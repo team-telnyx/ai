@@ -62,6 +62,17 @@ ManagedAccountCreateParams params = ManagedAccountCreateParams.builder()
 ManagedAccountCreateResponse managedAccount = client.managedAccounts().create(params);
 ```
 
+## Display information about allocatable global outbound channels for the current user.
+
+`GET /managed_accounts/allocatable_global_outbound_channels`
+
+```java
+import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalOutboundChannelsParams;
+import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalOutboundChannelsResponse;
+
+ManagedAccountGetAllocatableGlobalOutboundChannelsResponse response = client.managedAccounts().getAllocatableGlobalOutboundChannels();
+```
+
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
@@ -131,13 +142,54 @@ import com.telnyx.sdk.models.managedaccounts.ManagedAccountUpdateGlobalChannelLi
 ManagedAccountUpdateGlobalChannelLimitResponse response = client.managedAccounts().updateGlobalChannelLimit("id");
 ```
 
-## Display information about allocatable global outbound channels for the current user.
+## List organization users
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+Returns a list of the users in your organization.
+
+`GET /organizations/users`
 
 ```java
-import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalOutboundChannelsParams;
-import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalOutboundChannelsResponse;
+import com.telnyx.sdk.models.organizations.users.UserListPage;
+import com.telnyx.sdk.models.organizations.users.UserListParams;
 
-ManagedAccountGetAllocatableGlobalOutboundChannelsResponse response = client.managedAccounts().getAllocatableGlobalOutboundChannels();
+UserListPage page = client.organizations().users().list();
+```
+
+## Get organization users groups report
+
+Returns a report of all users in your organization with their group memberships.
+
+`GET /organizations/users/users_groups_report`
+
+```java
+import com.telnyx.sdk.models.organizations.users.UserGetGroupsReportParams;
+import com.telnyx.sdk.models.organizations.users.UserGetGroupsReportResponse;
+
+UserGetGroupsReportResponse response = client.organizations().users().getGroupsReport();
+```
+
+## Get organization user
+
+Returns a user in your organization.
+
+`GET /organizations/users/{id}`
+
+```java
+import com.telnyx.sdk.models.organizations.users.UserRetrieveParams;
+import com.telnyx.sdk.models.organizations.users.UserRetrieveResponse;
+
+UserRetrieveResponse user = client.organizations().users().retrieve("id");
+```
+
+## Delete organization user
+
+Deletes a user in your organization.
+
+`POST /organizations/users/{id}/actions/remove`
+
+```java
+import com.telnyx.sdk.models.organizations.users.actions.ActionRemoveParams;
+import com.telnyx.sdk.models.organizations.users.actions.ActionRemoveResponse;
+
+ActionRemoveResponse action = client.organizations().users().actions().remove("id");
 ```

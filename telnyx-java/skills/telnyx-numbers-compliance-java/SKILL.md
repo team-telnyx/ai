@@ -248,56 +248,30 @@ import com.telnyx.sdk.models.documents.DocumentGenerateDownloadLinkResponse;
 DocumentGenerateDownloadLinkResponse response = client.documents().generateDownloadLink("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-## List all requirements
+## Update requirement group for a phone number order
 
-List all requirements with filtering, sorting, and pagination
-
-`GET /requirements`
+`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
 ```java
-import com.telnyx.sdk.models.requirements.RequirementListPage;
-import com.telnyx.sdk.models.requirements.RequirementListParams;
+import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberUpdateRequirementGroupParams;
+import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberUpdateRequirementGroupResponse;
 
-RequirementListPage page = client.requirements().list();
+NumberOrderPhoneNumberUpdateRequirementGroupParams params = NumberOrderPhoneNumberUpdateRequirementGroupParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .requirementGroupId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .build();
+NumberOrderPhoneNumberUpdateRequirementGroupResponse response = client.numberOrderPhoneNumbers().updateRequirementGroup(params);
 ```
 
-## Retrieve a document requirement
+## Retrieve regulatory requirements for a list of phone numbers
 
-Retrieve a document requirement record
-
-`GET /requirements/{id}`
+`GET /phone_numbers_regulatory_requirements`
 
 ```java
-import com.telnyx.sdk.models.requirements.RequirementRetrieveParams;
-import com.telnyx.sdk.models.requirements.RequirementRetrieveResponse;
+import com.telnyx.sdk.models.phonenumbersregulatoryrequirements.PhoneNumbersRegulatoryRequirementRetrieveParams;
+import com.telnyx.sdk.models.phonenumbersregulatoryrequirements.PhoneNumbersRegulatoryRequirementRetrieveResponse;
 
-RequirementRetrieveResponse requirement = client.requirements().retrieve("a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa");
-```
-
-## List all requirement types
-
-List all requirement types ordered by created_at descending
-
-`GET /requirement_types`
-
-```java
-import com.telnyx.sdk.models.requirementtypes.RequirementTypeListParams;
-import com.telnyx.sdk.models.requirementtypes.RequirementTypeListResponse;
-
-RequirementTypeListResponse requirementTypes = client.requirementTypes().list();
-```
-
-## Retrieve a requirement types
-
-Retrieve a requirement type by id
-
-`GET /requirement_types/{id}`
-
-```java
-import com.telnyx.sdk.models.requirementtypes.RequirementTypeRetrieveParams;
-import com.telnyx.sdk.models.requirementtypes.RequirementTypeRetrieveResponse;
-
-RequirementTypeRetrieveResponse requirementType = client.requirementTypes().retrieve("a38c217a-8019-48f8-bff6-0fdd9939075b");
+PhoneNumbersRegulatoryRequirementRetrieveResponse phoneNumbersRegulatoryRequirement = client.phoneNumbersRegulatoryRequirements().retrieve();
 ```
 
 ## Retrieve regulatory requirements
@@ -384,6 +358,122 @@ import com.telnyx.sdk.models.requirementgroups.RequirementGroup;
 import com.telnyx.sdk.models.requirementgroups.RequirementGroupSubmitForApprovalParams;
 
 RequirementGroup requirementGroup = client.requirementGroups().submitForApproval("id");
+```
+
+## List all requirement types
+
+List all requirement types ordered by created_at descending
+
+`GET /requirement_types`
+
+```java
+import com.telnyx.sdk.models.requirementtypes.RequirementTypeListParams;
+import com.telnyx.sdk.models.requirementtypes.RequirementTypeListResponse;
+
+RequirementTypeListResponse requirementTypes = client.requirementTypes().list();
+```
+
+## Retrieve a requirement types
+
+Retrieve a requirement type by id
+
+`GET /requirement_types/{id}`
+
+```java
+import com.telnyx.sdk.models.requirementtypes.RequirementTypeRetrieveParams;
+import com.telnyx.sdk.models.requirementtypes.RequirementTypeRetrieveResponse;
+
+RequirementTypeRetrieveResponse requirementType = client.requirementTypes().retrieve("a38c217a-8019-48f8-bff6-0fdd9939075b");
+```
+
+## List all requirements
+
+List all requirements with filtering, sorting, and pagination
+
+`GET /requirements`
+
+```java
+import com.telnyx.sdk.models.requirements.RequirementListPage;
+import com.telnyx.sdk.models.requirements.RequirementListParams;
+
+RequirementListPage page = client.requirements().list();
+```
+
+## Retrieve a document requirement
+
+Retrieve a document requirement record
+
+`GET /requirements/{id}`
+
+```java
+import com.telnyx.sdk.models.requirements.RequirementRetrieveParams;
+import com.telnyx.sdk.models.requirements.RequirementRetrieveResponse;
+
+RequirementRetrieveResponse requirement = client.requirements().retrieve("a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa");
+```
+
+## Update requirement group for a sub number order
+
+`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
+
+```java
+import com.telnyx.sdk.models.subnumberorders.SubNumberOrderUpdateRequirementGroupParams;
+import com.telnyx.sdk.models.subnumberorders.SubNumberOrderUpdateRequirementGroupResponse;
+
+SubNumberOrderUpdateRequirementGroupParams params = SubNumberOrderUpdateRequirementGroupParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .requirementGroupId("a4b201f9-8646-4e54-a7d2-b2e403eeaf8c")
+    .build();
+SubNumberOrderUpdateRequirementGroupResponse response = client.subNumberOrders().updateRequirementGroup(params);
+```
+
+## List all user addresses
+
+Returns a list of your user addresses.
+
+`GET /user_addresses`
+
+```java
+import com.telnyx.sdk.models.useraddresses.UserAddressListPage;
+import com.telnyx.sdk.models.useraddresses.UserAddressListParams;
+
+UserAddressListPage page = client.userAddresses().list();
+```
+
+## Creates a user address
+
+Creates a user address.
+
+`POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```java
+import com.telnyx.sdk.models.useraddresses.UserAddressCreateParams;
+import com.telnyx.sdk.models.useraddresses.UserAddressCreateResponse;
+
+UserAddressCreateParams params = UserAddressCreateParams.builder()
+    .businessName("Toy-O'Kon")
+    .countryCode("US")
+    .firstName("Alfred")
+    .lastName("Foster")
+    .locality("Austin")
+    .streetAddress("600 Congress Avenue")
+    .build();
+UserAddressCreateResponse userAddress = client.userAddresses().create(params);
+```
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user_addresses/{id}`
+
+```java
+import com.telnyx.sdk.models.useraddresses.UserAddressRetrieveParams;
+import com.telnyx.sdk.models.useraddresses.UserAddressRetrieveResponse;
+
+UserAddressRetrieveResponse userAddress = client.userAddresses().retrieve("id");
 ```
 
 ## List all Verified Numbers

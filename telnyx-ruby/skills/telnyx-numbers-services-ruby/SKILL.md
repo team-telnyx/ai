@@ -32,6 +32,30 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List your voice channels for non-US zones
+
+Returns the non-US voice channels for your account.
+
+`GET /channel_zones`
+
+```ruby
+page = client.channel_zones.list
+
+puts(page)
+```
+
+## Update voice channels for non-US Zones
+
+Update the number of Voice Channels for the Non-US Zones.
+
+`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+
+```ruby
+channel_zone = client.channel_zones.update("channel_zone_id", channels: 0)
+
+puts(channel_zone)
+```
+
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
@@ -141,30 +165,6 @@ Deletes the dynamic emergency endpoint based on the ID provided
 dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 
 puts(dynamic_emergency_endpoint)
-```
-
-## List your voice channels for non-US zones
-
-Returns the non-US voice channels for your account.
-
-`GET /channel_zones`
-
-```ruby
-page = client.channel_zones.list
-
-puts(page)
-```
-
-## Update voice channels for non-US Zones
-
-Update the number of Voice Channels for the Non-US Zones.
-
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
-
-```ruby
-channel_zone = client.channel_zones.update("channel_zone_id", channels: 0)
-
-puts(channel_zone)
 ```
 
 ## List your voice channels for US Zone

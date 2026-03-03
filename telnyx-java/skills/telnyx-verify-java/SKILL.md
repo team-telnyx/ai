@@ -45,6 +45,33 @@ import com.telnyx.sdk.models.numberlookup.NumberLookupRetrieveResponse;
 NumberLookupRetrieveResponse numberLookup = client.numberLookup().retrieve("+18665552368");
 ```
 
+## List verifications by phone number
+
+`GET /verifications/by_phone_number/{phone_number}`
+
+```java
+import com.telnyx.sdk.models.verifications.byphonenumber.ByPhoneNumberListParams;
+import com.telnyx.sdk.models.verifications.byphonenumber.ByPhoneNumberListResponse;
+
+ByPhoneNumberListResponse byPhoneNumbers = client.verifications().byPhoneNumber().list("+13035551234");
+```
+
+## Verify verification code by phone number
+
+`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+
+```java
+import com.telnyx.sdk.models.verifications.byphonenumber.actions.ActionVerifyParams;
+import com.telnyx.sdk.models.verifications.byphonenumber.actions.VerifyVerificationCodeResponse;
+
+ActionVerifyParams params = ActionVerifyParams.builder()
+    .phoneNumber("+13035551234")
+    .code("17686")
+    .verifyProfileId("12ade33a-21c0-473b-b055-b3c836e1c292")
+    .build();
+VerifyVerificationCodeResponse verifyVerificationCodeResponse = client.verifications().byPhoneNumber().actions().verify(params);
+```
+
 ## Trigger Call verification
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
@@ -120,33 +147,6 @@ import com.telnyx.sdk.models.verifications.byphonenumber.actions.VerifyVerificat
 VerifyVerificationCodeResponse verifyVerificationCodeResponse = client.verifications().actions().verify("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
-
-```java
-import com.telnyx.sdk.models.verifications.byphonenumber.ByPhoneNumberListParams;
-import com.telnyx.sdk.models.verifications.byphonenumber.ByPhoneNumberListResponse;
-
-ByPhoneNumberListResponse byPhoneNumbers = client.verifications().byPhoneNumber().list("+13035551234");
-```
-
-## Verify verification code by phone number
-
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
-
-```java
-import com.telnyx.sdk.models.verifications.byphonenumber.actions.ActionVerifyParams;
-import com.telnyx.sdk.models.verifications.byphonenumber.actions.VerifyVerificationCodeResponse;
-
-ActionVerifyParams params = ActionVerifyParams.builder()
-    .phoneNumber("+13035551234")
-    .code("17686")
-    .verifyProfileId("12ade33a-21c0-473b-b055-b3c836e1c292")
-    .build();
-VerifyVerificationCodeResponse verifyVerificationCodeResponse = client.verifications().byPhoneNumber().actions().verify(params);
-```
-
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
@@ -176,43 +176,6 @@ VerifyProfileCreateParams params = VerifyProfileCreateParams.builder()
     .name("Test Profile")
     .build();
 VerifyProfileData verifyProfileData = client.verifyProfiles().create(params);
-```
-
-## Retrieve Verify profile
-
-Gets a single Verify profile.
-
-`GET /verify_profiles/{verify_profile_id}`
-
-```java
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileRetrieveParams;
-
-VerifyProfileData verifyProfileData = client.verifyProfiles().retrieve("12ade33a-21c0-473b-b055-b3c836e1c292");
-```
-
-## Update Verify profile
-
-`PATCH /verify_profiles/{verify_profile_id}`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```java
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileUpdateParams;
-
-VerifyProfileData verifyProfileData = client.verifyProfiles().update("12ade33a-21c0-473b-b055-b3c836e1c292");
-```
-
-## Delete Verify profile
-
-`DELETE /verify_profiles/{verify_profile_id}`
-
-```java
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
-import com.telnyx.sdk.models.verifyprofiles.VerifyProfileDeleteParams;
-
-VerifyProfileData verifyProfileData = client.verifyProfiles().delete("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
 ## Retrieve Verify profile message templates
@@ -259,4 +222,41 @@ VerifyProfileUpdateTemplateParams params = VerifyProfileUpdateTemplateParams.bui
     .text("Your {{app_name}} verification code is: {{code}}.")
     .build();
 MessageTemplate messageTemplate = client.verifyProfiles().updateTemplate(params);
+```
+
+## Retrieve Verify profile
+
+Gets a single Verify profile.
+
+`GET /verify_profiles/{verify_profile_id}`
+
+```java
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileRetrieveParams;
+
+VerifyProfileData verifyProfileData = client.verifyProfiles().retrieve("12ade33a-21c0-473b-b055-b3c836e1c292");
+```
+
+## Update Verify profile
+
+`PATCH /verify_profiles/{verify_profile_id}`
+
+Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+
+```java
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileUpdateParams;
+
+VerifyProfileData verifyProfileData = client.verifyProfiles().update("12ade33a-21c0-473b-b055-b3c836e1c292");
+```
+
+## Delete Verify profile
+
+`DELETE /verify_profiles/{verify_profile_id}`
+
+```java
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
+import com.telnyx.sdk.models.verifyprofiles.VerifyProfileDeleteParams;
+
+VerifyProfileData verifyProfileData = client.verifyProfiles().delete("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```

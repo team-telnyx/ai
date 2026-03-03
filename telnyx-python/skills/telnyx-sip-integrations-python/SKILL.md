@@ -33,93 +33,6 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all call recordings
-
-Returns a list of your call recordings.
-
-`GET /recordings`
-
-```python
-page = client.recordings.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Retrieve a call recording
-
-Retrieves the details of an existing call recording.
-
-`GET /recordings/{recording_id}`
-
-```python
-recording = client.recordings.retrieve(
-    "recording_id",
-)
-print(recording.data)
-```
-
-## Delete a call recording
-
-Permanently deletes a call recording.
-
-`DELETE /recordings/{recording_id}`
-
-```python
-recording = client.recordings.delete(
-    "recording_id",
-)
-print(recording.data)
-```
-
-## Delete a list of call recordings
-
-Permanently deletes a list of call recordings.
-
-`POST /recordings/actions/delete`
-
-```python
-client.recordings.actions.delete(
-    ids=["428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"],
-)
-```
-
-## List all recording transcriptions
-
-Returns a list of your recording transcriptions.
-
-`GET /recording_transcriptions`
-
-```python
-recording_transcriptions = client.recording_transcriptions.list()
-print(recording_transcriptions.data)
-```
-
-## Retrieve a recording transcription
-
-Retrieves the details of an existing recording transcription.
-
-`GET /recording_transcriptions/{recording_transcription_id}`
-
-```python
-recording_transcription = client.recording_transcriptions.retrieve(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(recording_transcription.data)
-```
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /recording_transcriptions/{recording_transcription_id}`
-
-```python
-recording_transcription = client.recording_transcriptions.delete(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(recording_transcription.data)
-```
-
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
@@ -280,6 +193,44 @@ external_connection = client.external_connections.create(
     outbound={},
 )
 print(external_connection.data)
+```
+
+## List all log messages
+
+Retrieve a list of log messages for all external connections associated with your account.
+
+`GET /external_connections/log_messages`
+
+```python
+page = client.external_connections.log_messages.list()
+page = page.log_messages[0]
+print(page.code)
+```
+
+## Retrieve a log message
+
+Retrieve a log message for an external connection associated with your account.
+
+`GET /external_connections/log_messages/{id}`
+
+```python
+log_message = client.external_connections.log_messages.retrieve(
+    "1293384261075731499",
+)
+print(log_message.log_messages)
+```
+
+## Dismiss a log message
+
+Dismiss a log message for an external connection associated with your account.
+
+`DELETE /external_connections/log_messages/{id}`
+
+```python
+response = client.external_connections.log_messages.dismiss(
+    "1293384261075731499",
+)
+print(response.success)
 ```
 
 ## Retrieve an External Connection
@@ -522,55 +473,6 @@ response = client.external_connections.uploads.retry(
 print(response.data)
 ```
 
-## List all log messages
-
-Retrieve a list of log messages for all external connections associated with your account.
-
-`GET /external_connections/log_messages`
-
-```python
-page = client.external_connections.log_messages.list()
-page = page.log_messages[0]
-print(page.code)
-```
-
-## Retrieve a log message
-
-Retrieve a log message for an external connection associated with your account.
-
-`GET /external_connections/log_messages/{id}`
-
-```python
-log_message = client.external_connections.log_messages.retrieve(
-    "1293384261075731499",
-)
-print(log_message.log_messages)
-```
-
-## Dismiss a log message
-
-Dismiss a log message for an external connection associated with your account.
-
-`DELETE /external_connections/log_messages/{id}`
-
-```python
-response = client.external_connections.log_messages.dismiss(
-    "1293384261075731499",
-)
-print(response.success)
-```
-
-## Refresh Operator Connect integration
-
-This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
-
-`POST /operator_connect/actions/refresh`
-
-```python
-response = client.operator_connect.actions.refresh()
-print(response.message)
-```
-
 ## List uploaded media
 
 Returns a list of stored media files.
@@ -650,4 +552,158 @@ response = client.media.download(
 print(response)
 content = response.read()
 print(content)
+```
+
+## Refresh Operator Connect integration
+
+This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
+
+`POST /operator_connect/actions/refresh`
+
+```python
+response = client.operator_connect.actions.refresh()
+print(response.message)
+```
+
+## List all recording transcriptions
+
+Returns a list of your recording transcriptions.
+
+`GET /recording_transcriptions`
+
+```python
+recording_transcriptions = client.recording_transcriptions.list()
+print(recording_transcriptions.data)
+```
+
+## Retrieve a recording transcription
+
+Retrieves the details of an existing recording transcription.
+
+`GET /recording_transcriptions/{recording_transcription_id}`
+
+```python
+recording_transcription = client.recording_transcriptions.retrieve(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(recording_transcription.data)
+```
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`DELETE /recording_transcriptions/{recording_transcription_id}`
+
+```python
+recording_transcription = client.recording_transcriptions.delete(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(recording_transcription.data)
+```
+
+## List all call recordings
+
+Returns a list of your call recordings.
+
+`GET /recordings`
+
+```python
+page = client.recordings.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Delete a list of call recordings
+
+Permanently deletes a list of call recordings.
+
+`POST /recordings/actions/delete`
+
+```python
+client.recordings.actions.delete(
+    ids=["428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"],
+)
+```
+
+## Retrieve a call recording
+
+Retrieves the details of an existing call recording.
+
+`GET /recordings/{recording_id}`
+
+```python
+recording = client.recordings.retrieve(
+    "recording_id",
+)
+print(recording.data)
+```
+
+## Delete a call recording
+
+Permanently deletes a call recording.
+
+`DELETE /recordings/{recording_id}`
+
+```python
+recording = client.recordings.delete(
+    "recording_id",
+)
+print(recording.data)
+```
+
+## Create a SIPREC connector
+
+Creates a new SIPREC connector configuration.
+
+`POST /siprec_connectors`
+
+```python
+siprec_connector = client.siprec_connectors.create(
+    host="siprec.telnyx.com",
+    name="my-siprec-connector",
+    port=5060,
+)
+print(siprec_connector.data)
+```
+
+## Retrieve a SIPREC connector
+
+Returns details of a stored SIPREC connector.
+
+`GET /siprec_connectors/{connector_name}`
+
+```python
+siprec_connector = client.siprec_connectors.retrieve(
+    "connector_name",
+)
+print(siprec_connector.data)
+```
+
+## Update a SIPREC connector
+
+Updates a stored SIPREC connector configuration.
+
+`PUT /siprec_connectors/{connector_name}`
+
+```python
+siprec_connector = client.siprec_connectors.update(
+    connector_name="connector_name",
+    host="siprec.telnyx.com",
+    name="my-siprec-connector",
+    port=5060,
+)
+print(siprec_connector.data)
+```
+
+## Delete a SIPREC connector
+
+Deletes a stored SIPREC connector.
+
+`DELETE /siprec_connectors/{connector_name}`
+
+```python
+client.siprec_connectors.delete(
+    "connector_name",
+)
 ```

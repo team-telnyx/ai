@@ -152,16 +152,3 @@ telephony_credential = client.telephony_credentials.delete(
 )
 print(telephony_credential.data)
 ```
-
-## Create an Access Token.
-
-Create an Access Token (JWT) for the credential.
-
-`POST /telephony_credentials/{id}/token`
-
-```python
-response = client.telephony_credentials.create_token(
-    "id",
-)
-print(response)
-```

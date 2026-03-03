@@ -33,39 +33,50 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
-## Lists the phone number blocks jobs
+## Bulk update phone number profiles
 
-`GET /phone_number_blocks/jobs`
+`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+
+Optional: `assign_only` (boolean)
+
+```javascript
+const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.create({
+  messaging_profile_id: '00000000-0000-0000-0000-000000000000',
+  numbers: ['+18880000000', '+18880000001', '+18880000002'],
+});
+
+console.log(messagingNumbersBulkUpdate.data);
+```
+
+## Retrieve bulk update status
+
+`GET /messaging_numbers_bulk_updates/{order_id}`
+
+```javascript
+const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.retrieve('order_id');
+
+console.log(messagingNumbersBulkUpdate.data);
+```
+
+## List mobile phone numbers with messaging settings
+
+`GET /mobile_phone_numbers/messaging`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const job of client.phoneNumberBlocks.jobs.list()) {
-  console.log(job.id);
+for await (const messagingListResponse of client.mobilePhoneNumbers.messaging.list()) {
+  console.log(messagingListResponse.id);
 }
 ```
 
-## Retrieves a phone number blocks job
+## Retrieve a mobile phone number with messaging settings
 
-`GET /phone_number_blocks/jobs/{id}`
-
-```javascript
-const job = await client.phoneNumberBlocks.jobs.retrieve('id');
-
-console.log(job.data);
-```
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
+`GET /mobile_phone_numbers/{id}/messaging`
 
 ```javascript
-const response = await client.phoneNumberBlocks.jobs.deletePhoneNumberBlock({
-  phone_number_block_id: 'f3946371-7199-4261-9c3d-81a0d7935146',
-});
+const messaging = await client.mobilePhoneNumbers.messaging.retrieve('id');
 
-console.log(response.data);
+console.log(messaging.data);
 ```
 
 ## List phone numbers
@@ -76,6 +87,123 @@ console.log(response.data);
 // Automatically fetches more pages as needed.
 for await (const phoneNumberDetailed of client.phoneNumbers.list()) {
   console.log(phoneNumberDetailed.id);
+}
+```
+
+## Verify ownership of phone numbers
+
+Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+
+`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+
+```javascript
+const response = await client.phoneNumbers.actions.verifyOwnership({
+  phone_numbers: ['+15551234567'],
+});
+
+console.log(response.data);
+```
+
+## Lists the phone numbers jobs
+
+`GET /phone_numbers/jobs`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumbersJob of client.phoneNumbers.jobs.list()) {
+  console.log(phoneNumbersJob.id);
+}
+```
+
+## Delete a batch of numbers
+
+Creates a new background job to delete a batch of numbers.
+
+`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+
+```javascript
+const response = await client.phoneNumbers.jobs.deleteBatch({
+  phone_numbers: ['+19705555098', '+19715555098', '32873127836'],
+});
+
+console.log(response.data);
+```
+
+## Update the emergency settings from a batch of numbers
+
+Creates a background job to update the emergency settings of a collection of phone numbers.
+
+`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+
+Optional: `emergency_address_id` (['string', 'null'])
+
+```javascript
+const response = await client.phoneNumbers.jobs.updateEmergencySettingsBatch({
+  emergency_enabled: true,
+  phone_numbers: ['+19705555098', '+19715555098', '32873127836'],
+});
+
+console.log(response.data);
+```
+
+## Update a batch of numbers
+
+Creates a new background job to update a batch of numbers.
+
+`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+
+```javascript
+const response = await client.phoneNumbers.jobs.updateBatch({
+  phone_numbers: ['1583466971586889004', '+13127367254'],
+});
+
+console.log(response.data);
+```
+
+## Retrieve a phone numbers job
+
+`GET /phone_numbers/jobs/{id}`
+
+```javascript
+const job = await client.phoneNumbers.jobs.retrieve('id');
+
+console.log(job.data);
+```
+
+## List phone numbers with messaging settings
+
+`GET /phone_numbers/messaging`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumberWithMessagingSettings of client.phoneNumbers.messaging.list()) {
+  console.log(phoneNumberWithMessagingSettings.id);
+}
+```
+
+## Slim List phone numbers
+
+List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+
+`GET /phone_numbers/slim`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumberSlimListResponse of client.phoneNumbers.slimList()) {
+  console.log(phoneNumberSlimListResponse.id);
+}
+```
+
+## List phone numbers with voice settings
+
+`GET /phone_numbers/voice`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumberWithVoiceSettings of client.phoneNumbers.voice.list()) {
+  console.log(phoneNumberWithVoiceSettings.id);
 }
 ```
 
@@ -136,6 +264,28 @@ const response = await client.phoneNumbers.actions.enableEmergency('129338426107
 console.log(response.data);
 ```
 
+## Retrieve a phone number with messaging settings
+
+`GET /phone_numbers/{id}/messaging`
+
+```javascript
+const messaging = await client.phoneNumbers.messaging.retrieve('id');
+
+console.log(messaging.data);
+```
+
+## Update the messaging profile and/or messaging product of a phone number
+
+`PATCH /phone_numbers/{id}/messaging`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```javascript
+const messaging = await client.phoneNumbers.messaging.update('id');
+
+console.log(messaging.data);
+```
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -156,154 +306,6 @@ Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name
 const voice = await client.phoneNumbers.voice.update('1293384261075731499');
 
 console.log(voice.data);
-```
-
-## Verify ownership of phone numbers
-
-Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
-
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
-
-```javascript
-const response = await client.phoneNumbers.actions.verifyOwnership({
-  phone_numbers: ['+15551234567'],
-});
-
-console.log(response.data);
-```
-
-## List CSV downloads
-
-`GET /phone_numbers/csv_downloads`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const csvDownload of client.phoneNumbers.csvDownloads.list()) {
-  console.log(csvDownload.id);
-}
-```
-
-## Create a CSV download
-
-`POST /phone_numbers/csv_downloads`
-
-```javascript
-const csvDownload = await client.phoneNumbers.csvDownloads.create();
-
-console.log(csvDownload.data);
-```
-
-## Retrieve a CSV download
-
-`GET /phone_numbers/csv_downloads/{id}`
-
-```javascript
-const csvDownload = await client.phoneNumbers.csvDownloads.retrieve('id');
-
-console.log(csvDownload.data);
-```
-
-## Lists the phone numbers jobs
-
-`GET /phone_numbers/jobs`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const phoneNumbersJob of client.phoneNumbers.jobs.list()) {
-  console.log(phoneNumbersJob.id);
-}
-```
-
-## Retrieve a phone numbers job
-
-`GET /phone_numbers/jobs/{id}`
-
-```javascript
-const job = await client.phoneNumbers.jobs.retrieve('id');
-
-console.log(job.data);
-```
-
-## Delete a batch of numbers
-
-Creates a new background job to delete a batch of numbers.
-
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
-
-```javascript
-const response = await client.phoneNumbers.jobs.deleteBatch({
-  phone_numbers: ['+19705555098', '+19715555098', '32873127836'],
-});
-
-console.log(response.data);
-```
-
-## Update the emergency settings from a batch of numbers
-
-Creates a background job to update the emergency settings of a collection of phone numbers.
-
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
-
-Optional: `emergency_address_id` (['string', 'null'])
-
-```javascript
-const response = await client.phoneNumbers.jobs.updateEmergencySettingsBatch({
-  emergency_enabled: true,
-  phone_numbers: ['+19705555098', '+19715555098', '32873127836'],
-});
-
-console.log(response.data);
-```
-
-## Update a batch of numbers
-
-Creates a new background job to update a batch of numbers.
-
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
-
-```javascript
-const response = await client.phoneNumbers.jobs.updateBatch({
-  phone_numbers: ['1583466971586889004', '+13127367254'],
-});
-
-console.log(response.data);
-```
-
-## Retrieve regulatory requirements for a list of phone numbers
-
-`GET /phone_numbers/regulatory_requirements`
-
-```javascript
-const phoneNumbersRegulatoryRequirement =
-  await client.phoneNumbersRegulatoryRequirements.retrieve();
-
-console.log(phoneNumbersRegulatoryRequirement.data);
-```
-
-## Slim List phone numbers
-
-List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
-
-`GET /phone_numbers/slim`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const phoneNumberSlimListResponse of client.phoneNumbers.slimList()) {
-  console.log(phoneNumberSlimListResponse.id);
-}
-```
-
-## List phone numbers with voice settings
-
-`GET /phone_numbers/voice`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const phoneNumberWithVoiceSettings of client.phoneNumbers.voice.list()) {
-  console.log(phoneNumberWithVoiceSettings.id);
-}
 ```
 
 ## List Mobile Phone Numbers

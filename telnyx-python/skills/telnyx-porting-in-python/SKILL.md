@@ -34,6 +34,19 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Run a portability check
+
+Runs a portability check, returning the results immediately.
+
+`POST /portability_checks`
+
+Optional: `phone_numbers` (array[string])
+
+```python
+response = client.portability_checks.run()
+print(response.data)
+```
+
 ## List all porting events
 
 Returns a list of all porting events.
@@ -75,7 +88,7 @@ client.porting.events.republish(
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration_preview`
+`POST /porting/loa_configuration/preview`
 
 ```python
 response = client.porting.loa_configurations.preview_0(
@@ -210,6 +223,58 @@ content = response.read()
 print(content)
 ```
 
+## List porting related reports
+
+List the reports generated about porting operations.
+
+`GET /porting/reports`
+
+```python
+page = client.porting.reports.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create a porting related report
+
+Generate reports about porting operations.
+
+`POST /porting/reports`
+
+```python
+report = client.porting.reports.create(
+    params={
+        "filters": {}
+    },
+    report_type="export_porting_orders_csv",
+)
+print(report.data)
+```
+
+## Retrieve a report
+
+Retrieve a specific report generated.
+
+`GET /porting/reports/{id}`
+
+```python
+report = client.porting.reports.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(report.data)
+```
+
+## List available carriers in the UK
+
+List available carriers in the UK.
+
+`GET /porting/uk_carriers`
+
+```python
+response = client.porting.list_uk_carriers()
+print(response.data)
+```
+
 ## List all porting orders
 
 Returns a list of your porting order.
@@ -235,6 +300,40 @@ porting_order = client.porting_orders.create(
     phone_numbers=["+13035550000", "+13035550001", "+13035550002"],
 )
 print(porting_order.data)
+```
+
+## List all exception types
+
+Returns a list of all possible exception types for a porting order.
+
+`GET /porting_orders/exception_types`
+
+```python
+response = client.porting_orders.retrieve_exception_types()
+print(response.data)
+```
+
+## List all phone number configurations
+
+Returns a list of phone number configurations paginated.
+
+`GET /porting_orders/phone_number_configurations`
+
+```python
+page = client.porting_orders.phone_number_configurations.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create a list of phone number configurations
+
+Creates a list of phone number configurations.
+
+`POST /porting_orders/phone_number_configurations`
+
+```python
+phone_number_configuration = client.porting_orders.phone_number_configurations.create()
+print(phone_number_configuration.data)
 ```
 
 ## Retrieve a porting order
@@ -702,113 +801,14 @@ phone_number_extension = client.porting_orders.phone_number_extensions.delete(
 print(phone_number_extension.data)
 ```
 
-## List all exception types
-
-Returns a list of all possible exception types for a porting order.
-
-`GET /porting_orders/exception_types`
-
-```python
-response = client.porting_orders.retrieve_exception_types()
-print(response.data)
-```
-
-## List all phone number configurations
-
-Returns a list of phone number configurations paginated.
-
-`GET /porting_orders/phone_number_configurations`
-
-```python
-page = client.porting_orders.phone_number_configurations.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create a list of phone number configurations
-
-Creates a list of phone number configurations.
-
-`POST /porting_orders/phone_number_configurations`
-
-```python
-phone_number_configuration = client.porting_orders.phone_number_configurations.create()
-print(phone_number_configuration.data)
-```
-
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting/phone_numbers`
+`GET /porting_phone_numbers`
 
 ```python
 page = client.porting_phone_numbers.list()
 page = page.data[0]
 print(page.porting_order_id)
-```
-
-## List porting related reports
-
-List the reports generated about porting operations.
-
-`GET /porting/reports`
-
-```python
-page = client.porting.reports.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create a porting related report
-
-Generate reports about porting operations.
-
-`POST /porting/reports`
-
-```python
-report = client.porting.reports.create(
-    params={
-        "filters": {}
-    },
-    report_type="export_porting_orders_csv",
-)
-print(report.data)
-```
-
-## Retrieve a report
-
-Retrieve a specific report generated.
-
-`GET /porting/reports/{id}`
-
-```python
-report = client.porting.reports.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(report.data)
-```
-
-## List available carriers in the UK
-
-List available carriers in the UK.
-
-`GET /porting/uk_carriers`
-
-```python
-response = client.porting.list_uk_carriers()
-print(response.data)
-```
-
-## Run a portability check
-
-Runs a portability check, returning the results immediately.
-
-`POST /portability_checks`
-
-Optional: `phone_numbers` (array[string])
-
-```python
-response = client.portability_checks.run()
-print(response.data)
 ```

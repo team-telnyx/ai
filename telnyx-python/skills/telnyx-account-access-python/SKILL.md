@@ -34,6 +34,51 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List all Access IP Addresses
+
+`GET /access_ip_address`
+
+```python
+page = client.access_ip_address.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create new Access IP Address
+
+`POST /access_ip_address` — Required: `ip_address`
+
+Optional: `description` (string)
+
+```python
+access_ip_address_response = client.access_ip_address.create(
+    ip_address="ip_address",
+)
+print(access_ip_address_response.id)
+```
+
+## Retrieve an access IP address
+
+`GET /access_ip_address/{access_ip_address_id}`
+
+```python
+access_ip_address_response = client.access_ip_address.retrieve(
+    "access_ip_address_id",
+)
+print(access_ip_address_response.id)
+```
+
+## Delete access IP address
+
+`DELETE /access_ip_address/{access_ip_address_id}`
+
+```python
+access_ip_address_response = client.access_ip_address.delete(
+    "access_ip_address_id",
+)
+print(access_ip_address_response.id)
+```
+
 ## List all addresses
 
 Returns a list of your addresses.
@@ -64,6 +109,23 @@ address = client.addresses.create(
     street_address="600 Congress Avenue",
 )
 print(address.data)
+```
+
+## Validate an address
+
+Validates an address for emergency services.
+
+`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+
+Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+
+```python
+response = client.addresses.actions.validate(
+    country_code="US",
+    postal_code="78701",
+    street_address="600 Congress Avenue",
+)
+print(response.data)
 ```
 
 ## Retrieve an address
@@ -101,23 +163,6 @@ Optional: `id` (string)
 ```python
 response = client.addresses.actions.accept_suggestions(
     address_uuid="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(response.data)
-```
-
-## Validate an address
-
-Validates an address for emergency services.
-
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
-
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
-
-```python
-response = client.addresses.actions.validate(
-    country_code="US",
-    postal_code="78701",
-    street_address="600 Congress Avenue",
 )
 print(response.data)
 ```
@@ -305,81 +350,15 @@ client.integration_secrets.delete(
 )
 ```
 
-## List all Access IP Addresses
+## Create an Access Token.
 
-`GET /access_ip_address`
+Create an Access Token (JWT) for the credential.
 
-```python
-page = client.access_ip_address.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create new Access IP Address
-
-`POST /access_ip_address` — Required: `ip_address`
-
-Optional: `description` (string)
+`POST /telephony_credentials/{id}/token`
 
 ```python
-access_ip_address_response = client.access_ip_address.create(
-    ip_address="ip_address",
+response = client.telephony_credentials.create_token(
+    "id",
 )
-print(access_ip_address_response.id)
-```
-
-## Retrieve an access IP address
-
-`GET /access_ip_address/{access_ip_address_id}`
-
-```python
-access_ip_address_response = client.access_ip_address.retrieve(
-    "access_ip_address_id",
-)
-print(access_ip_address_response.id)
-```
-
-## Delete access IP address
-
-`DELETE /access_ip_address/{access_ip_address_id}`
-
-```python
-access_ip_address_response = client.access_ip_address.delete(
-    "access_ip_address_id",
-)
-print(access_ip_address_response.id)
-```
-
-## List all Access IP Ranges
-
-`GET /access_ip_ranges`
-
-```python
-page = client.access_ip_ranges.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create new Access IP Range
-
-`POST /access_ip_ranges` — Required: `cidr_block`
-
-Optional: `description` (string)
-
-```python
-access_ip_range = client.access_ip_ranges.create(
-    cidr_block="cidr_block",
-)
-print(access_ip_range.id)
-```
-
-## Delete access IP ranges
-
-`DELETE /access_ip_ranges/{access_ip_range_id}`
-
-```python
-access_ip_range = client.access_ip_ranges.delete(
-    "access_ip_range_id",
-)
-print(access_ip_range.id)
+print(response)
 ```

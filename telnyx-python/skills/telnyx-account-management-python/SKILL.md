@@ -60,6 +60,15 @@ managed_account = client.managed_accounts.create(
 print(managed_account.data)
 ```
 
+## Display information about allocatable global outbound channels for the current user.
+
+`GET /managed_accounts/allocatable_global_outbound_channels`
+
+```python
+response = client.managed_accounts.get_allocatable_global_outbound_channels()
+print(response.data)
+```
+
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
@@ -129,11 +138,51 @@ response = client.managed_accounts.update_global_channel_limit(
 print(response.data)
 ```
 
-## Display information about allocatable global outbound channels for the current user.
+## List organization users
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+Returns a list of the users in your organization.
+
+`GET /organizations/users`
 
 ```python
-response = client.managed_accounts.get_allocatable_global_outbound_channels()
+page = client.organizations.users.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Get organization users groups report
+
+Returns a report of all users in your organization with their group memberships.
+
+`GET /organizations/users/users_groups_report`
+
+```python
+response = client.organizations.users.get_groups_report()
 print(response.data)
+```
+
+## Get organization user
+
+Returns a user in your organization.
+
+`GET /organizations/users/{id}`
+
+```python
+user = client.organizations.users.retrieve(
+    id="id",
+)
+print(user.data)
+```
+
+## Delete organization user
+
+Deletes a user in your organization.
+
+`POST /organizations/users/{id}/actions/remove`
+
+```python
+action = client.organizations.users.actions.remove(
+    "id",
+)
+print(action.data)
 ```

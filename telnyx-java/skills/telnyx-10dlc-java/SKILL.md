@@ -69,6 +69,32 @@ BrandCreateParams params = BrandCreateParams.builder()
 TelnyxBrand telnyxBrand = client.messaging10dlc().brand().create(params);
 ```
 
+## Get Brand Feedback By Id
+
+Get feedback about a brand by ID.
+
+`GET /10dlc/brand/feedback/{brandId}`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackParams;
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackResponse;
+
+BrandGetFeedbackResponse response = client.messaging10dlc().brand().getFeedback("brandId");
+```
+
+## Get Brand SMS OTP Status
+
+Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
+
+`GET /10dlc/brand/smsOtp/{referenceId}`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceParams;
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceResponse;
+
+BrandGetSmsOtpByReferenceResponse response = client.messaging10dlc().brand().getSmsOtpByReference("OTP4B2001");
+```
+
 ## Get Brand
 
 Retrieve a brand by `brandId`.
@@ -241,69 +267,6 @@ BrandVerifySmsOtpParams params = BrandVerifySmsOtpParams.builder()
 client.messaging10dlc().brand().verifySmsOtp(params);
 ```
 
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceResponse;
-
-BrandGetSmsOtpByReferenceResponse response = client.messaging10dlc().brand().getSmsOtpByReference("OTP4B2001");
-```
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID.
-
-`GET /10dlc/brand_feedback/{brandId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackResponse;
-
-BrandGetFeedbackResponse response = client.messaging10dlc().brand().getFeedback("brandId");
-```
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
-import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.CampaignBuilderSubmitParams;
-
-CampaignBuilderSubmitParams params = CampaignBuilderSubmitParams.builder()
-    .brandId("brandId")
-    .description("description")
-    .usecase("usecase")
-    .build();
-TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaignBuilder().submit(params);
-```
-
-## Qualify By Usecase
-
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
-
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseParams;
-import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseResponse;
-
-BrandQualifyByUsecaseParams params = BrandQualifyByUsecaseParams.builder()
-    .brandId("brandId")
-    .usecase("usecase")
-    .build();
-BrandQualifyByUsecaseResponse response = client.messaging10dlc().campaignBuilder().brand().qualifyByUsecase(params);
-```
-
 ## List Campaigns
 
 Retrieve a list of campaigns associated with a supplied `brandId`.
@@ -318,6 +281,33 @@ CampaignListParams params = CampaignListParams.builder()
     .brandId("brandId")
     .build();
 CampaignListPage page = client.messaging10dlc().campaign().list(params);
+```
+
+## Accept Shared Campaign
+
+Manually accept a campaign shared with Telnyx
+
+`POST /10dlc/campaign/acceptSharing/{campaignId}`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingParams;
+import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingResponse;
+
+CampaignAcceptSharingResponse response = client.messaging10dlc().campaign().acceptSharing("C26F1KLZN");
+```
+
+## Get Campaign Cost
+
+`GET /10dlc/campaign/usecase/cost`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostParams;
+import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostResponse;
+
+UsecaseGetCostParams params = UsecaseGetCostParams.builder()
+    .usecase("usecase")
+    .build();
+UsecaseGetCostResponse response = client.messaging10dlc().campaign().usecase().getCost(params);
 ```
 
 ## Get campaign
@@ -406,7 +396,7 @@ CampaignGetOperationStatusResponse response = client.messaging10dlc().campaign()
 
 ## Get OSR campaign attributes
 
-`GET /10dlc/campaign/{campaignId}/osr_attributes`
+`GET /10dlc/campaign/{campaignId}/osr/attributes`
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.campaign.osr.OsrGetAttributesParams;
@@ -426,31 +416,68 @@ import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetSharingStatusRes
 CampaignGetSharingStatusResponse response = client.messaging10dlc().campaign().getSharingStatus("campaignId");
 ```
 
-## Accept Shared Campaign
+## Submit Campaign
 
-Manually accept a campaign shared with Telnyx
+Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
 
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
+`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
 
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingResponse;
-
-CampaignAcceptSharingResponse response = client.messaging10dlc().campaign().acceptSharing("C26F1KLZN");
-```
-
-## Get Campaign Cost
-
-`GET /10dlc/campaign/usecase_cost`
+Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
 
 ```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostResponse;
+import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
+import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.CampaignBuilderSubmitParams;
 
-UsecaseGetCostParams params = UsecaseGetCostParams.builder()
+CampaignBuilderSubmitParams params = CampaignBuilderSubmitParams.builder()
+    .brandId("brandId")
+    .description("description")
     .usecase("usecase")
     .build();
-UsecaseGetCostResponse response = client.messaging10dlc().campaign().usecase().getCost(params);
+TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaignBuilder().submit(params);
+```
+
+## Qualify By Usecase
+
+This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+
+`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseParams;
+import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseResponse;
+
+BrandQualifyByUsecaseParams params = BrandQualifyByUsecaseParams.builder()
+    .brandId("brandId")
+    .usecase("usecase")
+    .build();
+BrandQualifyByUsecaseResponse response = client.messaging10dlc().campaignBuilder().brand().qualifyByUsecase(params);
+```
+
+## List shared partner campaigns
+
+Get all partner campaigns you have shared to Telnyx in a paginated fashion
+
+This endpoint is currently limited to only returning shared campaigns that Telnyx
+has accepted.
+
+`GET /10dlc/partnerCampaign/sharedByMe`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMePage;
+import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMeParams;
+
+PartnerCampaignListSharedByMePage page = client.messaging10dlc().partnerCampaigns().listSharedByMe();
+```
+
+## Get Sharing Status
+
+`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusParams;
+import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusResponse;
+
+PartnerCampaignRetrieveSharingStatusResponse response = client.messaging10dlc().partnerCampaigns().retrieveSharingStatus("campaignId");
 ```
 
 ## List Shared Campaigns
@@ -494,31 +521,48 @@ import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.TelnyxDownstreamCam
 TelnyxDownstreamCampaign telnyxDownstreamCampaign = client.messaging10dlc().partnerCampaigns().update("campaignId");
 ```
 
-## Get Sharing Status
+## Assign Messaging Profile To Campaign
 
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
+
+`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
+
+Optional: `campaignId` (string), `tcrCampaignId` (string)
 
 ```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusResponse;
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileAssignParams;
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileAssignResponse;
 
-PartnerCampaignRetrieveSharingStatusResponse response = client.messaging10dlc().partnerCampaigns().retrieveSharingStatus("campaignId");
+PhoneNumberAssignmentByProfileAssignParams params = PhoneNumberAssignmentByProfileAssignParams.builder()
+    .messagingProfileId("4001767e-ce0f-4cae-9d5f-0d5e636e7809")
+    .build();
+PhoneNumberAssignmentByProfileAssignResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().assign(params);
 ```
 
-## List shared partner campaigns
+## Get Assignment Task Status
 
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
+Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
 
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
 
 ```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMePage;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMeParams;
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusParams;
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusResponse;
 
-PartnerCampaignListSharedByMePage page = client.messaging10dlc().partnerCampaigns().listSharedByMe();
+PhoneNumberAssignmentByProfileRetrieveStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().retrieveStatus("taskId");
+```
+
+## Get Phone Number Status
+
+Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
+
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusParams;
+import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse;
+
+PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus("taskId");
 ```
 
 ## List phone number campaigns
@@ -591,50 +635,6 @@ import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCamp
 import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignDeleteParams;
 
 PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().delete("phoneNumber");
-```
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileAssignParams;
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileAssignResponse;
-
-PhoneNumberAssignmentByProfileAssignParams params = PhoneNumberAssignmentByProfileAssignParams.builder()
-    .messagingProfileId("4001767e-ce0f-4cae-9d5f-0d5e636e7809")
-    .build();
-PhoneNumberAssignmentByProfileAssignResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().assign(params);
-```
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusResponse;
-
-PhoneNumberAssignmentByProfileRetrieveStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().retrieveStatus("taskId");
-```
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse;
-
-PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus("taskId");
 ```
 
 ---

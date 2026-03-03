@@ -84,88 +84,6 @@ OAuth 2.0 authorization endpoint for the authorization code flow
 	}
 ```
 
-## List OAuth clients
-
-Retrieve a paginated list of OAuth clients for the authenticated user
-
-`GET /oauth/clients`
-
-```go
-	page, err := client.OAuthClients.List(context.TODO(), telnyx.OAuthClientListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create OAuth client
-
-Create a new OAuth client
-
-`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
-
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```go
-	oauthClient, err := client.OAuthClients.New(context.TODO(), telnyx.OAuthClientNewParams{
-		AllowedGrantTypes: []string{"client_credentials"},
-		AllowedScopes:     []string{"admin"},
-		ClientType:        telnyx.OAuthClientNewParamsClientTypePublic,
-		Name:              "My OAuth client",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", oauthClient.Data)
-```
-
-## Get OAuth client
-
-Retrieve a single OAuth client by ID
-
-`GET /oauth/clients/{id}`
-
-```go
-	oauthClient, err := client.OAuthClients.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", oauthClient.Data)
-```
-
-## Update OAuth client
-
-Update an existing OAuth client
-
-`PUT /oauth/clients/{id}`
-
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```go
-	oauthClient, err := client.OAuthClients.Update(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.OAuthClientUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", oauthClient.Data)
-```
-
-## Delete OAuth client
-
-Delete an OAuth client
-
-`DELETE /oauth/clients/{id}`
-
-```go
-	err := client.OAuthClients.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -180,46 +98,21 @@ Retrieve details about an OAuth consent token
 	fmt.Printf("%+v\n", oauth.Data)
 ```
 
-## List OAuth grants
+## Create OAuth grant
 
-Retrieve a paginated list of OAuth grants for the authenticated user
+Create an OAuth authorization grant
 
-`GET /oauth/grants`
+`POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```go
-	page, err := client.OAuthGrants.List(context.TODO(), telnyx.OAuthGrantListParams{})
+	response, err := client.OAuth.Grants(context.TODO(), telnyx.OAuthGrantsParams{
+		Allowed:      true,
+		ConsentToken: "consent_token",
+	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Get OAuth grant
-
-Retrieve a single OAuth grant by ID
-
-`GET /oauth/grants/{id}`
-
-```go
-	oauthGrant, err := client.OAuthGrants.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", oauthGrant.Data)
-```
-
-## Revoke OAuth grant
-
-Revoke an OAuth grant
-
-`DELETE /oauth/grants/{id}`
-
-```go
-	oauthGrant, err := client.OAuthGrants.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", oauthGrant.Data)
+	fmt.Printf("%+v\n", response.RedirectUri)
 ```
 
 ## Token introspection
@@ -284,4 +177,128 @@ Optional: `client_id` (string), `client_secret` (string), `code` (string), `code
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response.AccessToken)
+```
+
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth_clients`
+
+```go
+	page, err := client.OAuthClients.List(context.TODO(), telnyx.OAuthClientListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create OAuth client
+
+Create a new OAuth client
+
+`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```go
+	oauthClient, err := client.OAuthClients.New(context.TODO(), telnyx.OAuthClientNewParams{
+		AllowedGrantTypes: []string{"client_credentials"},
+		AllowedScopes:     []string{"admin"},
+		ClientType:        telnyx.OAuthClientNewParamsClientTypePublic,
+		Name:              "My OAuth client",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", oauthClient.Data)
+```
+
+## Get OAuth client
+
+Retrieve a single OAuth client by ID
+
+`GET /oauth_clients/{id}`
+
+```go
+	oauthClient, err := client.OAuthClients.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", oauthClient.Data)
+```
+
+## Update OAuth client
+
+Update an existing OAuth client
+
+`PUT /oauth_clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```go
+	oauthClient, err := client.OAuthClients.Update(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.OAuthClientUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", oauthClient.Data)
+```
+
+## Delete OAuth client
+
+Delete an OAuth client
+
+`DELETE /oauth_clients/{id}`
+
+```go
+	err := client.OAuthClients.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth_grants`
+
+```go
+	page, err := client.OAuthGrants.List(context.TODO(), telnyx.OAuthGrantListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Get OAuth grant
+
+Retrieve a single OAuth grant by ID
+
+`GET /oauth_grants/{id}`
+
+```go
+	oauthGrant, err := client.OAuthGrants.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", oauthGrant.Data)
+```
+
+## Revoke OAuth grant
+
+Revoke an OAuth grant
+
+`DELETE /oauth_grants/{id}`
+
+```go
+	oauthGrant, err := client.OAuthGrants.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", oauthGrant.Data)
 ```

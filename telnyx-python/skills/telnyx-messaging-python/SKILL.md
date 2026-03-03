@@ -34,6 +34,60 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List alphanumeric sender IDs
+
+List all alphanumeric sender IDs for the authenticated user.
+
+`GET /alphanumeric_sender_ids`
+
+```python
+page = client.alphanumeric_sender_ids.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create an alphanumeric sender ID
+
+Create a new alphanumeric sender ID associated with a messaging profile.
+
+`POST /alphanumeric_sender_ids` — Required: `alphanumeric_sender_id`, `messaging_profile_id`
+
+Optional: `us_long_code_fallback` (string)
+
+```python
+alphanumeric_sender_id = client.alphanumeric_sender_ids.create(
+    alphanumeric_sender_id="MyCompany",
+    messaging_profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(alphanumeric_sender_id.data)
+```
+
+## Retrieve an alphanumeric sender ID
+
+Retrieve a specific alphanumeric sender ID.
+
+`GET /alphanumeric_sender_ids/{id}`
+
+```python
+alphanumeric_sender_id = client.alphanumeric_sender_ids.retrieve(
+    "id",
+)
+print(alphanumeric_sender_id.data)
+```
+
+## Delete an alphanumeric sender ID
+
+Delete an alphanumeric sender ID and disassociate it from its messaging profile.
+
+`DELETE /alphanumeric_sender_ids/{id}`
+
+```python
+alphanumeric_sender_id = client.alphanumeric_sender_ids.delete(
+    "id",
+)
+print(alphanumeric_sender_id.data)
+```
+
 ## Send a message
 
 Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
@@ -49,43 +103,33 @@ response = client.messages.send(
 print(response.data)
 ```
 
-## Retrieve a message
+## Send a message using an alphanumeric sender ID
 
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+Send an SMS message using an alphanumeric sender ID.
 
-`GET /messages/{id}`
+`POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
+
+Optional: `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```python
-message = client.messages.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+response = client.messages.send_with_alphanumeric_sender(
+    from_="MyCompany",
+    messaging_profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    text="text",
+    to="+E.164",
 )
-print(message.data)
+print(response.data)
 ```
 
-## Cancel a scheduled message
+## Retrieve group MMS messages
 
-Cancel a scheduled message that has not yet been sent.
+Retrieve all messages in a group MMS conversation by the group message ID.
 
-`DELETE /messages/{id}`
+`GET /messages/group/{message_id}`
 
 ```python
-response = client.messages.cancel_scheduled(
+response = client.messages.retrieve_group_messages(
     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(response.id)
-```
-
-## Send a Whatsapp message
-
-`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
-
-Optional: `type` (enum), `webhook_url` (url)
-
-```python
-response = client.messages.send_whatsapp(
-    from_="+13125551234",
-    to="+13125551234",
-    whatsapp_message={},
 )
 print(response.data)
 ```
@@ -161,6 +205,87 @@ response = client.messages.send_short_code(
 print(response.data)
 ```
 
+## Send a Whatsapp message
+
+`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
+
+Optional: `type` (enum), `webhook_url` (url)
+
+```python
+response = client.messages.send_whatsapp(
+    from_="+13125551234",
+    to="+13125551234",
+    whatsapp_message={},
+)
+print(response.data)
+```
+
+## Retrieve a message
+
+Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+
+`GET /messages/{id}`
+
+```python
+message = client.messages.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(message.data)
+```
+
+## Cancel a scheduled message
+
+Cancel a scheduled message that has not yet been sent.
+
+`DELETE /messages/{id}`
+
+```python
+response = client.messages.cancel_scheduled(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(response.id)
+```
+
+## List messaging hosted numbers
+
+List all hosted numbers associated with the authenticated user.
+
+`GET /messaging_hosted_numbers`
+
+```python
+page = client.messaging_hosted_numbers.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Retrieve a messaging hosted number
+
+Retrieve a specific messaging hosted number by its ID or phone number.
+
+`GET /messaging_hosted_numbers/{id}`
+
+```python
+messaging_hosted_number = client.messaging_hosted_numbers.retrieve(
+    "id",
+)
+print(messaging_hosted_number.data)
+```
+
+## Update a messaging hosted number
+
+Update the messaging settings for a hosted number.
+
+`PATCH /messaging_hosted_numbers/{id}`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```python
+messaging_hosted_number = client.messaging_hosted_numbers.update(
+    id="id",
+)
+print(messaging_hosted_number.data)
+```
+
 ## List opt-outs
 
 Retrieve a list of opt-out blocks.
@@ -173,84 +298,123 @@ page = page.data[0]
 print(page.messaging_profile_id)
 ```
 
-## Retrieve a phone number with messaging settings
+## List high-level messaging profile metrics
 
-`GET /phone_numbers/{id}/messaging`
+List high-level metrics for all messaging profiles belonging to the authenticated user.
+
+`GET /messaging_profile_metrics`
 
 ```python
-messaging = client.phone_numbers.messaging.retrieve(
-    "id",
-)
-print(messaging.data)
+messaging_profile_metrics = client.messaging_profile_metrics.list()
+print(messaging_profile_metrics.data)
 ```
 
-## Update the messaging profile and/or messaging product of a phone number
+## Regenerate messaging profile secret
 
-`PATCH /phone_numbers/{id}/messaging`
+Regenerate the v1 secret for a messaging profile.
 
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+`POST /messaging_profiles/{id}/actions/regenerate_secret`
 
 ```python
-messaging = client.phone_numbers.messaging.update(
-    id="id",
+response = client.messaging_profiles.actions.regenerate_secret(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
-print(messaging.data)
+print(response.data)
 ```
 
-## List phone numbers with messaging settings
+## List alphanumeric sender IDs for a messaging profile
 
-`GET /phone_numbers/messaging`
+List all alphanumeric sender IDs associated with a specific messaging profile.
+
+`GET /messaging_profiles/{id}/alphanumeric_sender_ids`
 
 ```python
-page = client.phone_numbers.messaging.list()
+page = client.messaging_profiles.list_alphanumeric_sender_ids(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
 page = page.data[0]
 print(page.id)
 ```
 
-## Retrieve a mobile phone number with messaging settings
+## Get detailed messaging profile metrics
 
-`GET /mobile_phone_numbers/{id}/messaging`
+Get detailed metrics for a specific messaging profile, broken down by time interval.
+
+`GET /messaging_profiles/{id}/metrics`
 
 ```python
-messaging = client.mobile_phone_numbers.messaging.retrieve(
-    "id",
+response = client.messaging_profiles.retrieve_metrics(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
-print(messaging.data)
+print(response.data)
 ```
 
-## List mobile phone numbers with messaging settings
+## List Auto-Response Settings
 
-`GET /mobile_phone_numbers/messaging`
+`GET /messaging_profiles/{profile_id}/autoresp_configs`
 
 ```python
-page = client.mobile_phone_numbers.messaging.list()
-page = page.data[0]
-print(page.id)
+autoresp_configs = client.messaging_profiles.autoresp_configs.list(
+    profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(autoresp_configs.data)
 ```
 
-## Bulk update phone number profiles
+## Create auto-response setting
 
-`POST /messaging_numbers/bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`POST /messaging_profiles/{profile_id}/autoresp_configs` — Required: `op`, `keywords`, `country_code`
 
-Optional: `assign_only` (boolean)
+Optional: `resp_text` (string)
 
 ```python
-messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.create(
-    messaging_profile_id="00000000-0000-0000-0000-000000000000",
-    numbers=["+18880000000", "+18880000001", "+18880000002"],
+auto_resp_config_response = client.messaging_profiles.autoresp_configs.create(
+    profile_id="profile_id",
+    country_code="US",
+    keywords=["keyword1", "keyword2"],
+    op="start",
 )
-print(messaging_numbers_bulk_update.data)
+print(auto_resp_config_response.data)
 ```
 
-## Retrieve bulk update status
+## Get Auto-Response Setting
 
-`GET /messaging_numbers/bulk_updates/{order_id}`
+`GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
 
 ```python
-messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.retrieve(
-    "order_id",
+auto_resp_config_response = client.messaging_profiles.autoresp_configs.retrieve(
+    autoresp_cfg_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
-print(messaging_numbers_bulk_update.data)
+print(auto_resp_config_response.data)
+```
+
+## Update Auto-Response Setting
+
+`PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` — Required: `op`, `keywords`, `country_code`
+
+Optional: `resp_text` (string)
+
+```python
+auto_resp_config_response = client.messaging_profiles.autoresp_configs.update(
+    autoresp_cfg_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    country_code="US",
+    keywords=["keyword1", "keyword2"],
+    op="start",
+)
+print(auto_resp_config_response.data)
+```
+
+## Delete Auto-Response Setting
+
+`DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
+
+```python
+autoresp_config = client.messaging_profiles.autoresp_configs.delete(
+    autoresp_cfg_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    profile_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(autoresp_config)
 ```
 
 ---

@@ -31,6 +31,47 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## Transcribe speech to text
+
+Transcribe speech to text.
+
+`POST /ai/audio/transcriptions`
+
+```java
+import com.telnyx.sdk.models.ai.audio.AudioTranscribeParams;
+import com.telnyx.sdk.models.ai.audio.AudioTranscribeResponse;
+
+AudioTranscribeParams params = AudioTranscribeParams.builder()
+    .model(AudioTranscribeParams.Model.DISTIL_WHISPER_DISTIL_LARGE_V2)
+    .build();
+AudioTranscribeResponse response = client.ai().audio().transcribe(params);
+```
+
+## Create a chat completion
+
+Chat with a language model.
+
+`POST /ai/chat/completions` — Required: `messages`
+
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+
+```java
+import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionParams;
+import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionResponse;
+
+ChatCreateCompletionParams params = ChatCreateCompletionParams.builder()
+    .addMessage(ChatCreateCompletionParams.Message.builder()
+        .content("You are a friendly chatbot.")
+        .role(ChatCreateCompletionParams.Message.Role.SYSTEM)
+        .build())
+    .addMessage(ChatCreateCompletionParams.Message.builder()
+        .content("Hello, world!")
+        .role(ChatCreateCompletionParams.Message.Role.USER)
+        .build())
+    .build();
+ChatCreateCompletionResponse response = client.ai().chat().createCompletion(params);
+```
+
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user.
@@ -436,108 +477,6 @@ import com.telnyx.sdk.models.ai.embeddings.EmbeddingRetrieveResponse;
 EmbeddingRetrieveResponse embedding = client.ai().embeddings().retrieve("task_id");
 ```
 
-## List all clusters
-
-`GET /ai/clusters`
-
-```java
-import com.telnyx.sdk.models.ai.clusters.ClusterListPage;
-import com.telnyx.sdk.models.ai.clusters.ClusterListParams;
-
-ClusterListPage page = client.ai().clusters().list();
-```
-
-## Compute new clusters
-
-Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
-
-`POST /ai/clusters` — Required: `bucket`
-
-Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
-
-```java
-import com.telnyx.sdk.models.ai.clusters.ClusterComputeParams;
-import com.telnyx.sdk.models.ai.clusters.ClusterComputeResponse;
-
-ClusterComputeParams params = ClusterComputeParams.builder()
-    .bucket("bucket")
-    .build();
-ClusterComputeResponse response = client.ai().clusters().compute(params);
-```
-
-## Fetch a cluster
-
-`GET /ai/clusters/{task_id}`
-
-```java
-import com.telnyx.sdk.models.ai.clusters.ClusterRetrieveParams;
-import com.telnyx.sdk.models.ai.clusters.ClusterRetrieveResponse;
-
-ClusterRetrieveResponse cluster = client.ai().clusters().retrieve("task_id");
-```
-
-## Delete a cluster
-
-`DELETE /ai/clusters/{task_id}`
-
-```java
-import com.telnyx.sdk.models.ai.clusters.ClusterDeleteParams;
-
-client.ai().clusters().delete("task_id");
-```
-
-## Fetch a cluster visualization
-
-`GET /ai/clusters/{task_id}/graph`
-
-```java
-import com.telnyx.sdk.core.http.HttpResponse;
-import com.telnyx.sdk.models.ai.clusters.ClusterFetchGraphParams;
-
-HttpResponse response = client.ai().clusters().fetchGraph("task_id");
-```
-
-## Transcribe speech to text
-
-Transcribe speech to text.
-
-`POST /ai/audio/transcriptions`
-
-```java
-import com.telnyx.sdk.models.ai.audio.AudioTranscribeParams;
-import com.telnyx.sdk.models.ai.audio.AudioTranscribeResponse;
-
-AudioTranscribeParams params = AudioTranscribeParams.builder()
-    .model(AudioTranscribeParams.Model.DISTIL_WHISPER_DISTIL_LARGE_V2)
-    .build();
-AudioTranscribeResponse response = client.ai().audio().transcribe(params);
-```
-
-## Create a chat completion
-
-Chat with a language model.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```java
-import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionParams;
-import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionResponse;
-
-ChatCreateCompletionParams params = ChatCreateCompletionParams.builder()
-    .addMessage(ChatCreateCompletionParams.Message.builder()
-        .content("You are a friendly chatbot.")
-        .role(ChatCreateCompletionParams.Message.Role.SYSTEM)
-        .build())
-    .addMessage(ChatCreateCompletionParams.Message.builder()
-        .content("Hello, world!")
-        .role(ChatCreateCompletionParams.Message.Role.USER)
-        .build())
-    .build();
-ChatCreateCompletionResponse response = client.ai().chat().createCompletion(params);
-```
-
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
@@ -596,6 +535,19 @@ import com.telnyx.sdk.models.ai.finetuning.jobs.JobCancelParams;
 FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().cancel("job_id");
 ```
 
+## Get available models
+
+This endpoint returns a list of Open Source and OpenAI models that are available for use.
+
+`GET /ai/models`
+
+```java
+import com.telnyx.sdk.models.ai.AiRetrieveModelsParams;
+import com.telnyx.sdk.models.ai.AiRetrieveModelsResponse;
+
+AiRetrieveModelsResponse response = client.ai().retrieveModels();
+```
+
 ## Create embeddings
 
 Creates an embedding vector representing the input text.
@@ -628,19 +580,6 @@ import com.telnyx.sdk.models.ai.openai.embeddings.EmbeddingListEmbeddingModelsRe
 EmbeddingListEmbeddingModelsResponse response = client.ai().openai().embeddings().listEmbeddingModels();
 ```
 
-## Get available models
-
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
-
-`GET /ai/models`
-
-```java
-import com.telnyx.sdk.models.ai.AiRetrieveModelsParams;
-import com.telnyx.sdk.models.ai.AiRetrieveModelsResponse;
-
-AiRetrieveModelsResponse response = client.ai().retrieveModels();
-```
-
 ## Summarize file content
 
 Generate a summary of a file's contents.
@@ -658,4 +597,184 @@ AiSummarizeParams params = AiSummarizeParams.builder()
     .filename("filename")
     .build();
 AiSummarizeResponse response = client.ai().summarize(params);
+```
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextListParams;
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextListResponse;
+
+SpeechToTextListResponse speechToTexts = client.legacy().reporting().batchDetailRecords().speechToText().list();
+```
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextCreateParams;
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextCreateResponse;
+import java.time.OffsetDateTime;
+
+SpeechToTextCreateParams params = SpeechToTextCreateParams.builder()
+    .endDate(OffsetDateTime.parse("2020-07-01T00:00:00-06:00"))
+    .startDate(OffsetDateTime.parse("2020-07-01T00:00:00-06:00"))
+    .build();
+SpeechToTextCreateResponse speechToText = client.legacy().reporting().batchDetailRecords().speechToText().create(params);
+```
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextRetrieveParams;
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextRetrieveResponse;
+
+SpeechToTextRetrieveResponse speechToText = client.legacy().reporting().batchDetailRecords().speechToText().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextDeleteParams;
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.speechtotext.SpeechToTextDeleteResponse;
+
+SpeechToTextDeleteResponse speechToText = client.legacy().reporting().batchDetailRecords().speechToText().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously.
+
+`GET /legacy/reporting/usage_reports/speech_to_text`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.usagereports.UsageReportRetrieveSpeechToTextParams;
+import com.telnyx.sdk.models.legacy.reporting.usagereports.UsageReportRetrieveSpeechToTextResponse;
+
+UsageReportRetrieveSpeechToTextResponse response = client.legacy().reporting().usageReports().retrieveSpeechToText();
+```
+
+## Speech to text over websocket
+
+Transcribe audio streams to text over WebSocket.
+
+`GET /speech-to-text/transcription`
+
+```java
+import com.telnyx.sdk.models.speechtotext.SpeechToTextTranscribeParams;
+
+SpeechToTextTranscribeParams params = SpeechToTextTranscribeParams.builder()
+    .inputFormat(SpeechToTextTranscribeParams.InputFormat.MP3)
+    .transcriptionEngine(SpeechToTextTranscribeParams.TranscriptionEngine.AZURE)
+    .build();
+client.speechToText().transcribe(params);
+```
+
+## Stream text to speech over WebSocket
+
+Open a WebSocket connection to stream text and receive synthesized audio in real time.
+
+`GET /text-to-speech/speech`
+
+```java
+import com.telnyx.sdk.models.texttospeech.TextToSpeechStreamParams;
+
+client.textToSpeech().stream();
+```
+
+## Generate speech from text
+
+Generate synthesized speech audio from text input.
+
+`POST /text-to-speech/speech`
+
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+
+```java
+import com.telnyx.sdk.models.texttospeech.TextToSpeechGenerateParams;
+import com.telnyx.sdk.models.texttospeech.TextToSpeechGenerateResponse;
+
+TextToSpeechGenerateResponse response = client.textToSpeech().generate();
+```
+
+## List available voices
+
+Retrieve a list of available voices from one or all TTS providers.
+
+`GET /text-to-speech/voices`
+
+```java
+import com.telnyx.sdk.models.texttospeech.TextToSpeechListVoicesParams;
+import com.telnyx.sdk.models.texttospeech.TextToSpeechListVoicesResponse;
+
+TextToSpeechListVoicesResponse response = client.textToSpeech().listVoices();
+```
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`GET /wireless/detail_records_reports`
+
+```java
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportListParams;
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportListResponse;
+
+DetailRecordsReportListResponse detailRecordsReports = client.wireless().detailRecordsReports().list();
+```
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail_records_reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```java
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportCreateParams;
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportCreateResponse;
+
+DetailRecordsReportCreateResponse detailRecordsReport = client.wireless().detailRecordsReports().create();
+```
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`GET /wireless/detail_records_reports/{id}`
+
+```java
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportRetrieveParams;
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportRetrieveResponse;
+
+DetailRecordsReportRetrieveResponse detailRecordsReport = client.wireless().detailRecordsReports().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`DELETE /wireless/detail_records_reports/{id}`
+
+```java
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportDeleteParams;
+import com.telnyx.sdk.models.wireless.detailrecordsreports.DetailRecordsReportDeleteResponse;
+
+DetailRecordsReportDeleteResponse detailRecordsReport = client.wireless().detailRecordsReports().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```

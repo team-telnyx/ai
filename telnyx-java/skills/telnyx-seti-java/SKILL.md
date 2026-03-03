@@ -31,6 +31,17 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## Get Enum
+
+`GET /10dlc/enum/{endpoint}`
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.Messaging10dlcGetEnumParams;
+import com.telnyx.sdk.models.messaging10dlc.Messaging10dlcGetEnumResponse;
+
+Messaging10dlcGetEnumResponse response = client.messaging10dlc().getEnum(Messaging10dlcGetEnumParams.Endpoint.MNO);
+```
+
 ## Retrieve Black Box Test Results
 
 Returns the results of the various black box tests

@@ -39,105 +39,6 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all call recordings
-
-Returns a list of your call recordings.
-
-`GET /recordings`
-
-```go
-	page, err := client.Recordings.List(context.TODO(), telnyx.RecordingListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Retrieve a call recording
-
-Retrieves the details of an existing call recording.
-
-`GET /recordings/{recording_id}`
-
-```go
-	recording, err := client.Recordings.Get(context.TODO(), "recording_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", recording.Data)
-```
-
-## Delete a call recording
-
-Permanently deletes a call recording.
-
-`DELETE /recordings/{recording_id}`
-
-```go
-	recording, err := client.Recordings.Delete(context.TODO(), "recording_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", recording.Data)
-```
-
-## Delete a list of call recordings
-
-Permanently deletes a list of call recordings.
-
-`POST /recordings/actions/delete`
-
-```go
-	err := client.Recordings.Actions.Delete(context.TODO(), telnyx.RecordingActionDeleteParams{
-		IDs: []string{"428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
-## List all recording transcriptions
-
-Returns a list of your recording transcriptions.
-
-`GET /recording_transcriptions`
-
-```go
-	recordingTranscriptions, err := client.RecordingTranscriptions.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", recordingTranscriptions.Data)
-```
-
-## Retrieve a recording transcription
-
-Retrieves the details of an existing recording transcription.
-
-`GET /recording_transcriptions/{recording_transcription_id}`
-
-```go
-	recordingTranscription, err := client.RecordingTranscriptions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", recordingTranscription.Data)
-```
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /recording_transcriptions/{recording_transcription_id}`
-
-```go
-	recordingTranscription, err := client.RecordingTranscriptions.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", recordingTranscription.Data)
-```
-
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
@@ -339,6 +240,48 @@ Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webho
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", externalConnection.Data)
+```
+
+## List all log messages
+
+Retrieve a list of log messages for all external connections associated with your account.
+
+`GET /external_connections/log_messages`
+
+```go
+	page, err := client.ExternalConnections.LogMessages.List(context.TODO(), telnyx.ExternalConnectionLogMessageListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Retrieve a log message
+
+Retrieve a log message for an external connection associated with your account.
+
+`GET /external_connections/log_messages/{id}`
+
+```go
+	logMessage, err := client.ExternalConnections.LogMessages.Get(context.TODO(), "1293384261075731499")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", logMessage.LogMessages)
+```
+
+## Dismiss a log message
+
+Dismiss a log message for an external connection associated with your account.
+
+`DELETE /external_connections/log_messages/{id}`
+
+```go
+	response, err := client.ExternalConnections.LogMessages.Dismiss(context.TODO(), "1293384261075731499")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Success)
 ```
 
 ## Retrieve an External Connection
@@ -656,62 +599,6 @@ If there were any errors during the upload process, this endpoint will retry the
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List all log messages
-
-Retrieve a list of log messages for all external connections associated with your account.
-
-`GET /external_connections/log_messages`
-
-```go
-	page, err := client.ExternalConnections.LogMessages.List(context.TODO(), telnyx.ExternalConnectionLogMessageListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Retrieve a log message
-
-Retrieve a log message for an external connection associated with your account.
-
-`GET /external_connections/log_messages/{id}`
-
-```go
-	logMessage, err := client.ExternalConnections.LogMessages.Get(context.TODO(), "1293384261075731499")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", logMessage.LogMessages)
-```
-
-## Dismiss a log message
-
-Dismiss a log message for an external connection associated with your account.
-
-`DELETE /external_connections/log_messages/{id}`
-
-```go
-	response, err := client.ExternalConnections.LogMessages.Dismiss(context.TODO(), "1293384261075731499")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Success)
-```
-
-## Refresh Operator Connect integration
-
-This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
-
-`POST /operator_connect/actions/refresh`
-
-```go
-	response, err := client.OperatorConnect.Actions.Refresh(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Message)
-```
-
 ## List uploaded media
 
 Returns a list of stored media files.
@@ -803,4 +690,184 @@ Downloads a stored media file.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response)
+```
+
+## Refresh Operator Connect integration
+
+This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
+
+`POST /operator_connect/actions/refresh`
+
+```go
+	response, err := client.OperatorConnect.Actions.Refresh(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Message)
+```
+
+## List all recording transcriptions
+
+Returns a list of your recording transcriptions.
+
+`GET /recording_transcriptions`
+
+```go
+	recordingTranscriptions, err := client.RecordingTranscriptions.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", recordingTranscriptions.Data)
+```
+
+## Retrieve a recording transcription
+
+Retrieves the details of an existing recording transcription.
+
+`GET /recording_transcriptions/{recording_transcription_id}`
+
+```go
+	recordingTranscription, err := client.RecordingTranscriptions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", recordingTranscription.Data)
+```
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`DELETE /recording_transcriptions/{recording_transcription_id}`
+
+```go
+	recordingTranscription, err := client.RecordingTranscriptions.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", recordingTranscription.Data)
+```
+
+## List all call recordings
+
+Returns a list of your call recordings.
+
+`GET /recordings`
+
+```go
+	page, err := client.Recordings.List(context.TODO(), telnyx.RecordingListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Delete a list of call recordings
+
+Permanently deletes a list of call recordings.
+
+`POST /recordings/actions/delete`
+
+```go
+	err := client.Recordings.Actions.Delete(context.TODO(), telnyx.RecordingActionDeleteParams{
+		IDs: []string{"428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Retrieve a call recording
+
+Retrieves the details of an existing call recording.
+
+`GET /recordings/{recording_id}`
+
+```go
+	recording, err := client.Recordings.Get(context.TODO(), "recording_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", recording.Data)
+```
+
+## Delete a call recording
+
+Permanently deletes a call recording.
+
+`DELETE /recordings/{recording_id}`
+
+```go
+	recording, err := client.Recordings.Delete(context.TODO(), "recording_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", recording.Data)
+```
+
+## Create a SIPREC connector
+
+Creates a new SIPREC connector configuration.
+
+`POST /siprec_connectors`
+
+```go
+	siprecConnector, err := client.SiprecConnectors.New(context.TODO(), telnyx.SiprecConnectorNewParams{
+		Host: "siprec.telnyx.com",
+		Name: "my-siprec-connector",
+		Port: 5060,
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", siprecConnector.Data)
+```
+
+## Retrieve a SIPREC connector
+
+Returns details of a stored SIPREC connector.
+
+`GET /siprec_connectors/{connector_name}`
+
+```go
+	siprecConnector, err := client.SiprecConnectors.Get(context.TODO(), "connector_name")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", siprecConnector.Data)
+```
+
+## Update a SIPREC connector
+
+Updates a stored SIPREC connector configuration.
+
+`PUT /siprec_connectors/{connector_name}`
+
+```go
+	siprecConnector, err := client.SiprecConnectors.Update(
+		context.TODO(),
+		"connector_name",
+		telnyx.SiprecConnectorUpdateParams{
+			Host: "siprec.telnyx.com",
+			Name: "my-siprec-connector",
+			Port: 5060,
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", siprecConnector.Data)
+```
+
+## Delete a SIPREC connector
+
+Deletes a stored SIPREC connector.
+
+`DELETE /siprec_connectors/{connector_name}`
+
+```go
+	err := client.SiprecConnectors.Delete(context.TODO(), "connector_name")
+	if err != nil {
+		panic(err.Error())
+	}
 ```

@@ -197,32 +197,15 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Event | Description |
 |-------|-------------|
-| `callPlaybackStarted` | Call Playback Started |
 | `callPlaybackEnded` | Call Playback Ended |
-| `callSpeakEnded` | Call Speak Ended |
-| `callRecordingSaved` | Call Recording Saved |
+| `callPlaybackStarted` | Call Playback Started |
 | `callRecordingError` | Call Recording Error |
+| `callRecordingSaved` | Call Recording Saved |
 | `callRecordingTranscriptionSaved` | Call Recording Transcription Saved |
+| `callSpeakEnded` | Call Speak Ended |
 | `callSpeakStarted` | Call Speak Started |
 
 ### Webhook payload fields
-
-**`callPlaybackStarted`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.media_url` | string | The audio URL being played back, if audio_url has been used to start. |
-| `data.payload.media_name` | string | The name of the audio media file being played back, if media_name has been used to start. |
-| `data.payload.overlay` | boolean | Whether the audio is going to be played in overlay mode or not. |
 
 **`callPlaybackEnded`**
 
@@ -243,7 +226,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.status` | enum | Reflects how command ended. |
 | `data.payload.status_detail` | string | Provides details in case of failure. |
 
-**`callSpeakEnded`**
+**`callPlaybackStarted`**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -256,7 +239,24 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
 | `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
 | `data.payload.client_state` | string | State received from a command. |
-| `data.payload.status` | enum | Reflects how the command ended. |
+| `data.payload.media_url` | string | The audio URL being played back, if audio_url has been used to start. |
+| `data.payload.media_name` | string | The name of the audio media file being played back, if media_name has been used to start. |
+| `data.payload.overlay` | boolean | Whether the audio is going to be played in overlay mode or not. |
+
+**`callRecordingError`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.reason` | enum | Indication that there was a problem recording the call. |
 
 **`callRecordingSaved`**
 
@@ -273,21 +273,6 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.recording_started_at` | date-time | ISO 8601 datetime of when recording started. |
 | `data.payload.recording_ended_at` | date-time | ISO 8601 datetime of when recording ended. |
 | `data.payload.channels` | enum | Whether recording was recorded in `single` or `dual` channel. |
-
-**`callRecordingError`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.reason` | enum | Indication that there was a problem recording the call. |
 
 **`callRecordingTranscriptionSaved`**
 
@@ -307,6 +292,21 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.recording_transcription_id` | string | ID that is unique to the transcription process and can be used to correlate webhook events. |
 | `data.payload.status` | enum | The transcription status. |
 | `data.payload.transcription_text` | string | The transcribed text |
+
+**`callSpeakEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.status` | enum | Reflects how the command ended. |
 
 **`callSpeakStarted`**
 

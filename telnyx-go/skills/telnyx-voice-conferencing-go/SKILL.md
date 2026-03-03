@@ -115,6 +115,24 @@ Optional: `beep_enabled` (enum), `client_state` (string), `comfort_noise` (boole
 	fmt.Printf("%+v\n", conference.Data)
 ```
 
+## List conference participants
+
+Lists conference participants
+
+`GET /conferences/{conference_id}/participants`
+
+```go
+	page, err := client.Conferences.ListParticipants(
+		context.TODO(),
+		"conference_id",
+		telnyx.ConferenceListParticipantsParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
 ## Retrieve a conference
 
 Retrieve an existing conference
@@ -131,6 +149,48 @@ Retrieve an existing conference
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", conference.Data)
+```
+
+## End a conference
+
+End a conference and terminate all active participants.
+
+`POST /conferences/{id}/actions/end`
+
+Optional: `command_id` (string)
+
+```go
+	response, err := client.Conferences.Actions.EndConference(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.ConferenceActionEndConferenceParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Gather DTMF using audio prompt in a conference
+
+Play an audio file to a specific conference participant and gather DTMF input.
+
+`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
+
+Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
+
+```go
+	response, err := client.Conferences.Actions.GatherDtmfAudio(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.ConferenceActionGatherDtmfAudioParams{
+			CallControlID: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
 ```
 
 ## Hold conference participants
@@ -283,7 +343,7 @@ Start recording the conference.
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
+Optional: `channels` (enum), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
 
 ```go
 	response, err := client.Conferences.Actions.RecordStart(
@@ -312,6 +372,28 @@ Optional: `client_state` (string), `command_id` (string), `recording_id` (uuid),
 		context.TODO(),
 		"id",
 		telnyx.ConferenceActionRecordStopParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Send DTMF to conference participants
+
+Send DTMF tones to one or more conference participants.
+
+`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+
+Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+
+```go
+	response, err := client.Conferences.Actions.SendDtmf(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.ConferenceActionSendDtmfParams{
+			Digits: "1234#",
+		},
 	)
 	if err != nil {
 		panic(err.Error())
@@ -429,40 +511,18 @@ Optional: `command_id` (string), `region` (enum), `whisper_call_control_ids` (ar
 	fmt.Printf("%+v\n", action.Data)
 ```
 
-## End a conference
+## Retrieve a conference participant
 
-End a conference and terminate all active participants.
+Retrieve details of a specific conference participant by their ID or label.
 
-`POST /conferences/{id}/actions/end`
-
-Optional: `command_id` (string)
+`GET /conferences/{id}/participants/{participant_id}`
 
 ```go
-	response, err := client.Conferences.Actions.EndConference(
+	response, err := client.Conferences.GetParticipant(
 		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.ConferenceActionEndConferenceParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Gather DTMF using audio prompt in a conference
-
-Play an audio file to a specific conference participant and gather DTMF input.
-
-`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
-
-Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
-
-```go
-	response, err := client.Conferences.Actions.GatherDtmfAudio(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.ConferenceActionGatherDtmfAudioParams{
-			CallControlID: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg",
+		"participant_id",
+		telnyx.ConferenceGetParticipantParams{
+			ID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
@@ -471,20 +531,20 @@ Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Send DTMF to conference participants
+## Update a conference participant
 
-Send DTMF tones to one or more conference participants.
+Update properties of a conference participant.
 
-`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+`PATCH /conferences/{id}/participants/{participant_id}`
 
-Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+Optional: `beep_enabled` (enum), `end_conference_on_exit` (boolean), `soft_end_conference_on_exit` (boolean)
 
 ```go
-	response, err := client.Conferences.Actions.SendDtmf(
+	response, err := client.Conferences.UpdateParticipant(
 		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.ConferenceActionSendDtmfParams{
-			Digits: "1234#",
+		"participant_id",
+		telnyx.ConferenceUpdateParticipantParams{
+			ID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
@@ -493,22 +553,161 @@ Optional: `call_control_ids` (array[string]), `client_state` (string), `duration
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List conference participants
+## List queues
 
-Lists conference participants
+List all queues for the authenticated user.
 
-`GET /conferences/{conference_id}/participants`
+`GET /queues`
 
 ```go
-	page, err := client.Conferences.ListParticipants(
+	page, err := client.Queues.List(context.TODO(), telnyx.QueueListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a queue
+
+Create a new call queue.
+
+`POST /queues` — Required: `queue_name`
+
+Optional: `max_size` (integer)
+
+```go
+	queue, err := client.Queues.New(context.TODO(), telnyx.QueueNewParams{
+		QueueName: "tier_1_support",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", queue.Data)
+```
+
+## Retrieve a call queue
+
+Retrieve an existing call queue
+
+`GET /queues/{queue_name}`
+
+```go
+	queue, err := client.Queues.Get(context.TODO(), "queue_name")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", queue.Data)
+```
+
+## Update a queue
+
+Update properties of an existing call queue.
+
+`POST /queues/{queue_name}` — Required: `max_size`
+
+```go
+	queue, err := client.Queues.Update(
 		context.TODO(),
-		"conference_id",
-		telnyx.ConferenceListParticipantsParams{},
+		"queue_name",
+		telnyx.QueueUpdateParams{
+			MaxSize: 200,
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", queue.Data)
+```
+
+## Delete a queue
+
+Delete an existing call queue.
+
+`DELETE /queues/{queue_name}`
+
+```go
+	err := client.Queues.Delete(context.TODO(), "queue_name")
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Retrieve calls from a queue
+
+Retrieve the list of calls in an existing queue
+
+`GET /queues/{queue_name}/calls`
+
+```go
+	page, err := client.Queues.Calls.List(
+		context.TODO(),
+		"queue_name",
+		telnyx.QueueCallListParams{},
 	)
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
+```
+
+## Retrieve a call from a queue
+
+Retrieve an existing call from an existing queue
+
+`GET /queues/{queue_name}/calls/{call_control_id}`
+
+```go
+	call, err := client.Queues.Calls.Get(
+		context.TODO(),
+		"call_control_id",
+		telnyx.QueueCallGetParams{
+			QueueName: "queue_name",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", call.Data)
+```
+
+## Update queued call
+
+Update queued call's keep_after_hangup flag
+
+`PATCH /queues/{queue_name}/calls/{call_control_id}`
+
+Optional: `keep_after_hangup` (boolean)
+
+```go
+	err := client.Queues.Calls.Update(
+		context.TODO(),
+		"call_control_id",
+		telnyx.QueueCallUpdateParams{
+			QueueName: "queue_name",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Force remove a call from a queue
+
+Removes an inactive call from a queue.
+
+`DELETE /queues/{queue_name}/calls/{call_control_id}`
+
+```go
+	err := client.Queues.Calls.Remove(
+		context.TODO(),
+		"call_control_id",
+		telnyx.QueueCallRemoveParams{
+			QueueName: "queue_name",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
 ```
 
 ---

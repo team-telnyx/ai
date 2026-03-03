@@ -31,6 +31,36 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## List your voice channels for non-US zones
+
+Returns the non-US voice channels for your account.
+
+`GET /channel_zones`
+
+```java
+import com.telnyx.sdk.models.channelzones.ChannelZoneListPage;
+import com.telnyx.sdk.models.channelzones.ChannelZoneListParams;
+
+ChannelZoneListPage page = client.channelZones().list();
+```
+
+## Update voice channels for non-US Zones
+
+Update the number of Voice Channels for the Non-US Zones.
+
+`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+
+```java
+import com.telnyx.sdk.models.channelzones.ChannelZoneUpdateParams;
+import com.telnyx.sdk.models.channelzones.ChannelZoneUpdateResponse;
+
+ChannelZoneUpdateParams params = ChannelZoneUpdateParams.builder()
+    .channelZoneId("channel_zone_id")
+    .channels(0L)
+    .build();
+ChannelZoneUpdateResponse channelZone = client.channelZones().update(params);
+```
+
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
@@ -152,36 +182,6 @@ import com.telnyx.sdk.models.dynamicemergencyendpoints.DynamicEmergencyEndpointD
 import com.telnyx.sdk.models.dynamicemergencyendpoints.DynamicEmergencyEndpointDeleteResponse;
 
 DynamicEmergencyEndpointDeleteResponse dynamicEmergencyEndpoint = client.dynamicEmergencyEndpoints().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## List your voice channels for non-US zones
-
-Returns the non-US voice channels for your account.
-
-`GET /channel_zones`
-
-```java
-import com.telnyx.sdk.models.channelzones.ChannelZoneListPage;
-import com.telnyx.sdk.models.channelzones.ChannelZoneListParams;
-
-ChannelZoneListPage page = client.channelZones().list();
-```
-
-## Update voice channels for non-US Zones
-
-Update the number of Voice Channels for the Non-US Zones.
-
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
-
-```java
-import com.telnyx.sdk.models.channelzones.ChannelZoneUpdateParams;
-import com.telnyx.sdk.models.channelzones.ChannelZoneUpdateResponse;
-
-ChannelZoneUpdateParams params = ChannelZoneUpdateParams.builder()
-    .channelZoneId("channel_zone_id")
-    .channels(0L)
-    .build();
-ChannelZoneUpdateResponse channelZone = client.channelZones().update(params);
 ```
 
 ## List your voice channels for US Zone

@@ -32,6 +32,55 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## List all Access IP Addresses
+
+`GET /access_ip_address`
+
+```java
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListPage;
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListParams;
+
+AccessIpAddressListPage page = client.accessIpAddress().list();
+```
+
+## Create new Access IP Address
+
+`POST /access_ip_address` — Required: `ip_address`
+
+Optional: `description` (string)
+
+```java
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressCreateParams;
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
+
+AccessIpAddressCreateParams params = AccessIpAddressCreateParams.builder()
+    .ipAddress("ip_address")
+    .build();
+AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().create(params);
+```
+
+## Retrieve an access IP address
+
+`GET /access_ip_address/{access_ip_address_id}`
+
+```java
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressRetrieveParams;
+
+AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().retrieve("access_ip_address_id");
+```
+
+## Delete access IP address
+
+`DELETE /access_ip_address/{access_ip_address_id}`
+
+```java
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressDeleteParams;
+import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
+
+AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().delete("access_ip_address_id");
+```
+
 ## List all addresses
 
 Returns a list of your addresses.
@@ -66,6 +115,26 @@ AddressCreateParams params = AddressCreateParams.builder()
     .streetAddress("600 Congress Avenue")
     .build();
 AddressCreateResponse address = client.addresses().create(params);
+```
+
+## Validate an address
+
+Validates an address for emergency services.
+
+`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+
+Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+
+```java
+import com.telnyx.sdk.models.addresses.actions.ActionValidateParams;
+import com.telnyx.sdk.models.addresses.actions.ActionValidateResponse;
+
+ActionValidateParams params = ActionValidateParams.builder()
+    .countryCode("US")
+    .postalCode("78701")
+    .streetAddress("600 Congress Avenue")
+    .build();
+ActionValidateResponse response = client.addresses().actions().validate(params);
 ```
 
 ## Retrieve an address
@@ -105,26 +174,6 @@ import com.telnyx.sdk.models.addresses.actions.ActionAcceptSuggestionsParams;
 import com.telnyx.sdk.models.addresses.actions.ActionAcceptSuggestionsResponse;
 
 ActionAcceptSuggestionsResponse response = client.addresses().actions().acceptSuggestions("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Validate an address
-
-Validates an address for emergency services.
-
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
-
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
-
-```java
-import com.telnyx.sdk.models.addresses.actions.ActionValidateParams;
-import com.telnyx.sdk.models.addresses.actions.ActionValidateResponse;
-
-ActionValidateParams params = ActionValidateParams.builder()
-    .countryCode("US")
-    .postalCode("78701")
-    .streetAddress("600 Congress Avenue")
-    .build();
-ActionValidateResponse response = client.addresses().actions().validate(params);
 ```
 
 ## List all SSO authentication providers
@@ -309,89 +358,14 @@ import com.telnyx.sdk.models.integrationsecrets.IntegrationSecretDeleteParams;
 client.integrationSecrets().delete("id");
 ```
 
-## List all Access IP Addresses
+## Create an Access Token.
 
-`GET /access_ip_address`
+Create an Access Token (JWT) for the credential.
 
-```java
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListPage;
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListParams;
-
-AccessIpAddressListPage page = client.accessIpAddress().list();
-```
-
-## Create new Access IP Address
-
-`POST /access_ip_address` — Required: `ip_address`
-
-Optional: `description` (string)
+`POST /telephony_credentials/{id}/token`
 
 ```java
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressCreateParams;
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
+import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialCreateTokenParams;
 
-AccessIpAddressCreateParams params = AccessIpAddressCreateParams.builder()
-    .ipAddress("ip_address")
-    .build();
-AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().create(params);
-```
-
-## Retrieve an access IP address
-
-`GET /access_ip_address/{access_ip_address_id}`
-
-```java
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressRetrieveParams;
-
-AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().retrieve("access_ip_address_id");
-```
-
-## Delete access IP address
-
-`DELETE /access_ip_address/{access_ip_address_id}`
-
-```java
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressDeleteParams;
-import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
-
-AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().delete("access_ip_address_id");
-```
-
-## List all Access IP Ranges
-
-`GET /access_ip_ranges`
-
-```java
-import com.telnyx.sdk.models.accessipranges.AccessIpRangeListPage;
-import com.telnyx.sdk.models.accessipranges.AccessIpRangeListParams;
-
-AccessIpRangeListPage page = client.accessIpRanges().list();
-```
-
-## Create new Access IP Range
-
-`POST /access_ip_ranges` — Required: `cidr_block`
-
-Optional: `description` (string)
-
-```java
-import com.telnyx.sdk.models.accessipranges.AccessIpRange;
-import com.telnyx.sdk.models.accessipranges.AccessIpRangeCreateParams;
-
-AccessIpRangeCreateParams params = AccessIpRangeCreateParams.builder()
-    .cidrBlock("cidr_block")
-    .build();
-AccessIpRange accessIpRange = client.accessIpRanges().create(params);
-```
-
-## Delete access IP ranges
-
-`DELETE /access_ip_ranges/{access_ip_range_id}`
-
-```java
-import com.telnyx.sdk.models.accessipranges.AccessIpRange;
-import com.telnyx.sdk.models.accessipranges.AccessIpRangeDeleteParams;
-
-AccessIpRange accessIpRange = client.accessIpRanges().delete("access_ip_range_id");
+String response = client.telephonyCredentials().createToken("id");
 ```

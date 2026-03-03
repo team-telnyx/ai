@@ -74,80 +74,6 @@ OAuthRetrieveAuthorizeParams params = OAuthRetrieveAuthorizeParams.builder()
 client.oauth().retrieveAuthorize(params);
 ```
 
-## List OAuth clients
-
-Retrieve a paginated list of OAuth clients for the authenticated user
-
-`GET /oauth/clients`
-
-```java
-import com.telnyx.sdk.models.oauthclients.OAuthClientListPage;
-import com.telnyx.sdk.models.oauthclients.OAuthClientListParams;
-
-OAuthClientListPage page = client.oauthClients().list();
-```
-
-## Create OAuth client
-
-Create a new OAuth client
-
-`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
-
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```java
-import com.telnyx.sdk.models.oauthclients.OAuthClientCreateParams;
-import com.telnyx.sdk.models.oauthclients.OAuthClientCreateResponse;
-
-OAuthClientCreateParams params = OAuthClientCreateParams.builder()
-    .addAllowedGrantType(OAuthClientCreateParams.AllowedGrantType.CLIENT_CREDENTIALS)
-    .addAllowedScope("admin")
-    .clientType(OAuthClientCreateParams.ClientType.PUBLIC)
-    .name("My OAuth client")
-    .build();
-OAuthClientCreateResponse oauthClient = client.oauthClients().create(params);
-```
-
-## Get OAuth client
-
-Retrieve a single OAuth client by ID
-
-`GET /oauth/clients/{id}`
-
-```java
-import com.telnyx.sdk.models.oauthclients.OAuthClientRetrieveParams;
-import com.telnyx.sdk.models.oauthclients.OAuthClientRetrieveResponse;
-
-OAuthClientRetrieveResponse oauthClient = client.oauthClients().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Update OAuth client
-
-Update an existing OAuth client
-
-`PUT /oauth/clients/{id}`
-
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```java
-import com.telnyx.sdk.models.oauthclients.OAuthClientUpdateParams;
-import com.telnyx.sdk.models.oauthclients.OAuthClientUpdateResponse;
-
-OAuthClientUpdateResponse oauthClient = client.oauthClients().update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Delete OAuth client
-
-Delete an OAuth client
-
-`DELETE /oauth/clients/{id}`
-
-```java
-import com.telnyx.sdk.models.oauthclients.OAuthClientDeleteParams;
-
-client.oauthClients().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -161,43 +87,21 @@ import com.telnyx.sdk.models.oauth.OAuthRetrieveResponse;
 OAuthRetrieveResponse oauth = client.oauth().retrieve("consent_token");
 ```
 
-## List OAuth grants
+## Create OAuth grant
 
-Retrieve a paginated list of OAuth grants for the authenticated user
+Create an OAuth authorization grant
 
-`GET /oauth/grants`
-
-```java
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantListPage;
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantListParams;
-
-OAuthGrantListPage page = client.oauthGrants().list();
-```
-
-## Get OAuth grant
-
-Retrieve a single OAuth grant by ID
-
-`GET /oauth/grants/{id}`
+`POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```java
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantRetrieveParams;
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantRetrieveResponse;
+import com.telnyx.sdk.models.oauth.OAuthGrantsParams;
+import com.telnyx.sdk.models.oauth.OAuthGrantsResponse;
 
-OAuthGrantRetrieveResponse oauthGrant = client.oauthGrants().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Revoke OAuth grant
-
-Revoke an OAuth grant
-
-`DELETE /oauth/grants/{id}`
-
-```java
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantDeleteParams;
-import com.telnyx.sdk.models.oauthgrants.OAuthGrantDeleteResponse;
-
-OAuthGrantDeleteResponse oauthGrant = client.oauthGrants().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+OAuthGrantsParams params = OAuthGrantsParams.builder()
+    .allowed(true)
+    .consentToken("consent_token")
+    .build();
+OAuthGrantsResponse response = client.oauth().grants(params);
 ```
 
 ## Token introspection
@@ -260,4 +164,117 @@ OAuthTokenParams params = OAuthTokenParams.builder()
     .grantType(OAuthTokenParams.GrantType.CLIENT_CREDENTIALS)
     .build();
 OAuthTokenResponse response = client.oauth().token(params);
+```
+
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth_clients`
+
+```java
+import com.telnyx.sdk.models.oauthclients.OAuthClientListPage;
+import com.telnyx.sdk.models.oauthclients.OAuthClientListParams;
+
+OAuthClientListPage page = client.oauthClients().list();
+```
+
+## Create OAuth client
+
+Create a new OAuth client
+
+`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```java
+import com.telnyx.sdk.models.oauthclients.OAuthClientCreateParams;
+import com.telnyx.sdk.models.oauthclients.OAuthClientCreateResponse;
+
+OAuthClientCreateParams params = OAuthClientCreateParams.builder()
+    .addAllowedGrantType(OAuthClientCreateParams.AllowedGrantType.CLIENT_CREDENTIALS)
+    .addAllowedScope("admin")
+    .clientType(OAuthClientCreateParams.ClientType.PUBLIC)
+    .name("My OAuth client")
+    .build();
+OAuthClientCreateResponse oauthClient = client.oauthClients().create(params);
+```
+
+## Get OAuth client
+
+Retrieve a single OAuth client by ID
+
+`GET /oauth_clients/{id}`
+
+```java
+import com.telnyx.sdk.models.oauthclients.OAuthClientRetrieveParams;
+import com.telnyx.sdk.models.oauthclients.OAuthClientRetrieveResponse;
+
+OAuthClientRetrieveResponse oauthClient = client.oauthClients().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Update OAuth client
+
+Update an existing OAuth client
+
+`PUT /oauth_clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```java
+import com.telnyx.sdk.models.oauthclients.OAuthClientUpdateParams;
+import com.telnyx.sdk.models.oauthclients.OAuthClientUpdateResponse;
+
+OAuthClientUpdateResponse oauthClient = client.oauthClients().update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Delete OAuth client
+
+Delete an OAuth client
+
+`DELETE /oauth_clients/{id}`
+
+```java
+import com.telnyx.sdk.models.oauthclients.OAuthClientDeleteParams;
+
+client.oauthClients().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth_grants`
+
+```java
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantListPage;
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantListParams;
+
+OAuthGrantListPage page = client.oauthGrants().list();
+```
+
+## Get OAuth grant
+
+Retrieve a single OAuth grant by ID
+
+`GET /oauth_grants/{id}`
+
+```java
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantRetrieveParams;
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantRetrieveResponse;
+
+OAuthGrantRetrieveResponse oauthGrant = client.oauthGrants().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Revoke OAuth grant
+
+Revoke an OAuth grant
+
+`DELETE /oauth_grants/{id}`
+
+```java
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantDeleteParams;
+import com.telnyx.sdk.models.oauthgrants.OAuthGrantDeleteResponse;
+
+OAuthGrantDeleteResponse oauthGrant = client.oauthGrants().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```

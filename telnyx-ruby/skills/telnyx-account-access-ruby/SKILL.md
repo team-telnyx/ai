@@ -33,6 +33,48 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List all Access IP Addresses
+
+`GET /access_ip_address`
+
+```ruby
+page = client.access_ip_address.list
+
+puts(page)
+```
+
+## Create new Access IP Address
+
+`POST /access_ip_address` — Required: `ip_address`
+
+Optional: `description` (string)
+
+```ruby
+access_ip_address_response = client.access_ip_address.create(ip_address: "ip_address")
+
+puts(access_ip_address_response)
+```
+
+## Retrieve an access IP address
+
+`GET /access_ip_address/{access_ip_address_id}`
+
+```ruby
+access_ip_address_response = client.access_ip_address.retrieve("access_ip_address_id")
+
+puts(access_ip_address_response)
+```
+
+## Delete access IP address
+
+`DELETE /access_ip_address/{access_ip_address_id}`
+
+```ruby
+access_ip_address_response = client.access_ip_address.delete("access_ip_address_id")
+
+puts(access_ip_address_response)
+```
+
 ## List all addresses
 
 Returns a list of your addresses.
@@ -64,6 +106,24 @@ address = client.addresses.create(
 )
 
 puts(address)
+```
+
+## Validate an address
+
+Validates an address for emergency services.
+
+`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+
+Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+
+```ruby
+response = client.addresses.actions.validate(
+  country_code: "US",
+  postal_code: "78701",
+  street_address: "600 Congress Avenue"
+)
+
+puts(response)
 ```
 
 ## Retrieve an address
@@ -98,24 +158,6 @@ Optional: `id` (string)
 
 ```ruby
 response = client.addresses.actions.accept_suggestions("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(response)
-```
-
-## Validate an address
-
-Validates an address for emergency services.
-
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
-
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
-
-```ruby
-response = client.addresses.actions.validate(
-  country_code: "US",
-  postal_code: "78701",
-  street_address: "600 Congress Avenue"
-)
 
 puts(response)
 ```
@@ -284,76 +326,14 @@ result = client.integration_secrets.delete("id")
 puts(result)
 ```
 
-## List all Access IP Addresses
+## Create an Access Token.
 
-`GET /access_ip_address`
+Create an Access Token (JWT) for the credential.
 
-```ruby
-page = client.access_ip_address.list
-
-puts(page)
-```
-
-## Create new Access IP Address
-
-`POST /access_ip_address` — Required: `ip_address`
-
-Optional: `description` (string)
+`POST /telephony_credentials/{id}/token`
 
 ```ruby
-access_ip_address_response = client.access_ip_address.create(ip_address: "ip_address")
+response = client.telephony_credentials.create_token("id")
 
-puts(access_ip_address_response)
-```
-
-## Retrieve an access IP address
-
-`GET /access_ip_address/{access_ip_address_id}`
-
-```ruby
-access_ip_address_response = client.access_ip_address.retrieve("access_ip_address_id")
-
-puts(access_ip_address_response)
-```
-
-## Delete access IP address
-
-`DELETE /access_ip_address/{access_ip_address_id}`
-
-```ruby
-access_ip_address_response = client.access_ip_address.delete("access_ip_address_id")
-
-puts(access_ip_address_response)
-```
-
-## List all Access IP Ranges
-
-`GET /access_ip_ranges`
-
-```ruby
-page = client.access_ip_ranges.list
-
-puts(page)
-```
-
-## Create new Access IP Range
-
-`POST /access_ip_ranges` — Required: `cidr_block`
-
-Optional: `description` (string)
-
-```ruby
-access_ip_range = client.access_ip_ranges.create(cidr_block: "cidr_block")
-
-puts(access_ip_range)
-```
-
-## Delete access IP ranges
-
-`DELETE /access_ip_ranges/{access_ip_range_id}`
-
-```ruby
-access_ip_range = client.access_ip_ranges.delete("access_ip_range_id")
-
-puts(access_ip_range)
+puts(response)
 ```

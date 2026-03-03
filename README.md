@@ -32,7 +32,7 @@ Replace `telnyx-python` with the plugin for your stack:
 | `telnyx-twilio-migration` | Migrate from Twilio to Telnyx |
 <!-- END GENERATED PLUGIN_TABLE -->
 
-Each language plugin includes all <!-- PRODUCT_COUNT -->35<!-- /PRODUCT_COUNT --> Telnyx products (messaging, voice, numbers, IoT, AI, and more).
+Each language plugin includes all <!-- PRODUCT_COUNT -->36<!-- /PRODUCT_COUNT --> Telnyx products (messaging, voice, numbers, IoT, AI, and more).
 
 The WebRTC client plugin covers building VoIP calling apps — see [WebRTC Client SDKs](#webrtc-client-sdks) for details.
 
@@ -69,7 +69,7 @@ Skills are organized by product and language. Each product is available in **Jav
 | `telnyx-messaging-hosted-*` | Hosted SMS numbers, toll-free verification, RCS |
 | `telnyx-10dlc-*` | 10DLC brand/campaign registration for A2P compliance |
 
-#### Voice
+#### Voice & Communications
 
 | Skill | Description |
 |-------|-------------|
@@ -80,16 +80,11 @@ Skills are organized by product and language. Each product is available in **Jav
 | `telnyx-voice-conferencing-*` | Conference calls, queues, multi-party sessions |
 | `telnyx-voice-advanced-*` | DTMF sending, SIPREC, noise suppression, supervisor |
 | `telnyx-texml-*` | TeXML (TwiML-compatible) voice applications |
-
-#### Connectivity
-
-| Skill | Description |
-|-------|-------------|
 | `telnyx-sip-*` | SIP trunking connections, outbound voice profiles |
 | `telnyx-sip-integrations-*` | Call recordings, media storage, Dialogflow integration |
 | `telnyx-webrtc-*` | WebRTC credentials and push notification setup (server-side — see [Client SDKs](#webrtc-client-sdks) for the calling UI) |
 
-#### Phone Numbers
+#### Numbers
 
 | Skill | Description |
 |-------|-------------|
@@ -99,21 +94,27 @@ Skills are organized by product and language. Each product is available in **Jav
 | `telnyx-numbers-services-*` | Voicemail, voice channels, E911 |
 | `telnyx-porting-in-*` | Port numbers into Telnyx |
 | `telnyx-porting-out-*` | Manage port-out requests |
+| `telnyx-verify-*` | Phone verification, number lookup, 2FA |
 
-#### Identity & AI
+#### AI
 
 | Skill | Description |
 |-------|-------------|
-| `telnyx-verify-*` | Phone verification, number lookup, 2FA |
 | `telnyx-ai-assistants-*` | AI voice assistants with knowledge bases |
 | `telnyx-ai-inference-*` | LLM inference, embeddings, AI analytics |
+| `telnyx-missions-*` | Automated AI-driven workflows and tasks |
 
-#### Other
+#### IoT & Networking
 
 | Skill | Description |
 |-------|-------------|
 | `telnyx-iot-*` | IoT SIM cards, eSIMs, data plans |
 | `telnyx-networking-*` | Private networks, VPN gateways |
+
+#### Other
+
+| Skill | Description |
+|-------|-------------|
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |

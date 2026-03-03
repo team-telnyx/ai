@@ -93,6 +93,20 @@ conference = client.conferences.create(
 print(conference.data)
 ```
 
+## List conference participants
+
+Lists conference participants
+
+`GET /conferences/{conference_id}/participants`
+
+```python
+page = client.conferences.list_participants(
+    conference_id="conference_id",
+)
+page = page.data[0]
+print(page.id)
+```
+
 ## Retrieve a conference
 
 Retrieve an existing conference
@@ -104,6 +118,37 @@ conference = client.conferences.retrieve(
     id="id",
 )
 print(conference.data)
+```
+
+## End a conference
+
+End a conference and terminate all active participants.
+
+`POST /conferences/{id}/actions/end`
+
+Optional: `command_id` (string)
+
+```python
+response = client.conferences.actions.end_conference(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(response.data)
+```
+
+## Gather DTMF using audio prompt in a conference
+
+Play an audio file to a specific conference participant and gather DTMF input.
+
+`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
+
+Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
+
+```python
+response = client.conferences.actions.gather_dtmf_audio(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    call_control_id="v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg",
+)
+print(response.data)
 ```
 
 ## Hold conference participants
@@ -219,7 +264,7 @@ Start recording the conference.
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
+Optional: `channels` (enum), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
 
 ```python
 response = client.conferences.actions.record_start(
@@ -240,6 +285,22 @@ Optional: `client_state` (string), `command_id` (string), `recording_id` (uuid),
 ```python
 response = client.conferences.actions.record_stop(
     id="id",
+)
+print(response.data)
+```
+
+## Send DTMF to conference participants
+
+Send DTMF tones to one or more conference participants.
+
+`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+
+Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+
+```python
+response = client.conferences.actions.send_dtmf(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    digits="1234#",
 )
 print(response.data)
 ```
@@ -324,65 +385,156 @@ action = client.conferences.actions.update(
 print(action.data)
 ```
 
-## End a conference
+## Retrieve a conference participant
 
-End a conference and terminate all active participants.
+Retrieve details of a specific conference participant by their ID or label.
 
-`POST /conferences/{id}/actions/end`
-
-Optional: `command_id` (string)
+`GET /conferences/{id}/participants/{participant_id}`
 
 ```python
-response = client.conferences.actions.end_conference(
+response = client.conferences.retrieve_participant(
+    participant_id="participant_id",
     id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
 print(response.data)
 ```
 
-## Gather DTMF using audio prompt in a conference
+## Update a conference participant
 
-Play an audio file to a specific conference participant and gather DTMF input.
+Update properties of a conference participant.
 
-`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
+`PATCH /conferences/{id}/participants/{participant_id}`
 
-Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
+Optional: `beep_enabled` (enum), `end_conference_on_exit` (boolean), `soft_end_conference_on_exit` (boolean)
 
 ```python
-response = client.conferences.actions.gather_dtmf_audio(
+response = client.conferences.update_participant(
+    participant_id="participant_id",
     id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-    call_control_id="v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg",
 )
 print(response.data)
 ```
 
-## Send DTMF to conference participants
+## List queues
 
-Send DTMF tones to one or more conference participants.
+List all queues for the authenticated user.
 
-`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
-
-Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+`GET /queues`
 
 ```python
-response = client.conferences.actions.send_dtmf(
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-    digits="1234#",
-)
-print(response.data)
-```
-
-## List conference participants
-
-Lists conference participants
-
-`GET /conferences/{conference_id}/participants`
-
-```python
-page = client.conferences.list_participants(
-    conference_id="conference_id",
-)
+page = client.queues.list()
 page = page.data[0]
 print(page.id)
+```
+
+## Create a queue
+
+Create a new call queue.
+
+`POST /queues` — Required: `queue_name`
+
+Optional: `max_size` (integer)
+
+```python
+queue = client.queues.create(
+    queue_name="tier_1_support",
+)
+print(queue.data)
+```
+
+## Retrieve a call queue
+
+Retrieve an existing call queue
+
+`GET /queues/{queue_name}`
+
+```python
+queue = client.queues.retrieve(
+    "queue_name",
+)
+print(queue.data)
+```
+
+## Update a queue
+
+Update properties of an existing call queue.
+
+`POST /queues/{queue_name}` — Required: `max_size`
+
+```python
+queue = client.queues.update(
+    queue_name="queue_name",
+    max_size=200,
+)
+print(queue.data)
+```
+
+## Delete a queue
+
+Delete an existing call queue.
+
+`DELETE /queues/{queue_name}`
+
+```python
+client.queues.delete(
+    "queue_name",
+)
+```
+
+## Retrieve calls from a queue
+
+Retrieve the list of calls in an existing queue
+
+`GET /queues/{queue_name}/calls`
+
+```python
+page = client.queues.calls.list(
+    queue_name="queue_name",
+)
+page = page.data[0]
+print(page.call_control_id)
+```
+
+## Retrieve a call from a queue
+
+Retrieve an existing call from an existing queue
+
+`GET /queues/{queue_name}/calls/{call_control_id}`
+
+```python
+call = client.queues.calls.retrieve(
+    call_control_id="call_control_id",
+    queue_name="queue_name",
+)
+print(call.data)
+```
+
+## Update queued call
+
+Update queued call's keep_after_hangup flag
+
+`PATCH /queues/{queue_name}/calls/{call_control_id}`
+
+Optional: `keep_after_hangup` (boolean)
+
+```python
+client.queues.calls.update(
+    call_control_id="call_control_id",
+    queue_name="queue_name",
+)
+```
+
+## Force remove a call from a queue
+
+Removes an inactive call from a queue.
+
+`DELETE /queues/{queue_name}/calls/{call_control_id}`
+
+```python
+client.queues.calls.remove(
+    call_control_id="call_control_id",
+    queue_name="queue_name",
+)
 ```
 
 ---

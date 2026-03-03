@@ -91,6 +91,21 @@ const conference = await client.conferences.create({
 console.log(conference.data);
 ```
 
+## List conference participants
+
+Lists conference participants
+
+`GET /conferences/{conference_id}/participants`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const conferenceListParticipantsResponse of client.conferences.listParticipants(
+  'conference_id',
+)) {
+  console.log(conferenceListParticipantsResponse.id);
+}
+```
+
 ## Retrieve a conference
 
 Retrieve an existing conference
@@ -101,6 +116,39 @@ Retrieve an existing conference
 const conference = await client.conferences.retrieve('id');
 
 console.log(conference.data);
+```
+
+## End a conference
+
+End a conference and terminate all active participants.
+
+`POST /conferences/{id}/actions/end`
+
+Optional: `command_id` (string)
+
+```javascript
+const response = await client.conferences.actions.endConference(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(response.data);
+```
+
+## Gather DTMF using audio prompt in a conference
+
+Play an audio file to a specific conference participant and gather DTMF input.
+
+`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
+
+Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
+
+```javascript
+const response = await client.conferences.actions.gatherDtmfAudio(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { call_control_id: 'v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg' },
+);
+
+console.log(response.data);
 ```
 
 ## Hold conference participants
@@ -211,7 +259,7 @@ Start recording the conference.
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
+Optional: `channels` (enum), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
 
 ```javascript
 const response = await client.conferences.actions.recordStart('id', { format: 'wav' });
@@ -229,6 +277,22 @@ Optional: `client_state` (string), `command_id` (string), `recording_id` (uuid),
 
 ```javascript
 const response = await client.conferences.actions.recordStop('id');
+
+console.log(response.data);
+```
+
+## Send DTMF to conference participants
+
+Send DTMF tones to one or more conference participants.
+
+`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+
+Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+
+```javascript
+const response = await client.conferences.actions.sendDtmf('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
+  digits: '1234#',
+});
 
 console.log(response.data);
 ```
@@ -311,68 +375,142 @@ const action = await client.conferences.actions.update('id', {
 console.log(action.data);
 ```
 
-## End a conference
+## Retrieve a conference participant
 
-End a conference and terminate all active participants.
+Retrieve details of a specific conference participant by their ID or label.
 
-`POST /conferences/{id}/actions/end`
-
-Optional: `command_id` (string)
+`GET /conferences/{id}/participants/{participant_id}`
 
 ```javascript
-const response = await client.conferences.actions.endConference(
-  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-);
-
-console.log(response.data);
-```
-
-## Gather DTMF using audio prompt in a conference
-
-Play an audio file to a specific conference participant and gather DTMF input.
-
-`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
-
-Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
-
-```javascript
-const response = await client.conferences.actions.gatherDtmfAudio(
-  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-  { call_control_id: 'v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg' },
-);
-
-console.log(response.data);
-```
-
-## Send DTMF to conference participants
-
-Send DTMF tones to one or more conference participants.
-
-`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
-
-Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
-
-```javascript
-const response = await client.conferences.actions.sendDtmf('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
-  digits: '1234#',
+const response = await client.conferences.retrieveParticipant('participant_id', {
+  id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
 });
 
 console.log(response.data);
 ```
 
-## List conference participants
+## Update a conference participant
 
-Lists conference participants
+Update properties of a conference participant.
 
-`GET /conferences/{conference_id}/participants`
+`PATCH /conferences/{id}/participants/{participant_id}`
+
+Optional: `beep_enabled` (enum), `end_conference_on_exit` (boolean), `soft_end_conference_on_exit` (boolean)
+
+```javascript
+const response = await client.conferences.updateParticipant('participant_id', {
+  id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+});
+
+console.log(response.data);
+```
+
+## List queues
+
+List all queues for the authenticated user.
+
+`GET /queues`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const conferenceListParticipantsResponse of client.conferences.listParticipants(
-  'conference_id',
-)) {
-  console.log(conferenceListParticipantsResponse.id);
+for await (const queue of client.queues.list()) {
+  console.log(queue.id);
 }
+```
+
+## Create a queue
+
+Create a new call queue.
+
+`POST /queues` — Required: `queue_name`
+
+Optional: `max_size` (integer)
+
+```javascript
+const queue = await client.queues.create({ queue_name: 'tier_1_support' });
+
+console.log(queue.data);
+```
+
+## Retrieve a call queue
+
+Retrieve an existing call queue
+
+`GET /queues/{queue_name}`
+
+```javascript
+const queue = await client.queues.retrieve('queue_name');
+
+console.log(queue.data);
+```
+
+## Update a queue
+
+Update properties of an existing call queue.
+
+`POST /queues/{queue_name}` — Required: `max_size`
+
+```javascript
+const queue = await client.queues.update('queue_name', { max_size: 200 });
+
+console.log(queue.data);
+```
+
+## Delete a queue
+
+Delete an existing call queue.
+
+`DELETE /queues/{queue_name}`
+
+```javascript
+await client.queues.delete('queue_name');
+```
+
+## Retrieve calls from a queue
+
+Retrieve the list of calls in an existing queue
+
+`GET /queues/{queue_name}/calls`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const callListResponse of client.queues.calls.list('queue_name')) {
+  console.log(callListResponse.call_control_id);
+}
+```
+
+## Retrieve a call from a queue
+
+Retrieve an existing call from an existing queue
+
+`GET /queues/{queue_name}/calls/{call_control_id}`
+
+```javascript
+const call = await client.queues.calls.retrieve('call_control_id', { queue_name: 'queue_name' });
+
+console.log(call.data);
+```
+
+## Update queued call
+
+Update queued call's keep_after_hangup flag
+
+`PATCH /queues/{queue_name}/calls/{call_control_id}`
+
+Optional: `keep_after_hangup` (boolean)
+
+```javascript
+await client.queues.calls.update('call_control_id', { queue_name: 'queue_name' });
+```
+
+## Force remove a call from a queue
+
+Removes an inactive call from a queue.
+
+`DELETE /queues/{queue_name}/calls/{call_control_id}`
+
+```javascript
+await client.queues.calls.remove('call_control_id', { queue_name: 'queue_name' });
 ```
 
 ---

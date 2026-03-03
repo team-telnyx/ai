@@ -32,42 +32,59 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## Lists the phone number blocks jobs
+## Bulk update phone number profiles
 
-`GET /phone_number_blocks/jobs`
+`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
 
-```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobListPage;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobListParams;
-
-JobListPage page = client.phoneNumberBlocks().jobs().list();
-```
-
-## Retrieves a phone number blocks job
-
-`GET /phone_number_blocks/jobs/{id}`
+Optional: `assign_only` (boolean)
 
 ```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobRetrieveParams;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobRetrieveResponse;
+import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateCreateParams;
+import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateCreateResponse;
+import java.util.List;
 
-JobRetrieveResponse job = client.phoneNumberBlocks().jobs().retrieve("id");
-```
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
-
-```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobDeletePhoneNumberBlockParams;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobDeletePhoneNumberBlockResponse;
-
-JobDeletePhoneNumberBlockParams params = JobDeletePhoneNumberBlockParams.builder()
-    .phoneNumberBlockId("f3946371-7199-4261-9c3d-81a0d7935146")
+MessagingNumbersBulkUpdateCreateParams params = MessagingNumbersBulkUpdateCreateParams.builder()
+    .messagingProfileId("00000000-0000-0000-0000-000000000000")
+    .numbers(List.of(
+      "+18880000000",
+      "+18880000001",
+      "+18880000002"
+    ))
     .build();
-JobDeletePhoneNumberBlockResponse response = client.phoneNumberBlocks().jobs().deletePhoneNumberBlock(params);
+MessagingNumbersBulkUpdateCreateResponse messagingNumbersBulkUpdate = client.messagingNumbersBulkUpdates().create(params);
+```
+
+## Retrieve bulk update status
+
+`GET /messaging_numbers_bulk_updates/{order_id}`
+
+```java
+import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateRetrieveParams;
+import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateRetrieveResponse;
+
+MessagingNumbersBulkUpdateRetrieveResponse messagingNumbersBulkUpdate = client.messagingNumbersBulkUpdates().retrieve("order_id");
+```
+
+## List mobile phone numbers with messaging settings
+
+`GET /mobile_phone_numbers/messaging`
+
+```java
+import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingListPage;
+import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingListParams;
+
+MessagingListPage page = client.mobilePhoneNumbers().messaging().list();
+```
+
+## Retrieve a mobile phone number with messaging settings
+
+`GET /mobile_phone_numbers/{id}/messaging`
+
+```java
+import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingRetrieveParams;
+import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingRetrieveResponse;
+
+MessagingRetrieveResponse messaging = client.mobilePhoneNumbers().messaging().retrieve("id");
 ```
 
 ## List phone numbers
@@ -79,6 +96,143 @@ import com.telnyx.sdk.models.phonenumbers.PhoneNumberListPage;
 import com.telnyx.sdk.models.phonenumbers.PhoneNumberListParams;
 
 PhoneNumberListPage page = client.phoneNumbers().list();
+```
+
+## Verify ownership of phone numbers
+
+Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+
+`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.actions.ActionVerifyOwnershipParams;
+import com.telnyx.sdk.models.phonenumbers.actions.ActionVerifyOwnershipResponse;
+
+ActionVerifyOwnershipParams params = ActionVerifyOwnershipParams.builder()
+    .addPhoneNumber("+15551234567")
+    .build();
+ActionVerifyOwnershipResponse response = client.phoneNumbers().actions().verifyOwnership(params);
+```
+
+## Lists the phone numbers jobs
+
+`GET /phone_numbers/jobs`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.jobs.JobListPage;
+import com.telnyx.sdk.models.phonenumbers.jobs.JobListParams;
+
+JobListPage page = client.phoneNumbers().jobs().list();
+```
+
+## Delete a batch of numbers
+
+Creates a new background job to delete a batch of numbers.
+
+`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.jobs.JobDeleteBatchParams;
+import com.telnyx.sdk.models.phonenumbers.jobs.JobDeleteBatchResponse;
+import java.util.List;
+
+JobDeleteBatchParams params = JobDeleteBatchParams.builder()
+    .phoneNumbers(List.of(
+      "+19705555098",
+      "+19715555098",
+      "32873127836"
+    ))
+    .build();
+JobDeleteBatchResponse response = client.phoneNumbers().jobs().deleteBatch(params);
+```
+
+## Update the emergency settings from a batch of numbers
+
+Creates a background job to update the emergency settings of a collection of phone numbers.
+
+`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+
+Optional: `emergency_address_id` (['string', 'null'])
+
+```java
+import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateEmergencySettingsBatchParams;
+import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateEmergencySettingsBatchResponse;
+import java.util.List;
+
+JobUpdateEmergencySettingsBatchParams params = JobUpdateEmergencySettingsBatchParams.builder()
+    .emergencyEnabled(true)
+    .phoneNumbers(List.of(
+      "+19705555098",
+      "+19715555098",
+      "32873127836"
+    ))
+    .build();
+JobUpdateEmergencySettingsBatchResponse response = client.phoneNumbers().jobs().updateEmergencySettingsBatch(params);
+```
+
+## Update a batch of numbers
+
+Creates a new background job to update a batch of numbers.
+
+`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+
+```java
+import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateBatchParams;
+import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateBatchResponse;
+
+JobUpdateBatchParams params = JobUpdateBatchParams.builder()
+    .addPhoneNumber("1583466971586889004")
+    .addPhoneNumber("+13127367254")
+    .build();
+JobUpdateBatchResponse response = client.phoneNumbers().jobs().updateBatch(params);
+```
+
+## Retrieve a phone numbers job
+
+`GET /phone_numbers/jobs/{id}`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.jobs.JobRetrieveParams;
+import com.telnyx.sdk.models.phonenumbers.jobs.JobRetrieveResponse;
+
+JobRetrieveResponse job = client.phoneNumbers().jobs().retrieve("id");
+```
+
+## List phone numbers with messaging settings
+
+`GET /phone_numbers/messaging`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingListPage;
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingListParams;
+
+MessagingListPage page = client.phoneNumbers().messaging().list();
+```
+
+## Slim List phone numbers
+
+List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+
+`GET /phone_numbers/slim`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.PhoneNumberSlimListPage;
+import com.telnyx.sdk.models.phonenumbers.PhoneNumberSlimListParams;
+
+PhoneNumberSlimListPage page = client.phoneNumbers().slimList();
+```
+
+## List phone numbers with voice settings
+
+`GET /phone_numbers/voice`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.voice.VoiceListPage;
+import com.telnyx.sdk.models.phonenumbers.voice.VoiceListParams;
+
+VoiceListPage page = client.phoneNumbers().voice().list();
 ```
 
 ## Retrieve a phone number
@@ -147,6 +301,30 @@ ActionEnableEmergencyParams params = ActionEnableEmergencyParams.builder()
 ActionEnableEmergencyResponse response = client.phoneNumbers().actions().enableEmergency(params);
 ```
 
+## Retrieve a phone number with messaging settings
+
+`GET /phone_numbers/{id}/messaging`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingRetrieveParams;
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingRetrieveResponse;
+
+MessagingRetrieveResponse messaging = client.phoneNumbers().messaging().retrieve("id");
+```
+
+## Update the messaging profile and/or messaging product of a phone number
+
+`PATCH /phone_numbers/{id}/messaging`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```java
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingUpdateParams;
+import com.telnyx.sdk.models.phonenumbers.messaging.MessagingUpdateResponse;
+
+MessagingUpdateResponse messaging = client.phoneNumbers().messaging().update("id");
+```
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -174,176 +352,6 @@ VoiceUpdateParams params = VoiceUpdateParams.builder()
     .updateVoiceSettings(UpdateVoiceSettings.builder().build())
     .build();
 VoiceUpdateResponse voice = client.phoneNumbers().voice().update(params);
-```
-
-## Verify ownership of phone numbers
-
-Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
-
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.actions.ActionVerifyOwnershipParams;
-import com.telnyx.sdk.models.phonenumbers.actions.ActionVerifyOwnershipResponse;
-
-ActionVerifyOwnershipParams params = ActionVerifyOwnershipParams.builder()
-    .addPhoneNumber("+15551234567")
-    .build();
-ActionVerifyOwnershipResponse response = client.phoneNumbers().actions().verifyOwnership(params);
-```
-
-## List CSV downloads
-
-`GET /phone_numbers/csv_downloads`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadListPage;
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadListParams;
-
-CsvDownloadListPage page = client.phoneNumbers().csvDownloads().list();
-```
-
-## Create a CSV download
-
-`POST /phone_numbers/csv_downloads`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadCreateParams;
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadCreateResponse;
-
-CsvDownloadCreateResponse csvDownload = client.phoneNumbers().csvDownloads().create();
-```
-
-## Retrieve a CSV download
-
-`GET /phone_numbers/csv_downloads/{id}`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadRetrieveParams;
-import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadRetrieveResponse;
-
-CsvDownloadRetrieveResponse csvDownload = client.phoneNumbers().csvDownloads().retrieve("id");
-```
-
-## Lists the phone numbers jobs
-
-`GET /phone_numbers/jobs`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.jobs.JobListPage;
-import com.telnyx.sdk.models.phonenumbers.jobs.JobListParams;
-
-JobListPage page = client.phoneNumbers().jobs().list();
-```
-
-## Retrieve a phone numbers job
-
-`GET /phone_numbers/jobs/{id}`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.jobs.JobRetrieveParams;
-import com.telnyx.sdk.models.phonenumbers.jobs.JobRetrieveResponse;
-
-JobRetrieveResponse job = client.phoneNumbers().jobs().retrieve("id");
-```
-
-## Delete a batch of numbers
-
-Creates a new background job to delete a batch of numbers.
-
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.jobs.JobDeleteBatchParams;
-import com.telnyx.sdk.models.phonenumbers.jobs.JobDeleteBatchResponse;
-import java.util.List;
-
-JobDeleteBatchParams params = JobDeleteBatchParams.builder()
-    .phoneNumbers(List.of(
-      "+19705555098",
-      "+19715555098",
-      "32873127836"
-    ))
-    .build();
-JobDeleteBatchResponse response = client.phoneNumbers().jobs().deleteBatch(params);
-```
-
-## Update the emergency settings from a batch of numbers
-
-Creates a background job to update the emergency settings of a collection of phone numbers.
-
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
-
-Optional: `emergency_address_id` (['string', 'null'])
-
-```java
-import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateEmergencySettingsBatchParams;
-import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateEmergencySettingsBatchResponse;
-import java.util.List;
-
-JobUpdateEmergencySettingsBatchParams params = JobUpdateEmergencySettingsBatchParams.builder()
-    .emergencyEnabled(true)
-    .phoneNumbers(List.of(
-      "+19705555098",
-      "+19715555098",
-      "32873127836"
-    ))
-    .build();
-JobUpdateEmergencySettingsBatchResponse response = client.phoneNumbers().jobs().updateEmergencySettingsBatch(params);
-```
-
-## Update a batch of numbers
-
-Creates a new background job to update a batch of numbers.
-
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
-
-```java
-import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateBatchParams;
-import com.telnyx.sdk.models.phonenumbers.jobs.JobUpdateBatchResponse;
-
-JobUpdateBatchParams params = JobUpdateBatchParams.builder()
-    .addPhoneNumber("1583466971586889004")
-    .addPhoneNumber("+13127367254")
-    .build();
-JobUpdateBatchResponse response = client.phoneNumbers().jobs().updateBatch(params);
-```
-
-## Retrieve regulatory requirements for a list of phone numbers
-
-`GET /phone_numbers/regulatory_requirements`
-
-```java
-import com.telnyx.sdk.models.phonenumbersregulatoryrequirements.PhoneNumbersRegulatoryRequirementRetrieveParams;
-import com.telnyx.sdk.models.phonenumbersregulatoryrequirements.PhoneNumbersRegulatoryRequirementRetrieveResponse;
-
-PhoneNumbersRegulatoryRequirementRetrieveResponse phoneNumbersRegulatoryRequirement = client.phoneNumbersRegulatoryRequirements().retrieve();
-```
-
-## Slim List phone numbers
-
-List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
-
-`GET /phone_numbers/slim`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.PhoneNumberSlimListPage;
-import com.telnyx.sdk.models.phonenumbers.PhoneNumberSlimListParams;
-
-PhoneNumberSlimListPage page = client.phoneNumbers().slimList();
-```
-
-## List phone numbers with voice settings
-
-`GET /phone_numbers/voice`
-
-```java
-import com.telnyx.sdk.models.phonenumbers.voice.VoiceListPage;
-import com.telnyx.sdk.models.phonenumbers.voice.VoiceListParams;
-
-VoiceListPage page = client.phoneNumbers().voice().list();
 ```
 
 ## List Mobile Phone Numbers

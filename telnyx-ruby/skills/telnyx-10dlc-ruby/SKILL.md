@@ -65,6 +65,30 @@ telnyx_brand = client.messaging_10dlc.brand.create(
 puts(telnyx_brand)
 ```
 
+## Get Brand Feedback By Id
+
+Get feedback about a brand by ID.
+
+`GET /10dlc/brand/feedback/{brandId}`
+
+```ruby
+response = client.messaging_10dlc.brand.get_feedback("brandId")
+
+puts(response)
+```
+
+## Get Brand SMS OTP Status
+
+Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
+
+`GET /10dlc/brand/smsOtp/{referenceId}`
+
+```ruby
+response = client.messaging_10dlc.brand.get_sms_otp_by_reference("OTP4B2001")
+
+puts(response)
+```
+
 ## Get Brand
 
 Retrieve a brand by `brandId`.
@@ -215,60 +239,6 @@ result = client.messaging_10dlc.brand.verify_sms_otp("4b20019b-043a-78f8-0657-b3
 puts(result)
 ```
 
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```ruby
-response = client.messaging_10dlc.brand.get_sms_otp_by_reference("OTP4B2001")
-
-puts(response)
-```
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID.
-
-`GET /10dlc/brand_feedback/{brandId}`
-
-```ruby
-response = client.messaging_10dlc.brand.get_feedback("brandId")
-
-puts(response)
-```
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```ruby
-telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
-  brand_id: "brandId",
-  description: "description",
-  usecase: "usecase"
-)
-
-puts(telnyx_campaign_csp)
-```
-
-## Qualify By Usecase
-
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
-
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
-
-```ruby
-response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase("usecase", brand_id: "brandId")
-
-puts(response)
-```
-
 ## List Campaigns
 
 Retrieve a list of campaigns associated with a supplied `brandId`.
@@ -279,6 +249,28 @@ Retrieve a list of campaigns associated with a supplied `brandId`.
 page = client.messaging_10dlc.campaign.list(brand_id: "brandId")
 
 puts(page)
+```
+
+## Accept Shared Campaign
+
+Manually accept a campaign shared with Telnyx
+
+`POST /10dlc/campaign/acceptSharing/{campaignId}`
+
+```ruby
+response = client.messaging_10dlc.campaign.accept_sharing("C26F1KLZN")
+
+puts(response)
+```
+
+## Get Campaign Cost
+
+`GET /10dlc/campaign/usecase/cost`
+
+```ruby
+response = client.messaging_10dlc.campaign.usecase.get_cost(usecase: "usecase")
+
+puts(response)
 ```
 
 ## Get campaign
@@ -360,7 +352,7 @@ puts(response)
 
 ## Get OSR campaign attributes
 
-`GET /10dlc/campaign/{campaignId}/osr_attributes`
+`GET /10dlc/campaign/{campaignId}/osr/attributes`
 
 ```ruby
 response = client.messaging_10dlc.campaign.osr.get_attributes("campaignId")
@@ -378,24 +370,57 @@ response = client.messaging_10dlc.campaign.get_sharing_status("campaignId")
 puts(response)
 ```
 
-## Accept Shared Campaign
+## Submit Campaign
 
-Manually accept a campaign shared with Telnyx
+Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
 
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
+`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
+
+Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
 
 ```ruby
-response = client.messaging_10dlc.campaign.accept_sharing("C26F1KLZN")
+telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
+  brand_id: "brandId",
+  description: "description",
+  usecase: "usecase"
+)
+
+puts(telnyx_campaign_csp)
+```
+
+## Qualify By Usecase
+
+This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+
+`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+```ruby
+response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase("usecase", brand_id: "brandId")
 
 puts(response)
 ```
 
-## Get Campaign Cost
+## List shared partner campaigns
 
-`GET /10dlc/campaign/usecase_cost`
+Get all partner campaigns you have shared to Telnyx in a paginated fashion
+
+This endpoint is currently limited to only returning shared campaigns that Telnyx
+has accepted.
+
+`GET /10dlc/partnerCampaign/sharedByMe`
 
 ```ruby
-response = client.messaging_10dlc.campaign.usecase.get_cost(usecase: "usecase")
+page = client.messaging_10dlc.partner_campaigns.list_shared_by_me
+
+puts(page)
+```
+
+## Get Sharing Status
+
+`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+
+```ruby
+response = client.messaging_10dlc.partner_campaigns.retrieve_sharing_status("campaignId")
 
 puts(response)
 ```
@@ -438,29 +463,44 @@ telnyx_downstream_campaign = client.messaging_10dlc.partner_campaigns.update("ca
 puts(telnyx_downstream_campaign)
 ```
 
-## Get Sharing Status
+## Assign Messaging Profile To Campaign
 
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
+
+`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
+
+Optional: `campaignId` (string), `tcrCampaignId` (string)
 
 ```ruby
-response = client.messaging_10dlc.partner_campaigns.retrieve_sharing_status("campaignId")
+response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
+  messaging_profile_id: "4001767e-ce0f-4cae-9d5f-0d5e636e7809"
+)
 
 puts(response)
 ```
 
-## List shared partner campaigns
+## Get Assignment Task Status
 
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
+Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
 
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
 
 ```ruby
-page = client.messaging_10dlc.partner_campaigns.list_shared_by_me
+response = client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status("taskId")
 
-puts(page)
+puts(response)
+```
+
+## Get Phone Number Status
+
+Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
+
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
+
+```ruby
+response = client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status("taskId")
+
+puts(response)
 ```
 
 ## List phone number campaigns
@@ -522,46 +562,6 @@ This endpoint allows you to remove a campaign assignment from the supplied `phon
 phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.delete("phoneNumber")
 
 puts(phone_number_campaign)
-```
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
-
-```ruby
-response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
-  messaging_profile_id: "4001767e-ce0f-4cae-9d5f-0d5e636e7809"
-)
-
-puts(response)
-```
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```ruby
-response = client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status("taskId")
-
-puts(response)
-```
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```ruby
-response = client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status("taskId")
-
-puts(response)
 ```
 
 ---

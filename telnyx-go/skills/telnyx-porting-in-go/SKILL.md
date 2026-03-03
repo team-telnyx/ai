@@ -39,6 +39,22 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Run a portability check
+
+Runs a portability check, returning the results immediately.
+
+`POST /portability_checks`
+
+Optional: `phone_numbers` (array[string])
+
+```go
+	response, err := client.PortabilityChecks.Run(context.TODO(), telnyx.PortabilityCheckRunParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
 ## List all porting events
 
 Returns a list of all porting events.
@@ -84,7 +100,7 @@ Republish a specific porting event.
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration_preview`
+`POST /porting/loa_configuration/preview`
 
 ```go
 	response, err := client.Porting.LoaConfigurations.Preview0(context.TODO(), telnyx.PortingLoaConfigurationPreview0Params{
@@ -232,6 +248,67 @@ Preview a specific LOA configuration.
 	fmt.Printf("%+v\n", response)
 ```
 
+## List porting related reports
+
+List the reports generated about porting operations.
+
+`GET /porting/reports`
+
+```go
+	page, err := client.Porting.Reports.List(context.TODO(), telnyx.PortingReportListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a porting related report
+
+Generate reports about porting operations.
+
+`POST /porting/reports`
+
+```go
+	report, err := client.Porting.Reports.New(context.TODO(), telnyx.PortingReportNewParams{
+		Params: telnyx.ExportPortingOrdersCsvReportParam{
+			Filters: telnyx.ExportPortingOrdersCsvReportFiltersParam{},
+		},
+		ReportType: telnyx.PortingReportNewParamsReportTypeExportPortingOrdersCsv,
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", report.Data)
+```
+
+## Retrieve a report
+
+Retrieve a specific report generated.
+
+`GET /porting/reports/{id}`
+
+```go
+	report, err := client.Porting.Reports.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", report.Data)
+```
+
+## List available carriers in the UK
+
+List available carriers in the UK.
+
+`GET /porting/uk_carriers`
+
+```go
+	response, err := client.Porting.ListUkCarriers(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
 ## List all porting orders
 
 Returns a list of your porting order.
@@ -262,6 +339,48 @@ Optional: `customer_group_reference` (string), `customer_reference` (['string', 
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", portingOrder.Data)
+```
+
+## List all exception types
+
+Returns a list of all possible exception types for a porting order.
+
+`GET /porting_orders/exception_types`
+
+```go
+	response, err := client.PortingOrders.GetExceptionTypes(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## List all phone number configurations
+
+Returns a list of phone number configurations paginated.
+
+`GET /porting_orders/phone_number_configurations`
+
+```go
+	page, err := client.PortingOrders.PhoneNumberConfigurations.List(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a list of phone number configurations
+
+Creates a list of phone number configurations.
+
+`POST /porting_orders/phone_number_configurations`
+
+```go
+	phoneNumberConfiguration, err := client.PortingOrders.PhoneNumberConfigurations.New(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", phoneNumberConfiguration.Data)
 ```
 
 ## Retrieve a porting order
@@ -869,53 +988,11 @@ Deletes a phone number extension.
 	fmt.Printf("%+v\n", phoneNumberExtension.Data)
 ```
 
-## List all exception types
-
-Returns a list of all possible exception types for a porting order.
-
-`GET /porting_orders/exception_types`
-
-```go
-	response, err := client.PortingOrders.GetExceptionTypes(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## List all phone number configurations
-
-Returns a list of phone number configurations paginated.
-
-`GET /porting_orders/phone_number_configurations`
-
-```go
-	page, err := client.PortingOrders.PhoneNumberConfigurations.List(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a list of phone number configurations
-
-Creates a list of phone number configurations.
-
-`POST /porting_orders/phone_number_configurations`
-
-```go
-	phoneNumberConfiguration, err := client.PortingOrders.PhoneNumberConfigurations.New(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", phoneNumberConfiguration.Data)
-```
-
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting/phone_numbers`
+`GET /porting_phone_numbers`
 
 ```go
 	page, err := client.PortingPhoneNumbers.List(context.TODO(), telnyx.PortingPhoneNumberListParams{})
@@ -923,81 +1000,4 @@ Returns a list of your porting phone numbers.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
-```
-
-## List porting related reports
-
-List the reports generated about porting operations.
-
-`GET /porting/reports`
-
-```go
-	page, err := client.Porting.Reports.List(context.TODO(), telnyx.PortingReportListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a porting related report
-
-Generate reports about porting operations.
-
-`POST /porting/reports`
-
-```go
-	report, err := client.Porting.Reports.New(context.TODO(), telnyx.PortingReportNewParams{
-		Params: telnyx.ExportPortingOrdersCsvReportParam{
-			Filters: telnyx.ExportPortingOrdersCsvReportFiltersParam{},
-		},
-		ReportType: telnyx.PortingReportNewParamsReportTypeExportPortingOrdersCsv,
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", report.Data)
-```
-
-## Retrieve a report
-
-Retrieve a specific report generated.
-
-`GET /porting/reports/{id}`
-
-```go
-	report, err := client.Porting.Reports.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", report.Data)
-```
-
-## List available carriers in the UK
-
-List available carriers in the UK.
-
-`GET /porting/uk_carriers`
-
-```go
-	response, err := client.Porting.ListUkCarriers(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Run a portability check
-
-Runs a portability check, returning the results immediately.
-
-`POST /portability_checks`
-
-Optional: `phone_numbers` (array[string])
-
-```go
-	response, err := client.PortabilityChecks.Run(context.TODO(), telnyx.PortabilityCheckRunParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
 ```

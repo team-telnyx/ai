@@ -33,6 +33,32 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List your voice channels for non-US zones
+
+Returns the non-US voice channels for your account.
+
+`GET /channel_zones`
+
+```python
+page = client.channel_zones.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Update voice channels for non-US Zones
+
+Update the number of Voice Channels for the Non-US Zones.
+
+`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+
+```python
+channel_zone = client.channel_zones.update(
+    channel_zone_id="channel_zone_id",
+    channels=0,
+)
+print(channel_zone.id)
+```
+
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
@@ -144,32 +170,6 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.delete(
     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
 print(dynamic_emergency_endpoint.data)
-```
-
-## List your voice channels for non-US zones
-
-Returns the non-US voice channels for your account.
-
-`GET /channel_zones`
-
-```python
-page = client.channel_zones.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Update voice channels for non-US Zones
-
-Update the number of Voice Channels for the Non-US Zones.
-
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
-
-```python
-channel_zone = client.channel_zones.update(
-    channel_zone_id="channel_zone_id",
-    channels=0,
-)
-print(channel_zone.id)
 ```
 
 ## List your voice channels for US Zone

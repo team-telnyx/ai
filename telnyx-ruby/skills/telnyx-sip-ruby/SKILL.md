@@ -33,66 +33,36 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all outbound voice profiles
+## List all Access IP Ranges
 
-Get all outbound voice profiles belonging to the user that match the given filters.
-
-`GET /outbound_voice_profiles`
+`GET /access_ip_ranges`
 
 ```ruby
-page = client.outbound_voice_profiles.list
+page = client.access_ip_ranges.list
 
 puts(page)
 ```
 
-## Create an outbound voice profile
+## Create new Access IP Range
 
-Create an outbound voice profile.
+`POST /access_ip_ranges` — Required: `cidr_block`
 
-`POST /outbound_voice_profiles` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+Optional: `description` (string)
 
 ```ruby
-outbound_voice_profile = client.outbound_voice_profiles.create(name: "office")
+access_ip_range = client.access_ip_ranges.create(cidr_block: "cidr_block")
 
-puts(outbound_voice_profile)
+puts(access_ip_range)
 ```
 
-## Retrieve an outbound voice profile
+## Delete access IP ranges
 
-Retrieves the details of an existing outbound voice profile.
-
-`GET /outbound_voice_profiles/{id}`
+`DELETE /access_ip_ranges/{access_ip_range_id}`
 
 ```ruby
-outbound_voice_profile = client.outbound_voice_profiles.retrieve("1293384261075731499")
+access_ip_range = client.access_ip_ranges.delete("access_ip_range_id")
 
-puts(outbound_voice_profile)
-```
-
-## Updates an existing outbound voice profile.
-
-`PATCH /outbound_voice_profiles/{id}` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
-
-```ruby
-outbound_voice_profile = client.outbound_voice_profiles.update("1293384261075731499", name: "office")
-
-puts(outbound_voice_profile)
-```
-
-## Delete an outbound voice profile
-
-Deletes an existing outbound voice profile.
-
-`DELETE /outbound_voice_profiles/{id}`
-
-```ruby
-outbound_voice_profile = client.outbound_voice_profiles.delete("1293384261075731499")
-
-puts(outbound_voice_profile)
+puts(access_ip_range)
 ```
 
 ## List connections
@@ -199,132 +169,68 @@ response = client.credential_connections.actions.check_registration_status("id")
 puts(response)
 ```
 
-## List Ips
+## List FQDN connections
 
-Get all IPs belonging to the user that match the given filters.
+Returns a list of your FQDN connections.
 
-`GET /ips`
+`GET /fqdn_connections`
 
 ```ruby
-page = client.ips.list
+page = client.fqdn_connections.list
 
 puts(page)
 ```
 
-## Create an Ip
+## Create an FQDN connection
 
-Create a new IP object.
+Creates a FQDN connection.
 
-`POST /ips` — Required: `ip_address`
+`POST /fqdn_connections` — Required: `connection_name`
 
-Optional: `connection_id` (string), `port` (integer)
-
-```ruby
-ip = client.ips.create(ip_address: "192.168.0.0")
-
-puts(ip)
-```
-
-## Retrieve an Ip
-
-Return the details regarding a specific IP.
-
-`GET /ips/{id}`
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```ruby
-ip = client.ips.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+fqdn_connection = client.fqdn_connections.create(connection_name: "string")
 
-puts(ip)
+puts(fqdn_connection)
 ```
 
-## Update an Ip
+## Retrieve an FQDN connection
 
-Update the details of a specific IP.
+Retrieves the details of an existing FQDN connection.
 
-`PATCH /ips/{id}` — Required: `ip_address`
-
-Optional: `connection_id` (string), `port` (integer)
+`GET /fqdn_connections/{id}`
 
 ```ruby
-ip = client.ips.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58", ip_address: "192.168.0.0")
+fqdn_connection = client.fqdn_connections.retrieve("1293384261075731499")
 
-puts(ip)
+puts(fqdn_connection)
 ```
 
-## Delete an Ip
+## Update an FQDN connection
 
-Delete an IP.
+Updates settings of an existing FQDN connection.
 
-`DELETE /ips/{id}`
-
-```ruby
-ip = client.ips.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(ip)
-```
-
-## List Ip connections
-
-Returns a list of your IP connections.
-
-`GET /ip_connections`
-
-```ruby
-page = client.ip_connections.list
-
-puts(page)
-```
-
-## Create an Ip connection
-
-Creates an IP connection.
-
-`POST /ip_connections`
+`PATCH /fqdn_connections/{id}`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```ruby
-ip_connection = client.ip_connections.create
+fqdn_connection = client.fqdn_connections.update("1293384261075731499")
 
-puts(ip_connection)
+puts(fqdn_connection)
 ```
 
-## Retrieve an Ip connection
+## Delete an FQDN connection
 
-Retrieves the details of an existing ip connection.
+Deletes an FQDN connection.
 
-`GET /ip_connections/{id}`
-
-```ruby
-ip_connection = client.ip_connections.retrieve("id")
-
-puts(ip_connection)
-```
-
-## Update an Ip connection
-
-Updates settings of an existing IP connection.
-
-`PATCH /ip_connections/{id}`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+`DELETE /fqdn_connections/{id}`
 
 ```ruby
-ip_connection = client.ip_connections.update("id")
+fqdn_connection = client.fqdn_connections.delete("1293384261075731499")
 
-puts(ip_connection)
-```
-
-## Delete an Ip connection
-
-Deletes an existing IP connection.
-
-`DELETE /ip_connections/{id}`
-
-```ruby
-ip_connection = client.ip_connections.delete("id")
-
-puts(ip_connection)
+puts(fqdn_connection)
 ```
 
 ## List FQDNs
@@ -391,120 +297,192 @@ fqdn = client.fqdns.delete("1517907029795014409")
 puts(fqdn)
 ```
 
-## List FQDN connections
+## List Ip connections
 
-Returns a list of your FQDN connections.
+Returns a list of your IP connections.
 
-`GET /fqdn_connections`
+`GET /ip_connections`
 
 ```ruby
-page = client.fqdn_connections.list
+page = client.ip_connections.list
 
 puts(page)
 ```
 
-## Create an FQDN connection
+## Create an Ip connection
 
-Creates a FQDN connection.
+Creates an IP connection.
 
-`POST /fqdn_connections` — Required: `connection_name`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
-
-```ruby
-fqdn_connection = client.fqdn_connections.create(connection_name: "string")
-
-puts(fqdn_connection)
-```
-
-## Retrieve an FQDN connection
-
-Retrieves the details of an existing FQDN connection.
-
-`GET /fqdn_connections/{id}`
-
-```ruby
-fqdn_connection = client.fqdn_connections.retrieve("1293384261075731499")
-
-puts(fqdn_connection)
-```
-
-## Update an FQDN connection
-
-Updates settings of an existing FQDN connection.
-
-`PATCH /fqdn_connections/{id}`
+`POST /ip_connections`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```ruby
-fqdn_connection = client.fqdn_connections.update("1293384261075731499")
+ip_connection = client.ip_connections.create
 
-puts(fqdn_connection)
+puts(ip_connection)
 ```
 
-## Delete an FQDN connection
+## Retrieve an Ip connection
 
-Deletes an FQDN connection.
+Retrieves the details of an existing ip connection.
 
-`DELETE /fqdn_connections/{id}`
+`GET /ip_connections/{id}`
 
 ```ruby
-fqdn_connection = client.fqdn_connections.delete("1293384261075731499")
+ip_connection = client.ip_connections.retrieve("id")
 
-puts(fqdn_connection)
+puts(ip_connection)
 ```
 
-## List Mobile Voice Connections
+## Update an Ip connection
 
-`GET /v2/mobile_voice_connections`
+Updates settings of an existing IP connection.
+
+`PATCH /ip_connections/{id}`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```ruby
-page = client.mobile_voice_connections.list
+ip_connection = client.ip_connections.update("id")
+
+puts(ip_connection)
+```
+
+## Delete an Ip connection
+
+Deletes an existing IP connection.
+
+`DELETE /ip_connections/{id}`
+
+```ruby
+ip_connection = client.ip_connections.delete("id")
+
+puts(ip_connection)
+```
+
+## List Ips
+
+Get all IPs belonging to the user that match the given filters.
+
+`GET /ips`
+
+```ruby
+page = client.ips.list
 
 puts(page)
 ```
 
-## Create a Mobile Voice Connection
+## Create an Ip
 
-`POST /v2/mobile_voice_connections`
+Create a new IP object.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
+`POST /ips` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
 
 ```ruby
-mobile_voice_connection = client.mobile_voice_connections.create
+ip = client.ips.create(ip_address: "192.168.0.0")
 
-puts(mobile_voice_connection)
+puts(ip)
 ```
 
-## Retrieve a Mobile Voice Connection
+## Retrieve an Ip
 
-`GET /v2/mobile_voice_connections/{id}`
+Return the details regarding a specific IP.
+
+`GET /ips/{id}`
 
 ```ruby
-mobile_voice_connection = client.mobile_voice_connections.retrieve("id")
+ip = client.ips.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
-puts(mobile_voice_connection)
+puts(ip)
 ```
 
-## Update a Mobile Voice Connection
+## Update an Ip
 
-`PATCH /v2/mobile_voice_connections/{id}`
+Update the details of a specific IP.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
+`PATCH /ips/{id}` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
 
 ```ruby
-mobile_voice_connection = client.mobile_voice_connections.update("id")
+ip = client.ips.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58", ip_address: "192.168.0.0")
 
-puts(mobile_voice_connection)
+puts(ip)
 ```
 
-## Delete a Mobile Voice Connection
+## Delete an Ip
 
-`DELETE /v2/mobile_voice_connections/{id}`
+Delete an IP.
+
+`DELETE /ips/{id}`
 
 ```ruby
-mobile_voice_connection = client.mobile_voice_connections.delete("id")
+ip = client.ips.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
-puts(mobile_voice_connection)
+puts(ip)
+```
+
+## Get all outbound voice profiles
+
+Get all outbound voice profiles belonging to the user that match the given filters.
+
+`GET /outbound_voice_profiles`
+
+```ruby
+page = client.outbound_voice_profiles.list
+
+puts(page)
+```
+
+## Create an outbound voice profile
+
+Create an outbound voice profile.
+
+`POST /outbound_voice_profiles` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```ruby
+outbound_voice_profile = client.outbound_voice_profiles.create(name: "office")
+
+puts(outbound_voice_profile)
+```
+
+## Retrieve an outbound voice profile
+
+Retrieves the details of an existing outbound voice profile.
+
+`GET /outbound_voice_profiles/{id}`
+
+```ruby
+outbound_voice_profile = client.outbound_voice_profiles.retrieve("1293384261075731499")
+
+puts(outbound_voice_profile)
+```
+
+## Updates an existing outbound voice profile.
+
+`PATCH /outbound_voice_profiles/{id}` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```ruby
+outbound_voice_profile = client.outbound_voice_profiles.update("1293384261075731499", name: "office")
+
+puts(outbound_voice_profile)
+```
+
+## Delete an outbound voice profile
+
+Deletes an existing outbound voice profile.
+
+`DELETE /outbound_voice_profiles/{id}`
+
+```ruby
+outbound_voice_profile = client.outbound_voice_profiles.delete("1293384261075731499")
+
+puts(outbound_voice_profile)
 ```

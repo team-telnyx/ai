@@ -45,92 +45,6 @@ page = page.data[0]
 print(page.id)
 ```
 
-## Get a portout request
-
-Returns the portout request based on the ID provided
-
-`GET /portouts/{id}`
-
-```python
-portout = client.portouts.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(portout.data)
-```
-
-## List all comments for a portout request
-
-Returns a list of comments for a portout request.
-
-`GET /portouts/{id}/comments`
-
-```python
-comments = client.portouts.comments.list(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(comments.data)
-```
-
-## Create a comment on a portout request
-
-Creates a comment on a portout request.
-
-`POST /portouts/{id}/comments`
-
-Optional: `body` (string)
-
-```python
-comment = client.portouts.comments.create(
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(comment.data)
-```
-
-## List supporting documents on a portout request
-
-List every supporting documents for a portout request.
-
-`GET /portouts/{id}/supporting_documents`
-
-```python
-supporting_documents = client.portouts.supporting_documents.list(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(supporting_documents.data)
-```
-
-## Create a list of supporting documents on a portout request
-
-Creates a list of supporting documents on a portout request.
-
-`POST /portouts/{id}/supporting_documents`
-
-Optional: `documents` (array[object])
-
-```python
-supporting_document = client.portouts.supporting_documents.create(
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(supporting_document.data)
-```
-
-## Update Status
-
-Authorize or reject portout request
-
-`PATCH /portouts/{id}/{status}` — Required: `reason`
-
-Optional: `host_messaging` (boolean)
-
-```python
-response = client.portouts.update_status(
-    status="authorized",
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-    reason="I do not recognize this transaction",
-)
-print(response.data)
-```
-
 ## List all port-out events
 
 Returns a list of all port-out events.
@@ -220,4 +134,90 @@ report = client.portouts.reports.retrieve(
     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
 print(report.data)
+```
+
+## Get a portout request
+
+Returns the portout request based on the ID provided
+
+`GET /portouts/{id}`
+
+```python
+portout = client.portouts.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(portout.data)
+```
+
+## List all comments for a portout request
+
+Returns a list of comments for a portout request.
+
+`GET /portouts/{id}/comments`
+
+```python
+comments = client.portouts.comments.list(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(comments.data)
+```
+
+## Create a comment on a portout request
+
+Creates a comment on a portout request.
+
+`POST /portouts/{id}/comments`
+
+Optional: `body` (string)
+
+```python
+comment = client.portouts.comments.create(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(comment.data)
+```
+
+## List supporting documents on a portout request
+
+List every supporting documents for a portout request.
+
+`GET /portouts/{id}/supporting_documents`
+
+```python
+supporting_documents = client.portouts.supporting_documents.list(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(supporting_documents.data)
+```
+
+## Create a list of supporting documents on a portout request
+
+Creates a list of supporting documents on a portout request.
+
+`POST /portouts/{id}/supporting_documents`
+
+Optional: `documents` (array[object])
+
+```python
+supporting_document = client.portouts.supporting_documents.create(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(supporting_document.data)
+```
+
+## Update Status
+
+Authorize or reject portout request
+
+`PATCH /portouts/{id}/{status}` — Required: `reason`
+
+Optional: `host_messaging` (boolean)
+
+```python
+response = client.portouts.update_status(
+    status="authorized",
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    reason="I do not recognize this transaction",
+)
+print(response.data)
 ```

@@ -239,53 +239,25 @@ response = client.documents.generate_download_link(
 print(response.data)
 ```
 
-## List all requirements
+## Update requirement group for a phone number order
 
-List all requirements with filtering, sorting, and pagination
-
-`GET /requirements`
+`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
 ```python
-page = client.requirements.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Retrieve a document requirement
-
-Retrieve a document requirement record
-
-`GET /requirements/{id}`
-
-```python
-requirement = client.requirements.retrieve(
-    "a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa",
+response = client.number_order_phone_numbers.update_requirement_group(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    requirement_group_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
-print(requirement.data)
+print(response.data)
 ```
 
-## List all requirement types
+## Retrieve regulatory requirements for a list of phone numbers
 
-List all requirement types ordered by created_at descending
-
-`GET /requirement_types`
+`GET /phone_numbers_regulatory_requirements`
 
 ```python
-requirement_types = client.requirement_types.list()
-print(requirement_types.data)
-```
-
-## Retrieve a requirement types
-
-Retrieve a requirement type by id
-
-`GET /requirement_types/{id}`
-
-```python
-requirement_type = client.requirement_types.retrieve(
-    "a38c217a-8019-48f8-bff6-0fdd9939075b",
-)
-print(requirement_type.data)
+phone_numbers_regulatory_requirement = client.phone_numbers_regulatory_requirements.retrieve()
+print(phone_numbers_regulatory_requirement.data)
 ```
 
 ## Retrieve regulatory requirements
@@ -365,6 +337,112 @@ requirement_group = client.requirement_groups.submit_for_approval(
     "id",
 )
 print(requirement_group.id)
+```
+
+## List all requirement types
+
+List all requirement types ordered by created_at descending
+
+`GET /requirement_types`
+
+```python
+requirement_types = client.requirement_types.list()
+print(requirement_types.data)
+```
+
+## Retrieve a requirement types
+
+Retrieve a requirement type by id
+
+`GET /requirement_types/{id}`
+
+```python
+requirement_type = client.requirement_types.retrieve(
+    "a38c217a-8019-48f8-bff6-0fdd9939075b",
+)
+print(requirement_type.data)
+```
+
+## List all requirements
+
+List all requirements with filtering, sorting, and pagination
+
+`GET /requirements`
+
+```python
+page = client.requirements.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Retrieve a document requirement
+
+Retrieve a document requirement record
+
+`GET /requirements/{id}`
+
+```python
+requirement = client.requirements.retrieve(
+    "a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa",
+)
+print(requirement.data)
+```
+
+## Update requirement group for a sub number order
+
+`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
+
+```python
+response = client.sub_number_orders.update_requirement_group(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    requirement_group_id="a4b201f9-8646-4e54-a7d2-b2e403eeaf8c",
+)
+print(response.data)
+```
+
+## List all user addresses
+
+Returns a list of your user addresses.
+
+`GET /user_addresses`
+
+```python
+page = client.user_addresses.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Creates a user address
+
+Creates a user address.
+
+`POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```python
+user_address = client.user_addresses.create(
+    business_name="Toy-O'Kon",
+    country_code="US",
+    first_name="Alfred",
+    last_name="Foster",
+    locality="Austin",
+    street_address="600 Congress Avenue",
+)
+print(user_address.data)
+```
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user_addresses/{id}`
+
+```python
+user_address = client.user_addresses.retrieve(
+    "id",
+)
+print(user_address.data)
 ```
 
 ## List all Verified Numbers

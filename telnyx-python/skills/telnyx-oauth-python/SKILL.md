@@ -69,76 +69,6 @@ client.oauth.retrieve_authorize(
 )
 ```
 
-## List OAuth clients
-
-Retrieve a paginated list of OAuth clients for the authenticated user
-
-`GET /oauth/clients`
-
-```python
-page = client.oauth_clients.list()
-page = page.data[0]
-print(page.client_id)
-```
-
-## Create OAuth client
-
-Create a new OAuth client
-
-`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
-
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```python
-oauth_client = client.oauth_clients.create(
-    allowed_grant_types=["client_credentials"],
-    allowed_scopes=["admin"],
-    client_type="public",
-    name="My OAuth client",
-)
-print(oauth_client.data)
-```
-
-## Get OAuth client
-
-Retrieve a single OAuth client by ID
-
-`GET /oauth/clients/{id}`
-
-```python
-oauth_client = client.oauth_clients.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(oauth_client.data)
-```
-
-## Update OAuth client
-
-Update an existing OAuth client
-
-`PUT /oauth/clients/{id}`
-
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```python
-oauth_client = client.oauth_clients.update(
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(oauth_client.data)
-```
-
-## Delete OAuth client
-
-Delete an OAuth client
-
-`DELETE /oauth/clients/{id}`
-
-```python
-client.oauth_clients.delete(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-```
-
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -152,42 +82,18 @@ oauth = client.oauth.retrieve(
 print(oauth.data)
 ```
 
-## List OAuth grants
+## Create OAuth grant
 
-Retrieve a paginated list of OAuth grants for the authenticated user
+Create an OAuth authorization grant
 
-`GET /oauth/grants`
-
-```python
-page = client.oauth_grants.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Get OAuth grant
-
-Retrieve a single OAuth grant by ID
-
-`GET /oauth/grants/{id}`
+`POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```python
-oauth_grant = client.oauth_grants.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+response = client.oauth.grants(
+    allowed=True,
+    consent_token="consent_token",
 )
-print(oauth_grant.data)
-```
-
-## Revoke OAuth grant
-
-Revoke an OAuth grant
-
-`DELETE /oauth/grants/{id}`
-
-```python
-oauth_grant = client.oauth_grants.delete(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(oauth_grant.data)
+print(response.redirect_uri)
 ```
 
 ## Token introspection
@@ -240,4 +146,112 @@ response = client.oauth.token(
     grant_type="client_credentials",
 )
 print(response.access_token)
+```
+
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth_clients`
+
+```python
+page = client.oauth_clients.list()
+page = page.data[0]
+print(page.client_id)
+```
+
+## Create OAuth client
+
+Create a new OAuth client
+
+`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```python
+oauth_client = client.oauth_clients.create(
+    allowed_grant_types=["client_credentials"],
+    allowed_scopes=["admin"],
+    client_type="public",
+    name="My OAuth client",
+)
+print(oauth_client.data)
+```
+
+## Get OAuth client
+
+Retrieve a single OAuth client by ID
+
+`GET /oauth_clients/{id}`
+
+```python
+oauth_client = client.oauth_clients.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(oauth_client.data)
+```
+
+## Update OAuth client
+
+Update an existing OAuth client
+
+`PUT /oauth_clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```python
+oauth_client = client.oauth_clients.update(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(oauth_client.data)
+```
+
+## Delete OAuth client
+
+Delete an OAuth client
+
+`DELETE /oauth_clients/{id}`
+
+```python
+client.oauth_clients.delete(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+```
+
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth_grants`
+
+```python
+page = client.oauth_grants.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Get OAuth grant
+
+Retrieve a single OAuth grant by ID
+
+`GET /oauth_grants/{id}`
+
+```python
+oauth_grant = client.oauth_grants.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(oauth_grant.data)
+```
+
+## Revoke OAuth grant
+
+Revoke an OAuth grant
+
+`DELETE /oauth_grants/{id}`
+
+```python
+oauth_grant = client.oauth_grants.delete(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(oauth_grant.data)
 ```

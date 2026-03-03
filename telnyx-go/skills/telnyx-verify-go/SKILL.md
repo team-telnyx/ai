@@ -58,6 +58,37 @@ Returns information about the provided phone number.
 	fmt.Printf("%+v\n", numberLookup.Data)
 ```
 
+## List verifications by phone number
+
+`GET /verifications/by_phone_number/{phone_number}`
+
+```go
+	byPhoneNumbers, err := client.Verifications.ByPhoneNumber.List(context.TODO(), "+13035551234")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", byPhoneNumbers.Data)
+```
+
+## Verify verification code by phone number
+
+`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+
+```go
+	verifyVerificationCodeResponse, err := client.Verifications.ByPhoneNumber.Actions.Verify(
+		context.TODO(),
+		"+13035551234",
+		telnyx.VerificationByPhoneNumberActionVerifyParams{
+			Code:            "17686",
+			VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
+```
+
 ## Trigger Call verification
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
@@ -139,37 +170,6 @@ Optional: `code` (string), `status` (enum)
 	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
 ```
 
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
-
-```go
-	byPhoneNumbers, err := client.Verifications.ByPhoneNumber.List(context.TODO(), "+13035551234")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", byPhoneNumbers.Data)
-```
-
-## Verify verification code by phone number
-
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
-
-```go
-	verifyVerificationCodeResponse, err := client.Verifications.ByPhoneNumber.Actions.Verify(
-		context.TODO(),
-		"+13035551234",
-		telnyx.VerificationByPhoneNumberActionVerifyParams{
-			Code:            "17686",
-			VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
-```
-
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
@@ -196,50 +196,6 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (obj
 	verifyProfileData, err := client.VerifyProfiles.New(context.TODO(), telnyx.VerifyProfileNewParams{
 		Name: "Test Profile",
 	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verifyProfileData.Data)
-```
-
-## Retrieve Verify profile
-
-Gets a single Verify profile.
-
-`GET /verify_profiles/{verify_profile_id}`
-
-```go
-	verifyProfileData, err := client.VerifyProfiles.Get(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verifyProfileData.Data)
-```
-
-## Update Verify profile
-
-`PATCH /verify_profiles/{verify_profile_id}`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```go
-	verifyProfileData, err := client.VerifyProfiles.Update(
-		context.TODO(),
-		"12ade33a-21c0-473b-b055-b3c836e1c292",
-		telnyx.VerifyProfileUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verifyProfileData.Data)
-```
-
-## Delete Verify profile
-
-`DELETE /verify_profiles/{verify_profile_id}`
-
-```go
-	verifyProfileData, err := client.VerifyProfiles.Delete(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -294,4 +250,48 @@ Update an existing Verify profile message template.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", messageTemplate.Data)
+```
+
+## Retrieve Verify profile
+
+Gets a single Verify profile.
+
+`GET /verify_profiles/{verify_profile_id}`
+
+```go
+	verifyProfileData, err := client.VerifyProfiles.Get(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", verifyProfileData.Data)
+```
+
+## Update Verify profile
+
+`PATCH /verify_profiles/{verify_profile_id}`
+
+Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+
+```go
+	verifyProfileData, err := client.VerifyProfiles.Update(
+		context.TODO(),
+		"12ade33a-21c0-473b-b055-b3c836e1c292",
+		telnyx.VerifyProfileUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", verifyProfileData.Data)
+```
+
+## Delete Verify profile
+
+`DELETE /verify_profiles/{verify_profile_id}`
+
+```go
+	verifyProfileData, err := client.VerifyProfiles.Delete(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```

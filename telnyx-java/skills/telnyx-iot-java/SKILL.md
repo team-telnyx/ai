@@ -31,233 +31,97 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all wireless regions
+## Purchase eSIMs
 
-Retrieve all wireless regions for the given product.
+Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
 
-`GET /wireless/regions`
+`POST /actions/purchase/esims` — Required: `amount`
+
+Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
 
 ```java
-import com.telnyx.sdk.models.wireless.WirelessRetrieveRegionsParams;
-import com.telnyx.sdk.models.wireless.WirelessRetrieveRegionsResponse;
+import com.telnyx.sdk.models.actions.purchase.PurchaseCreateParams;
+import com.telnyx.sdk.models.actions.purchase.PurchaseCreateResponse;
 
-WirelessRetrieveRegionsParams params = WirelessRetrieveRegionsParams.builder()
-    .product("public_ips")
+PurchaseCreateParams params = PurchaseCreateParams.builder()
+    .amount(10L)
     .build();
-WirelessRetrieveRegionsResponse response = client.wireless().retrieveRegions(params);
+PurchaseCreateResponse purchase = client.actions().purchase().create(params);
 ```
 
-## Get all SIM cards
+## Register SIM cards
 
-Get all SIM cards belonging to the user that match the given filters.
+Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
 
-`GET /sim_cards`
+`POST /actions/register/sim_cards` — Required: `registration_codes`
 
-```java
-import com.telnyx.sdk.models.simcards.SimCardListPage;
-import com.telnyx.sdk.models.simcards.SimCardListParams;
-
-SimCardListPage page = client.simCards().list();
-```
-
-## Get SIM card
-
-Returns the details regarding a specific SIM card.
-
-`GET /sim_cards/{id}`
+Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
 
 ```java
-import com.telnyx.sdk.models.simcards.SimCardRetrieveParams;
-import com.telnyx.sdk.models.simcards.SimCardRetrieveResponse;
+import com.telnyx.sdk.models.actions.register.RegisterCreateParams;
+import com.telnyx.sdk.models.actions.register.RegisterCreateResponse;
+import java.util.List;
 
-SimCardRetrieveResponse simCard = client.simCards().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Update a SIM card
-
-Updates SIM card data
-
-`PATCH /sim_cards/{id}`
-
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
-
-```java
-import com.telnyx.sdk.models.simcards.SimCard;
-import com.telnyx.sdk.models.simcards.SimCardUpdateParams;
-import com.telnyx.sdk.models.simcards.SimCardUpdateResponse;
-
-SimCardUpdateParams params = SimCardUpdateParams.builder()
-    .simCardId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .simCard(SimCard.builder().build())
+RegisterCreateParams params = RegisterCreateParams.builder()
+    .registrationCodes(List.of(
+      "0000000001",
+      "0000000002",
+      "0000000003"
+    ))
     .build();
-SimCardUpdateResponse simCard = client.simCards().update(params);
+RegisterCreateResponse register = client.actions().register().create(params);
 ```
 
-## Deletes a SIM card
+## List bulk SIM card actions
 
-The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
+This API lists a paginated collection of bulk SIM card actions.
 
-`DELETE /sim_cards/{id}`
+`GET /bulk_sim_card_actions`
 
 ```java
-import com.telnyx.sdk.models.simcards.SimCardDeleteParams;
-import com.telnyx.sdk.models.simcards.SimCardDeleteResponse;
+import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionListPage;
+import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionListParams;
 
-SimCardDeleteResponse simCard = client.simCards().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+BulkSimCardActionListPage page = client.bulkSimCardActions().list();
 ```
 
-## Get activation code for an eSIM
+## Get bulk SIM card action details
 
-It returns the activation code for an eSIM.<br/><br/>
- This API is only available for eSIMs.
+This API fetches information about a bulk SIM card action.
 
-`GET /sim_cards/{id}/activation_code`
+`GET /bulk_sim_card_actions/{id}`
 
 ```java
-import com.telnyx.sdk.models.simcards.SimCardGetActivationCodeParams;
-import com.telnyx.sdk.models.simcards.SimCardGetActivationCodeResponse;
+import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionRetrieveParams;
+import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionRetrieveResponse;
 
-SimCardGetActivationCodeResponse response = client.simCards().getActivationCode("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+BulkSimCardActionRetrieveResponse bulkSimCardAction = client.bulkSimCardActions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
-## Get SIM card device details
+## List OTA updates
 
-It returns the device details where a SIM card is currently being used.
-
-`GET /sim_cards/{id}/device_details`
+`GET /ota_updates`
 
 ```java
-import com.telnyx.sdk.models.simcards.SimCardGetDeviceDetailsParams;
-import com.telnyx.sdk.models.simcards.SimCardGetDeviceDetailsResponse;
+import com.telnyx.sdk.models.otaupdates.OtaUpdateListPage;
+import com.telnyx.sdk.models.otaupdates.OtaUpdateListParams;
 
-SimCardGetDeviceDetailsResponse response = client.simCards().getDeviceDetails("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+OtaUpdateListPage page = client.otaUpdates().list();
 ```
 
-## Get SIM card public IP definition
+## Get OTA update
 
-It returns the public IP requested for a SIM card.
+This API returns the details of an Over the Air (OTA) update.
 
-`GET /sim_cards/{id}/public_ip`
-
-```java
-import com.telnyx.sdk.models.simcards.SimCardGetPublicIpParams;
-import com.telnyx.sdk.models.simcards.SimCardGetPublicIpResponse;
-
-SimCardGetPublicIpResponse response = client.simCards().getPublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List wireless connectivity logs
-
-This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
-
-`GET /sim_cards/{id}/wireless_connectivity_logs`
+`GET /ota_updates/{id}`
 
 ```java
-import com.telnyx.sdk.models.simcards.SimCardListWirelessConnectivityLogsPage;
-import com.telnyx.sdk.models.simcards.SimCardListWirelessConnectivityLogsParams;
+import com.telnyx.sdk.models.otaupdates.OtaUpdateRetrieveParams;
+import com.telnyx.sdk.models.otaupdates.OtaUpdateRetrieveResponse;
 
-SimCardListWirelessConnectivityLogsPage page = client.simCards().listWirelessConnectivityLogs("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request a SIM card disable
-
-This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
-The API will trigger an asynchronous operation called a SIM Card Action.
-
-`POST /sim_cards/{id}/actions/disable`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionDisableParams;
-import com.telnyx.sdk.models.simcards.actions.ActionDisableResponse;
-
-ActionDisableResponse response = client.simCards().actions().disable("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request a SIM card enable
-
-This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
-To enable a SIM card, it must be associated with a SIM card group.<br/>
-The API will trigger a...
-
-`POST /sim_cards/{id}/actions/enable`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionEnableParams;
-import com.telnyx.sdk.models.simcards.actions.ActionEnableResponse;
-
-ActionEnableResponse response = client.simCards().actions().enable("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request removing a SIM card public IP
-
-This API removes an existing public IP from a SIM card.
-
-`POST /sim_cards/{id}/actions/remove_public_ip`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionRemovePublicIpParams;
-import com.telnyx.sdk.models.simcards.actions.ActionRemovePublicIpResponse;
-
-ActionRemovePublicIpResponse response = client.simCards().actions().removePublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request setting a SIM card public IP
-
-This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
-
-`POST /sim_cards/{id}/actions/set_public_ip`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionSetPublicIpParams;
-import com.telnyx.sdk.models.simcards.actions.ActionSetPublicIpResponse;
-
-ActionSetPublicIpResponse response = client.simCards().actions().setPublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request setting a SIM card to standby
-
-The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
-To set a SIM card to standby, it must be ...
-
-`POST /sim_cards/{id}/actions/set_standby`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionSetStandbyParams;
-import com.telnyx.sdk.models.simcards.actions.ActionSetStandbyResponse;
-
-ActionSetStandbyResponse response = client.simCards().actions().setStandby("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Request bulk setting SIM card public IPs.
-
-This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
-For each SIM Card a SIM Card Action will be generated.
-
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionBulkSetPublicIpsParams;
-import com.telnyx.sdk.models.simcards.actions.ActionBulkSetPublicIpsResponse;
-
-ActionBulkSetPublicIpsParams params = ActionBulkSetPublicIpsParams.builder()
-    .addSimCardId("6b14e151-8493-4fa1-8664-1cc4e6d14158")
-    .build();
-ActionBulkSetPublicIpsResponse response = client.simCards().actions().bulkSetPublicIps(params);
-```
-
-## Validate SIM cards registration codes
-
-It validates whether SIM card registration codes are valid or not.
-
-`POST /sim_cards/actions/validate_registration_codes`
-
-Optional: `registration_codes` (array[string])
-
-```java
-import com.telnyx.sdk.models.simcards.actions.ActionValidateRegistrationCodesParams;
-import com.telnyx.sdk.models.simcards.actions.ActionValidateRegistrationCodesResponse;
-
-ActionValidateRegistrationCodesResponse response = client.simCards().actions().validateRegistrationCodes();
+OtaUpdateRetrieveResponse otaUpdate = client.otaUpdates().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
 ## List SIM card actions
@@ -286,30 +150,106 @@ import com.telnyx.sdk.models.simcards.actions.ActionRetrieveResponse;
 ActionRetrieveResponse action = client.simCards().actions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
-## List bulk SIM card actions
+## List SIM card data usage notifications
 
-This API lists a paginated collection of bulk SIM card actions.
+Lists a paginated collection of SIM card data usage notifications.
 
-`GET /bulk_sim_card_actions`
+`GET /sim_card_data_usage_notifications`
 
 ```java
-import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionListPage;
-import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionListParams;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationListPage;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationListParams;
 
-BulkSimCardActionListPage page = client.bulkSimCardActions().list();
+SimCardDataUsageNotificationListPage page = client.simCardDataUsageNotifications().list();
 ```
 
-## Get bulk SIM card action details
+## Create a new SIM card data usage notification
 
-This API fetches information about a bulk SIM card action.
+Creates a new SIM card data usage notification.
 
-`GET /bulk_sim_card_actions/{id}`
+`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
 
 ```java
-import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionRetrieveParams;
-import com.telnyx.sdk.models.bulksimcardactions.BulkSimCardActionRetrieveResponse;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationCreateParams;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationCreateResponse;
 
-BulkSimCardActionRetrieveResponse bulkSimCardAction = client.bulkSimCardActions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+SimCardDataUsageNotificationCreateParams params = SimCardDataUsageNotificationCreateParams.builder()
+    .simCardId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .threshold(SimCardDataUsageNotificationCreateParams.Threshold.builder().build())
+    .build();
+SimCardDataUsageNotificationCreateResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().create(params);
+```
+
+## Get a single SIM card data usage notification
+
+Get a single SIM Card Data Usage Notification.
+
+`GET /sim_card_data_usage_notifications/{id}`
+
+```java
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationRetrieveParams;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationRetrieveResponse;
+
+SimCardDataUsageNotificationRetrieveResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Updates information for a SIM Card Data Usage Notification
+
+Updates information for a SIM Card Data Usage Notification.
+
+`PATCH /sim_card_data_usage_notifications/{id}`
+
+Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+
+```java
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotification;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationUpdateParams;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationUpdateResponse;
+
+SimCardDataUsageNotificationUpdateParams params = SimCardDataUsageNotificationUpdateParams.builder()
+    .simCardDataUsageNotificationId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .simCardDataUsageNotification(SimCardDataUsageNotification.builder().build())
+    .build();
+SimCardDataUsageNotificationUpdateResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().update(params);
+```
+
+## Delete SIM card data usage notifications
+
+Delete the SIM Card Data Usage Notification.
+
+`DELETE /sim_card_data_usage_notifications/{id}`
+
+```java
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationDeleteParams;
+import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationDeleteResponse;
+
+SimCardDataUsageNotificationDeleteResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List SIM card group actions
+
+This API allows listing a paginated collection a SIM card group actions.
+
+`GET /sim_card_group_actions`
+
+```java
+import com.telnyx.sdk.models.simcardgroups.actions.ActionListPage;
+import com.telnyx.sdk.models.simcardgroups.actions.ActionListParams;
+
+ActionListPage page = client.simCardGroups().actions().list();
+```
+
+## Get SIM card group action details
+
+This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
+
+`GET /sim_card_group_actions/{id}`
+
+```java
+import com.telnyx.sdk.models.simcardgroups.actions.ActionRetrieveParams;
+import com.telnyx.sdk.models.simcardgroups.actions.ActionRetrieveResponse;
+
+ActionRetrieveResponse action = client.simCardGroups().actions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
 ## Get all SIM card groups
@@ -444,30 +384,21 @@ ActionSetWirelessBlocklistParams params = ActionSetWirelessBlocklistParams.build
 ActionSetWirelessBlocklistResponse response = client.simCardGroups().actions().setWirelessBlocklist(params);
 ```
 
-## List SIM card group actions
+## Preview SIM card orders
 
-This API allows listing a paginated collection a SIM card group actions.
+Preview SIM card order purchases.
 
-`GET /sim_card_group_actions`
-
-```java
-import com.telnyx.sdk.models.simcardgroups.actions.ActionListPage;
-import com.telnyx.sdk.models.simcardgroups.actions.ActionListParams;
-
-ActionListPage page = client.simCardGroups().actions().list();
-```
-
-## Get SIM card group action details
-
-This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
-
-`GET /sim_card_group_actions/{id}`
+`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
 
 ```java
-import com.telnyx.sdk.models.simcardgroups.actions.ActionRetrieveParams;
-import com.telnyx.sdk.models.simcardgroups.actions.ActionRetrieveResponse;
+import com.telnyx.sdk.models.simcardorderpreview.SimCardOrderPreviewPreviewParams;
+import com.telnyx.sdk.models.simcardorderpreview.SimCardOrderPreviewPreviewResponse;
 
-ActionRetrieveResponse action = client.simCardGroups().actions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+SimCardOrderPreviewPreviewParams params = SimCardOrderPreviewPreviewParams.builder()
+    .addressId("1293384261075731499")
+    .quantity(21L)
+    .build();
+SimCardOrderPreviewPreviewResponse response = client.simCardOrderPreview().preview(params);
 ```
 
 ## Get all SIM card orders
@@ -513,222 +444,427 @@ import com.telnyx.sdk.models.simcardorders.SimCardOrderRetrieveResponse;
 SimCardOrderRetrieveResponse simCardOrder = client.simCardOrders().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
-## Preview SIM card orders
+## Get all SIM cards
 
-Preview SIM card order purchases.
+Get all SIM cards belonging to the user that match the given filters.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`GET /sim_cards`
 
 ```java
-import com.telnyx.sdk.models.simcardorderpreview.SimCardOrderPreviewPreviewParams;
-import com.telnyx.sdk.models.simcardorderpreview.SimCardOrderPreviewPreviewResponse;
+import com.telnyx.sdk.models.simcards.SimCardListPage;
+import com.telnyx.sdk.models.simcards.SimCardListParams;
 
-SimCardOrderPreviewPreviewParams params = SimCardOrderPreviewPreviewParams.builder()
-    .addressId("1293384261075731499")
-    .quantity(21L)
+SimCardListPage page = client.simCards().list();
+```
+
+## Request bulk setting SIM card public IPs.
+
+This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
+For each SIM Card a SIM Card Action will be generated.
+
+`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+
+```java
+import com.telnyx.sdk.models.simcards.actions.ActionBulkSetPublicIpsParams;
+import com.telnyx.sdk.models.simcards.actions.ActionBulkSetPublicIpsResponse;
+
+ActionBulkSetPublicIpsParams params = ActionBulkSetPublicIpsParams.builder()
+    .addSimCardId("6b14e151-8493-4fa1-8664-1cc4e6d14158")
     .build();
-SimCardOrderPreviewPreviewResponse response = client.simCardOrderPreview().preview(params);
+ActionBulkSetPublicIpsResponse response = client.simCards().actions().bulkSetPublicIps(params);
 ```
 
-## List SIM card data usage notifications
+## Validate SIM cards registration codes
 
-Lists a paginated collection of SIM card data usage notifications.
+It validates whether SIM card registration codes are valid or not.
 
-`GET /sim_card_data_usage_notifications`
+`POST /sim_cards/actions/validate_registration_codes`
+
+Optional: `registration_codes` (array[string])
 
 ```java
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationListPage;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationListParams;
+import com.telnyx.sdk.models.simcards.actions.ActionValidateRegistrationCodesParams;
+import com.telnyx.sdk.models.simcards.actions.ActionValidateRegistrationCodesResponse;
 
-SimCardDataUsageNotificationListPage page = client.simCardDataUsageNotifications().list();
+ActionValidateRegistrationCodesResponse response = client.simCards().actions().validateRegistrationCodes();
 ```
 
-## Create a new SIM card data usage notification
+## Get SIM card
 
-Creates a new SIM card data usage notification.
+Returns the details regarding a specific SIM card.
 
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
+`GET /sim_cards/{id}`
 
 ```java
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationCreateParams;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationCreateResponse;
+import com.telnyx.sdk.models.simcards.SimCardRetrieveParams;
+import com.telnyx.sdk.models.simcards.SimCardRetrieveResponse;
 
-SimCardDataUsageNotificationCreateParams params = SimCardDataUsageNotificationCreateParams.builder()
+SimCardRetrieveResponse simCard = client.simCards().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Update a SIM card
+
+Updates SIM card data
+
+`PATCH /sim_cards/{id}`
+
+Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+
+```java
+import com.telnyx.sdk.models.simcards.SimCard;
+import com.telnyx.sdk.models.simcards.SimCardUpdateParams;
+import com.telnyx.sdk.models.simcards.SimCardUpdateResponse;
+
+SimCardUpdateParams params = SimCardUpdateParams.builder()
     .simCardId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .threshold(SimCardDataUsageNotificationCreateParams.Threshold.builder().build())
+    .simCard(SimCard.builder().build())
     .build();
-SimCardDataUsageNotificationCreateResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().create(params);
+SimCardUpdateResponse simCard = client.simCards().update(params);
 ```
 
-## Get a single SIM card data usage notification
+## Deletes a SIM card
 
-Get a single SIM Card Data Usage Notification.
+The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
 
-`GET /sim_card_data_usage_notifications/{id}`
+`DELETE /sim_cards/{id}`
 
 ```java
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationRetrieveParams;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationRetrieveResponse;
+import com.telnyx.sdk.models.simcards.SimCardDeleteParams;
+import com.telnyx.sdk.models.simcards.SimCardDeleteResponse;
 
-SimCardDataUsageNotificationRetrieveResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+SimCardDeleteResponse simCard = client.simCards().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
-## Updates information for a SIM Card Data Usage Notification
+## Request a SIM card disable
 
-Updates information for a SIM Card Data Usage Notification.
+This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
+The API will trigger an asynchronous operation called a SIM Card Action.
 
-`PATCH /sim_card_data_usage_notifications/{id}`
-
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+`POST /sim_cards/{id}/actions/disable`
 
 ```java
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotification;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationUpdateParams;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationUpdateResponse;
+import com.telnyx.sdk.models.simcards.actions.ActionDisableParams;
+import com.telnyx.sdk.models.simcards.actions.ActionDisableResponse;
 
-SimCardDataUsageNotificationUpdateParams params = SimCardDataUsageNotificationUpdateParams.builder()
-    .simCardDataUsageNotificationId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .simCardDataUsageNotification(SimCardDataUsageNotification.builder().build())
+ActionDisableResponse response = client.simCards().actions().disable("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Request a SIM card enable
+
+This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
+To enable a SIM card, it must be associated with a SIM card group.<br/>
+The API will trigger a...
+
+`POST /sim_cards/{id}/actions/enable`
+
+```java
+import com.telnyx.sdk.models.simcards.actions.ActionEnableParams;
+import com.telnyx.sdk.models.simcards.actions.ActionEnableResponse;
+
+ActionEnableResponse response = client.simCards().actions().enable("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Request removing a SIM card public IP
+
+This API removes an existing public IP from a SIM card.
+
+`POST /sim_cards/{id}/actions/remove_public_ip`
+
+```java
+import com.telnyx.sdk.models.simcards.actions.ActionRemovePublicIpParams;
+import com.telnyx.sdk.models.simcards.actions.ActionRemovePublicIpResponse;
+
+ActionRemovePublicIpResponse response = client.simCards().actions().removePublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Request setting a SIM card public IP
+
+This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
+
+`POST /sim_cards/{id}/actions/set_public_ip`
+
+```java
+import com.telnyx.sdk.models.simcards.actions.ActionSetPublicIpParams;
+import com.telnyx.sdk.models.simcards.actions.ActionSetPublicIpResponse;
+
+ActionSetPublicIpResponse response = client.simCards().actions().setPublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Request setting a SIM card to standby
+
+The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
+To set a SIM card to standby, it must be ...
+
+`POST /sim_cards/{id}/actions/set_standby`
+
+```java
+import com.telnyx.sdk.models.simcards.actions.ActionSetStandbyParams;
+import com.telnyx.sdk.models.simcards.actions.ActionSetStandbyResponse;
+
+ActionSetStandbyResponse response = client.simCards().actions().setStandby("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Get activation code for an eSIM
+
+It returns the activation code for an eSIM.<br/><br/>
+ This API is only available for eSIMs.
+
+`GET /sim_cards/{id}/activation_code`
+
+```java
+import com.telnyx.sdk.models.simcards.SimCardGetActivationCodeParams;
+import com.telnyx.sdk.models.simcards.SimCardGetActivationCodeResponse;
+
+SimCardGetActivationCodeResponse response = client.simCards().getActivationCode("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Get SIM card device details
+
+It returns the device details where a SIM card is currently being used.
+
+`GET /sim_cards/{id}/device_details`
+
+```java
+import com.telnyx.sdk.models.simcards.SimCardGetDeviceDetailsParams;
+import com.telnyx.sdk.models.simcards.SimCardGetDeviceDetailsResponse;
+
+SimCardGetDeviceDetailsResponse response = client.simCards().getDeviceDetails("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Get SIM card public IP definition
+
+It returns the public IP requested for a SIM card.
+
+`GET /sim_cards/{id}/public_ip`
+
+```java
+import com.telnyx.sdk.models.simcards.SimCardGetPublicIpParams;
+import com.telnyx.sdk.models.simcards.SimCardGetPublicIpResponse;
+
+SimCardGetPublicIpResponse response = client.simCards().getPublicIp("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List wireless connectivity logs
+
+This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
+
+`GET /sim_cards/{id}/wireless_connectivity_logs`
+
+```java
+import com.telnyx.sdk.models.simcards.SimCardListWirelessConnectivityLogsPage;
+import com.telnyx.sdk.models.simcards.SimCardListWirelessConnectivityLogsParams;
+
+SimCardListWirelessConnectivityLogsPage page = client.simCards().listWirelessConnectivityLogs("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List Migration Source coverage
+
+`GET /storage/migration_source_coverage`
+
+```java
+import com.telnyx.sdk.models.storage.StorageListMigrationSourceCoverageParams;
+import com.telnyx.sdk.models.storage.StorageListMigrationSourceCoverageResponse;
+
+StorageListMigrationSourceCoverageResponse response = client.storage().listMigrationSourceCoverage();
+```
+
+## List all Migration Sources
+
+`GET /storage/migration_sources`
+
+```java
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceListParams;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceListResponse;
+
+MigrationSourceListResponse migrationSources = client.storage().migrationSources().list();
+```
+
+## Create a Migration Source
+
+Create a source from which data can be migrated from.
+
+`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+
+Optional: `id` (string), `source_region` (string)
+
+```java
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateParams;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateResponse;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceParams;
+
+MigrationSourceParams params = MigrationSourceParams.builder()
+    .bucketName("bucket_name")
+    .provider(MigrationSourceParams.Provider.AWS)
+    .providerAuth(MigrationSourceParams.ProviderAuth.builder().build())
     .build();
-SimCardDataUsageNotificationUpdateResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().update(params);
+MigrationSourceCreateResponse migrationSource = client.storage().migrationSources().create(params);
 ```
 
-## Delete SIM card data usage notifications
+## Get a Migration Source
 
-Delete the SIM Card Data Usage Notification.
-
-`DELETE /sim_card_data_usage_notifications/{id}`
+`GET /storage/migration_sources/{id}`
 
 ```java
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationDeleteParams;
-import com.telnyx.sdk.models.simcarddatausagenotifications.SimCardDataUsageNotificationDeleteResponse;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceRetrieveParams;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceRetrieveResponse;
 
-SimCardDataUsageNotificationDeleteResponse simCardDataUsageNotification = client.simCardDataUsageNotifications().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+MigrationSourceRetrieveResponse migrationSource = client.storage().migrationSources().retrieve("");
 ```
 
-## Purchase eSIMs
+## Delete a Migration Source
 
-Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
-
-`POST /actions/purchase/esims` — Required: `amount`
-
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
+`DELETE /storage/migration_sources/{id}`
 
 ```java
-import com.telnyx.sdk.models.actions.purchase.PurchaseCreateParams;
-import com.telnyx.sdk.models.actions.purchase.PurchaseCreateResponse;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceDeleteParams;
+import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceDeleteResponse;
 
-PurchaseCreateParams params = PurchaseCreateParams.builder()
-    .amount(10L)
+MigrationSourceDeleteResponse migrationSource = client.storage().migrationSources().delete("");
+```
+
+## List all Migrations
+
+`GET /storage/migrations`
+
+```java
+import com.telnyx.sdk.models.storage.migrations.MigrationListParams;
+import com.telnyx.sdk.models.storage.migrations.MigrationListResponse;
+
+MigrationListResponse migrations = client.storage().migrations().list();
+```
+
+## Create a Migration
+
+Initiate a migration of data from an external provider into Telnyx Cloud Storage.
+
+`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+
+Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
+
+```java
+import com.telnyx.sdk.models.storage.migrations.MigrationCreateParams;
+import com.telnyx.sdk.models.storage.migrations.MigrationCreateResponse;
+import com.telnyx.sdk.models.storage.migrations.MigrationParams;
+
+MigrationParams params = MigrationParams.builder()
+    .sourceId("source_id")
+    .targetBucketName("target_bucket_name")
+    .targetRegion("target_region")
     .build();
-PurchaseCreateResponse purchase = client.actions().purchase().create(params);
+MigrationCreateResponse migration = client.storage().migrations().create(params);
 ```
 
-## Register SIM cards
+## Get a Migration
 
-Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
-
-`POST /actions/register/sim_cards` — Required: `registration_codes`
-
-Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
+`GET /storage/migrations/{id}`
 
 ```java
-import com.telnyx.sdk.models.actions.register.RegisterCreateParams;
-import com.telnyx.sdk.models.actions.register.RegisterCreateResponse;
-import java.util.List;
+import com.telnyx.sdk.models.storage.migrations.MigrationRetrieveParams;
+import com.telnyx.sdk.models.storage.migrations.MigrationRetrieveResponse;
 
-RegisterCreateParams params = RegisterCreateParams.builder()
-    .registrationCodes(List.of(
-      "0000000001",
-      "0000000002",
-      "0000000003"
-    ))
+MigrationRetrieveResponse migration = client.storage().migrations().retrieve("");
+```
+
+## Stop a Migration
+
+`POST /storage/migrations/{id}/actions/stop`
+
+```java
+import com.telnyx.sdk.models.storage.migrations.actions.ActionStopParams;
+import com.telnyx.sdk.models.storage.migrations.actions.ActionStopResponse;
+
+ActionStopResponse response = client.storage().migrations().actions().stop("");
+```
+
+## List Mobile Voice Connections
+
+`GET /v2/mobile_voice_connections`
+
+```java
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListPage;
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListParams;
+
+MobileVoiceConnectionListPage page = client.mobileVoiceConnections().list();
+```
+
+## Create a Mobile Voice Connection
+
+`POST /v2/mobile_voice_connections`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
+
+```java
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateParams;
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateResponse;
+
+MobileVoiceConnectionCreateResponse mobileVoiceConnection = client.mobileVoiceConnections().create();
+```
+
+## Retrieve a Mobile Voice Connection
+
+`GET /v2/mobile_voice_connections/{id}`
+
+```java
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveParams;
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveResponse;
+
+MobileVoiceConnectionRetrieveResponse mobileVoiceConnection = client.mobileVoiceConnections().retrieve("id");
+```
+
+## Update a Mobile Voice Connection
+
+`PATCH /v2/mobile_voice_connections/{id}`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
+
+```java
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateParams;
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateResponse;
+
+MobileVoiceConnectionUpdateResponse mobileVoiceConnection = client.mobileVoiceConnections().update("id");
+```
+
+## Delete a Mobile Voice Connection
+
+`DELETE /v2/mobile_voice_connections/{id}`
+
+```java
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteParams;
+import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteResponse;
+
+MobileVoiceConnectionDeleteResponse mobileVoiceConnection = client.mobileVoiceConnections().delete("id");
+```
+
+## Get all wireless regions
+
+Retrieve all wireless regions for the given product.
+
+`GET /wireless/regions`
+
+```java
+import com.telnyx.sdk.models.wireless.WirelessRetrieveRegionsParams;
+import com.telnyx.sdk.models.wireless.WirelessRetrieveRegionsResponse;
+
+WirelessRetrieveRegionsParams params = WirelessRetrieveRegionsParams.builder()
+    .product("public_ips")
     .build();
-RegisterCreateResponse register = client.actions().register().create(params);
+WirelessRetrieveRegionsResponse response = client.wireless().retrieveRegions(params);
 ```
 
-## List OTA updates
+## Get all possible wireless blocklist values
 
-`GET /ota_updates`
+Retrieve all wireless blocklist values for a given blocklist type.
 
-```java
-import com.telnyx.sdk.models.otaupdates.OtaUpdateListPage;
-import com.telnyx.sdk.models.otaupdates.OtaUpdateListParams;
-
-OtaUpdateListPage page = client.otaUpdates().list();
-```
-
-## Get OTA update
-
-This API returns the details of an Over the Air (OTA) update.
-
-`GET /ota_updates/{id}`
+`GET /wireless_blocklist_values`
 
 ```java
-import com.telnyx.sdk.models.otaupdates.OtaUpdateRetrieveParams;
-import com.telnyx.sdk.models.otaupdates.OtaUpdateRetrieveResponse;
+import com.telnyx.sdk.models.wirelessblocklistvalues.WirelessBlocklistValueListParams;
+import com.telnyx.sdk.models.wirelessblocklistvalues.WirelessBlocklistValueListResponse;
 
-OtaUpdateRetrieveResponse otaUpdate = client.otaUpdates().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Get all Private Wireless Gateways
-
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListPage;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListParams;
-
-PrivateWirelessGatewayListPage page = client.privateWirelessGateways().list();
-```
-
-## Create a Private Wireless Gateway
-
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
-
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateResponse;
-
-PrivateWirelessGatewayCreateParams params = PrivateWirelessGatewayCreateParams.builder()
-    .name("My private wireless gateway")
-    .networkId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+WirelessBlocklistValueListParams params = WirelessBlocklistValueListParams.builder()
+    .type(WirelessBlocklistValueListParams.Type.COUNTRY)
     .build();
-PrivateWirelessGatewayCreateResponse privateWirelessGateway = client.privateWirelessGateways().create(params);
-```
-
-## Get a Private Wireless Gateway
-
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveResponse;
-
-PrivateWirelessGatewayRetrieveResponse privateWirelessGateway = client.privateWirelessGateways().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Private Wireless Gateway
-
-Deletes the Private Wireless Gateway.
-
-`DELETE /private_wireless_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteResponse;
-
-PrivateWirelessGatewayDeleteResponse privateWirelessGateway = client.privateWirelessGateways().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+WirelessBlocklistValueListResponse wirelessBlocklistValues = client.wirelessBlocklistValues().list(params);
 ```
 
 ## Get all Wireless Blocklists
@@ -802,20 +938,4 @@ import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistDeleteParams;
 import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistDeleteResponse;
 
 WirelessBlocklistDeleteResponse wirelessBlocklist = client.wirelessBlocklists().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Get all possible wireless blocklist values
-
-Retrieve all wireless blocklist values for a given blocklist type.
-
-`GET /wireless_blocklist_values`
-
-```java
-import com.telnyx.sdk.models.wirelessblocklistvalues.WirelessBlocklistValueListParams;
-import com.telnyx.sdk.models.wirelessblocklistvalues.WirelessBlocklistValueListResponse;
-
-WirelessBlocklistValueListParams params = WirelessBlocklistValueListParams.builder()
-    .type(WirelessBlocklistValueListParams.Type.COUNTRY)
-    .build();
-WirelessBlocklistValueListResponse wirelessBlocklistValues = client.wirelessBlocklistValues().list(params);
 ```

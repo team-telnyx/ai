@@ -39,6 +39,40 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List your voice channels for non-US zones
+
+Returns the non-US voice channels for your account.
+
+`GET /channel_zones`
+
+```go
+	page, err := client.ChannelZones.List(context.TODO(), telnyx.ChannelZoneListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Update voice channels for non-US Zones
+
+Update the number of Voice Channels for the Non-US Zones.
+
+`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+
+```go
+	channelZone, err := client.ChannelZones.Update(
+		context.TODO(),
+		"channel_zone_id",
+		telnyx.ChannelZoneUpdateParams{
+			Channels: 0,
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", channelZone.ID)
+```
+
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
@@ -168,40 +202,6 @@ Deletes the dynamic emergency endpoint based on the ID provided
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", dynamicEmergencyEndpoint.Data)
-```
-
-## List your voice channels for non-US zones
-
-Returns the non-US voice channels for your account.
-
-`GET /channel_zones`
-
-```go
-	page, err := client.ChannelZones.List(context.TODO(), telnyx.ChannelZoneListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Update voice channels for non-US Zones
-
-Update the number of Voice Channels for the Non-US Zones.
-
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
-
-```go
-	channelZone, err := client.ChannelZones.Update(
-		context.TODO(),
-		"channel_zone_id",
-		telnyx.ChannelZoneUpdateParams{
-			Channels: 0,
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", channelZone.ID)
 ```
 
 ## List your voice channels for US Zone

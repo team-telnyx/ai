@@ -32,6 +32,64 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## List alphanumeric sender IDs
+
+List all alphanumeric sender IDs for the authenticated user.
+
+`GET /alphanumeric_sender_ids`
+
+```java
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdListPage;
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdListParams;
+
+AlphanumericSenderIdListPage page = client.alphanumericSenderIds().list();
+```
+
+## Create an alphanumeric sender ID
+
+Create a new alphanumeric sender ID associated with a messaging profile.
+
+`POST /alphanumeric_sender_ids` — Required: `alphanumeric_sender_id`, `messaging_profile_id`
+
+Optional: `us_long_code_fallback` (string)
+
+```java
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdCreateParams;
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdCreateResponse;
+
+AlphanumericSenderIdCreateParams params = AlphanumericSenderIdCreateParams.builder()
+    .alphanumericSenderId("MyCompany")
+    .messagingProfileId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .build();
+AlphanumericSenderIdCreateResponse alphanumericSenderId = client.alphanumericSenderIds().create(params);
+```
+
+## Retrieve an alphanumeric sender ID
+
+Retrieve a specific alphanumeric sender ID.
+
+`GET /alphanumeric_sender_ids/{id}`
+
+```java
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdRetrieveParams;
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdRetrieveResponse;
+
+AlphanumericSenderIdRetrieveResponse alphanumericSenderId = client.alphanumericSenderIds().retrieve("id");
+```
+
+## Delete an alphanumeric sender ID
+
+Delete an alphanumeric sender ID and disassociate it from its messaging profile.
+
+`DELETE /alphanumeric_sender_ids/{id}`
+
+```java
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdDeleteParams;
+import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdDeleteResponse;
+
+AlphanumericSenderIdDeleteResponse alphanumericSenderId = client.alphanumericSenderIds().delete("id");
+```
+
 ## Send a message
 
 Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
@@ -50,48 +108,38 @@ MessageSendParams params = MessageSendParams.builder()
 MessageSendResponse response = client.messages().send(params);
 ```
 
-## Retrieve a message
+## Send a message using an alphanumeric sender ID
 
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+Send an SMS message using an alphanumeric sender ID.
 
-`GET /messages/{id}`
+`POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
 
-```java
-import com.telnyx.sdk.models.messages.MessageRetrieveParams;
-import com.telnyx.sdk.models.messages.MessageRetrieveResponse;
-
-MessageRetrieveResponse message = client.messages().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Cancel a scheduled message
-
-Cancel a scheduled message that has not yet been sent.
-
-`DELETE /messages/{id}`
+Optional: `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
-import com.telnyx.sdk.models.messages.MessageCancelScheduledParams;
-import com.telnyx.sdk.models.messages.MessageCancelScheduledResponse;
+import com.telnyx.sdk.models.messages.MessageSendWithAlphanumericSenderParams;
+import com.telnyx.sdk.models.messages.MessageSendWithAlphanumericSenderResponse;
 
-MessageCancelScheduledResponse response = client.messages().cancelScheduled("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Send a Whatsapp message
-
-`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
-
-Optional: `type` (enum), `webhook_url` (url)
-
-```java
-import com.telnyx.sdk.models.messages.MessageSendWhatsappParams;
-import com.telnyx.sdk.models.messages.MessageSendWhatsappResponse;
-
-MessageSendWhatsappParams params = MessageSendWhatsappParams.builder()
-    .from("+13125551234")
-    .to("+13125551234")
-    .whatsappMessage(MessageSendWhatsappParams.WhatsappMessage.builder().build())
+MessageSendWithAlphanumericSenderParams params = MessageSendWithAlphanumericSenderParams.builder()
+    .from("MyCompany")
+    .messagingProfileId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .text("text")
+    .to("+E.164")
     .build();
-MessageSendWhatsappResponse response = client.messages().sendWhatsapp(params);
+MessageSendWithAlphanumericSenderResponse response = client.messages().sendWithAlphanumericSender(params);
+```
+
+## Retrieve group MMS messages
+
+Retrieve all messages in a group MMS conversation by the group message ID.
+
+`GET /messages/group/{message_id}`
+
+```java
+import com.telnyx.sdk.models.messages.MessageRetrieveGroupMessagesParams;
+import com.telnyx.sdk.models.messages.MessageRetrieveGroupMessagesResponse;
+
+MessageRetrieveGroupMessagesResponse response = client.messages().retrieveGroupMessages("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
 ## Send a group MMS message
@@ -181,6 +229,92 @@ MessageSendShortCodeParams params = MessageSendShortCodeParams.builder()
 MessageSendShortCodeResponse response = client.messages().sendShortCode(params);
 ```
 
+## Send a Whatsapp message
+
+`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
+
+Optional: `type` (enum), `webhook_url` (url)
+
+```java
+import com.telnyx.sdk.models.messages.MessageSendWhatsappParams;
+import com.telnyx.sdk.models.messages.MessageSendWhatsappResponse;
+import com.telnyx.sdk.models.messages.WhatsappMessageContent;
+
+MessageSendWhatsappParams params = MessageSendWhatsappParams.builder()
+    .from("+13125551234")
+    .to("+13125551234")
+    .whatsappMessage(WhatsappMessageContent.builder().build())
+    .build();
+MessageSendWhatsappResponse response = client.messages().sendWhatsapp(params);
+```
+
+## Retrieve a message
+
+Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+
+`GET /messages/{id}`
+
+```java
+import com.telnyx.sdk.models.messages.MessageRetrieveParams;
+import com.telnyx.sdk.models.messages.MessageRetrieveResponse;
+
+MessageRetrieveResponse message = client.messages().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Cancel a scheduled message
+
+Cancel a scheduled message that has not yet been sent.
+
+`DELETE /messages/{id}`
+
+```java
+import com.telnyx.sdk.models.messages.MessageCancelScheduledParams;
+import com.telnyx.sdk.models.messages.MessageCancelScheduledResponse;
+
+MessageCancelScheduledResponse response = client.messages().cancelScheduled("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List messaging hosted numbers
+
+List all hosted numbers associated with the authenticated user.
+
+`GET /messaging_hosted_numbers`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberListPage;
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberListParams;
+
+MessagingHostedNumberListPage page = client.messagingHostedNumbers().list();
+```
+
+## Retrieve a messaging hosted number
+
+Retrieve a specific messaging hosted number by its ID or phone number.
+
+`GET /messaging_hosted_numbers/{id}`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberRetrieveParams;
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberRetrieveResponse;
+
+MessagingHostedNumberRetrieveResponse messagingHostedNumber = client.messagingHostedNumbers().retrieve("id");
+```
+
+## Update a messaging hosted number
+
+Update the messaging settings for a hosted number.
+
+`PATCH /messaging_hosted_numbers/{id}`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```java
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberUpdateParams;
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberUpdateResponse;
+
+MessagingHostedNumberUpdateResponse messagingHostedNumber = client.messagingHostedNumbers().update("id");
+```
+
 ## List opt-outs
 
 Retrieve a list of opt-out blocks.
@@ -194,94 +328,143 @@ import com.telnyx.sdk.models.messagingoptouts.MessagingOptoutListParams;
 MessagingOptoutListPage page = client.messagingOptouts().list();
 ```
 
-## Retrieve a phone number with messaging settings
+## List high-level messaging profile metrics
 
-`GET /phone_numbers/{id}/messaging`
+List high-level metrics for all messaging profiles belonging to the authenticated user.
+
+`GET /messaging_profile_metrics`
 
 ```java
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingRetrieveParams;
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingRetrieveResponse;
+import com.telnyx.sdk.models.messagingprofilemetrics.MessagingProfileMetricListParams;
+import com.telnyx.sdk.models.messagingprofilemetrics.MessagingProfileMetricListResponse;
 
-MessagingRetrieveResponse messaging = client.phoneNumbers().messaging().retrieve("id");
+MessagingProfileMetricListResponse messagingProfileMetrics = client.messagingProfileMetrics().list();
 ```
 
-## Update the messaging profile and/or messaging product of a phone number
+## Regenerate messaging profile secret
 
-`PATCH /phone_numbers/{id}/messaging`
+Regenerate the v1 secret for a messaging profile.
 
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+`POST /messaging_profiles/{id}/actions/regenerate_secret`
 
 ```java
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingUpdateParams;
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingUpdateResponse;
+import com.telnyx.sdk.models.messagingprofiles.actions.ActionRegenerateSecretParams;
+import com.telnyx.sdk.models.messagingprofiles.actions.ActionRegenerateSecretResponse;
 
-MessagingUpdateResponse messaging = client.phoneNumbers().messaging().update("id");
+ActionRegenerateSecretResponse response = client.messagingProfiles().actions().regenerateSecret("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## List phone numbers with messaging settings
+## List alphanumeric sender IDs for a messaging profile
 
-`GET /phone_numbers/messaging`
+List all alphanumeric sender IDs associated with a specific messaging profile.
+
+`GET /messaging_profiles/{id}/alphanumeric_sender_ids`
 
 ```java
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingListPage;
-import com.telnyx.sdk.models.phonenumbers.messaging.MessagingListParams;
+import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListAlphanumericSenderIdsPage;
+import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListAlphanumericSenderIdsParams;
 
-MessagingListPage page = client.phoneNumbers().messaging().list();
+MessagingProfileListAlphanumericSenderIdsPage page = client.messagingProfiles().listAlphanumericSenderIds("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## Retrieve a mobile phone number with messaging settings
+## Get detailed messaging profile metrics
 
-`GET /mobile_phone_numbers/{id}/messaging`
+Get detailed metrics for a specific messaging profile, broken down by time interval.
+
+`GET /messaging_profiles/{id}/metrics`
 
 ```java
-import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingRetrieveParams;
-import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingRetrieveResponse;
+import com.telnyx.sdk.models.messagingprofiles.MessagingProfileRetrieveMetricsParams;
+import com.telnyx.sdk.models.messagingprofiles.MessagingProfileRetrieveMetricsResponse;
 
-MessagingRetrieveResponse messaging = client.mobilePhoneNumbers().messaging().retrieve("id");
+MessagingProfileRetrieveMetricsResponse response = client.messagingProfiles().retrieveMetrics("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## List mobile phone numbers with messaging settings
+## List Auto-Response Settings
 
-`GET /mobile_phone_numbers/messaging`
+`GET /messaging_profiles/{profile_id}/autoresp_configs`
 
 ```java
-import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingListPage;
-import com.telnyx.sdk.models.mobilephonenumbers.messaging.MessagingListParams;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigListParams;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigListResponse;
 
-MessagingListPage page = client.mobilePhoneNumbers().messaging().list();
+AutorespConfigListResponse autorespConfigs = client.messagingProfiles().autorespConfigs().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## Bulk update phone number profiles
+## Create auto-response setting
 
-`POST /messaging_numbers/bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`POST /messaging_profiles/{profile_id}/autoresp_configs` — Required: `op`, `keywords`, `country_code`
 
-Optional: `assign_only` (boolean)
+Optional: `resp_text` (string)
 
 ```java
-import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateCreateParams;
-import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateCreateResponse;
-import java.util.List;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutoRespConfigCreate;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutoRespConfigResponse;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigCreateParams;
 
-MessagingNumbersBulkUpdateCreateParams params = MessagingNumbersBulkUpdateCreateParams.builder()
-    .messagingProfileId("00000000-0000-0000-0000-000000000000")
-    .numbers(List.of(
-      "+18880000000",
-      "+18880000001",
-      "+18880000002"
-    ))
+AutorespConfigCreateParams params = AutorespConfigCreateParams.builder()
+    .profileId("profile_id")
+    .autoRespConfigCreate(AutoRespConfigCreate.builder()
+        .countryCode("US")
+        .addKeyword("keyword1")
+        .addKeyword("keyword2")
+        .op(AutoRespConfigCreate.Op.START)
+        .build())
     .build();
-MessagingNumbersBulkUpdateCreateResponse messagingNumbersBulkUpdate = client.messagingNumbersBulkUpdates().create(params);
+AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().create(params);
 ```
 
-## Retrieve bulk update status
+## Get Auto-Response Setting
 
-`GET /messaging_numbers/bulk_updates/{order_id}`
+`GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
 
 ```java
-import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateRetrieveParams;
-import com.telnyx.sdk.models.messagingnumbersbulkupdates.MessagingNumbersBulkUpdateRetrieveResponse;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutoRespConfigResponse;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigRetrieveParams;
 
-MessagingNumbersBulkUpdateRetrieveResponse messagingNumbersBulkUpdate = client.messagingNumbersBulkUpdates().retrieve("order_id");
+AutorespConfigRetrieveParams params = AutorespConfigRetrieveParams.builder()
+    .profileId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .autorespCfgId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .build();
+AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().retrieve(params);
+```
+
+## Update Auto-Response Setting
+
+`PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` — Required: `op`, `keywords`, `country_code`
+
+Optional: `resp_text` (string)
+
+```java
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutoRespConfigCreate;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutoRespConfigResponse;
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigUpdateParams;
+
+AutorespConfigUpdateParams params = AutorespConfigUpdateParams.builder()
+    .profileId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .autorespCfgId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .autoRespConfigCreate(AutoRespConfigCreate.builder()
+        .countryCode("US")
+        .addKeyword("keyword1")
+        .addKeyword("keyword2")
+        .op(AutoRespConfigCreate.Op.START)
+        .build())
+    .build();
+AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().update(params);
+```
+
+## Delete Auto-Response Setting
+
+`DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
+
+```java
+import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigDeleteParams;
+
+AutorespConfigDeleteParams params = AutorespConfigDeleteParams.builder()
+    .profileId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .autorespCfgId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .build();
+String autorespConfig = client.messagingProfiles().autorespConfigs().delete(params);
 ```
 
 ---

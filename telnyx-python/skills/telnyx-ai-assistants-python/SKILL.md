@@ -61,92 +61,6 @@ assistant = client.ai.assistants.create(
 print(assistant.id)
 ```
 
-## Get an assistant
-
-Retrieve an AI Assistant configuration by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}`
-
-```python
-assistant = client.ai.assistants.retrieve(
-    assistant_id="assistant_id",
-)
-print(assistant.id)
-```
-
-## Update an assistant
-
-Update an AI Assistant's attributes.
-
-`POST /ai/assistants/{assistant_id}`
-
-```python
-assistant = client.ai.assistants.update(
-    assistant_id="assistant_id",
-)
-print(assistant.id)
-```
-
-## Delete an assistant
-
-Delete an AI Assistant by `assistant_id`.
-
-`DELETE /ai/assistants/{assistant_id}`
-
-```python
-assistant = client.ai.assistants.delete(
-    "assistant_id",
-)
-print(assistant.id)
-```
-
-## Assistant Chat (BETA)
-
-This endpoint allows a client to send a chat message to a specific AI Assistant.
-
-`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
-
-Optional: `name` (string)
-
-```python
-response = client.ai.assistants.chat(
-    assistant_id="assistant_id",
-    content="Tell me a joke about cats",
-    conversation_id="42b20469-1215-4a9a-8964-c36f66b406f4",
-)
-print(response.content)
-```
-
-## Assistant Sms Chat
-
-Send an SMS message for an assistant.
-
-`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
-
-Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
-
-```python
-response = client.ai.assistants.send_sms(
-    assistant_id="assistant_id",
-    from_="from",
-    to="to",
-)
-print(response.conversation_id)
-```
-
-## Clone Assistant
-
-Clone an existing assistant, excluding telephony and messaging settings.
-
-`POST /ai/assistants/{assistant_id}/clone`
-
-```python
-assistant = client.ai.assistants.clone(
-    "assistant_id",
-)
-print(assistant.id)
-```
-
 ## Import assistants from external provider
 
 Import assistants from external providers.
@@ -161,68 +75,6 @@ assistants_list = client.ai.assistants.imports(
     provider="elevenlabs",
 )
 print(assistants_list.data)
-```
-
-## List scheduled events
-
-Get scheduled events for an assistant with pagination and filtering
-
-`GET /ai/assistants/{assistant_id}/scheduled_events`
-
-```python
-page = client.ai.assistants.scheduled_events.list(
-    assistant_id="assistant_id",
-)
-page = page.data[0]
-print(page)
-```
-
-## Create a scheduled event
-
-Create a scheduled event for an assistant
-
-`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
-
-Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
-
-```python
-from datetime import datetime
-
-scheduled_event_response = client.ai.assistants.scheduled_events.create(
-    assistant_id="assistant_id",
-    scheduled_at_fixed_datetime=datetime.fromisoformat("2025-04-15T13:07:28.764"),
-    telnyx_agent_target="telnyx_agent_target",
-    telnyx_conversation_channel="phone_call",
-    telnyx_end_user_target="telnyx_end_user_target",
-)
-print(scheduled_event_response)
-```
-
-## Get a scheduled event
-
-Retrieve a scheduled event by event ID
-
-`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```python
-scheduled_event_response = client.ai.assistants.scheduled_events.retrieve(
-    event_id="event_id",
-    assistant_id="assistant_id",
-)
-print(scheduled_event_response)
-```
-
-## Delete a scheduled event
-
-If the event is pending, this will cancel the event.
-
-`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```python
-client.ai.assistants.scheduled_events.delete(
-    event_id="event_id",
-    assistant_id="assistant_id",
-)
 ```
 
 ## List assistant tests with pagination
@@ -384,6 +236,242 @@ test_run_response = client.ai.assistants.tests.runs.retrieve(
 print(test_run_response.run_id)
 ```
 
+## Get an assistant
+
+Retrieve an AI Assistant configuration by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}`
+
+```python
+assistant = client.ai.assistants.retrieve(
+    assistant_id="assistant_id",
+)
+print(assistant.id)
+```
+
+## Update an assistant
+
+Update an AI Assistant's attributes.
+
+`POST /ai/assistants/{assistant_id}`
+
+```python
+assistant = client.ai.assistants.update(
+    assistant_id="assistant_id",
+)
+print(assistant.id)
+```
+
+## Delete an assistant
+
+Delete an AI Assistant by `assistant_id`.
+
+`DELETE /ai/assistants/{assistant_id}`
+
+```python
+assistant = client.ai.assistants.delete(
+    "assistant_id",
+)
+print(assistant.id)
+```
+
+## Get Canary Deploy
+
+Endpoint to get a canary deploy configuration for an assistant.
+
+`GET /ai/assistants/{assistant_id}/canary-deploys`
+
+```python
+canary_deploy_response = client.ai.assistants.canary_deploys.retrieve(
+    "assistant_id",
+)
+print(canary_deploy_response.assistant_id)
+```
+
+## Create Canary Deploy
+
+Endpoint to create a canary deploy configuration for an assistant.
+
+`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```python
+canary_deploy_response = client.ai.assistants.canary_deploys.create(
+    assistant_id="assistant_id",
+    versions=[{
+        "percentage": 1,
+        "version_id": "version_id",
+    }],
+)
+print(canary_deploy_response.assistant_id)
+```
+
+## Update Canary Deploy
+
+Endpoint to update a canary deploy configuration for an assistant.
+
+`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```python
+canary_deploy_response = client.ai.assistants.canary_deploys.update(
+    assistant_id="assistant_id",
+    versions=[{
+        "percentage": 1,
+        "version_id": "version_id",
+    }],
+)
+print(canary_deploy_response.assistant_id)
+```
+
+## Delete Canary Deploy
+
+Endpoint to delete a canary deploy configuration for an assistant.
+
+`DELETE /ai/assistants/{assistant_id}/canary-deploys`
+
+```python
+client.ai.assistants.canary_deploys.delete(
+    "assistant_id",
+)
+```
+
+## Assistant Chat (BETA)
+
+This endpoint allows a client to send a chat message to a specific AI Assistant.
+
+`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
+
+Optional: `name` (string)
+
+```python
+response = client.ai.assistants.chat(
+    assistant_id="assistant_id",
+    content="Tell me a joke about cats",
+    conversation_id="42b20469-1215-4a9a-8964-c36f66b406f4",
+)
+print(response.content)
+```
+
+## Assistant Sms Chat
+
+Send an SMS message for an assistant.
+
+`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
+
+Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
+
+```python
+response = client.ai.assistants.send_sms(
+    assistant_id="assistant_id",
+    from_="from",
+    to="to",
+)
+print(response.conversation_id)
+```
+
+## Clone Assistant
+
+Clone an existing assistant, excluding telephony and messaging settings.
+
+`POST /ai/assistants/{assistant_id}/clone`
+
+```python
+assistant = client.ai.assistants.clone(
+    "assistant_id",
+)
+print(assistant.id)
+```
+
+## List scheduled events
+
+Get scheduled events for an assistant with pagination and filtering
+
+`GET /ai/assistants/{assistant_id}/scheduled_events`
+
+```python
+page = client.ai.assistants.scheduled_events.list(
+    assistant_id="assistant_id",
+)
+page = page.data[0]
+print(page)
+```
+
+## Create a scheduled event
+
+Create a scheduled event for an assistant
+
+`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
+
+Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
+
+```python
+from datetime import datetime
+
+scheduled_event_response = client.ai.assistants.scheduled_events.create(
+    assistant_id="assistant_id",
+    scheduled_at_fixed_datetime=datetime.fromisoformat("2025-04-15T13:07:28.764"),
+    telnyx_agent_target="telnyx_agent_target",
+    telnyx_conversation_channel="phone_call",
+    telnyx_end_user_target="telnyx_end_user_target",
+)
+print(scheduled_event_response)
+```
+
+## Get a scheduled event
+
+Retrieve a scheduled event by event ID
+
+`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```python
+scheduled_event_response = client.ai.assistants.scheduled_events.retrieve(
+    event_id="event_id",
+    assistant_id="assistant_id",
+)
+print(scheduled_event_response)
+```
+
+## Delete a scheduled event
+
+If the event is pending, this will cancel the event.
+
+`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```python
+client.ai.assistants.scheduled_events.delete(
+    event_id="event_id",
+    assistant_id="assistant_id",
+)
+```
+
+## Get assistant texml
+
+Get an assistant texml by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}/texml`
+
+```python
+response = client.ai.assistants.get_texml(
+    "assistant_id",
+)
+print(response)
+```
+
+## Test Assistant Tool
+
+Test a webhook tool for an assistant
+
+`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
+
+Optional: `arguments` (object), `dynamic_variables` (object)
+
+```python
+response = client.ai.assistants.tools.test(
+    tool_id="tool_id",
+    assistant_id="assistant_id",
+)
+print(response.data)
+```
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -452,154 +540,6 @@ assistant = client.ai.assistants.versions.promote(
     assistant_id="assistant_id",
 )
 print(assistant.id)
-```
-
-## Get Canary Deploy
-
-Endpoint to get a canary deploy configuration for an assistant.
-
-`GET /ai/assistants/{assistant_id}/canary-deploys`
-
-```python
-canary_deploy_response = client.ai.assistants.canary_deploys.retrieve(
-    "assistant_id",
-)
-print(canary_deploy_response.assistant_id)
-```
-
-## Create Canary Deploy
-
-Endpoint to create a canary deploy configuration for an assistant.
-
-`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```python
-canary_deploy_response = client.ai.assistants.canary_deploys.create(
-    assistant_id="assistant_id",
-    versions=[{
-        "percentage": 1,
-        "version_id": "version_id",
-    }],
-)
-print(canary_deploy_response.assistant_id)
-```
-
-## Update Canary Deploy
-
-Endpoint to update a canary deploy configuration for an assistant.
-
-`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```python
-canary_deploy_response = client.ai.assistants.canary_deploys.update(
-    assistant_id="assistant_id",
-    versions=[{
-        "percentage": 1,
-        "version_id": "version_id",
-    }],
-)
-print(canary_deploy_response.assistant_id)
-```
-
-## Delete Canary Deploy
-
-Endpoint to delete a canary deploy configuration for an assistant.
-
-`DELETE /ai/assistants/{assistant_id}/canary-deploys`
-
-```python
-client.ai.assistants.canary_deploys.delete(
-    "assistant_id",
-)
-```
-
-## Get assistant texml
-
-Get an assistant texml by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}/texml`
-
-```python
-response = client.ai.assistants.get_texml(
-    "assistant_id",
-)
-print(response)
-```
-
-## Test Assistant Tool
-
-Test a webhook tool for an assistant
-
-`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
-
-Optional: `arguments` (object), `dynamic_variables` (object)
-
-```python
-response = client.ai.assistants.tools.test(
-    tool_id="tool_id",
-    assistant_id="assistant_id",
-)
-print(response.data)
-```
-
-## List Integrations
-
-List all available integrations.
-
-`GET /ai/integrations`
-
-```python
-integrations = client.ai.integrations.list()
-print(integrations.data)
-```
-
-## List User Integrations
-
-List user setup integrations
-
-`GET /ai/integrations/connections`
-
-```python
-connections = client.ai.integrations.connections.list()
-print(connections.data)
-```
-
-## Get User Integration connection By Id
-
-Get user setup integrations
-
-`GET /ai/integrations/connections/{user_connection_id}`
-
-```python
-connection = client.ai.integrations.connections.retrieve(
-    "user_connection_id",
-)
-print(connection.data)
-```
-
-## Delete Integration Connection
-
-Delete a specific integration connection.
-
-`DELETE /ai/integrations/connections/{user_connection_id}`
-
-```python
-client.ai.integrations.connections.delete(
-    "user_connection_id",
-)
-```
-
-## List Integration By Id
-
-Retrieve integration details
-
-`GET /ai/integrations/{integration_id}`
-
-```python
-integration = client.ai.integrations.retrieve(
-    "integration_id",
-)
-print(integration.id)
 ```
 
 ## List MCP Servers

@@ -33,138 +33,6 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
-## List messaging hosted number orders
-
-`GET /messaging_hosted_number_orders`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const messagingHostedNumberOrder of client.messagingHostedNumberOrders.list()) {
-  console.log(messagingHostedNumberOrder.id);
-}
-```
-
-## Create a messaging hosted number order
-
-`POST /messaging_hosted_number_orders`
-
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
-
-```javascript
-const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.create();
-
-console.log(messagingHostedNumberOrder.data);
-```
-
-## Retrieve a messaging hosted number order
-
-`GET /messaging_hosted_number_orders/{id}`
-
-```javascript
-const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.retrieve('id');
-
-console.log(messagingHostedNumberOrder.data);
-```
-
-## Delete a messaging hosted number order
-
-Delete a messaging hosted number order and all associated phone numbers.
-
-`DELETE /messaging_hosted_number_orders/{id}`
-
-```javascript
-const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.delete('id');
-
-console.log(messagingHostedNumberOrder.data);
-```
-
-## Upload hosted number document
-
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
-
-```javascript
-const response = await client.messagingHostedNumberOrders.actions.uploadFile('id');
-
-console.log(response.data);
-```
-
-## Validate hosted number codes
-
-Validate the verification codes sent to the numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
-
-```javascript
-const response = await client.messagingHostedNumberOrders.validateCodes('id', {
-  verification_codes: [{ code: 'code', phone_number: 'phone_number' }],
-});
-
-console.log(response.data);
-```
-
-## Create hosted number verification codes
-
-Create verification codes to validate numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
-
-```javascript
-const response = await client.messagingHostedNumberOrders.createVerificationCodes('id', {
-  phone_numbers: ['string'],
-  verification_method: 'sms',
-});
-
-console.log(response.data);
-```
-
-## Check hosted messaging eligibility
-
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
-
-```javascript
-const response = await client.messagingHostedNumberOrders.checkEligibility({
-  phone_numbers: ['string'],
-});
-
-console.log(response.phone_numbers);
-```
-
-## Retrieve a messaging hosted number
-
-Retrieve a specific messaging hosted number by its ID or phone number.
-
-`GET /messaging_hosted_numbers/{id}`
-
-```javascript
-const messagingHostedNumber = await client.messagingHostedNumbers.retrieve('id');
-
-console.log(messagingHostedNumber.data);
-```
-
-## Update a messaging hosted number
-
-Update the messaging settings for a hosted number.
-
-`PATCH /messaging_hosted_numbers/{id}`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
-
-```javascript
-const messagingHostedNumber = await client.messagingHostedNumbers.update('id');
-
-console.log(messagingHostedNumber.data);
-```
-
-## Delete a messaging hosted number
-
-`DELETE /messaging_hosted_numbers/{id}`
-
-```javascript
-const messagingHostedNumber = await client.messagingHostedNumbers.delete('id');
-
-console.log(messagingHostedNumber.data);
-```
-
 ## Send an RCS message
 
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
@@ -178,6 +46,18 @@ const response = await client.messages.rcs.send({
   messaging_profile_id: 'messaging_profile_id',
   to: '+13125551234',
 });
+
+console.log(response.data);
+```
+
+## Generate RCS deeplink
+
+Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
+
+`GET /messages/rcs/deeplinks/{agent_id}`
+
+```javascript
+const response = await client.messages.rcs.generateDeeplink('agent_id');
 
 console.log(response.data);
 ```
@@ -252,16 +132,110 @@ const response = await client.messaging.rcs.inviteTestNumber('phone_number', { i
 console.log(response.data);
 ```
 
-## Generate RCS deeplink
+## List messaging hosted number orders
 
-Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
-
-`GET /messages/rcs_deeplinks/{agent_id}`
+`GET /messaging_hosted_number_orders`
 
 ```javascript
-const response = await client.messages.rcs.generateDeeplink('agent_id');
+// Automatically fetches more pages as needed.
+for await (const messagingHostedNumberOrder of client.messagingHostedNumberOrders.list()) {
+  console.log(messagingHostedNumberOrder.id);
+}
+```
+
+## Create a messaging hosted number order
+
+`POST /messaging_hosted_number_orders`
+
+Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+
+```javascript
+const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.create();
+
+console.log(messagingHostedNumberOrder.data);
+```
+
+## Check hosted messaging eligibility
+
+`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+
+```javascript
+const response = await client.messagingHostedNumberOrders.checkEligibility({
+  phone_numbers: ['string'],
+});
+
+console.log(response.phone_numbers);
+```
+
+## Retrieve a messaging hosted number order
+
+`GET /messaging_hosted_number_orders/{id}`
+
+```javascript
+const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.retrieve('id');
+
+console.log(messagingHostedNumberOrder.data);
+```
+
+## Delete a messaging hosted number order
+
+Delete a messaging hosted number order and all associated phone numbers.
+
+`DELETE /messaging_hosted_number_orders/{id}`
+
+```javascript
+const messagingHostedNumberOrder = await client.messagingHostedNumberOrders.delete('id');
+
+console.log(messagingHostedNumberOrder.data);
+```
+
+## Upload hosted number document
+
+`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+```javascript
+const response = await client.messagingHostedNumberOrders.actions.uploadFile('id');
 
 console.log(response.data);
+```
+
+## Validate hosted number codes
+
+Validate the verification codes sent to the numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+
+```javascript
+const response = await client.messagingHostedNumberOrders.validateCodes('id', {
+  verification_codes: [{ code: 'code', phone_number: 'phone_number' }],
+});
+
+console.log(response.data);
+```
+
+## Create hosted number verification codes
+
+Create verification codes to validate numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+
+```javascript
+const response = await client.messagingHostedNumberOrders.createVerificationCodes('id', {
+  phone_numbers: ['string'],
+  verification_method: 'sms',
+});
+
+console.log(response.data);
+```
+
+## Delete a messaging hosted number
+
+`DELETE /messaging_hosted_numbers/{id}`
+
+```javascript
+const messagingHostedNumber = await client.messagingHostedNumbers.delete('id');
+
+console.log(messagingHostedNumber.data);
 ```
 
 ## List Verification Requests
@@ -383,4 +357,30 @@ A request may only be deleted when when the request is in the "rejected" state.
 
 ```javascript
 await client.messagingTollfree.verification.requests.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+```
+
+## Get Verification Request Status History
+
+Get the history of status changes for a verification request.
+
+`GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+```javascript
+const response = await client.messagingTollfree.verification.requests.retrieveStatusHistory(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { 'page[number]': 1, 'page[size]': 1 },
+);
+
+console.log(response.records);
+```
+
+## List messaging URL domains
+
+`GET /messaging_url_domains`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const messagingURLDomainListResponse of client.messagingURLDomains.list()) {
+  console.log(messagingURLDomainListResponse.id);
+}
 ```

@@ -33,6 +33,20 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## Run a portability check
+
+Runs a portability check, returning the results immediately.
+
+`POST /portability_checks`
+
+Optional: `phone_numbers` (array[string])
+
+```javascript
+const response = await client.portabilityChecks.run();
+
+console.log(response.data);
+```
+
 ## List all porting events
 
 Returns a list of all porting events.
@@ -72,7 +86,7 @@ await client.porting.events.republish('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration_preview`
+`POST /porting/loa_configuration/preview`
 
 ```javascript
 const response = await client.porting.loaConfigurations.preview0({
@@ -200,6 +214,58 @@ const content = await response.blob();
 console.log(content);
 ```
 
+## List porting related reports
+
+List the reports generated about porting operations.
+
+`GET /porting/reports`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const portingReport of client.porting.reports.list()) {
+  console.log(portingReport.id);
+}
+```
+
+## Create a porting related report
+
+Generate reports about porting operations.
+
+`POST /porting/reports`
+
+```javascript
+const report = await client.porting.reports.create({
+  params: { filters: {} },
+  report_type: 'export_porting_orders_csv',
+});
+
+console.log(report.data);
+```
+
+## Retrieve a report
+
+Retrieve a specific report generated.
+
+`GET /porting/reports/{id}`
+
+```javascript
+const report = await client.porting.reports.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(report.data);
+```
+
+## List available carriers in the UK
+
+List available carriers in the UK.
+
+`GET /porting/uk_carriers`
+
+```javascript
+const response = await client.porting.listUkCarriers();
+
+console.log(response.data);
+```
+
 ## List all porting orders
 
 Returns a list of your porting order.
@@ -227,6 +293,43 @@ const portingOrder = await client.portingOrders.create({
 });
 
 console.log(portingOrder.data);
+```
+
+## List all exception types
+
+Returns a list of all possible exception types for a porting order.
+
+`GET /porting_orders/exception_types`
+
+```javascript
+const response = await client.portingOrders.retrieveExceptionTypes();
+
+console.log(response.data);
+```
+
+## List all phone number configurations
+
+Returns a list of phone number configurations paginated.
+
+`GET /porting_orders/phone_number_configurations`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumberConfigurationListResponse of client.portingOrders.phoneNumberConfigurations.list()) {
+  console.log(phoneNumberConfigurationListResponse.id);
+}
+```
+
+## Create a list of phone number configurations
+
+Creates a list of phone number configurations.
+
+`POST /porting_orders/phone_number_configurations`
+
+```javascript
+const phoneNumberConfiguration = await client.portingOrders.phoneNumberConfigurations.create();
+
+console.log(phoneNumberConfiguration.data);
 ```
 
 ## Retrieve a porting order
@@ -698,118 +801,15 @@ const phoneNumberExtension = await client.portingOrders.phoneNumberExtensions.de
 console.log(phoneNumberExtension.data);
 ```
 
-## List all exception types
-
-Returns a list of all possible exception types for a porting order.
-
-`GET /porting_orders/exception_types`
-
-```javascript
-const response = await client.portingOrders.retrieveExceptionTypes();
-
-console.log(response.data);
-```
-
-## List all phone number configurations
-
-Returns a list of phone number configurations paginated.
-
-`GET /porting_orders/phone_number_configurations`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const phoneNumberConfigurationListResponse of client.portingOrders.phoneNumberConfigurations.list()) {
-  console.log(phoneNumberConfigurationListResponse.id);
-}
-```
-
-## Create a list of phone number configurations
-
-Creates a list of phone number configurations.
-
-`POST /porting_orders/phone_number_configurations`
-
-```javascript
-const phoneNumberConfiguration = await client.portingOrders.phoneNumberConfigurations.create();
-
-console.log(phoneNumberConfiguration.data);
-```
-
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting/phone_numbers`
+`GET /porting_phone_numbers`
 
 ```javascript
 // Automatically fetches more pages as needed.
 for await (const portingPhoneNumberListResponse of client.portingPhoneNumbers.list()) {
   console.log(portingPhoneNumberListResponse.porting_order_id);
 }
-```
-
-## List porting related reports
-
-List the reports generated about porting operations.
-
-`GET /porting/reports`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const portingReport of client.porting.reports.list()) {
-  console.log(portingReport.id);
-}
-```
-
-## Create a porting related report
-
-Generate reports about porting operations.
-
-`POST /porting/reports`
-
-```javascript
-const report = await client.porting.reports.create({
-  params: { filters: {} },
-  report_type: 'export_porting_orders_csv',
-});
-
-console.log(report.data);
-```
-
-## Retrieve a report
-
-Retrieve a specific report generated.
-
-`GET /porting/reports/{id}`
-
-```javascript
-const report = await client.porting.reports.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(report.data);
-```
-
-## List available carriers in the UK
-
-List available carriers in the UK.
-
-`GET /porting/uk_carriers`
-
-```javascript
-const response = await client.porting.listUkCarriers();
-
-console.log(response.data);
-```
-
-## Run a portability check
-
-Runs a portability check, returning the results immediately.
-
-`POST /portability_checks`
-
-Optional: `phone_numbers` (array[string])
-
-```javascript
-const response = await client.portabilityChecks.run();
-
-console.log(response.data);
 ```

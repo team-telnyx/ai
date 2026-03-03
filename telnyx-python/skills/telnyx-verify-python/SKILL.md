@@ -47,6 +47,30 @@ number_lookup = client.number_lookup.retrieve(
 print(number_lookup.data)
 ```
 
+## List verifications by phone number
+
+`GET /verifications/by_phone_number/{phone_number}`
+
+```python
+by_phone_numbers = client.verifications.by_phone_number.list(
+    "+13035551234",
+)
+print(by_phone_numbers.data)
+```
+
+## Verify verification code by phone number
+
+`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+
+```python
+verify_verification_code_response = client.verifications.by_phone_number.actions.verify(
+    phone_number="+13035551234",
+    code="17686",
+    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
+)
+print(verify_verification_code_response.data)
+```
+
 ## Trigger Call verification
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
@@ -113,30 +137,6 @@ verify_verification_code_response = client.verifications.actions.verify(
 print(verify_verification_code_response.data)
 ```
 
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
-
-```python
-by_phone_numbers = client.verifications.by_phone_number.list(
-    "+13035551234",
-)
-print(by_phone_numbers.data)
-```
-
-## Verify verification code by phone number
-
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
-
-```python
-verify_verification_code_response = client.verifications.by_phone_number.actions.verify(
-    phone_number="+13035551234",
-    code="17686",
-    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
-)
-print(verify_verification_code_response.data)
-```
-
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
@@ -160,43 +160,6 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (obj
 ```python
 verify_profile_data = client.verify_profiles.create(
     name="Test Profile",
-)
-print(verify_profile_data.data)
-```
-
-## Retrieve Verify profile
-
-Gets a single Verify profile.
-
-`GET /verify_profiles/{verify_profile_id}`
-
-```python
-verify_profile_data = client.verify_profiles.retrieve(
-    "12ade33a-21c0-473b-b055-b3c836e1c292",
-)
-print(verify_profile_data.data)
-```
-
-## Update Verify profile
-
-`PATCH /verify_profiles/{verify_profile_id}`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```python
-verify_profile_data = client.verify_profiles.update(
-    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
-)
-print(verify_profile_data.data)
-```
-
-## Delete Verify profile
-
-`DELETE /verify_profiles/{verify_profile_id}`
-
-```python
-verify_profile_data = client.verify_profiles.delete(
-    "12ade33a-21c0-473b-b055-b3c836e1c292",
 )
 print(verify_profile_data.data)
 ```
@@ -237,4 +200,41 @@ message_template = client.verify_profiles.update_template(
     text="Your {{app_name}} verification code is: {{code}}.",
 )
 print(message_template.data)
+```
+
+## Retrieve Verify profile
+
+Gets a single Verify profile.
+
+`GET /verify_profiles/{verify_profile_id}`
+
+```python
+verify_profile_data = client.verify_profiles.retrieve(
+    "12ade33a-21c0-473b-b055-b3c836e1c292",
+)
+print(verify_profile_data.data)
+```
+
+## Update Verify profile
+
+`PATCH /verify_profiles/{verify_profile_id}`
+
+Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+
+```python
+verify_profile_data = client.verify_profiles.update(
+    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
+)
+print(verify_profile_data.data)
+```
+
+## Delete Verify profile
+
+`DELETE /verify_profiles/{verify_profile_id}`
+
+```python
+verify_profile_data = client.verify_profiles.delete(
+    "12ade33a-21c0-473b-b055-b3c836e1c292",
+)
+print(verify_profile_data.data)
 ```

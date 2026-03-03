@@ -33,38 +33,49 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Lists the phone number blocks jobs
+## Bulk update phone number profiles
 
-`GET /phone_number_blocks/jobs`
+`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+
+Optional: `assign_only` (boolean)
 
 ```ruby
-page = client.phone_number_blocks.jobs.list
+messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.create(
+  messaging_profile_id: "00000000-0000-0000-0000-000000000000",
+  numbers: ["+18880000000", "+18880000001", "+18880000002"]
+)
+
+puts(messaging_numbers_bulk_update)
+```
+
+## Retrieve bulk update status
+
+`GET /messaging_numbers_bulk_updates/{order_id}`
+
+```ruby
+messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.retrieve("order_id")
+
+puts(messaging_numbers_bulk_update)
+```
+
+## List mobile phone numbers with messaging settings
+
+`GET /mobile_phone_numbers/messaging`
+
+```ruby
+page = client.mobile_phone_numbers.messaging.list
 
 puts(page)
 ```
 
-## Retrieves a phone number blocks job
+## Retrieve a mobile phone number with messaging settings
 
-`GET /phone_number_blocks/jobs/{id}`
-
-```ruby
-job = client.phone_number_blocks.jobs.retrieve("id")
-
-puts(job)
-```
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
+`GET /mobile_phone_numbers/{id}/messaging`
 
 ```ruby
-response = client.phone_number_blocks.jobs.delete_phone_number_block(
-  phone_number_block_id: "f3946371-7199-4261-9c3d-81a0d7935146"
-)
+messaging = client.mobile_phone_numbers.messaging.retrieve("id")
 
-puts(response)
+puts(messaging)
 ```
 
 ## List phone numbers
@@ -73,6 +84,113 @@ puts(response)
 
 ```ruby
 page = client.phone_numbers.list
+
+puts(page)
+```
+
+## Verify ownership of phone numbers
+
+Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+
+`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+
+```ruby
+response = client.phone_numbers.actions.verify_ownership(phone_numbers: ["+15551234567"])
+
+puts(response)
+```
+
+## Lists the phone numbers jobs
+
+`GET /phone_numbers/jobs`
+
+```ruby
+page = client.phone_numbers.jobs.list
+
+puts(page)
+```
+
+## Delete a batch of numbers
+
+Creates a new background job to delete a batch of numbers.
+
+`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+
+```ruby
+response = client.phone_numbers.jobs.delete_batch(phone_numbers: ["+19705555098", "+19715555098", "32873127836"])
+
+puts(response)
+```
+
+## Update the emergency settings from a batch of numbers
+
+Creates a background job to update the emergency settings of a collection of phone numbers.
+
+`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+
+Optional: `emergency_address_id` (['string', 'null'])
+
+```ruby
+response = client.phone_numbers.jobs.update_emergency_settings_batch(
+  emergency_enabled: true,
+  phone_numbers: ["+19705555098", "+19715555098", "32873127836"]
+)
+
+puts(response)
+```
+
+## Update a batch of numbers
+
+Creates a new background job to update a batch of numbers.
+
+`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+
+```ruby
+response = client.phone_numbers.jobs.update_batch(phone_numbers: ["1583466971586889004", "+13127367254"])
+
+puts(response)
+```
+
+## Retrieve a phone numbers job
+
+`GET /phone_numbers/jobs/{id}`
+
+```ruby
+job = client.phone_numbers.jobs.retrieve("id")
+
+puts(job)
+```
+
+## List phone numbers with messaging settings
+
+`GET /phone_numbers/messaging`
+
+```ruby
+page = client.phone_numbers.messaging.list
+
+puts(page)
+```
+
+## Slim List phone numbers
+
+List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+
+`GET /phone_numbers/slim`
+
+```ruby
+page = client.phone_numbers.slim_list
+
+puts(page)
+```
+
+## List phone numbers with voice settings
+
+`GET /phone_numbers/voice`
+
+```ruby
+page = client.phone_numbers.voice.list
 
 puts(page)
 ```
@@ -136,6 +254,28 @@ response = client.phone_numbers.actions.enable_emergency(
 puts(response)
 ```
 
+## Retrieve a phone number with messaging settings
+
+`GET /phone_numbers/{id}/messaging`
+
+```ruby
+messaging = client.phone_numbers.messaging.retrieve("id")
+
+puts(messaging)
+```
+
+## Update the messaging profile and/or messaging product of a phone number
+
+`PATCH /phone_numbers/{id}/messaging`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```ruby
+messaging = client.phone_numbers.messaging.update("id")
+
+puts(messaging)
+```
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -156,143 +296,6 @@ Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name
 voice = client.phone_numbers.voice.update("1293384261075731499")
 
 puts(voice)
-```
-
-## Verify ownership of phone numbers
-
-Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
-
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
-
-```ruby
-response = client.phone_numbers.actions.verify_ownership(phone_numbers: ["+15551234567"])
-
-puts(response)
-```
-
-## List CSV downloads
-
-`GET /phone_numbers/csv_downloads`
-
-```ruby
-page = client.phone_numbers.csv_downloads.list
-
-puts(page)
-```
-
-## Create a CSV download
-
-`POST /phone_numbers/csv_downloads`
-
-```ruby
-csv_download = client.phone_numbers.csv_downloads.create
-
-puts(csv_download)
-```
-
-## Retrieve a CSV download
-
-`GET /phone_numbers/csv_downloads/{id}`
-
-```ruby
-csv_download = client.phone_numbers.csv_downloads.retrieve("id")
-
-puts(csv_download)
-```
-
-## Lists the phone numbers jobs
-
-`GET /phone_numbers/jobs`
-
-```ruby
-page = client.phone_numbers.jobs.list
-
-puts(page)
-```
-
-## Retrieve a phone numbers job
-
-`GET /phone_numbers/jobs/{id}`
-
-```ruby
-job = client.phone_numbers.jobs.retrieve("id")
-
-puts(job)
-```
-
-## Delete a batch of numbers
-
-Creates a new background job to delete a batch of numbers.
-
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
-
-```ruby
-response = client.phone_numbers.jobs.delete_batch(phone_numbers: ["+19705555098", "+19715555098", "32873127836"])
-
-puts(response)
-```
-
-## Update the emergency settings from a batch of numbers
-
-Creates a background job to update the emergency settings of a collection of phone numbers.
-
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
-
-Optional: `emergency_address_id` (['string', 'null'])
-
-```ruby
-response = client.phone_numbers.jobs.update_emergency_settings_batch(
-  emergency_enabled: true,
-  phone_numbers: ["+19705555098", "+19715555098", "32873127836"]
-)
-
-puts(response)
-```
-
-## Update a batch of numbers
-
-Creates a new background job to update a batch of numbers.
-
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
-
-```ruby
-response = client.phone_numbers.jobs.update_batch(phone_numbers: ["1583466971586889004", "+13127367254"])
-
-puts(response)
-```
-
-## Retrieve regulatory requirements for a list of phone numbers
-
-`GET /phone_numbers/regulatory_requirements`
-
-```ruby
-phone_numbers_regulatory_requirement = client.phone_numbers_regulatory_requirements.retrieve
-
-puts(phone_numbers_regulatory_requirement)
-```
-
-## Slim List phone numbers
-
-List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
-
-`GET /phone_numbers/slim`
-
-```ruby
-page = client.phone_numbers.slim_list
-
-puts(page)
-```
-
-## List phone numbers with voice settings
-
-`GET /phone_numbers/voice`
-
-```ruby
-page = client.phone_numbers.voice.list
-
-puts(page)
 ```
 
 ## List Mobile Phone Numbers

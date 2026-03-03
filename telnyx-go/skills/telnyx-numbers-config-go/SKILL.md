@@ -40,44 +40,57 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Lists the phone number blocks jobs
+## Bulk update phone number profiles
 
-`GET /phone_number_blocks/jobs`
+`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+
+Optional: `assign_only` (boolean)
 
 ```go
-	page, err := client.PhoneNumberBlocks.Jobs.List(context.TODO(), telnyx.PhoneNumberBlockJobListParams{})
+	messagingNumbersBulkUpdate, err := client.MessagingNumbersBulkUpdates.New(context.TODO(), telnyx.MessagingNumbersBulkUpdateNewParams{
+		MessagingProfileID: "00000000-0000-0000-0000-000000000000",
+		Numbers:            []string{"+18880000000", "+18880000001", "+18880000002"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingNumbersBulkUpdate.Data)
+```
+
+## Retrieve bulk update status
+
+`GET /messaging_numbers_bulk_updates/{order_id}`
+
+```go
+	messagingNumbersBulkUpdate, err := client.MessagingNumbersBulkUpdates.Get(context.TODO(), "order_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingNumbersBulkUpdate.Data)
+```
+
+## List mobile phone numbers with messaging settings
+
+`GET /mobile_phone_numbers/messaging`
+
+```go
+	page, err := client.MobilePhoneNumbers.Messaging.List(context.TODO(), telnyx.MobilePhoneNumberMessagingListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Retrieves a phone number blocks job
+## Retrieve a mobile phone number with messaging settings
 
-`GET /phone_number_blocks/jobs/{id}`
+`GET /mobile_phone_numbers/{id}/messaging`
 
 ```go
-	job, err := client.PhoneNumberBlocks.Jobs.Get(context.TODO(), "id")
+	messaging, err := client.MobilePhoneNumbers.Messaging.Get(context.TODO(), "id")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", job.Data)
-```
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
-
-```go
-	response, err := client.PhoneNumberBlocks.Jobs.DeletePhoneNumberBlock(context.TODO(), telnyx.PhoneNumberBlockJobDeletePhoneNumberBlockParams{
-		PhoneNumberBlockID: "f3946371-7199-4261-9c3d-81a0d7935146",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
+	fmt.Printf("%+v\n", messaging.Data)
 ```
 
 ## List phone numbers
@@ -86,6 +99,137 @@ Creates a new background job to delete all the phone numbers associated with the
 
 ```go
 	page, err := client.PhoneNumbers.List(context.TODO(), telnyx.PhoneNumberListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Verify ownership of phone numbers
+
+Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+
+`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+
+```go
+	response, err := client.PhoneNumbers.Actions.VerifyOwnership(context.TODO(), telnyx.PhoneNumberActionVerifyOwnershipParams{
+		PhoneNumbers: []string{"+15551234567"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Lists the phone numbers jobs
+
+`GET /phone_numbers/jobs`
+
+```go
+	page, err := client.PhoneNumbers.Jobs.List(context.TODO(), telnyx.PhoneNumberJobListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Delete a batch of numbers
+
+Creates a new background job to delete a batch of numbers.
+
+`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+
+```go
+	response, err := client.PhoneNumbers.Jobs.DeleteBatch(context.TODO(), telnyx.PhoneNumberJobDeleteBatchParams{
+		PhoneNumbers: []string{"+19705555098", "+19715555098", "32873127836"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Update the emergency settings from a batch of numbers
+
+Creates a background job to update the emergency settings of a collection of phone numbers.
+
+`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+
+Optional: `emergency_address_id` (['string', 'null'])
+
+```go
+	response, err := client.PhoneNumbers.Jobs.UpdateEmergencySettingsBatch(context.TODO(), telnyx.PhoneNumberJobUpdateEmergencySettingsBatchParams{
+		EmergencyEnabled: true,
+		PhoneNumbers:     []string{"+19705555098", "+19715555098", "32873127836"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Update a batch of numbers
+
+Creates a new background job to update a batch of numbers.
+
+`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+
+```go
+	response, err := client.PhoneNumbers.Jobs.UpdateBatch(context.TODO(), telnyx.PhoneNumberJobUpdateBatchParams{
+		PhoneNumbers: []string{"1583466971586889004", "+13127367254"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Retrieve a phone numbers job
+
+`GET /phone_numbers/jobs/{id}`
+
+```go
+	job, err := client.PhoneNumbers.Jobs.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", job.Data)
+```
+
+## List phone numbers with messaging settings
+
+`GET /phone_numbers/messaging`
+
+```go
+	page, err := client.PhoneNumbers.Messaging.List(context.TODO(), telnyx.PhoneNumberMessagingListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Slim List phone numbers
+
+List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+
+`GET /phone_numbers/slim`
+
+```go
+	page, err := client.PhoneNumbers.SlimList(context.TODO(), telnyx.PhoneNumberSlimListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## List phone numbers with voice settings
+
+`GET /phone_numbers/voice`
+
+```go
+	page, err := client.PhoneNumbers.Voice.List(context.TODO(), telnyx.PhoneNumberVoiceListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
@@ -171,6 +315,36 @@ Optional: `address_id` (string), `billing_group_id` (string), `connection_id` (s
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+## Retrieve a phone number with messaging settings
+
+`GET /phone_numbers/{id}/messaging`
+
+```go
+	messaging, err := client.PhoneNumbers.Messaging.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messaging.Data)
+```
+
+## Update the messaging profile and/or messaging product of a phone number
+
+`PATCH /phone_numbers/{id}/messaging`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```go
+	messaging, err := client.PhoneNumbers.Messaging.Update(
+		context.TODO(),
+		"id",
+		telnyx.PhoneNumberMessagingUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messaging.Data)
+```
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -201,173 +375,6 @@ Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", voice.Data)
-```
-
-## Verify ownership of phone numbers
-
-Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
-
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
-
-```go
-	response, err := client.PhoneNumbers.Actions.VerifyOwnership(context.TODO(), telnyx.PhoneNumberActionVerifyOwnershipParams{
-		PhoneNumbers: []string{"+15551234567"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## List CSV downloads
-
-`GET /phone_numbers/csv_downloads`
-
-```go
-	page, err := client.PhoneNumbers.CsvDownloads.List(context.TODO(), telnyx.PhoneNumberCsvDownloadListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a CSV download
-
-`POST /phone_numbers/csv_downloads`
-
-```go
-	csvDownload, err := client.PhoneNumbers.CsvDownloads.New(context.TODO(), telnyx.PhoneNumberCsvDownloadNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", csvDownload.Data)
-```
-
-## Retrieve a CSV download
-
-`GET /phone_numbers/csv_downloads/{id}`
-
-```go
-	csvDownload, err := client.PhoneNumbers.CsvDownloads.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", csvDownload.Data)
-```
-
-## Lists the phone numbers jobs
-
-`GET /phone_numbers/jobs`
-
-```go
-	page, err := client.PhoneNumbers.Jobs.List(context.TODO(), telnyx.PhoneNumberJobListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Retrieve a phone numbers job
-
-`GET /phone_numbers/jobs/{id}`
-
-```go
-	job, err := client.PhoneNumbers.Jobs.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", job.Data)
-```
-
-## Delete a batch of numbers
-
-Creates a new background job to delete a batch of numbers.
-
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
-
-```go
-	response, err := client.PhoneNumbers.Jobs.DeleteBatch(context.TODO(), telnyx.PhoneNumberJobDeleteBatchParams{
-		PhoneNumbers: []string{"+19705555098", "+19715555098", "32873127836"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Update the emergency settings from a batch of numbers
-
-Creates a background job to update the emergency settings of a collection of phone numbers.
-
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
-
-Optional: `emergency_address_id` (['string', 'null'])
-
-```go
-	response, err := client.PhoneNumbers.Jobs.UpdateEmergencySettingsBatch(context.TODO(), telnyx.PhoneNumberJobUpdateEmergencySettingsBatchParams{
-		EmergencyEnabled: true,
-		PhoneNumbers:     []string{"+19705555098", "+19715555098", "32873127836"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Update a batch of numbers
-
-Creates a new background job to update a batch of numbers.
-
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
-
-```go
-	response, err := client.PhoneNumbers.Jobs.UpdateBatch(context.TODO(), telnyx.PhoneNumberJobUpdateBatchParams{
-		PhoneNumbers: []string{"1583466971586889004", "+13127367254"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Retrieve regulatory requirements for a list of phone numbers
-
-`GET /phone_numbers/regulatory_requirements`
-
-```go
-	phoneNumbersRegulatoryRequirement, err := client.PhoneNumbersRegulatoryRequirements.Get(context.TODO(), telnyx.PhoneNumbersRegulatoryRequirementGetParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", phoneNumbersRegulatoryRequirement.Data)
-```
-
-## Slim List phone numbers
-
-List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
-
-`GET /phone_numbers/slim`
-
-```go
-	page, err := client.PhoneNumbers.SlimList(context.TODO(), telnyx.PhoneNumberSlimListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## List phone numbers with voice settings
-
-`GET /phone_numbers/voice`
-
-```go
-	page, err := client.PhoneNumbers.Voice.List(context.TODO(), telnyx.PhoneNumberVoiceListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
 ```
 
 ## List Mobile Phone Numbers

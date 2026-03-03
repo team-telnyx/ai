@@ -48,22 +48,6 @@ response = client.calls.actions.update_client_state(
 print(response.data)
 ```
 
-## SIP Refer a call
-
-Initiate a SIP Refer on a Call Control call.
-
-`POST /calls/{call_control_id}/actions/refer` — Required: `sip_address`
-
-Optional: `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object])
-
-```python
-response = client.calls.actions.refer(
-    call_control_id="call_control_id",
-    sip_address="sip:username@sip.non-telnyx-address.com",
-)
-print(response.data)
-```
-
 ## Send DTMF
 
 Sends DTMF tones from this leg.
@@ -159,16 +143,49 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Event | Description |
 |-------|-------------|
-| `callReferStarted` | Call Refer Started |
+| `callConversationEnded` | Call Conversation Ended |
+| `callConversationInsightsGenerated` | Call Conversation Insights Generated |
+| `callDtmfReceived` | Call Dtmf Received |
+| `callMachineDetectionEnded` | Call Machine Detection Ended |
+| `callMachineGreetingEnded` | Call Machine Greeting Ended |
+| `callMachinePremiumDetectionEnded` | Call Machine Premium Detection Ended |
+| `callMachinePremiumGreetingEnded` | Call Machine Premium Greeting Ended |
 | `callReferCompleted` | Call Refer Completed |
 | `callReferFailed` | Call Refer Failed |
+| `callReferStarted` | Call Refer Started |
+| `callSiprecFailed` | Call Siprec Failed |
 | `callSiprecStarted` | Call Siprec Started |
 | `callSiprecStopped` | Call Siprec Stopped |
-| `callSiprecFailed` | Call Siprec Failed |
 
 ### Webhook payload fields
 
-**`callReferStarted`**
+**`callConversationEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Unique identifier for the event. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.created_at` | date-time | Timestamp when the event was created in the system. |
+| `data.payload.assistant_id` | string | Unique identifier of the assistant involved in the call. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call leg. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session (group of related call legs). |
+| `data.payload.client_state` | string | Base64-encoded state received from a command. |
+| `data.payload.calling_party_type` | enum | The type of calling party connection. |
+| `data.payload.conversation_id` | string | ID unique to the conversation or insight group generated for the call. |
+| `data.payload.duration_sec` | integer | Duration of the conversation in seconds. |
+| `data.payload.from` | string | The caller's number or identifier. |
+| `data.payload.to` | string | The callee's number or SIP address. |
+| `data.payload.llm_model` | string | The large language model used during the conversation. |
+| `data.payload.stt_model` | string | The speech-to-text model used in the conversation. |
+| `data.payload.tts_provider` | string | The text-to-speech provider used in the call. |
+| `data.payload.tts_model_id` | string | The model ID used for text-to-speech synthesis. |
+| `data.payload.tts_voice_id` | string | Voice ID used for TTS. |
+
+**`callConversationInsightsGenerated`**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -176,14 +193,99 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.event_type` | enum | The type of event being delivered. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Unique ID for controlling the call. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
 | `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
 | `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.calling_party_type` | enum | The type of calling party connection. |
+| `data.payload.insight_group_id` | string | ID that is unique to the insight group being generated for the call. |
+| `data.payload.results` | array[object] | Array of insight results being generated for the call. |
+
+**`callDtmfReceived`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Identifies the type of resource. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.sip_notify_response` | integer | SIP NOTIFY event status for tracking the REFER attempt. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.digit` | string | The received DTMF digit or symbol. |
+
+**`callMachineDetectionEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.result` | enum | Answering machine detection result. |
+
+**`callMachineGreetingEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.result` | enum | Answering machine greeting ended result. |
+
+**`callMachinePremiumDetectionEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.result` | enum | Premium Answering Machine Detection result. |
+
+**`callMachinePremiumGreetingEnded`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.result` | enum | Premium Answering Machine Greeting Ended result. |
 
 **`callReferCompleted`**
 
@@ -219,6 +321,38 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.sip_notify_response` | integer | SIP NOTIFY event status for tracking the REFER attempt. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 
+**`callReferStarted`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Unique ID for controlling the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.sip_notify_response` | integer | SIP NOTIFY event status for tracking the REFER attempt. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+
+**`callSiprecFailed`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.failure_cause` | string | Q850 reason why siprec session failed. |
+
 **`callSiprecStarted`**
 
 | Field | Type | Description |
@@ -247,18 +381,3 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.hangup_cause` | string | Q850 reason why the SIPREC session was stopped. |
-
-**`callSiprecFailed`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.failure_cause` | string | Q850 reason why siprec session failed. |

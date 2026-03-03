@@ -1,7 +1,9 @@
 ---
 name: telnyx-missions-java
 description: >-
-  Telnyx Missions SDK operations. This skill provides Java SDK examples.
+  Create and manage Telnyx Missions — automated workflows, tasks, and
+  sub-resources for AI-driven telecom operations. This skill provides Java SDK
+  examples.
 metadata:
   author: telnyx
   product: missions
@@ -138,6 +140,158 @@ import com.telnyx.sdk.models.ai.missions.MissionCloneMissionParams;
 import com.telnyx.sdk.models.ai.missions.MissionCloneMissionResponse;
 
 MissionCloneMissionResponse response = client.ai().missions().cloneMission("mission_id");
+```
+
+## List knowledge bases
+
+List all knowledge bases for a mission
+
+`GET /ai/missions/{mission_id}/knowledge-bases`
+
+```java
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseListKnowledgeBasesParams;
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseListKnowledgeBasesResponse;
+
+KnowledgeBaseListKnowledgeBasesResponse response = client.ai().missions().knowledgeBases().listKnowledgeBases("mission_id");
+```
+
+## Create knowledge base
+
+Create a new knowledge base for a mission
+
+`POST /ai/missions/{mission_id}/knowledge-bases`
+
+```java
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseCreateKnowledgeBaseParams;
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseCreateKnowledgeBaseResponse;
+
+KnowledgeBaseCreateKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().createKnowledgeBase("mission_id");
+```
+
+## Get knowledge base
+
+Get a specific knowledge base by ID
+
+`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseGetKnowledgeBaseParams;
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseGetKnowledgeBaseResponse;
+
+KnowledgeBaseGetKnowledgeBaseParams params = KnowledgeBaseGetKnowledgeBaseParams.builder()
+    .missionId("mission_id")
+    .knowledgeBaseId("knowledge_base_id")
+    .build();
+KnowledgeBaseGetKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().getKnowledgeBase(params);
+```
+
+## Update knowledge base
+
+Update a knowledge base definition
+
+`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseUpdateKnowledgeBaseParams;
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseUpdateKnowledgeBaseResponse;
+
+KnowledgeBaseUpdateKnowledgeBaseParams params = KnowledgeBaseUpdateKnowledgeBaseParams.builder()
+    .missionId("mission_id")
+    .knowledgeBaseId("knowledge_base_id")
+    .build();
+KnowledgeBaseUpdateKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().updateKnowledgeBase(params);
+```
+
+## Delete knowledge base
+
+Delete a knowledge base from a mission
+
+`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseDeleteKnowledgeBaseParams;
+
+KnowledgeBaseDeleteKnowledgeBaseParams params = KnowledgeBaseDeleteKnowledgeBaseParams.builder()
+    .missionId("mission_id")
+    .knowledgeBaseId("knowledge_base_id")
+    .build();
+client.ai().missions().knowledgeBases().deleteKnowledgeBase(params);
+```
+
+## List MCP servers
+
+List all MCP servers for a mission
+
+`GET /ai/missions/{mission_id}/mcp-servers`
+
+```java
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerListMcpServersParams;
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerListMcpServersResponse;
+
+McpServerListMcpServersResponse response = client.ai().missions().mcpServers().listMcpServers("mission_id");
+```
+
+## Create MCP server
+
+Create a new MCP server for a mission
+
+`POST /ai/missions/{mission_id}/mcp-servers`
+
+```java
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerCreateMcpServerParams;
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerCreateMcpServerResponse;
+
+McpServerCreateMcpServerResponse response = client.ai().missions().mcpServers().createMcpServer("mission_id");
+```
+
+## Get MCP server
+
+Get a specific MCP server by ID
+
+`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerGetMcpServerParams;
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerGetMcpServerResponse;
+
+McpServerGetMcpServerParams params = McpServerGetMcpServerParams.builder()
+    .missionId("mission_id")
+    .mcpServerId("mcp_server_id")
+    .build();
+McpServerGetMcpServerResponse response = client.ai().missions().mcpServers().getMcpServer(params);
+```
+
+## Update MCP server
+
+Update an MCP server definition
+
+`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerUpdateMcpServerParams;
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerUpdateMcpServerResponse;
+
+McpServerUpdateMcpServerParams params = McpServerUpdateMcpServerParams.builder()
+    .missionId("mission_id")
+    .mcpServerId("mcp_server_id")
+    .build();
+McpServerUpdateMcpServerResponse response = client.ai().missions().mcpServers().updateMcpServer(params);
+```
+
+## Delete MCP server
+
+Delete an MCP server from a mission
+
+`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerDeleteMcpServerParams;
+
+McpServerDeleteMcpServerParams params = McpServerDeleteMcpServerParams.builder()
+    .missionId("mission_id")
+    .mcpServerId("mcp_server_id")
+    .build();
+client.ai().missions().mcpServers().deleteMcpServer(params);
 ```
 
 ## List runs for mission
@@ -460,4 +614,80 @@ TelnyxAgentUnlinkParams params = TelnyxAgentUnlinkParams.builder()
     .telnyxAgentId("telnyx_agent_id")
     .build();
 client.ai().missions().runs().telnyxAgents().unlink(params);
+```
+
+## List tools
+
+List all tools for a mission
+
+`GET /ai/missions/{mission_id}/tools`
+
+```java
+import com.telnyx.sdk.models.ai.missions.tools.ToolListToolsParams;
+import com.telnyx.sdk.models.ai.missions.tools.ToolListToolsResponse;
+
+ToolListToolsResponse response = client.ai().missions().tools().listTools("mission_id");
+```
+
+## Create tool
+
+Create a new tool for a mission
+
+`POST /ai/missions/{mission_id}/tools`
+
+```java
+import com.telnyx.sdk.models.ai.missions.tools.ToolCreateToolParams;
+import com.telnyx.sdk.models.ai.missions.tools.ToolCreateToolResponse;
+
+ToolCreateToolResponse response = client.ai().missions().tools().createTool("mission_id");
+```
+
+## Get tool
+
+Get a specific tool by ID
+
+`GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.tools.ToolGetToolParams;
+import com.telnyx.sdk.models.ai.missions.tools.ToolGetToolResponse;
+
+ToolGetToolParams params = ToolGetToolParams.builder()
+    .missionId("mission_id")
+    .toolId("tool_id")
+    .build();
+ToolGetToolResponse response = client.ai().missions().tools().getTool(params);
+```
+
+## Update tool
+
+Update a tool definition
+
+`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.tools.ToolUpdateToolParams;
+import com.telnyx.sdk.models.ai.missions.tools.ToolUpdateToolResponse;
+
+ToolUpdateToolParams params = ToolUpdateToolParams.builder()
+    .missionId("mission_id")
+    .toolId("tool_id")
+    .build();
+ToolUpdateToolResponse response = client.ai().missions().tools().updateTool(params);
+```
+
+## Delete tool
+
+Delete a tool from a mission
+
+`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+```java
+import com.telnyx.sdk.models.ai.missions.tools.ToolDeleteToolParams;
+
+ToolDeleteToolParams params = ToolDeleteToolParams.builder()
+    .missionId("mission_id")
+    .toolId("tool_id")
+    .build();
+client.ai().missions().tools().deleteTool(params);
 ```

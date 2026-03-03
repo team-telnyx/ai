@@ -71,6 +71,18 @@ Optional: `email` (string), `managed_account_allow_custom_pricing` (boolean), `p
 	fmt.Printf("%+v\n", managedAccount.Data)
 ```
 
+## Display information about allocatable global outbound channels for the current user.
+
+`GET /managed_accounts/allocatable_global_outbound_channels`
+
+```go
+	response, err := client.ManagedAccounts.GetAllocatableGlobalOutboundChannels(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
@@ -157,14 +169,62 @@ Optional: `channel_limit` (integer)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Display information about allocatable global outbound channels for the current user.
+## List organization users
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+Returns a list of the users in your organization.
+
+`GET /organizations/users`
 
 ```go
-	response, err := client.ManagedAccounts.GetAllocatableGlobalOutboundChannels(context.TODO())
+	page, err := client.Organizations.Users.List(context.TODO(), telnyx.OrganizationUserListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Get organization users groups report
+
+Returns a report of all users in your organization with their group memberships.
+
+`GET /organizations/users/users_groups_report`
+
+```go
+	response, err := client.Organizations.Users.GetGroupsReport(context.TODO(), telnyx.OrganizationUserGetGroupsReportParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response.Data)
+```
+
+## Get organization user
+
+Returns a user in your organization.
+
+`GET /organizations/users/{id}`
+
+```go
+	user, err := client.Organizations.Users.Get(
+		context.TODO(),
+		"id",
+		telnyx.OrganizationUserGetParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", user.Data)
+```
+
+## Delete organization user
+
+Deletes a user in your organization.
+
+`POST /organizations/users/{id}/actions/remove`
+
+```go
+	action, err := client.Organizations.Users.Actions.Remove(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", action.Data)
 ```

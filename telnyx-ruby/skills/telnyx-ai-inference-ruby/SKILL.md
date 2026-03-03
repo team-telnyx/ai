@@ -32,6 +32,34 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Transcribe speech to text
+
+Transcribe speech to text.
+
+`POST /ai/audio/transcriptions`
+
+```ruby
+response = client.ai.audio.transcribe(model: :"distil-whisper/distil-large-v2")
+
+puts(response)
+```
+
+## Create a chat completion
+
+Chat with a language model.
+
+`POST /ai/chat/completions` — Required: `messages`
+
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+
+```ruby
+response = client.ai.chat.create_completion(
+  messages: [{content: "You are a friendly chatbot.", role: :system}, {content: "Hello, world!", role: :user}]
+)
+
+puts(response)
+```
+
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user.
@@ -392,88 +420,6 @@ embedding = client.ai.embeddings.retrieve("task_id")
 puts(embedding)
 ```
 
-## List all clusters
-
-`GET /ai/clusters`
-
-```ruby
-page = client.ai.clusters.list
-
-puts(page)
-```
-
-## Compute new clusters
-
-Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
-
-`POST /ai/clusters` — Required: `bucket`
-
-Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
-
-```ruby
-response = client.ai.clusters.compute(bucket: "bucket")
-
-puts(response)
-```
-
-## Fetch a cluster
-
-`GET /ai/clusters/{task_id}`
-
-```ruby
-cluster = client.ai.clusters.retrieve("task_id")
-
-puts(cluster)
-```
-
-## Delete a cluster
-
-`DELETE /ai/clusters/{task_id}`
-
-```ruby
-result = client.ai.clusters.delete("task_id")
-
-puts(result)
-```
-
-## Fetch a cluster visualization
-
-`GET /ai/clusters/{task_id}/graph`
-
-```ruby
-response = client.ai.clusters.fetch_graph("task_id")
-
-puts(response)
-```
-
-## Transcribe speech to text
-
-Transcribe speech to text.
-
-`POST /ai/audio/transcriptions`
-
-```ruby
-response = client.ai.audio.transcribe(model: :"distil-whisper/distil-large-v2")
-
-puts(response)
-```
-
-## Create a chat completion
-
-Chat with a language model.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```ruby
-response = client.ai.chat.create_completion(
-  messages: [{content: "You are a friendly chatbot.", role: :system}, {content: "Hello, world!", role: :user}]
-)
-
-puts(response)
-```
-
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
@@ -524,6 +470,18 @@ fine_tuning_job = client.ai.fine_tuning.jobs.cancel("job_id")
 puts(fine_tuning_job)
 ```
 
+## Get available models
+
+This endpoint returns a list of Open Source and OpenAI models that are available for use.
+
+`GET /ai/models`
+
+```ruby
+response = client.ai.retrieve_models
+
+puts(response)
+```
+
 ## Create embeddings
 
 Creates an embedding vector representing the input text.
@@ -553,18 +511,6 @@ response = client.ai.openai.embeddings.list_embedding_models
 puts(response)
 ```
 
-## Get available models
-
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
-
-`GET /ai/models`
-
-```ruby
-response = client.ai.retrieve_models
-
-puts(response)
-```
-
 ## Summarize file content
 
 Generate a summary of a file's contents.
@@ -577,4 +523,169 @@ Optional: `system_prompt` (string)
 response = client.ai.summarize(bucket: "bucket", filename: "filename")
 
 puts(response)
+```
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text`
+
+```ruby
+speech_to_texts = client.legacy.reporting.batch_detail_records.speech_to_text.list
+
+puts(speech_to_texts)
+```
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+
+```ruby
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.create(
+  end_date: "2020-07-01T00:00:00-06:00",
+  start_date: "2020-07-01T00:00:00-06:00"
+)
+
+puts(speech_to_text)
+```
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```ruby
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.retrieve(
+  "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e"
+)
+
+puts(speech_to_text)
+```
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```ruby
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(speech_to_text)
+```
+
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously.
+
+`GET /legacy/reporting/usage_reports/speech_to_text`
+
+```ruby
+response = client.legacy.reporting.usage_reports.retrieve_speech_to_text
+
+puts(response)
+```
+
+## Speech to text over websocket
+
+Transcribe audio streams to text over WebSocket.
+
+`GET /speech-to-text/transcription`
+
+```ruby
+result = client.speech_to_text.transcribe(input_format: :mp3, transcription_engine: :Azure)
+
+puts(result)
+```
+
+## Stream text to speech over WebSocket
+
+Open a WebSocket connection to stream text and receive synthesized audio in real time.
+
+`GET /text-to-speech/speech`
+
+```ruby
+result = client.text_to_speech.stream
+
+puts(result)
+```
+
+## Generate speech from text
+
+Generate synthesized speech audio from text input.
+
+`POST /text-to-speech/speech`
+
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+
+```ruby
+response = client.text_to_speech.generate
+
+puts(response)
+```
+
+## List available voices
+
+Retrieve a list of available voices from one or all TTS providers.
+
+`GET /text-to-speech/voices`
+
+```ruby
+response = client.text_to_speech.list_voices
+
+puts(response)
+```
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`GET /wireless/detail_records_reports`
+
+```ruby
+detail_records_reports = client.wireless.detail_records_reports.list
+
+puts(detail_records_reports)
+```
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail_records_reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```ruby
+detail_records_report = client.wireless.detail_records_reports.create
+
+puts(detail_records_report)
+```
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`GET /wireless/detail_records_reports/{id}`
+
+```ruby
+detail_records_report = client.wireless.detail_records_reports.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(detail_records_report)
+```
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`DELETE /wireless/detail_records_reports/{id}`
+
+```ruby
+detail_records_report = client.wireless.detail_records_reports.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(detail_records_report)
 ```

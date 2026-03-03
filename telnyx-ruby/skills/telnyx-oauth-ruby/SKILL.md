@@ -72,75 +72,6 @@ result = client.oauth.retrieve_authorize(
 puts(result)
 ```
 
-## List OAuth clients
-
-Retrieve a paginated list of OAuth clients for the authenticated user
-
-`GET /oauth/clients`
-
-```ruby
-page = client.oauth_clients.list
-
-puts(page)
-```
-
-## Create OAuth client
-
-Create a new OAuth client
-
-`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
-
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```ruby
-oauth_client = client.oauth_clients.create(
-  allowed_grant_types: [:client_credentials],
-  allowed_scopes: ["admin"],
-  client_type: :public,
-  name: "My OAuth client"
-)
-
-puts(oauth_client)
-```
-
-## Get OAuth client
-
-Retrieve a single OAuth client by ID
-
-`GET /oauth/clients/{id}`
-
-```ruby
-oauth_client = client.oauth_clients.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(oauth_client)
-```
-
-## Update OAuth client
-
-Update an existing OAuth client
-
-`PUT /oauth/clients/{id}`
-
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```ruby
-oauth_client = client.oauth_clients.update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(oauth_client)
-```
-
-## Delete OAuth client
-
-Delete an OAuth client
-
-`DELETE /oauth/clients/{id}`
-
-```ruby
-result = client.oauth_clients.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(result)
-```
-
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -153,40 +84,16 @@ oauth = client.oauth.retrieve("consent_token")
 puts(oauth)
 ```
 
-## List OAuth grants
+## Create OAuth grant
 
-Retrieve a paginated list of OAuth grants for the authenticated user
+Create an OAuth authorization grant
 
-`GET /oauth/grants`
-
-```ruby
-page = client.oauth_grants.list
-
-puts(page)
-```
-
-## Get OAuth grant
-
-Retrieve a single OAuth grant by ID
-
-`GET /oauth/grants/{id}`
+`POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```ruby
-oauth_grant = client.oauth_grants.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+response = client.oauth.grants(allowed: true, consent_token: "consent_token")
 
-puts(oauth_grant)
-```
-
-## Revoke OAuth grant
-
-Revoke an OAuth grant
-
-`DELETE /oauth/grants/{id}`
-
-```ruby
-oauth_grant = client.oauth_grants.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(oauth_grant)
+puts(response)
 ```
 
 ## Token introspection
@@ -239,4 +146,109 @@ Optional: `client_id` (string), `client_secret` (string), `code` (string), `code
 response = client.oauth.token(grant_type: :client_credentials)
 
 puts(response)
+```
+
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth_clients`
+
+```ruby
+page = client.oauth_clients.list
+
+puts(page)
+```
+
+## Create OAuth client
+
+Create a new OAuth client
+
+`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```ruby
+oauth_client = client.oauth_clients.create(
+  allowed_grant_types: [:client_credentials],
+  allowed_scopes: ["admin"],
+  client_type: :public,
+  name: "My OAuth client"
+)
+
+puts(oauth_client)
+```
+
+## Get OAuth client
+
+Retrieve a single OAuth client by ID
+
+`GET /oauth_clients/{id}`
+
+```ruby
+oauth_client = client.oauth_clients.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(oauth_client)
+```
+
+## Update OAuth client
+
+Update an existing OAuth client
+
+`PUT /oauth_clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```ruby
+oauth_client = client.oauth_clients.update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(oauth_client)
+```
+
+## Delete OAuth client
+
+Delete an OAuth client
+
+`DELETE /oauth_clients/{id}`
+
+```ruby
+result = client.oauth_clients.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(result)
+```
+
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth_grants`
+
+```ruby
+page = client.oauth_grants.list
+
+puts(page)
+```
+
+## Get OAuth grant
+
+Retrieve a single OAuth grant by ID
+
+`GET /oauth_grants/{id}`
+
+```ruby
+oauth_grant = client.oauth_grants.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(oauth_grant)
+```
+
+## Revoke OAuth grant
+
+Revoke an OAuth grant
+
+`DELETE /oauth_grants/{id}`
+
+```ruby
+oauth_grant = client.oauth_grants.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(oauth_grant)
 ```

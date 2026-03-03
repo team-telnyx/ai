@@ -33,6 +33,112 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List Advanced Orders
+
+`GET /advanced_orders`
+
+```ruby
+advanced_orders = client.advanced_orders.list
+
+puts(advanced_orders)
+```
+
+## Create Advanced Order
+
+`POST /advanced_orders`
+
+Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum), `quantity` (integer), `requirement_group_id` (uuid)
+
+```ruby
+advanced_order = client.advanced_orders.create
+
+puts(advanced_order)
+```
+
+## Update Advanced Order
+
+`PATCH /advanced_orders/{advanced-order-id}/requirement_group`
+
+Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum), `quantity` (integer), `requirement_group_id` (uuid)
+
+```ruby
+response = client.advanced_orders.update_requirement_group("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(response)
+```
+
+## Get Advanced Order
+
+`GET /advanced_orders/{order_id}`
+
+```ruby
+advanced_order = client.advanced_orders.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(advanced_order)
+```
+
+## List available phone number blocks
+
+`GET /available_phone_number_blocks`
+
+```ruby
+available_phone_number_blocks = client.available_phone_number_blocks.list
+
+puts(available_phone_number_blocks)
+```
+
+## List available phone numbers
+
+`GET /available_phone_numbers`
+
+```ruby
+available_phone_numbers = client.available_phone_numbers.list
+
+puts(available_phone_numbers)
+```
+
+## Retrieve all comments
+
+`GET /comments`
+
+```ruby
+comments = client.comments.list
+
+puts(comments)
+```
+
+## Create a comment
+
+`POST /comments`
+
+Optional: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum), `commenter` (string), `commenter_type` (enum), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
+
+```ruby
+comment = client.comments.create
+
+puts(comment)
+```
+
+## Retrieve a comment
+
+`GET /comments/{id}`
+
+```ruby
+comment = client.comments.retrieve("id")
+
+puts(comment)
+```
+
+## Mark a comment as read
+
+`PATCH /comments/{id}/read`
+
+```ruby
+response = client.comments.mark_as_read("id")
+
+puts(response)
+```
+
 ## Get country coverage
 
 `GET /country_coverage`
@@ -53,6 +159,94 @@ response = client.country_coverage.retrieve_country("US")
 puts(response)
 ```
 
+## List customer service records
+
+List customer service records.
+
+`GET /customer_service_records`
+
+```ruby
+page = client.customer_service_records.list
+
+puts(page)
+```
+
+## Create a customer service record
+
+Create a new customer service record for the provided phone number.
+
+`POST /customer_service_records`
+
+```ruby
+customer_service_record = client.customer_service_records.create(phone_number: "+13035553000")
+
+puts(customer_service_record)
+```
+
+## Verify CSR phone number coverage
+
+Verify the coverage for a list of phone numbers.
+
+`POST /customer_service_records/phone_number_coverages`
+
+```ruby
+response = client.customer_service_records.verify_phone_number_coverage(phone_numbers: ["+13035553000"])
+
+puts(response)
+```
+
+## Get a customer service record
+
+Get a specific customer service record.
+
+`GET /customer_service_records/{customer_service_record_id}`
+
+```ruby
+customer_service_record = client.customer_service_records.retrieve("customer_service_record_id")
+
+puts(customer_service_record)
+```
+
+## List inexplicit number orders
+
+Get a paginated list of inexplicit number orders.
+
+`GET /inexplicit_number_orders`
+
+```ruby
+page = client.inexplicit_number_orders.list
+
+puts(page)
+```
+
+## Create an inexplicit number order
+
+Create an inexplicit number order to programmatically purchase phone numbers without specifying exact numbers.
+
+`POST /inexplicit_number_orders` — Required: `ordering_groups`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string)
+
+```ruby
+inexplicit_number_order = client.inexplicit_number_orders.create(
+  ordering_groups: [{count_requested: "count_requested", country_iso: :US, phone_number_type: "phone_number_type"}]
+)
+
+puts(inexplicit_number_order)
+```
+
+## Retrieve an inexplicit number order
+
+Get an existing inexplicit number order by ID.
+
+`GET /inexplicit_number_orders/{id}`
+
+```ruby
+inexplicit_number_order = client.inexplicit_number_orders.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+
+puts(inexplicit_number_order)
+```
+
 ## Create an inventory coverage request
 
 Creates an inventory coverage request.
@@ -65,52 +259,102 @@ inventory_coverages = client.inventory_coverage.list
 puts(inventory_coverages)
 ```
 
-## List number reservations
+## List mobile network operators
 
-Gets a paginated list of phone number reservations.
+Telnyx has a set of GSM mobile operators partners that are available through our mobile network roaming.
 
-`GET /number_reservations`
+`GET /mobile_network_operators`
 
 ```ruby
-page = client.number_reservations.list
+page = client.mobile_network_operators.list
 
 puts(page)
 ```
 
-## Create a number reservation
+## List network coverage locations
 
-Creates a Phone Number Reservation for multiple numbers.
+List all locations and the interfaces that region supports
 
-`POST /number_reservations`
-
-Optional: `created_at` (date-time), `customer_reference` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum), `updated_at` (date-time)
+`GET /network_coverage`
 
 ```ruby
-number_reservation = client.number_reservations.create
+page = client.network_coverage.list
 
-puts(number_reservation)
+puts(page)
 ```
 
-## Retrieve a number reservation
+## List number block orders
 
-Gets a single phone number reservation.
+Get a paginated list of number block orders.
 
-`GET /number_reservations/{number_reservation_id}`
+`GET /number_block_orders`
 
 ```ruby
-number_reservation = client.number_reservations.retrieve("number_reservation_id")
+page = client.number_block_orders.list
 
-puts(number_reservation)
+puts(page)
 ```
 
-## Extend a number reservation
+## Create a number block order
 
-Extends reservation expiry time on all phone numbers.
+Creates a phone number block order.
 
-`POST /number_reservations/{number_reservation_id}/actions/extend`
+`POST /number_block_orders` — Required: `starting_number`, `range`
+
+Optional: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum), `updated_at` (date-time)
 
 ```ruby
-response = client.number_reservations.actions.extend_("number_reservation_id")
+number_block_order = client.number_block_orders.create(range: 10, starting_number: "+19705555000")
+
+puts(number_block_order)
+```
+
+## Retrieve a number block order
+
+Get an existing phone number block order.
+
+`GET /number_block_orders/{number_block_order_id}`
+
+```ruby
+number_block_order = client.number_block_orders.retrieve("number_block_order_id")
+
+puts(number_block_order)
+```
+
+## Retrieve a list of phone numbers associated to orders
+
+Get a list of phone numbers associated to orders.
+
+`GET /number_order_phone_numbers`
+
+```ruby
+number_order_phone_numbers = client.number_order_phone_numbers.list
+
+puts(number_order_phone_numbers)
+```
+
+## Retrieve a single phone number within a number order.
+
+Get an existing phone number in number order.
+
+`GET /number_order_phone_numbers/{number_order_phone_number_id}`
+
+```ruby
+number_order_phone_number = client.number_order_phone_numbers.retrieve("number_order_phone_number_id")
+
+puts(number_order_phone_number)
+```
+
+## Update requirements for a single phone number within a number order.
+
+Updates requirements for a single phone number within a number order.
+
+`PATCH /number_order_phone_numbers/{number_order_phone_number_id}`
+
+Optional: `regulatory_requirements` (array[object])
+
+```ruby
+response = client.number_order_phone_numbers.update_requirements("number_order_phone_number_id")
 
 puts(response)
 ```
@@ -167,93 +411,98 @@ number_order = client.number_orders.update("number_order_id")
 puts(number_order)
 ```
 
-## List number block orders
+## List number reservations
 
-Get a paginated list of number block orders.
+Gets a paginated list of phone number reservations.
 
-`GET /number_block_orders`
+`GET /number_reservations`
 
 ```ruby
-page = client.number_block_orders.list
+page = client.number_reservations.list
 
 puts(page)
 ```
 
-## Create a number block order
+## Create a number reservation
 
-Creates a phone number block order.
+Creates a Phone Number Reservation for multiple numbers.
 
-`POST /number_block_orders` — Required: `starting_number`, `range`
+`POST /number_reservations`
 
-Optional: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum), `updated_at` (date-time)
+Optional: `created_at` (date-time), `customer_reference` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum), `updated_at` (date-time)
 
 ```ruby
-number_block_order = client.number_block_orders.create(range: 10, starting_number: "+19705555000")
+number_reservation = client.number_reservations.create
 
-puts(number_block_order)
+puts(number_reservation)
 ```
 
-## Retrieve a number block order
+## Retrieve a number reservation
 
-Get an existing phone number block order.
+Gets a single phone number reservation.
 
-`GET /number_block_orders/{number_block_order_id}`
+`GET /number_reservations/{number_reservation_id}`
 
 ```ruby
-number_block_order = client.number_block_orders.retrieve("number_block_order_id")
+number_reservation = client.number_reservations.retrieve("number_reservation_id")
 
-puts(number_block_order)
+puts(number_reservation)
 ```
 
-## Retrieve a list of phone numbers associated to orders
+## Extend a number reservation
 
-Get a list of phone numbers associated to orders.
+Extends reservation expiry time on all phone numbers.
 
-`GET /number_order_phone_numbers`
+`POST /number_reservations/{number_reservation_id}/actions/extend`
 
 ```ruby
-number_order_phone_numbers = client.number_order_phone_numbers.list
+response = client.number_reservations.actions.extend_("number_reservation_id")
 
-puts(number_order_phone_numbers)
+puts(response)
 ```
 
-## Update requirement group for a phone number order
+## Retrieve the features for a list of numbers
 
-`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
+`POST /numbers_features` — Required: `phone_numbers`
 
 ```ruby
-response = client.number_order_phone_numbers.update_requirement_group(
-  "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-  requirement_group_id: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e"
+numbers_feature = client.numbers_features.create(phone_numbers: ["string"])
+
+puts(numbers_feature)
+```
+
+## Lists the phone number blocks jobs
+
+`GET /phone_number_blocks/jobs`
+
+```ruby
+page = client.phone_number_blocks.jobs.list
+
+puts(page)
+```
+
+## Deletes all numbers associated with a phone number block
+
+Creates a new background job to delete all the phone numbers associated with the given block.
+
+`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
+
+```ruby
+response = client.phone_number_blocks.jobs.delete_phone_number_block(
+  phone_number_block_id: "f3946371-7199-4261-9c3d-81a0d7935146"
 )
 
 puts(response)
 ```
 
-## Retrieve a single phone number within a number order.
+## Retrieves a phone number blocks job
 
-Get an existing phone number in number order.
-
-`GET /number_order_phone_numbers/{number_order_phone_number_id}`
+`GET /phone_number_blocks/jobs/{id}`
 
 ```ruby
-number_order_phone_number = client.number_order_phone_numbers.retrieve("number_order_phone_number_id")
+job = client.phone_number_blocks.jobs.retrieve("id")
 
-puts(number_order_phone_number)
-```
-
-## Update requirements for a single phone number within a number order.
-
-Updates requirements for a single phone number within a number order.
-
-`PATCH /number_order_phone_numbers/{number_order_phone_number_id}`
-
-Optional: `regulatory_requirements` (array[object])
-
-```ruby
-response = client.number_order_phone_numbers.update_requirements("number_order_phone_number_id")
-
-puts(response)
+puts(job)
 ```
 
 ## List sub number orders
@@ -266,19 +515,6 @@ Get a paginated list of sub number orders.
 sub_number_orders = client.sub_number_orders.list
 
 puts(sub_number_orders)
-```
-
-## Update requirement group for a sub number order
-
-`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
-
-```ruby
-response = client.sub_number_orders.update_requirement_group(
-  "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-  requirement_group_id: "a4b201f9-8646-4e54-a7d2-b2e403eeaf8c"
-)
-
-puts(response)
 ```
 
 ## Retrieve a sub number order
@@ -323,7 +559,7 @@ puts(response)
 
 Create a CSV report for sub number orders.
 
-`POST /sub_number_orders/report`
+`POST /sub_number_orders_report`
 
 Optional: `country_code` (string), `created_at_gt` (date-time), `created_at_lt` (date-time), `customer_reference` (string), `order_request_id` (uuid), `status` (enum)
 
@@ -337,7 +573,7 @@ puts(sub_number_orders_report)
 
 Get the status and details of a sub number orders report.
 
-`GET /sub_number_orders/report/{report_id}`
+`GET /sub_number_orders_report/{report_id}`
 
 ```ruby
 sub_number_orders_report = client.sub_number_orders_report.retrieve("12ade33a-21c0-473b-b055-b3c836e1c293")
@@ -349,168 +585,12 @@ puts(sub_number_orders_report)
 
 Download the CSV file for a completed sub number orders report.
 
-`GET /sub_number_orders/report/{report_id}/download`
+`GET /sub_number_orders_report/{report_id}/download`
 
 ```ruby
 response = client.sub_number_orders_report.download("12ade33a-21c0-473b-b055-b3c836e1c293")
 
 puts(response)
-```
-
-## List Advanced Orders
-
-`GET /advanced_orders`
-
-```ruby
-advanced_orders = client.advanced_orders.list
-
-puts(advanced_orders)
-```
-
-## Create Advanced Order
-
-`POST /advanced_orders`
-
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum), `quantity` (integer), `requirement_group_id` (uuid)
-
-```ruby
-advanced_order = client.advanced_orders.create
-
-puts(advanced_order)
-```
-
-## Update Advanced Order
-
-`PATCH /advanced_orders/{advanced-order-id}/requirement_group`
-
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum), `quantity` (integer), `requirement_group_id` (uuid)
-
-```ruby
-response = client.advanced_orders.update_requirement_group("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(response)
-```
-
-## Get Advanced Order
-
-`GET /advanced_orders/{order_id}`
-
-```ruby
-advanced_order = client.advanced_orders.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(advanced_order)
-```
-
-## List inexplicit number orders
-
-Get a paginated list of inexplicit number orders.
-
-`GET /inexplicit_number_orders`
-
-```ruby
-page = client.inexplicit_number_orders.list
-
-puts(page)
-```
-
-## Create an inexplicit number order
-
-Create an inexplicit number order to programmatically purchase phone numbers without specifying exact numbers.
-
-`POST /inexplicit_number_orders` — Required: `ordering_groups`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string)
-
-```ruby
-inexplicit_number_order = client.inexplicit_number_orders.create(
-  ordering_groups: [{count_requested: "count_requested", country_iso: :US, phone_number_type: "phone_number_type"}]
-)
-
-puts(inexplicit_number_order)
-```
-
-## Retrieve an inexplicit number order
-
-Get an existing inexplicit number order by ID.
-
-`GET /inexplicit_number_orders/{id}`
-
-```ruby
-inexplicit_number_order = client.inexplicit_number_orders.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-
-puts(inexplicit_number_order)
-```
-
-## Retrieve all comments
-
-`GET /comments`
-
-```ruby
-comments = client.comments.list
-
-puts(comments)
-```
-
-## Create a comment
-
-`POST /comments`
-
-Optional: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum), `commenter` (string), `commenter_type` (enum), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
-
-```ruby
-comment = client.comments.create
-
-puts(comment)
-```
-
-## Retrieve a comment
-
-`GET /comments/{id}`
-
-```ruby
-comment = client.comments.retrieve("id")
-
-puts(comment)
-```
-
-## Mark a comment as read
-
-`PATCH /comments/{id}/read`
-
-```ruby
-response = client.comments.mark_as_read("id")
-
-puts(response)
-```
-
-## List available phone number blocks
-
-`GET /available_phone_number_blocks`
-
-```ruby
-available_phone_number_blocks = client.available_phone_number_blocks.list
-
-puts(available_phone_number_blocks)
-```
-
-## List available phone numbers
-
-`GET /available_phone_numbers`
-
-```ruby
-available_phone_numbers = client.available_phone_numbers.list
-
-puts(available_phone_numbers)
-```
-
-## Retrieve the features for a list of numbers
-
-`POST /numbers_features` — Required: `phone_numbers`
-
-```ruby
-numbers_feature = client.numbers_features.create(phone_numbers: ["string"])
-
-puts(numbers_feature)
 ```
 
 ---

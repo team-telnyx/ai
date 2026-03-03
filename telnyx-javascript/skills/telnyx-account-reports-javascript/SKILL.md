@@ -32,11 +32,51 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## List call events
+
+Filters call events by given filter parameters.
+
+`GET /call_events`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const callEventListResponse of client.callEvents.list()) {
+  console.log(callEventListResponse.call_leg_id);
+}
+```
+
+## Create a ledger billing group report
+
+`POST /ledger_billing_group_reports`
+
+Optional: `month` (integer), `year` (integer)
+
+```javascript
+const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.create({
+  month: 10,
+  year: 2019,
+});
+
+console.log(ledgerBillingGroupReport.data);
+```
+
+## Get a ledger billing group report
+
+`GET /ledger_billing_group_reports/{id}`
+
+```javascript
+const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.retrieve(
+  'f5586561-8ff0-4291-a0ac-84fe544797bd',
+);
+
+console.log(ledgerBillingGroupReport.data);
+```
+
 ## Get all MDR detailed report requests
 
 Retrieves all MDR detailed report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/messaging`
+`GET /legacy/reporting/batch_detail_records/messaging`
 
 ```javascript
 const messagings = await client.legacy.reporting.batchDetailRecords.messaging.list();
@@ -48,7 +88,7 @@ console.log(messagings.data);
 
 Creates a new MDR detailed report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
 
 Optional: `connections` (array[integer]), `directions` (array[integer]), `filters` (array[object]), `include_message_body` (boolean), `managed_accounts` (array[string]), `profiles` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `timezone` (string)
 
@@ -65,7 +105,7 @@ console.log(messaging.data);
 
 Retrieves a specific MDR detailed report request by ID
 
-`GET /legacy_reporting/batch_detail_records/messaging/{id}`
+`GET /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```javascript
 const messaging = await client.legacy.reporting.batchDetailRecords.messaging.retrieve(
@@ -79,7 +119,7 @@ console.log(messaging.data);
 
 Deletes a specific MDR detailed report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/messaging/{id}`
+`DELETE /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```javascript
 const messaging = await client.legacy.reporting.batchDetailRecords.messaging.delete(
@@ -93,7 +133,7 @@ console.log(messaging.data);
 
 Retrieves all CDR report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/voice`
+`GET /legacy/reporting/batch_detail_records/voice`
 
 ```javascript
 const voices = await client.legacy.reporting.batchDetailRecords.voice.list();
@@ -105,7 +145,7 @@ console.log(voices.data);
 
 Creates a new CDR report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
 
 Optional: `call_types` (array[integer]), `connections` (array[integer]), `fields` (array[string]), `filters` (array[object]), `include_all_metadata` (boolean), `managed_accounts` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `source` (string), `timezone` (string)
 
@@ -118,11 +158,23 @@ const voice = await client.legacy.reporting.batchDetailRecords.voice.create({
 console.log(voice.data);
 ```
 
+## Get available CDR report fields
+
+Retrieves all available fields that can be used in CDR reports
+
+`GET /legacy/reporting/batch_detail_records/voice/fields`
+
+```javascript
+const response = await client.legacy.reporting.batchDetailRecords.voice.retrieveFields();
+
+console.log(response.Billing);
+```
+
 ## Get a specific CDR report request
 
 Retrieves a specific CDR report request by ID
 
-`GET /legacy_reporting/batch_detail_records/voice/{id}`
+`GET /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```javascript
 const voice = await client.legacy.reporting.batchDetailRecords.voice.retrieve(
@@ -136,7 +188,7 @@ console.log(voice.data);
 
 Deletes a specific CDR report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/voice/{id}`
+`DELETE /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```javascript
 const voice = await client.legacy.reporting.batchDetailRecords.voice.delete(
@@ -146,23 +198,11 @@ const voice = await client.legacy.reporting.batchDetailRecords.voice.delete(
 console.log(voice.data);
 ```
 
-## Get available CDR report fields
-
-Retrieves all available fields that can be used in CDR reports
-
-`GET /legacy_reporting/batch_detail_records/voice/fields`
-
-```javascript
-const response = await client.legacy.reporting.batchDetailRecords.voice.retrieveFields();
-
-console.log(response.Billing);
-```
-
 ## List MDR usage reports
 
 Fetch all previous requests for MDR usage reports.
 
-`GET /legacy_reporting/usage_reports/messaging`
+`GET /legacy/reporting/usage_reports/messaging`
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -175,7 +215,7 @@ for await (const mdrUsageReportResponseLegacy of client.legacy.reporting.usageRe
 
 Creates a new legacy usage V2 MDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/messaging`
+`POST /legacy/reporting/usage_reports/messaging`
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.create({
@@ -189,7 +229,7 @@ console.log(messaging.data);
 
 Fetch single MDR usage report by id.
 
-`GET /legacy_reporting/usage_reports/messaging/{id}`
+`GET /legacy/reporting/usage_reports/messaging/{id}`
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.retrieve(
@@ -203,7 +243,7 @@ console.log(messaging.data);
 
 Deletes a specific V2 legacy usage MDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/messaging/{id}`
+`DELETE /legacy/reporting/usage_reports/messaging/{id}`
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.delete(
@@ -217,7 +257,7 @@ console.log(messaging.data);
 
 Retrieve a paginated list of telco data usage reports
 
-`GET /legacy_reporting/usage_reports/number_lookup`
+`GET /legacy/reporting/usage_reports/number_lookup`
 
 ```javascript
 const numberLookups = await client.legacy.reporting.usageReports.numberLookup.list();
@@ -229,7 +269,7 @@ console.log(numberLookups.data);
 
 Submit a new telco data usage report
 
-`POST /legacy_reporting/usage_reports/number_lookup`
+`POST /legacy/reporting/usage_reports/number_lookup`
 
 ```javascript
 const numberLookup = await client.legacy.reporting.usageReports.numberLookup.create();
@@ -241,7 +281,7 @@ console.log(numberLookup.data);
 
 Retrieve a specific telco data usage report by its ID
 
-`GET /legacy_reporting/usage_reports/number_lookup/{id}`
+`GET /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```javascript
 const numberLookup = await client.legacy.reporting.usageReports.numberLookup.retrieve('id');
@@ -253,29 +293,17 @@ console.log(numberLookup.data);
 
 Delete a specific telco data usage report by its ID
 
-`DELETE /legacy_reporting/usage_reports/number_lookup/{id}`
+`DELETE /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```javascript
 await client.legacy.reporting.usageReports.numberLookup.delete('id');
-```
-
-## Get speech to text usage report
-
-Generate and fetch speech to text usage report synchronously.
-
-`GET /legacy_reporting/usage_reports/speech_to_text`
-
-```javascript
-const response = await client.legacy.reporting.usageReports.retrieveSpeechToText();
-
-console.log(response.data);
 ```
 
 ## List CDR usage reports
 
 Fetch all previous requests for cdr usage reports.
 
-`GET /legacy_reporting/usage_reports/voice`
+`GET /legacy/reporting/usage_reports/voice`
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -288,7 +316,7 @@ for await (const cdrUsageReportResponseLegacy of client.legacy.reporting.usageRe
 
 Creates a new legacy usage V2 CDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/voice`
+`POST /legacy/reporting/usage_reports/voice`
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.create({
@@ -303,7 +331,7 @@ console.log(voice.data);
 
 Fetch single cdr usage report by id.
 
-`GET /legacy_reporting/usage_reports/voice/{id}`
+`GET /legacy/reporting/usage_reports/voice/{id}`
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.retrieve(
@@ -317,7 +345,7 @@ console.log(voice.data);
 
 Deletes a specific V2 legacy usage CDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/voice/{id}`
+`DELETE /legacy/reporting/usage_reports/voice/{id}`
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.delete(
@@ -325,6 +353,52 @@ const voice = await client.legacy.reporting.usageReports.voice.delete(
 );
 
 console.log(voice.data);
+```
+
+## List CSV downloads
+
+`GET /phone_numbers/csv_downloads`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const csvDownload of client.phoneNumbers.csvDownloads.list()) {
+  console.log(csvDownload.id);
+}
+```
+
+## Create a CSV download
+
+`POST /phone_numbers/csv_downloads`
+
+```javascript
+const csvDownload = await client.phoneNumbers.csvDownloads.create();
+
+console.log(csvDownload.data);
+```
+
+## Retrieve a CSV download
+
+`GET /phone_numbers/csv_downloads/{id}`
+
+```javascript
+const csvDownload = await client.phoneNumbers.csvDownloads.retrieve('id');
+
+console.log(csvDownload.data);
+```
+
+## Generates and fetches CDR Usage Reports
+
+Generate and fetch voice usage report synchronously.
+
+`GET /reports/cdr_usage_reports/sync`
+
+```javascript
+const response = await client.reports.cdrUsageReports.fetchSync({
+  aggregation_type: 'NO_AGGREGATION',
+  product_breakdown: 'NO_BREAKDOWN',
+});
+
+console.log(response.data);
 ```
 
 ## Fetch all Messaging usage reports
@@ -356,6 +430,18 @@ const mdrUsageReport = await client.reports.mdrUsageReports.create({
 console.log(mdrUsageReport.data);
 ```
 
+## Generate and fetch MDR Usage Report
+
+Generate and fetch messaging usage report synchronously.
+
+`GET /reports/mdr_usage_reports/sync`
+
+```javascript
+const response = await client.reports.mdrUsageReports.fetchSync({ aggregation_type: 'PROFILE' });
+
+console.log(response.data);
+```
+
 ## Retrieve messaging report
 
 Fetch a single messaging usage report by id
@@ -384,31 +470,27 @@ const mdrUsageReport = await client.reports.mdrUsageReports.delete(
 console.log(mdrUsageReport.data);
 ```
 
-## Generate and fetch MDR Usage Report
+## Fetch all Mdr records
 
-Generate and fetch messaging usage report synchronously.
-
-`GET /reports/mdr_usage_reports/sync`
+`GET /reports/mdrs`
 
 ```javascript
-const response = await client.reports.mdrUsageReports.fetchSync({ aggregation_type: 'PROFILE' });
+const response = await client.reports.listMdrs();
 
 console.log(response.data);
 ```
 
-## Generates and fetches CDR Usage Reports
+## Fetches all Wdr records
 
-Generate and fetch voice usage report synchronously.
+Fetch all Wdr records
 
-`GET /reports/cdr_usage_reports/sync`
+`GET /reports/wdrs`
 
 ```javascript
-const response = await client.reports.cdrUsageReports.fetchSync({
-  aggregation_type: 'NO_AGGREGATION',
-  product_breakdown: 'NO_BREAKDOWN',
-});
-
-console.log(response.data);
+// Automatically fetches more pages as needed.
+for await (const reportListWdrsResponse of client.reports.listWdrs()) {
+  console.log(reportListWdrsResponse.id);
+}
 ```
 
 ## Get Telnyx product usage data (BETA)

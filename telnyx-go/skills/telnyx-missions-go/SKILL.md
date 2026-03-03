@@ -1,7 +1,9 @@
 ---
 name: telnyx-missions-go
 description: >-
-  Telnyx Missions SDK operations. This skill provides Go SDK examples.
+  Create and manage Telnyx Missions — automated workflows, tasks, and
+  sub-resources for AI-driven telecom operations. This skill provides Go SDK
+  examples.
 metadata:
   author: telnyx
   product: missions
@@ -157,6 +159,180 @@ Clone an existing mission
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response)
+```
+
+## List knowledge bases
+
+List all knowledge bases for a mission
+
+`GET /ai/missions/{mission_id}/knowledge-bases`
+
+```go
+	response, err := client.AI.Missions.KnowledgeBases.ListKnowledgeBases(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Create knowledge base
+
+Create a new knowledge base for a mission
+
+`POST /ai/missions/{mission_id}/knowledge-bases`
+
+```go
+	response, err := client.AI.Missions.KnowledgeBases.NewKnowledgeBase(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Get knowledge base
+
+Get a specific knowledge base by ID
+
+`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```go
+	response, err := client.AI.Missions.KnowledgeBases.GetKnowledgeBase(
+		context.TODO(),
+		"knowledge_base_id",
+		telnyx.AIMissionKnowledgeBaseGetKnowledgeBaseParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Update knowledge base
+
+Update a knowledge base definition
+
+`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```go
+	response, err := client.AI.Missions.KnowledgeBases.UpdateKnowledgeBase(
+		context.TODO(),
+		"knowledge_base_id",
+		telnyx.AIMissionKnowledgeBaseUpdateKnowledgeBaseParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Delete knowledge base
+
+Delete a knowledge base from a mission
+
+`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```go
+	err := client.AI.Missions.KnowledgeBases.DeleteKnowledgeBase(
+		context.TODO(),
+		"knowledge_base_id",
+		telnyx.AIMissionKnowledgeBaseDeleteKnowledgeBaseParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## List MCP servers
+
+List all MCP servers for a mission
+
+`GET /ai/missions/{mission_id}/mcp-servers`
+
+```go
+	response, err := client.AI.Missions.McpServers.ListMcpServers(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Create MCP server
+
+Create a new MCP server for a mission
+
+`POST /ai/missions/{mission_id}/mcp-servers`
+
+```go
+	response, err := client.AI.Missions.McpServers.NewMcpServer(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Get MCP server
+
+Get a specific MCP server by ID
+
+`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```go
+	response, err := client.AI.Missions.McpServers.GetMcpServer(
+		context.TODO(),
+		"mcp_server_id",
+		telnyx.AIMissionMcpServerGetMcpServerParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Update MCP server
+
+Update an MCP server definition
+
+`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```go
+	response, err := client.AI.Missions.McpServers.UpdateMcpServer(
+		context.TODO(),
+		"mcp_server_id",
+		telnyx.AIMissionMcpServerUpdateMcpServerParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Delete MCP server
+
+Delete an MCP server from a mission
+
+`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```go
+	err := client.AI.Missions.McpServers.DeleteMcpServer(
+		context.TODO(),
+		"mcp_server_id",
+		telnyx.AIMissionMcpServerDeleteMcpServerParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
 ```
 
 ## List runs for mission
@@ -532,6 +708,93 @@ Unlink a Telnyx agent from a run
 		telnyx.AIMissionRunTelnyxAgentUnlinkParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 			RunID:     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## List tools
+
+List all tools for a mission
+
+`GET /ai/missions/{mission_id}/tools`
+
+```go
+	response, err := client.AI.Missions.Tools.ListTools(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Create tool
+
+Create a new tool for a mission
+
+`POST /ai/missions/{mission_id}/tools`
+
+```go
+	response, err := client.AI.Missions.Tools.NewTool(context.TODO(), "mission_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Get tool
+
+Get a specific tool by ID
+
+`GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+```go
+	response, err := client.AI.Missions.Tools.GetTool(
+		context.TODO(),
+		"tool_id",
+		telnyx.AIMissionToolGetToolParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Update tool
+
+Update a tool definition
+
+`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+```go
+	response, err := client.AI.Missions.Tools.UpdateTool(
+		context.TODO(),
+		"tool_id",
+		telnyx.AIMissionToolUpdateToolParams{
+			MissionID: "mission_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Delete tool
+
+Delete a tool from a mission
+
+`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+```go
+	err := client.AI.Missions.Tools.DeleteTool(
+		context.TODO(),
+		"tool_id",
+		telnyx.AIMissionToolDeleteToolParams{
+			MissionID: "mission_id",
 		},
 	)
 	if err != nil {

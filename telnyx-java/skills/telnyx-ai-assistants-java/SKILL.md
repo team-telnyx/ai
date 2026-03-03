@@ -64,98 +64,6 @@ AssistantCreateParams params = AssistantCreateParams.builder()
 InferenceEmbedding assistant = client.ai().assistants().create(params);
 ```
 
-## Get an assistant
-
-Retrieve an AI Assistant configuration by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantRetrieveParams;
-import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
-
-InferenceEmbedding assistant = client.ai().assistants().retrieve("assistant_id");
-```
-
-## Update an assistant
-
-Update an AI Assistant's attributes.
-
-`POST /ai/assistants/{assistant_id}`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantUpdateParams;
-import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
-
-InferenceEmbedding assistant = client.ai().assistants().update("assistant_id");
-```
-
-## Delete an assistant
-
-Delete an AI Assistant by `assistant_id`.
-
-`DELETE /ai/assistants/{assistant_id}`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantDeleteParams;
-import com.telnyx.sdk.models.ai.assistants.AssistantDeleteResponse;
-
-AssistantDeleteResponse assistant = client.ai().assistants().delete("assistant_id");
-```
-
-## Assistant Chat (BETA)
-
-This endpoint allows a client to send a chat message to a specific AI Assistant.
-
-`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
-
-Optional: `name` (string)
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantChatParams;
-import com.telnyx.sdk.models.ai.assistants.AssistantChatResponse;
-
-AssistantChatParams params = AssistantChatParams.builder()
-    .assistantId("assistant_id")
-    .content("Tell me a joke about cats")
-    .conversationId("42b20469-1215-4a9a-8964-c36f66b406f4")
-    .build();
-AssistantChatResponse response = client.ai().assistants().chat(params);
-```
-
-## Assistant Sms Chat
-
-Send an SMS message for an assistant.
-
-`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
-
-Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantSendSmsParams;
-import com.telnyx.sdk.models.ai.assistants.AssistantSendSmsResponse;
-
-AssistantSendSmsParams params = AssistantSendSmsParams.builder()
-    .assistantId("assistant_id")
-    .from("from")
-    .to("to")
-    .build();
-AssistantSendSmsResponse response = client.ai().assistants().sendSms(params);
-```
-
-## Clone Assistant
-
-Clone an existing assistant, excluding telephony and messaging settings.
-
-`POST /ai/assistants/{assistant_id}/clone`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantCloneParams;
-import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
-
-InferenceEmbedding assistant = client.ai().assistants().clone("assistant_id");
-```
-
 ## Import assistants from external provider
 
 Import assistants from external providers.
@@ -173,76 +81,6 @@ AssistantImportsParams params = AssistantImportsParams.builder()
     .provider(AssistantImportsParams.Provider.ELEVENLABS)
     .build();
 AssistantsList assistantsList = client.ai().assistants().imports(params);
-```
-
-## List scheduled events
-
-Get scheduled events for an assistant with pagination and filtering
-
-`GET /ai/assistants/{assistant_id}/scheduled_events`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventListPage;
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventListParams;
-
-ScheduledEventListPage page = client.ai().assistants().scheduledEvents().list("assistant_id");
-```
-
-## Create a scheduled event
-
-Create a scheduled event for an assistant
-
-`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
-
-Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
-
-```java
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ConversationChannelType;
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventCreateParams;
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventResponse;
-import java.time.OffsetDateTime;
-
-ScheduledEventCreateParams params = ScheduledEventCreateParams.builder()
-    .assistantId("assistant_id")
-    .scheduledAtFixedDatetime(OffsetDateTime.parse("2025-04-15T13:07:28.764Z"))
-    .telnyxAgentTarget("telnyx_agent_target")
-    .telnyxConversationChannel(ConversationChannelType.PHONE_CALL)
-    .telnyxEndUserTarget("telnyx_end_user_target")
-    .build();
-ScheduledEventResponse scheduledEventResponse = client.ai().assistants().scheduledEvents().create(params);
-```
-
-## Get a scheduled event
-
-Retrieve a scheduled event by event ID
-
-`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventResponse;
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventRetrieveParams;
-
-ScheduledEventRetrieveParams params = ScheduledEventRetrieveParams.builder()
-    .assistantId("assistant_id")
-    .eventId("event_id")
-    .build();
-ScheduledEventResponse scheduledEventResponse = client.ai().assistants().scheduledEvents().retrieve(params);
-```
-
-## Delete a scheduled event
-
-If the event is pending, this will cancel the event.
-
-`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventDeleteParams;
-
-ScheduledEventDeleteParams params = ScheduledEventDeleteParams.builder()
-    .assistantId("assistant_id")
-    .eventId("event_id")
-    .build();
-client.ai().assistants().scheduledEvents().delete(params);
 ```
 
 ## List assistant tests with pagination
@@ -412,6 +250,272 @@ RunRetrieveParams params = RunRetrieveParams.builder()
 TestRunResponse testRunResponse = client.ai().assistants().tests().runs().retrieve(params);
 ```
 
+## Get an assistant
+
+Retrieve an AI Assistant configuration by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantRetrieveParams;
+import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
+
+InferenceEmbedding assistant = client.ai().assistants().retrieve("assistant_id");
+```
+
+## Update an assistant
+
+Update an AI Assistant's attributes.
+
+`POST /ai/assistants/{assistant_id}`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantUpdateParams;
+import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
+
+InferenceEmbedding assistant = client.ai().assistants().update("assistant_id");
+```
+
+## Delete an assistant
+
+Delete an AI Assistant by `assistant_id`.
+
+`DELETE /ai/assistants/{assistant_id}`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantDeleteParams;
+import com.telnyx.sdk.models.ai.assistants.AssistantDeleteResponse;
+
+AssistantDeleteResponse assistant = client.ai().assistants().delete("assistant_id");
+```
+
+## Get Canary Deploy
+
+Endpoint to get a canary deploy configuration for an assistant.
+
+`GET /ai/assistants/{assistant_id}/canary-deploys`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployRetrieveParams;
+
+CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().retrieve("assistant_id");
+```
+
+## Create Canary Deploy
+
+Endpoint to create a canary deploy configuration for an assistant.
+
+`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeploy;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployCreateParams;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.VersionConfig;
+
+CanaryDeployCreateParams params = CanaryDeployCreateParams.builder()
+    .assistantId("assistant_id")
+    .canaryDeploy(CanaryDeploy.builder()
+        .addVersion(VersionConfig.builder()
+            .percentage(1.0)
+            .versionId("version_id")
+            .build())
+        .build())
+    .build();
+CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().create(params);
+```
+
+## Update Canary Deploy
+
+Endpoint to update a canary deploy configuration for an assistant.
+
+`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeploy;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployUpdateParams;
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.VersionConfig;
+
+CanaryDeployUpdateParams params = CanaryDeployUpdateParams.builder()
+    .assistantId("assistant_id")
+    .canaryDeploy(CanaryDeploy.builder()
+        .addVersion(VersionConfig.builder()
+            .percentage(1.0)
+            .versionId("version_id")
+            .build())
+        .build())
+    .build();
+CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().update(params);
+```
+
+## Delete Canary Deploy
+
+Endpoint to delete a canary deploy configuration for an assistant.
+
+`DELETE /ai/assistants/{assistant_id}/canary-deploys`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployDeleteParams;
+
+client.ai().assistants().canaryDeploys().delete("assistant_id");
+```
+
+## Assistant Chat (BETA)
+
+This endpoint allows a client to send a chat message to a specific AI Assistant.
+
+`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
+
+Optional: `name` (string)
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantChatParams;
+import com.telnyx.sdk.models.ai.assistants.AssistantChatResponse;
+
+AssistantChatParams params = AssistantChatParams.builder()
+    .assistantId("assistant_id")
+    .content("Tell me a joke about cats")
+    .conversationId("42b20469-1215-4a9a-8964-c36f66b406f4")
+    .build();
+AssistantChatResponse response = client.ai().assistants().chat(params);
+```
+
+## Assistant Sms Chat
+
+Send an SMS message for an assistant.
+
+`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
+
+Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantSendSmsParams;
+import com.telnyx.sdk.models.ai.assistants.AssistantSendSmsResponse;
+
+AssistantSendSmsParams params = AssistantSendSmsParams.builder()
+    .assistantId("assistant_id")
+    .from("from")
+    .to("to")
+    .build();
+AssistantSendSmsResponse response = client.ai().assistants().sendSms(params);
+```
+
+## Clone Assistant
+
+Clone an existing assistant, excluding telephony and messaging settings.
+
+`POST /ai/assistants/{assistant_id}/clone`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantCloneParams;
+import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
+
+InferenceEmbedding assistant = client.ai().assistants().clone("assistant_id");
+```
+
+## List scheduled events
+
+Get scheduled events for an assistant with pagination and filtering
+
+`GET /ai/assistants/{assistant_id}/scheduled_events`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventListPage;
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventListParams;
+
+ScheduledEventListPage page = client.ai().assistants().scheduledEvents().list("assistant_id");
+```
+
+## Create a scheduled event
+
+Create a scheduled event for an assistant
+
+`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
+
+Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
+
+```java
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ConversationChannelType;
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventCreateParams;
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventResponse;
+import java.time.OffsetDateTime;
+
+ScheduledEventCreateParams params = ScheduledEventCreateParams.builder()
+    .assistantId("assistant_id")
+    .scheduledAtFixedDatetime(OffsetDateTime.parse("2025-04-15T13:07:28.764Z"))
+    .telnyxAgentTarget("telnyx_agent_target")
+    .telnyxConversationChannel(ConversationChannelType.PHONE_CALL)
+    .telnyxEndUserTarget("telnyx_end_user_target")
+    .build();
+ScheduledEventResponse scheduledEventResponse = client.ai().assistants().scheduledEvents().create(params);
+```
+
+## Get a scheduled event
+
+Retrieve a scheduled event by event ID
+
+`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventResponse;
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventRetrieveParams;
+
+ScheduledEventRetrieveParams params = ScheduledEventRetrieveParams.builder()
+    .assistantId("assistant_id")
+    .eventId("event_id")
+    .build();
+ScheduledEventResponse scheduledEventResponse = client.ai().assistants().scheduledEvents().retrieve(params);
+```
+
+## Delete a scheduled event
+
+If the event is pending, this will cancel the event.
+
+`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.scheduledevents.ScheduledEventDeleteParams;
+
+ScheduledEventDeleteParams params = ScheduledEventDeleteParams.builder()
+    .assistantId("assistant_id")
+    .eventId("event_id")
+    .build();
+client.ai().assistants().scheduledEvents().delete(params);
+```
+
+## Get assistant texml
+
+Get an assistant texml by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}/texml`
+
+```java
+import com.telnyx.sdk.models.ai.assistants.AssistantGetTexmlParams;
+
+String response = client.ai().assistants().getTexml("assistant_id");
+```
+
+## Test Assistant Tool
+
+Test a webhook tool for an assistant
+
+`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
+
+Optional: `arguments` (object), `dynamic_variables` (object)
+
+```java
+import com.telnyx.sdk.models.ai.assistants.tools.ToolTestParams;
+import com.telnyx.sdk.models.ai.assistants.tools.ToolTestResponse;
+
+ToolTestParams params = ToolTestParams.builder()
+    .assistantId("assistant_id")
+    .toolId("tool_id")
+    .build();
+ToolTestResponse response = client.ai().assistants().tools().test(params);
+```
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -494,174 +598,6 @@ VersionPromoteParams params = VersionPromoteParams.builder()
     .versionId("version_id")
     .build();
 InferenceEmbedding assistant = client.ai().assistants().versions().promote(params);
-```
-
-## Get Canary Deploy
-
-Endpoint to get a canary deploy configuration for an assistant.
-
-`GET /ai/assistants/{assistant_id}/canary-deploys`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployRetrieveParams;
-
-CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().retrieve("assistant_id");
-```
-
-## Create Canary Deploy
-
-Endpoint to create a canary deploy configuration for an assistant.
-
-`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeploy;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployCreateParams;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.VersionConfig;
-
-CanaryDeployCreateParams params = CanaryDeployCreateParams.builder()
-    .assistantId("assistant_id")
-    .canaryDeploy(CanaryDeploy.builder()
-        .addVersion(VersionConfig.builder()
-            .percentage(1.0)
-            .versionId("version_id")
-            .build())
-        .build())
-    .build();
-CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().create(params);
-```
-
-## Update Canary Deploy
-
-Endpoint to update a canary deploy configuration for an assistant.
-
-`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeploy;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployResponse;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployUpdateParams;
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.VersionConfig;
-
-CanaryDeployUpdateParams params = CanaryDeployUpdateParams.builder()
-    .assistantId("assistant_id")
-    .canaryDeploy(CanaryDeploy.builder()
-        .addVersion(VersionConfig.builder()
-            .percentage(1.0)
-            .versionId("version_id")
-            .build())
-        .build())
-    .build();
-CanaryDeployResponse canaryDeployResponse = client.ai().assistants().canaryDeploys().update(params);
-```
-
-## Delete Canary Deploy
-
-Endpoint to delete a canary deploy configuration for an assistant.
-
-`DELETE /ai/assistants/{assistant_id}/canary-deploys`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.canarydeploys.CanaryDeployDeleteParams;
-
-client.ai().assistants().canaryDeploys().delete("assistant_id");
-```
-
-## Get assistant texml
-
-Get an assistant texml by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}/texml`
-
-```java
-import com.telnyx.sdk.models.ai.assistants.AssistantGetTexmlParams;
-
-String response = client.ai().assistants().getTexml("assistant_id");
-```
-
-## Test Assistant Tool
-
-Test a webhook tool for an assistant
-
-`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
-
-Optional: `arguments` (object), `dynamic_variables` (object)
-
-```java
-import com.telnyx.sdk.models.ai.assistants.tools.ToolTestParams;
-import com.telnyx.sdk.models.ai.assistants.tools.ToolTestResponse;
-
-ToolTestParams params = ToolTestParams.builder()
-    .assistantId("assistant_id")
-    .toolId("tool_id")
-    .build();
-ToolTestResponse response = client.ai().assistants().tools().test(params);
-```
-
-## List Integrations
-
-List all available integrations.
-
-`GET /ai/integrations`
-
-```java
-import com.telnyx.sdk.models.ai.integrations.IntegrationListParams;
-import com.telnyx.sdk.models.ai.integrations.IntegrationListResponse;
-
-IntegrationListResponse integrations = client.ai().integrations().list();
-```
-
-## List User Integrations
-
-List user setup integrations
-
-`GET /ai/integrations/connections`
-
-```java
-import com.telnyx.sdk.models.ai.integrations.connections.ConnectionListParams;
-import com.telnyx.sdk.models.ai.integrations.connections.ConnectionListResponse;
-
-ConnectionListResponse connections = client.ai().integrations().connections().list();
-```
-
-## Get User Integration connection By Id
-
-Get user setup integrations
-
-`GET /ai/integrations/connections/{user_connection_id}`
-
-```java
-import com.telnyx.sdk.models.ai.integrations.connections.ConnectionRetrieveParams;
-import com.telnyx.sdk.models.ai.integrations.connections.ConnectionRetrieveResponse;
-
-ConnectionRetrieveResponse connection = client.ai().integrations().connections().retrieve("user_connection_id");
-```
-
-## Delete Integration Connection
-
-Delete a specific integration connection.
-
-`DELETE /ai/integrations/connections/{user_connection_id}`
-
-```java
-import com.telnyx.sdk.models.ai.integrations.connections.ConnectionDeleteParams;
-
-client.ai().integrations().connections().delete("user_connection_id");
-```
-
-## List Integration By Id
-
-Retrieve integration details
-
-`GET /ai/integrations/{integration_id}`
-
-```java
-import com.telnyx.sdk.models.ai.integrations.IntegrationRetrieveParams;
-import com.telnyx.sdk.models.ai.integrations.IntegrationRetrieveResponse;
-
-IntegrationRetrieveResponse integration = client.ai().integrations().retrieve("integration_id");
 ```
 
 ## List MCP Servers

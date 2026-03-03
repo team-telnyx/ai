@@ -33,22 +33,6 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Create Presigned Object URL
-
-Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
-
-`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
-
-Optional: `ttl` (integer)
-
-```python
-response = client.storage.buckets.create_presigned_url(
-    object_name="",
-    bucket_name="",
-)
-print(response.content)
-```
-
 ## Get Bucket SSL Certificate
 
 Returns the stored certificate detail of a bucket, if applicable.
@@ -120,107 +104,18 @@ response = client.storage.buckets.usage.get_bucket_usage(
 print(response.data)
 ```
 
-## List Migration Source coverage
+## Create Presigned Object URL
 
-`GET /storage/migration_source_coverage`
+Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
 
-```python
-response = client.storage.list_migration_source_coverage()
-print(response.data)
-```
+`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
 
-## List all Migration Sources
-
-`GET /storage/migration_sources`
+Optional: `ttl` (integer)
 
 ```python
-migration_sources = client.storage.migration_sources.list()
-print(migration_sources.data)
-```
-
-## Create a Migration Source
-
-Create a source from which data can be migrated from.
-
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
-
-Optional: `id` (string), `source_region` (string)
-
-```python
-migration_source = client.storage.migration_sources.create(
-    bucket_name="bucket_name",
-    provider="aws",
-    provider_auth={},
+response = client.storage.buckets.create_presigned_url(
+    object_name="",
+    bucket_name="",
 )
-print(migration_source.data)
-```
-
-## Get a Migration Source
-
-`GET /storage/migration_sources/{id}`
-
-```python
-migration_source = client.storage.migration_sources.retrieve(
-    "",
-)
-print(migration_source.data)
-```
-
-## Delete a Migration Source
-
-`DELETE /storage/migration_sources/{id}`
-
-```python
-migration_source = client.storage.migration_sources.delete(
-    "",
-)
-print(migration_source.data)
-```
-
-## List all Migrations
-
-`GET /storage/migrations`
-
-```python
-migrations = client.storage.migrations.list()
-print(migrations.data)
-```
-
-## Create a Migration
-
-Initiate a migration of data from an external provider into Telnyx Cloud Storage.
-
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
-
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
-
-```python
-migration = client.storage.migrations.create(
-    source_id="source_id",
-    target_bucket_name="target_bucket_name",
-    target_region="target_region",
-)
-print(migration.data)
-```
-
-## Get a Migration
-
-`GET /storage/migrations/{id}`
-
-```python
-migration = client.storage.migrations.retrieve(
-    "",
-)
-print(migration.data)
-```
-
-## Stop a Migration
-
-`POST /storage/migrations/{id}/actions/stop`
-
-```python
-response = client.storage.migrations.actions.stop(
-    "",
-)
-print(response.data)
+print(response.content)
 ```

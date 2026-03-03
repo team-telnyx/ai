@@ -75,6 +75,20 @@ const response = await client.calls.actions.stopAIAssistant('call_control_id');
 console.log(response.data);
 ```
 
+## Gather
+
+Gather DTMF signals to build interactive menus.
+
+`POST /calls/{call_control_id}/actions/gather`
+
+Optional: `client_state` (string), `command_id` (string), `gather_id` (string), `initial_timeout_millis` (int32), `inter_digit_timeout_millis` (int32), `maximum_digits` (int32), `minimum_digits` (int32), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string)
+
+```javascript
+const response = await client.calls.actions.gather('call_control_id');
+
+console.log(response.data);
+```
+
 ## Gather stop
 
 Stop current gather.
@@ -140,20 +154,6 @@ const response = await client.calls.actions.gatherUsingSpeak('call_control_id', 
 console.log(response.data);
 ```
 
-## Gather
-
-Gather DTMF signals to build interactive menus.
-
-`POST /calls/{call_control_id}/actions/gather`
-
-Optional: `client_state` (string), `command_id` (string), `gather_id` (string), `initial_timeout_millis` (int32), `inter_digit_timeout_millis` (int32), `maximum_digits` (int32), `minimum_digits` (int32), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string)
-
-```javascript
-const response = await client.calls.actions.gather('call_control_id');
-
-console.log(response.data);
-```
-
 ---
 
 ## Webhooks
@@ -163,34 +163,12 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Event | Description |
 |-------|-------------|
-| `callGatherEnded` | Call Gather Ended |
 | `CallAIGatherEnded` | Call AI Gather Ended |
 | `CallAIGatherMessageHistoryUpdated` | Call AI Gather Message History Updated |
 | `CallAIGatherPartialResults` | Call AI Gather Partial Results |
-| `CallConversationEnded` | Call Conversation Ended |
-| `callPlaybackStarted` | Call Playback Started |
-| `callPlaybackEnded` | Call Playback Ended |
-| `callDtmfReceived` | Call Dtmf Received |
+| `callGatherEnded` | Call Gather Ended |
 
 ### Webhook payload fields
-
-**`callGatherEnded`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.digits` | string | The received DTMF digit or symbol. |
-| `data.payload.status` | enum | Reflects how command ended. |
 
 **`CallAIGatherEnded`**
 
@@ -246,33 +224,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.message_history` | array[object] | The history of the messages exchanged during the AI gather |
 | `data.payload.partial_results` | object | The partial result of the AI gather, its type depends of the `parameters` provided in the command |
 
-**`CallConversationEnded`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Unique identifier for the event. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.created_at` | date-time | Timestamp when the event was created in the system. |
-| `data.payload.assistant_id` | string | Unique identifier of the assistant involved in the call. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call leg. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session (group of related call legs). |
-| `data.payload.client_state` | string | Base64-encoded state received from a command. |
-| `data.payload.calling_party_type` | enum | The type of calling party connection. |
-| `data.payload.conversation_id` | string | ID unique to the conversation or insight group generated for the call. |
-| `data.payload.duration_sec` | integer | Duration of the conversation in seconds. |
-| `data.payload.from` | string | The caller's number or identifier. |
-| `data.payload.to` | string | The callee's number or SIP address. |
-| `data.payload.llm_model` | string | The large language model used during the conversation. |
-| `data.payload.stt_model` | string | The speech-to-text model used in the conversation. |
-| `data.payload.tts_provider` | string | The text-to-speech provider used in the call. |
-| `data.payload.tts_model_id` | string | The model ID used for text-to-speech synthesis. |
-| `data.payload.tts_voice_id` | string | Voice ID used for TTS. |
-
-**`callPlaybackStarted`**
+**`callGatherEnded`**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -282,45 +234,10 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
 | `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.media_url` | string | The audio URL being played back, if audio_url has been used to start. |
-| `data.payload.media_name` | string | The name of the audio media file being played back, if media_name has been used to start. |
-| `data.payload.overlay` | boolean | Whether the audio is going to be played in overlay mode or not. |
-
-**`callPlaybackEnded`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.media_url` | string | The audio URL being played back, if audio_url has been used to start. |
-| `data.payload.media_name` | string | The name of the audio media file being played back, if media_name has been used to start. |
-| `data.payload.overlay` | boolean | Whether the stopped audio was in overlay mode or not. |
-| `data.payload.status` | enum | Reflects how command ended. |
-| `data.payload.status_detail` | string | Provides details in case of failure. |
-
-**`callDtmfReceived`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Identifies the type of resource. |
 | `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
 | `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.from` | string | Number or SIP URI placing the call. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.digit` | string | The received DTMF digit or symbol. |
+| `data.payload.digits` | string | The received DTMF digit or symbol. |
+| `data.payload.status` | enum | Reflects how command ended. |

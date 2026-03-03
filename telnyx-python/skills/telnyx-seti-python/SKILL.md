@@ -33,6 +33,17 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Get Enum
+
+`GET /10dlc/enum/{endpoint}`
+
+```python
+response = client.messaging_10dlc.get_enum(
+    "mno",
+)
+print(response)
+```
+
 ## Retrieve Black Box Test Results
 
 Returns the results of the various black box tests

@@ -32,78 +32,42 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all outbound voice profiles
+## List all Access IP Ranges
 
-Get all outbound voice profiles belonging to the user that match the given filters.
-
-`GET /outbound_voice_profiles`
+`GET /access_ip_ranges`
 
 ```java
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileListPage;
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileListParams;
+import com.telnyx.sdk.models.accessipranges.AccessIpRangeListPage;
+import com.telnyx.sdk.models.accessipranges.AccessIpRangeListParams;
 
-OutboundVoiceProfileListPage page = client.outboundVoiceProfiles().list();
+AccessIpRangeListPage page = client.accessIpRanges().list();
 ```
 
-## Create an outbound voice profile
+## Create new Access IP Range
 
-Create an outbound voice profile.
+`POST /access_ip_ranges` — Required: `cidr_block`
 
-`POST /outbound_voice_profiles` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+Optional: `description` (string)
 
 ```java
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileCreateParams;
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileCreateResponse;
+import com.telnyx.sdk.models.accessipranges.AccessIpRange;
+import com.telnyx.sdk.models.accessipranges.AccessIpRangeCreateParams;
 
-OutboundVoiceProfileCreateParams params = OutboundVoiceProfileCreateParams.builder()
-    .name("office")
+AccessIpRangeCreateParams params = AccessIpRangeCreateParams.builder()
+    .cidrBlock("cidr_block")
     .build();
-OutboundVoiceProfileCreateResponse outboundVoiceProfile = client.outboundVoiceProfiles().create(params);
+AccessIpRange accessIpRange = client.accessIpRanges().create(params);
 ```
 
-## Retrieve an outbound voice profile
+## Delete access IP ranges
 
-Retrieves the details of an existing outbound voice profile.
-
-`GET /outbound_voice_profiles/{id}`
+`DELETE /access_ip_ranges/{access_ip_range_id}`
 
 ```java
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileRetrieveParams;
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileRetrieveResponse;
+import com.telnyx.sdk.models.accessipranges.AccessIpRange;
+import com.telnyx.sdk.models.accessipranges.AccessIpRangeDeleteParams;
 
-OutboundVoiceProfileRetrieveResponse outboundVoiceProfile = client.outboundVoiceProfiles().retrieve("1293384261075731499");
-```
-
-## Updates an existing outbound voice profile.
-
-`PATCH /outbound_voice_profiles/{id}` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
-
-```java
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileUpdateParams;
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileUpdateResponse;
-
-OutboundVoiceProfileUpdateParams params = OutboundVoiceProfileUpdateParams.builder()
-    .id("1293384261075731499")
-    .name("office")
-    .build();
-OutboundVoiceProfileUpdateResponse outboundVoiceProfile = client.outboundVoiceProfiles().update(params);
-```
-
-## Delete an outbound voice profile
-
-Deletes an existing outbound voice profile.
-
-`DELETE /outbound_voice_profiles/{id}`
-
-```java
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileDeleteParams;
-import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileDeleteResponse;
-
-OutboundVoiceProfileDeleteResponse outboundVoiceProfile = client.outboundVoiceProfiles().delete("1293384261075731499");
+AccessIpRange accessIpRange = client.accessIpRanges().delete("access_ip_range_id");
 ```
 
 ## List connections
@@ -219,149 +183,76 @@ import com.telnyx.sdk.models.credentialconnections.actions.ActionCheckRegistrati
 ActionCheckRegistrationStatusResponse response = client.credentialConnections().actions().checkRegistrationStatus("id");
 ```
 
-## List Ips
+## List FQDN connections
 
-Get all IPs belonging to the user that match the given filters.
+Returns a list of your FQDN connections.
 
-`GET /ips`
+`GET /fqdn_connections`
 
 ```java
-import com.telnyx.sdk.models.ips.IpListPage;
-import com.telnyx.sdk.models.ips.IpListParams;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionListPage;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionListParams;
 
-IpListPage page = client.ips().list();
+FqdnConnectionListPage page = client.fqdnConnections().list();
 ```
 
-## Create an Ip
+## Create an FQDN connection
 
-Create a new IP object.
+Creates a FQDN connection.
 
-`POST /ips` — Required: `ip_address`
+`POST /fqdn_connections` — Required: `connection_name`
 
-Optional: `connection_id` (string), `port` (integer)
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
-import com.telnyx.sdk.models.ips.IpCreateParams;
-import com.telnyx.sdk.models.ips.IpCreateResponse;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionCreateParams;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionCreateResponse;
 
-IpCreateParams params = IpCreateParams.builder()
-    .ipAddress("192.168.0.0")
+FqdnConnectionCreateParams params = FqdnConnectionCreateParams.builder()
+    .connectionName("string")
     .build();
-IpCreateResponse ip = client.ips().create(params);
+FqdnConnectionCreateResponse fqdnConnection = client.fqdnConnections().create(params);
 ```
 
-## Retrieve an Ip
+## Retrieve an FQDN connection
 
-Return the details regarding a specific IP.
+Retrieves the details of an existing FQDN connection.
 
-`GET /ips/{id}`
+`GET /fqdn_connections/{id}`
 
 ```java
-import com.telnyx.sdk.models.ips.IpRetrieveParams;
-import com.telnyx.sdk.models.ips.IpRetrieveResponse;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionRetrieveParams;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionRetrieveResponse;
 
-IpRetrieveResponse ip = client.ips().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+FqdnConnectionRetrieveResponse fqdnConnection = client.fqdnConnections().retrieve("1293384261075731499");
 ```
 
-## Update an Ip
+## Update an FQDN connection
 
-Update the details of a specific IP.
+Updates settings of an existing FQDN connection.
 
-`PATCH /ips/{id}` — Required: `ip_address`
-
-Optional: `connection_id` (string), `port` (integer)
-
-```java
-import com.telnyx.sdk.models.ips.IpUpdateParams;
-import com.telnyx.sdk.models.ips.IpUpdateResponse;
-
-IpUpdateParams params = IpUpdateParams.builder()
-    .id("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .ipAddress("192.168.0.0")
-    .build();
-IpUpdateResponse ip = client.ips().update(params);
-```
-
-## Delete an Ip
-
-Delete an IP.
-
-`DELETE /ips/{id}`
-
-```java
-import com.telnyx.sdk.models.ips.IpDeleteParams;
-import com.telnyx.sdk.models.ips.IpDeleteResponse;
-
-IpDeleteResponse ip = client.ips().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List Ip connections
-
-Returns a list of your IP connections.
-
-`GET /ip_connections`
-
-```java
-import com.telnyx.sdk.models.ipconnections.IpConnectionListPage;
-import com.telnyx.sdk.models.ipconnections.IpConnectionListParams;
-
-IpConnectionListPage page = client.ipConnections().list();
-```
-
-## Create an Ip connection
-
-Creates an IP connection.
-
-`POST /ip_connections`
+`PATCH /fqdn_connections/{id}`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
-import com.telnyx.sdk.models.ipconnections.IpConnectionCreateParams;
-import com.telnyx.sdk.models.ipconnections.IpConnectionCreateResponse;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionUpdateParams;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionUpdateResponse;
 
-IpConnectionCreateResponse ipConnection = client.ipConnections().create();
+FqdnConnectionUpdateResponse fqdnConnection = client.fqdnConnections().update("1293384261075731499");
 ```
 
-## Retrieve an Ip connection
+## Delete an FQDN connection
 
-Retrieves the details of an existing ip connection.
+Deletes an FQDN connection.
 
-`GET /ip_connections/{id}`
-
-```java
-import com.telnyx.sdk.models.ipconnections.IpConnectionRetrieveParams;
-import com.telnyx.sdk.models.ipconnections.IpConnectionRetrieveResponse;
-
-IpConnectionRetrieveResponse ipConnection = client.ipConnections().retrieve("id");
-```
-
-## Update an Ip connection
-
-Updates settings of an existing IP connection.
-
-`PATCH /ip_connections/{id}`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+`DELETE /fqdn_connections/{id}`
 
 ```java
-import com.telnyx.sdk.models.ipconnections.IpConnectionUpdateParams;
-import com.telnyx.sdk.models.ipconnections.IpConnectionUpdateResponse;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionDeleteParams;
+import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionDeleteResponse;
 
-IpConnectionUpdateResponse ipConnection = client.ipConnections().update("id");
-```
-
-## Delete an Ip connection
-
-Deletes an existing IP connection.
-
-`DELETE /ip_connections/{id}`
-
-```java
-import com.telnyx.sdk.models.ipconnections.IpConnectionDeleteParams;
-import com.telnyx.sdk.models.ipconnections.IpConnectionDeleteResponse;
-
-IpConnectionDeleteResponse ipConnection = client.ipConnections().delete("id");
+FqdnConnectionDeleteResponse fqdnConnection = client.fqdnConnections().delete("1293384261075731499");
 ```
 
 ## List FQDNs
@@ -438,133 +329,221 @@ import com.telnyx.sdk.models.fqdns.FqdnDeleteResponse;
 FqdnDeleteResponse fqdn = client.fqdns().delete("1517907029795014409");
 ```
 
-## List FQDN connections
+## List Ip connections
 
-Returns a list of your FQDN connections.
+Returns a list of your IP connections.
 
-`GET /fqdn_connections`
-
-```java
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionListPage;
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionListParams;
-
-FqdnConnectionListPage page = client.fqdnConnections().list();
-```
-
-## Create an FQDN connection
-
-Creates a FQDN connection.
-
-`POST /fqdn_connections` — Required: `connection_name`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+`GET /ip_connections`
 
 ```java
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionCreateParams;
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionCreateResponse;
+import com.telnyx.sdk.models.ipconnections.IpConnectionListPage;
+import com.telnyx.sdk.models.ipconnections.IpConnectionListParams;
 
-FqdnConnectionCreateParams params = FqdnConnectionCreateParams.builder()
-    .connectionName("string")
-    .build();
-FqdnConnectionCreateResponse fqdnConnection = client.fqdnConnections().create(params);
+IpConnectionListPage page = client.ipConnections().list();
 ```
 
-## Retrieve an FQDN connection
+## Create an Ip connection
 
-Retrieves the details of an existing FQDN connection.
+Creates an IP connection.
 
-`GET /fqdn_connections/{id}`
-
-```java
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionRetrieveParams;
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionRetrieveResponse;
-
-FqdnConnectionRetrieveResponse fqdnConnection = client.fqdnConnections().retrieve("1293384261075731499");
-```
-
-## Update an FQDN connection
-
-Updates settings of an existing FQDN connection.
-
-`PATCH /fqdn_connections/{id}`
+`POST /ip_connections`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionUpdateParams;
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionUpdateResponse;
+import com.telnyx.sdk.models.ipconnections.IpConnectionCreateParams;
+import com.telnyx.sdk.models.ipconnections.IpConnectionCreateResponse;
 
-FqdnConnectionUpdateResponse fqdnConnection = client.fqdnConnections().update("1293384261075731499");
+IpConnectionCreateResponse ipConnection = client.ipConnections().create();
 ```
 
-## Delete an FQDN connection
+## Retrieve an Ip connection
 
-Deletes an FQDN connection.
+Retrieves the details of an existing ip connection.
 
-`DELETE /fqdn_connections/{id}`
+`GET /ip_connections/{id}`
 
 ```java
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionDeleteParams;
-import com.telnyx.sdk.models.fqdnconnections.FqdnConnectionDeleteResponse;
+import com.telnyx.sdk.models.ipconnections.IpConnectionRetrieveParams;
+import com.telnyx.sdk.models.ipconnections.IpConnectionRetrieveResponse;
 
-FqdnConnectionDeleteResponse fqdnConnection = client.fqdnConnections().delete("1293384261075731499");
+IpConnectionRetrieveResponse ipConnection = client.ipConnections().retrieve("id");
 ```
 
-## List Mobile Voice Connections
+## Update an Ip connection
 
-`GET /v2/mobile_voice_connections`
+Updates settings of an existing IP connection.
+
+`PATCH /ip_connections/{id}`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListPage;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListParams;
+import com.telnyx.sdk.models.ipconnections.IpConnectionUpdateParams;
+import com.telnyx.sdk.models.ipconnections.IpConnectionUpdateResponse;
 
-MobileVoiceConnectionListPage page = client.mobileVoiceConnections().list();
+IpConnectionUpdateResponse ipConnection = client.ipConnections().update("id");
 ```
 
-## Create a Mobile Voice Connection
+## Delete an Ip connection
 
-`POST /v2/mobile_voice_connections`
+Deletes an existing IP connection.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
+`DELETE /ip_connections/{id}`
 
 ```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateResponse;
+import com.telnyx.sdk.models.ipconnections.IpConnectionDeleteParams;
+import com.telnyx.sdk.models.ipconnections.IpConnectionDeleteResponse;
 
-MobileVoiceConnectionCreateResponse mobileVoiceConnection = client.mobileVoiceConnections().create();
+IpConnectionDeleteResponse ipConnection = client.ipConnections().delete("id");
 ```
 
-## Retrieve a Mobile Voice Connection
+## List Ips
 
-`GET /v2/mobile_voice_connections/{id}`
+Get all IPs belonging to the user that match the given filters.
+
+`GET /ips`
 
 ```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveResponse;
+import com.telnyx.sdk.models.ips.IpListPage;
+import com.telnyx.sdk.models.ips.IpListParams;
 
-MobileVoiceConnectionRetrieveResponse mobileVoiceConnection = client.mobileVoiceConnections().retrieve("id");
+IpListPage page = client.ips().list();
 ```
 
-## Update a Mobile Voice Connection
+## Create an Ip
 
-`PATCH /v2/mobile_voice_connections/{id}`
+Create a new IP object.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
+`POST /ips` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
 
 ```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateResponse;
+import com.telnyx.sdk.models.ips.IpCreateParams;
+import com.telnyx.sdk.models.ips.IpCreateResponse;
 
-MobileVoiceConnectionUpdateResponse mobileVoiceConnection = client.mobileVoiceConnections().update("id");
+IpCreateParams params = IpCreateParams.builder()
+    .ipAddress("192.168.0.0")
+    .build();
+IpCreateResponse ip = client.ips().create(params);
 ```
 
-## Delete a Mobile Voice Connection
+## Retrieve an Ip
 
-`DELETE /v2/mobile_voice_connections/{id}`
+Return the details regarding a specific IP.
+
+`GET /ips/{id}`
 
 ```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteResponse;
+import com.telnyx.sdk.models.ips.IpRetrieveParams;
+import com.telnyx.sdk.models.ips.IpRetrieveResponse;
 
-MobileVoiceConnectionDeleteResponse mobileVoiceConnection = client.mobileVoiceConnections().delete("id");
+IpRetrieveResponse ip = client.ips().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Update an Ip
+
+Update the details of a specific IP.
+
+`PATCH /ips/{id}` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
+
+```java
+import com.telnyx.sdk.models.ips.IpUpdateParams;
+import com.telnyx.sdk.models.ips.IpUpdateResponse;
+
+IpUpdateParams params = IpUpdateParams.builder()
+    .id("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .ipAddress("192.168.0.0")
+    .build();
+IpUpdateResponse ip = client.ips().update(params);
+```
+
+## Delete an Ip
+
+Delete an IP.
+
+`DELETE /ips/{id}`
+
+```java
+import com.telnyx.sdk.models.ips.IpDeleteParams;
+import com.telnyx.sdk.models.ips.IpDeleteResponse;
+
+IpDeleteResponse ip = client.ips().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Get all outbound voice profiles
+
+Get all outbound voice profiles belonging to the user that match the given filters.
+
+`GET /outbound_voice_profiles`
+
+```java
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileListPage;
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileListParams;
+
+OutboundVoiceProfileListPage page = client.outboundVoiceProfiles().list();
+```
+
+## Create an outbound voice profile
+
+Create an outbound voice profile.
+
+`POST /outbound_voice_profiles` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```java
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileCreateParams;
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileCreateResponse;
+
+OutboundVoiceProfileCreateParams params = OutboundVoiceProfileCreateParams.builder()
+    .name("office")
+    .build();
+OutboundVoiceProfileCreateResponse outboundVoiceProfile = client.outboundVoiceProfiles().create(params);
+```
+
+## Retrieve an outbound voice profile
+
+Retrieves the details of an existing outbound voice profile.
+
+`GET /outbound_voice_profiles/{id}`
+
+```java
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileRetrieveParams;
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileRetrieveResponse;
+
+OutboundVoiceProfileRetrieveResponse outboundVoiceProfile = client.outboundVoiceProfiles().retrieve("1293384261075731499");
+```
+
+## Updates an existing outbound voice profile.
+
+`PATCH /outbound_voice_profiles/{id}` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```java
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileUpdateParams;
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileUpdateResponse;
+
+OutboundVoiceProfileUpdateParams params = OutboundVoiceProfileUpdateParams.builder()
+    .id("1293384261075731499")
+    .name("office")
+    .build();
+OutboundVoiceProfileUpdateResponse outboundVoiceProfile = client.outboundVoiceProfiles().update(params);
+```
+
+## Delete an outbound voice profile
+
+Deletes an existing outbound voice profile.
+
+`DELETE /outbound_voice_profiles/{id}`
+
+```java
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileDeleteParams;
+import com.telnyx.sdk.models.outboundvoiceprofiles.OutboundVoiceProfileDeleteResponse;
+
+OutboundVoiceProfileDeleteResponse outboundVoiceProfile = client.outboundVoiceProfiles().delete("1293384261075731499");
 ```

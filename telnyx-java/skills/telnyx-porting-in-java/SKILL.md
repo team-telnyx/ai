@@ -32,6 +32,21 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## Run a portability check
+
+Runs a portability check, returning the results immediately.
+
+`POST /portability_checks`
+
+Optional: `phone_numbers` (array[string])
+
+```java
+import com.telnyx.sdk.models.portabilitychecks.PortabilityCheckRunParams;
+import com.telnyx.sdk.models.portabilitychecks.PortabilityCheckRunResponse;
+
+PortabilityCheckRunResponse response = client.portabilityChecks().run();
+```
+
 ## List all porting events
 
 Returns a list of all porting events.
@@ -74,7 +89,7 @@ client.porting().events().republish("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration_preview`
+`POST /porting/loa_configuration/preview`
 
 ```java
 import com.telnyx.sdk.core.http.HttpResponse;
@@ -215,6 +230,65 @@ import com.telnyx.sdk.models.porting.loaconfigurations.LoaConfigurationPreview1P
 HttpResponse response = client.porting().loaConfigurations().preview1("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+## List porting related reports
+
+List the reports generated about porting operations.
+
+`GET /porting/reports`
+
+```java
+import com.telnyx.sdk.models.porting.reports.ReportListPage;
+import com.telnyx.sdk.models.porting.reports.ReportListParams;
+
+ReportListPage page = client.porting().reports().list();
+```
+
+## Create a porting related report
+
+Generate reports about porting operations.
+
+`POST /porting/reports`
+
+```java
+import com.telnyx.sdk.models.porting.reports.ExportPortingOrdersCsvReport;
+import com.telnyx.sdk.models.porting.reports.ReportCreateParams;
+import com.telnyx.sdk.models.porting.reports.ReportCreateResponse;
+
+ReportCreateParams params = ReportCreateParams.builder()
+    .params(ExportPortingOrdersCsvReport.builder()
+        .filters(ExportPortingOrdersCsvReport.Filters.builder().build())
+        .build())
+    .reportType(ReportCreateParams.ReportType.EXPORT_PORTING_ORDERS_CSV)
+    .build();
+ReportCreateResponse report = client.porting().reports().create(params);
+```
+
+## Retrieve a report
+
+Retrieve a specific report generated.
+
+`GET /porting/reports/{id}`
+
+```java
+import com.telnyx.sdk.models.porting.reports.ReportRetrieveParams;
+import com.telnyx.sdk.models.porting.reports.ReportRetrieveResponse;
+
+ReportRetrieveResponse report = client.porting().reports().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List available carriers in the UK
+
+List available carriers in the UK.
+
+`GET /porting/uk_carriers`
+
+```java
+import com.telnyx.sdk.models.porting.PortingListUkCarriersParams;
+import com.telnyx.sdk.models.porting.PortingListUkCarriersResponse;
+
+PortingListUkCarriersResponse response = client.porting().listUkCarriers();
+```
+
 ## List all porting orders
 
 Returns a list of your porting order.
@@ -249,6 +323,45 @@ PortingOrderCreateParams params = PortingOrderCreateParams.builder()
     ))
     .build();
 PortingOrderCreateResponse portingOrder = client.portingOrders().create(params);
+```
+
+## List all exception types
+
+Returns a list of all possible exception types for a porting order.
+
+`GET /porting_orders/exception_types`
+
+```java
+import com.telnyx.sdk.models.portingorders.PortingOrderRetrieveExceptionTypesParams;
+import com.telnyx.sdk.models.portingorders.PortingOrderRetrieveExceptionTypesResponse;
+
+PortingOrderRetrieveExceptionTypesResponse response = client.portingOrders().retrieveExceptionTypes();
+```
+
+## List all phone number configurations
+
+Returns a list of phone number configurations paginated.
+
+`GET /porting_orders/phone_number_configurations`
+
+```java
+import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationListPage;
+import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationListParams;
+
+PhoneNumberConfigurationListPage page = client.portingOrders().phoneNumberConfigurations().list();
+```
+
+## Create a list of phone number configurations
+
+Creates a list of phone number configurations.
+
+`POST /porting_orders/phone_number_configurations`
+
+```java
+import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationCreateParams;
+import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationCreateResponse;
+
+PhoneNumberConfigurationCreateResponse phoneNumberConfiguration = client.portingOrders().phoneNumberConfigurations().create();
 ```
 
 ## Retrieve a porting order
@@ -735,128 +848,15 @@ PhoneNumberExtensionDeleteParams params = PhoneNumberExtensionDeleteParams.build
 PhoneNumberExtensionDeleteResponse phoneNumberExtension = client.portingOrders().phoneNumberExtensions().delete(params);
 ```
 
-## List all exception types
-
-Returns a list of all possible exception types for a porting order.
-
-`GET /porting_orders/exception_types`
-
-```java
-import com.telnyx.sdk.models.portingorders.PortingOrderRetrieveExceptionTypesParams;
-import com.telnyx.sdk.models.portingorders.PortingOrderRetrieveExceptionTypesResponse;
-
-PortingOrderRetrieveExceptionTypesResponse response = client.portingOrders().retrieveExceptionTypes();
-```
-
-## List all phone number configurations
-
-Returns a list of phone number configurations paginated.
-
-`GET /porting_orders/phone_number_configurations`
-
-```java
-import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationListPage;
-import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationListParams;
-
-PhoneNumberConfigurationListPage page = client.portingOrders().phoneNumberConfigurations().list();
-```
-
-## Create a list of phone number configurations
-
-Creates a list of phone number configurations.
-
-`POST /porting_orders/phone_number_configurations`
-
-```java
-import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationCreateParams;
-import com.telnyx.sdk.models.portingorders.phonenumberconfigurations.PhoneNumberConfigurationCreateResponse;
-
-PhoneNumberConfigurationCreateResponse phoneNumberConfiguration = client.portingOrders().phoneNumberConfigurations().create();
-```
-
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting/phone_numbers`
+`GET /porting_phone_numbers`
 
 ```java
 import com.telnyx.sdk.models.portingphonenumbers.PortingPhoneNumberListPage;
 import com.telnyx.sdk.models.portingphonenumbers.PortingPhoneNumberListParams;
 
 PortingPhoneNumberListPage page = client.portingPhoneNumbers().list();
-```
-
-## List porting related reports
-
-List the reports generated about porting operations.
-
-`GET /porting/reports`
-
-```java
-import com.telnyx.sdk.models.porting.reports.ReportListPage;
-import com.telnyx.sdk.models.porting.reports.ReportListParams;
-
-ReportListPage page = client.porting().reports().list();
-```
-
-## Create a porting related report
-
-Generate reports about porting operations.
-
-`POST /porting/reports`
-
-```java
-import com.telnyx.sdk.models.porting.reports.ExportPortingOrdersCsvReport;
-import com.telnyx.sdk.models.porting.reports.ReportCreateParams;
-import com.telnyx.sdk.models.porting.reports.ReportCreateResponse;
-
-ReportCreateParams params = ReportCreateParams.builder()
-    .params(ExportPortingOrdersCsvReport.builder()
-        .filters(ExportPortingOrdersCsvReport.Filters.builder().build())
-        .build())
-    .reportType(ReportCreateParams.ReportType.EXPORT_PORTING_ORDERS_CSV)
-    .build();
-ReportCreateResponse report = client.porting().reports().create(params);
-```
-
-## Retrieve a report
-
-Retrieve a specific report generated.
-
-`GET /porting/reports/{id}`
-
-```java
-import com.telnyx.sdk.models.porting.reports.ReportRetrieveParams;
-import com.telnyx.sdk.models.porting.reports.ReportRetrieveResponse;
-
-ReportRetrieveResponse report = client.porting().reports().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## List available carriers in the UK
-
-List available carriers in the UK.
-
-`GET /porting/uk_carriers`
-
-```java
-import com.telnyx.sdk.models.porting.PortingListUkCarriersParams;
-import com.telnyx.sdk.models.porting.PortingListUkCarriersResponse;
-
-PortingListUkCarriersResponse response = client.porting().listUkCarriers();
-```
-
-## Run a portability check
-
-Runs a portability check, returning the results immediately.
-
-`POST /portability_checks`
-
-Optional: `phone_numbers` (array[string])
-
-```java
-import com.telnyx.sdk.models.portabilitychecks.PortabilityCheckRunParams;
-import com.telnyx.sdk.models.portabilitychecks.PortabilityCheckRunResponse;
-
-PortabilityCheckRunResponse response = client.portabilityChecks().run();
 ```

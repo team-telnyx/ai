@@ -66,6 +66,30 @@ const telnyxBrand = await client.messaging10dlc.brand.create({
 console.log(telnyxBrand.identityStatus);
 ```
 
+## Get Brand Feedback By Id
+
+Get feedback about a brand by ID.
+
+`GET /10dlc/brand/feedback/{brandId}`
+
+```javascript
+const response = await client.messaging10dlc.brand.getFeedback('brandId');
+
+console.log(response.brandId);
+```
+
+## Get Brand SMS OTP Status
+
+Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
+
+`GET /10dlc/brand/smsOtp/{referenceId}`
+
+```javascript
+const response = await client.messaging10dlc.brand.getSMSOtpByReference('OTP4B2001');
+
+console.log(response.brandId);
+```
+
 ## Get Brand
 
 Retrieve a brand by `brandId`.
@@ -214,62 +238,6 @@ await client.messaging10dlc.brand.verifySMSOtp('4b20019b-043a-78f8-0657-b3be3f4b
 });
 ```
 
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```javascript
-const response = await client.messaging10dlc.brand.getSMSOtpByReference('OTP4B2001');
-
-console.log(response.brandId);
-```
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID.
-
-`GET /10dlc/brand_feedback/{brandId}`
-
-```javascript
-const response = await client.messaging10dlc.brand.getFeedback('brandId');
-
-console.log(response.brandId);
-```
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```javascript
-const telnyxCampaignCsp = await client.messaging10dlc.campaignBuilder.submit({
-  brandId: 'brandId',
-  description: 'description',
-  usecase: 'usecase',
-});
-
-console.log(telnyxCampaignCsp.brandId);
-```
-
-## Qualify By Usecase
-
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
-
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
-
-```javascript
-const response = await client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase('usecase', {
-  brandId: 'brandId',
-});
-
-console.log(response.annualFee);
-```
-
 ## List Campaigns
 
 Retrieve a list of campaigns associated with a supplied `brandId`.
@@ -283,6 +251,28 @@ for await (const campaignListResponse of client.messaging10dlc.campaign.list({
 })) {
   console.log(campaignListResponse.ageGated);
 }
+```
+
+## Accept Shared Campaign
+
+Manually accept a campaign shared with Telnyx
+
+`POST /10dlc/campaign/acceptSharing/{campaignId}`
+
+```javascript
+const response = await client.messaging10dlc.campaign.acceptSharing('C26F1KLZN');
+
+console.log(response);
+```
+
+## Get Campaign Cost
+
+`GET /10dlc/campaign/usecase/cost`
+
+```javascript
+const response = await client.messaging10dlc.campaign.usecase.getCost({ usecase: 'usecase' });
+
+console.log(response.campaignUsecase);
 ```
 
 ## Get campaign
@@ -367,7 +357,7 @@ console.log(response);
 
 ## Get OSR campaign attributes
 
-`GET /10dlc/campaign/{campaignId}/osr_attributes`
+`GET /10dlc/campaign/{campaignId}/osr/attributes`
 
 ```javascript
 const response = await client.messaging10dlc.campaign.osr.getAttributes('campaignId');
@@ -385,26 +375,62 @@ const response = await client.messaging10dlc.campaign.getSharingStatus('campaign
 console.log(response.sharedByMe);
 ```
 
-## Accept Shared Campaign
+## Submit Campaign
 
-Manually accept a campaign shared with Telnyx
+Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
 
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
+`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
+
+Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
 
 ```javascript
-const response = await client.messaging10dlc.campaign.acceptSharing('C26F1KLZN');
+const telnyxCampaignCsp = await client.messaging10dlc.campaignBuilder.submit({
+  brandId: 'brandId',
+  description: 'description',
+  usecase: 'usecase',
+});
 
-console.log(response);
+console.log(telnyxCampaignCsp.brandId);
 ```
 
-## Get Campaign Cost
+## Qualify By Usecase
 
-`GET /10dlc/campaign/usecase_cost`
+This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+
+`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
 
 ```javascript
-const response = await client.messaging10dlc.campaign.usecase.getCost({ usecase: 'usecase' });
+const response = await client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase('usecase', {
+  brandId: 'brandId',
+});
 
-console.log(response.campaignUsecase);
+console.log(response.annualFee);
+```
+
+## List shared partner campaigns
+
+Get all partner campaigns you have shared to Telnyx in a paginated fashion
+
+This endpoint is currently limited to only returning shared campaigns that Telnyx
+has accepted.
+
+`GET /10dlc/partnerCampaign/sharedByMe`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const partnerCampaignListSharedByMeResponse of client.messaging10dlc.partnerCampaigns.listSharedByMe()) {
+  console.log(partnerCampaignListSharedByMeResponse.brandId);
+}
+```
+
+## Get Sharing Status
+
+`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+
+```javascript
+const response = await client.messaging10dlc.partnerCampaigns.retrieveSharingStatus('campaignId');
+
+console.log(response);
 ```
 
 ## List Shared Campaigns
@@ -448,30 +474,48 @@ const telnyxDownstreamCampaign = await client.messaging10dlc.partnerCampaigns.up
 console.log(telnyxDownstreamCampaign.tcrBrandId);
 ```
 
-## Get Sharing Status
+## Assign Messaging Profile To Campaign
 
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
+
+`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
+
+Optional: `campaignId` (string), `tcrCampaignId` (string)
 
 ```javascript
-const response = await client.messaging10dlc.partnerCampaigns.retrieveSharingStatus('campaignId');
+const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.assign({
+  messagingProfileId: '4001767e-ce0f-4cae-9d5f-0d5e636e7809',
+});
 
-console.log(response);
+console.log(response.messagingProfileId);
 ```
 
-## List shared partner campaigns
+## Get Assignment Task Status
 
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
+Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
 
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
 
 ```javascript
-// Automatically fetches more pages as needed.
-for await (const partnerCampaignListSharedByMeResponse of client.messaging10dlc.partnerCampaigns.listSharedByMe()) {
-  console.log(partnerCampaignListSharedByMeResponse.brandId);
-}
+const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.retrieveStatus(
+  'taskId',
+);
+
+console.log(response.status);
+```
+
+## Get Phone Number Status
+
+Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
+
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
+
+```javascript
+const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.listPhoneNumberStatus(
+  'taskId',
+);
+
+console.log(response.records);
 ```
 
 ## List phone number campaigns
@@ -535,50 +579,6 @@ This endpoint allows you to remove a campaign assignment from the supplied `phon
 const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.delete('phoneNumber');
 
 console.log(phoneNumberCampaign.campaignId);
-```
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
-
-```javascript
-const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.assign({
-  messagingProfileId: '4001767e-ce0f-4cae-9d5f-0d5e636e7809',
-});
-
-console.log(response.messagingProfileId);
-```
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```javascript
-const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.retrieveStatus(
-  'taskId',
-);
-
-console.log(response.status);
-```
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```javascript
-const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.listPhoneNumberStatus(
-  'taskId',
-);
-
-console.log(response.records);
 ```
 
 ---

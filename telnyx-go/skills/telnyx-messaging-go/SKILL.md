@@ -40,6 +40,67 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List alphanumeric sender IDs
+
+List all alphanumeric sender IDs for the authenticated user.
+
+`GET /alphanumeric_sender_ids`
+
+```go
+	page, err := client.AlphanumericSenderIDs.List(context.TODO(), telnyx.AlphanumericSenderIDListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create an alphanumeric sender ID
+
+Create a new alphanumeric sender ID associated with a messaging profile.
+
+`POST /alphanumeric_sender_ids` — Required: `alphanumeric_sender_id`, `messaging_profile_id`
+
+Optional: `us_long_code_fallback` (string)
+
+```go
+	alphanumericSenderID, err := client.AlphanumericSenderIDs.New(context.TODO(), telnyx.AlphanumericSenderIDNewParams{
+		AlphanumericSenderID: "MyCompany",
+		MessagingProfileID:   "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", alphanumericSenderID.Data)
+```
+
+## Retrieve an alphanumeric sender ID
+
+Retrieve a specific alphanumeric sender ID.
+
+`GET /alphanumeric_sender_ids/{id}`
+
+```go
+	alphanumericSenderID, err := client.AlphanumericSenderIDs.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", alphanumericSenderID.Data)
+```
+
+## Delete an alphanumeric sender ID
+
+Delete an alphanumeric sender ID and disassociate it from its messaging profile.
+
+`DELETE /alphanumeric_sender_ids/{id}`
+
+```go
+	alphanumericSenderID, err := client.AlphanumericSenderIDs.Delete(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", alphanumericSenderID.Data)
+```
+
 ## Send a message
 
 Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
@@ -58,46 +119,35 @@ Optional: `auto_detect` (boolean), `encoding` (enum), `from` (string), `media_ur
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Retrieve a message
+## Send a message using an alphanumeric sender ID
 
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+Send an SMS message using an alphanumeric sender ID.
 
-`GET /messages/{id}`
+`POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
 
-```go
-	message, err := client.Messages.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", message.Data)
-```
-
-## Cancel a scheduled message
-
-Cancel a scheduled message that has not yet been sent.
-
-`DELETE /messages/{id}`
+Optional: `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```go
-	response, err := client.Messages.CancelScheduled(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.ID)
-```
-
-## Send a Whatsapp message
-
-`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
-
-Optional: `type` (enum), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendWhatsapp(context.TODO(), telnyx.MessageSendWhatsappParams{
-		From:            "+13125551234",
-		To:              "+13125551234",
-		WhatsappMessage: telnyx.MessageSendWhatsappParamsWhatsappMessage{},
+	response, err := client.Messages.SendWithAlphanumericSender(context.TODO(), telnyx.MessageSendWithAlphanumericSenderParams{
+		From:               "MyCompany",
+		MessagingProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		Text:               "text",
+		To:                 "+E.164",
 	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Retrieve group MMS messages
+
+Retrieve all messages in a group MMS conversation by the group message ID.
+
+`GET /messages/group/{message_id}`
+
+```go
+	response, err := client.Messages.GetGroupMessages(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -190,6 +240,100 @@ Optional: `auto_detect` (boolean), `encoding` (enum), `media_urls` (array[string
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+## Send a Whatsapp message
+
+`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
+
+Optional: `type` (enum), `webhook_url` (url)
+
+```go
+	response, err := client.Messages.SendWhatsapp(context.TODO(), telnyx.MessageSendWhatsappParams{
+		From:            "+13125551234",
+		To:              "+13125551234",
+		WhatsappMessage: telnyx.WhatsappMessageContentParam{},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Retrieve a message
+
+Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+
+`GET /messages/{id}`
+
+```go
+	message, err := client.Messages.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", message.Data)
+```
+
+## Cancel a scheduled message
+
+Cancel a scheduled message that has not yet been sent.
+
+`DELETE /messages/{id}`
+
+```go
+	response, err := client.Messages.CancelScheduled(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.ID)
+```
+
+## List messaging hosted numbers
+
+List all hosted numbers associated with the authenticated user.
+
+`GET /messaging_hosted_numbers`
+
+```go
+	page, err := client.MessagingHostedNumbers.List(context.TODO(), telnyx.MessagingHostedNumberListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Retrieve a messaging hosted number
+
+Retrieve a specific messaging hosted number by its ID or phone number.
+
+`GET /messaging_hosted_numbers/{id}`
+
+```go
+	messagingHostedNumber, err := client.MessagingHostedNumbers.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumber.Data)
+```
+
+## Update a messaging hosted number
+
+Update the messaging settings for a hosted number.
+
+`PATCH /messaging_hosted_numbers/{id}`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```go
+	messagingHostedNumber, err := client.MessagingHostedNumbers.Update(
+		context.TODO(),
+		"id",
+		telnyx.MessagingHostedNumberUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumber.Data)
+```
+
 ## List opt-outs
 
 Retrieve a list of opt-out blocks.
@@ -204,99 +348,169 @@ Retrieve a list of opt-out blocks.
 	fmt.Printf("%+v\n", page)
 ```
 
-## Retrieve a phone number with messaging settings
+## List high-level messaging profile metrics
 
-`GET /phone_numbers/{id}/messaging`
+List high-level metrics for all messaging profiles belonging to the authenticated user.
+
+`GET /messaging_profile_metrics`
 
 ```go
-	messaging, err := client.PhoneNumbers.Messaging.Get(context.TODO(), "id")
+	messagingProfileMetrics, err := client.MessagingProfileMetrics.List(context.TODO(), telnyx.MessagingProfileMetricListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", messaging.Data)
+	fmt.Printf("%+v\n", messagingProfileMetrics.Data)
 ```
 
-## Update the messaging profile and/or messaging product of a phone number
+## Regenerate messaging profile secret
 
-`PATCH /phone_numbers/{id}/messaging`
+Regenerate the v1 secret for a messaging profile.
 
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+`POST /messaging_profiles/{id}/actions/regenerate_secret`
 
 ```go
-	messaging, err := client.PhoneNumbers.Messaging.Update(
+	response, err := client.MessagingProfiles.Actions.RegenerateSecret(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## List alphanumeric sender IDs for a messaging profile
+
+List all alphanumeric sender IDs associated with a specific messaging profile.
+
+`GET /messaging_profiles/{id}/alphanumeric_sender_ids`
+
+```go
+	page, err := client.MessagingProfiles.ListAlphanumericSenderIDs(
 		context.TODO(),
-		"id",
-		telnyx.PhoneNumberMessagingUpdateParams{},
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileListAlphanumericSenderIDsParams{},
 	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", messaging.Data)
-```
-
-## List phone numbers with messaging settings
-
-`GET /phone_numbers/messaging`
-
-```go
-	page, err := client.PhoneNumbers.Messaging.List(context.TODO(), telnyx.PhoneNumberMessagingListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Retrieve a mobile phone number with messaging settings
+## Get detailed messaging profile metrics
 
-`GET /mobile_phone_numbers/{id}/messaging`
+Get detailed metrics for a specific messaging profile, broken down by time interval.
+
+`GET /messaging_profiles/{id}/metrics`
 
 ```go
-	messaging, err := client.MobilePhoneNumbers.Messaging.Get(context.TODO(), "id")
+	response, err := client.MessagingProfiles.GetMetrics(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileGetMetricsParams{},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", messaging.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List mobile phone numbers with messaging settings
+## List Auto-Response Settings
 
-`GET /mobile_phone_numbers/messaging`
+`GET /messaging_profiles/{profile_id}/autoresp_configs`
 
 ```go
-	page, err := client.MobilePhoneNumbers.Messaging.List(context.TODO(), telnyx.MobilePhoneNumberMessagingListParams{})
+	autorespConfigs, err := client.MessagingProfiles.AutorespConfigs.List(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileAutorespConfigListParams{},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
+	fmt.Printf("%+v\n", autorespConfigs.Data)
 ```
 
-## Bulk update phone number profiles
+## Create auto-response setting
 
-`POST /messaging_numbers/bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`POST /messaging_profiles/{profile_id}/autoresp_configs` — Required: `op`, `keywords`, `country_code`
 
-Optional: `assign_only` (boolean)
+Optional: `resp_text` (string)
 
 ```go
-	messagingNumbersBulkUpdate, err := client.MessagingNumbersBulkUpdates.New(context.TODO(), telnyx.MessagingNumbersBulkUpdateNewParams{
-		MessagingProfileID: "00000000-0000-0000-0000-000000000000",
-		Numbers:            []string{"+18880000000", "+18880000001", "+18880000002"},
-	})
+	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.New(
+		context.TODO(),
+		"profile_id",
+		telnyx.MessagingProfileAutorespConfigNewParams{
+			AutoRespConfigCreate: telnyx.AutoRespConfigCreateParam{
+				CountryCode: "US",
+				Keywords:    []string{"keyword1", "keyword2"},
+				Op:          telnyx.AutoRespConfigCreateOpStart,
+			},
+		},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", messagingNumbersBulkUpdate.Data)
+	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
 ```
 
-## Retrieve bulk update status
+## Get Auto-Response Setting
 
-`GET /messaging_numbers/bulk_updates/{order_id}`
+`GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
 
 ```go
-	messagingNumbersBulkUpdate, err := client.MessagingNumbersBulkUpdates.Get(context.TODO(), "order_id")
+	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.Get(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileAutorespConfigGetParams{
+			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", messagingNumbersBulkUpdate.Data)
+	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
+```
+
+## Update Auto-Response Setting
+
+`PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` — Required: `op`, `keywords`, `country_code`
+
+Optional: `resp_text` (string)
+
+```go
+	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.Update(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileAutorespConfigUpdateParams{
+			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+			AutoRespConfigCreate: telnyx.AutoRespConfigCreateParam{
+				CountryCode: "US",
+				Keywords:    []string{"keyword1", "keyword2"},
+				Op:          telnyx.AutoRespConfigCreateOpStart,
+			},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
+```
+
+## Delete Auto-Response Setting
+
+`DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
+
+```go
+	autorespConfig, err := client.MessagingProfiles.AutorespConfigs.Delete(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingProfileAutorespConfigDeleteParams{
+			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", autorespConfig)
 ```
 
 ---

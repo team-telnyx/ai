@@ -54,6 +54,37 @@ balance = client.balance.retrieve()
 print(balance.data)
 ```
 
+## Get monthly charges breakdown
+
+Retrieve a detailed breakdown of monthly charges for phone numbers in a specified date range.
+
+`GET /charges_breakdown`
+
+```python
+from datetime import date
+
+charges_breakdown = client.charges_breakdown.retrieve(
+    start_date=date.fromisoformat("2025-05-01"),
+)
+print(charges_breakdown.data)
+```
+
+## Get monthly charges summary
+
+Retrieve a summary of monthly charges for a specified date range.
+
+`GET /charges_summary`
+
+```python
+from datetime import date
+
+charges_summary = client.charges_summary.retrieve(
+    end_date=date.fromisoformat("2025-06-01"),
+    start_date=date.fromisoformat("2025-05-01"),
+)
+print(charges_summary.data)
+```
+
 ## Search detail records
 
 Search for any detail record across the Telnyx Platform
@@ -95,7 +126,7 @@ print(invoice.data)
 
 Returns the payment auto recharge preferences.
 
-`GET /payments/auto_recharge_prefs`
+`GET /payment/auto_recharge_prefs`
 
 ```python
 auto_recharge_prefs = client.payment.auto_recharge_prefs.list()
@@ -106,7 +137,7 @@ print(auto_recharge_prefs.data)
 
 Update payment auto recharge preferences.
 
-`PATCH /payments/auto_recharge_prefs`
+`PATCH /payment/auto_recharge_prefs`
 
 Optional: `enabled` (boolean), `invoice_enabled` (boolean), `preference` (enum), `recharge_amount` (string), `threshold_amount` (string)
 
@@ -124,6 +155,17 @@ List all user tags.
 ```python
 user_tags = client.user_tags.list()
 print(user_tags.data)
+```
+
+## Create a stored payment transaction
+
+`POST /v2/payment/stored_payment_transactions` — Required: `amount`
+
+```python
+response = client.payment.create_stored_payment_transaction(
+    amount="120.00",
+)
+print(response.data)
 ```
 
 ## List webhook deliveries

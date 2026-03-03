@@ -32,6 +32,16 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## Get Enum
+
+`GET /10dlc/enum/{endpoint}`
+
+```javascript
+const response = await client.messaging10dlc.getEnum('mno');
+
+console.log(response);
+```
+
 ## Retrieve Black Box Test Results
 
 Returns the results of the various black box tests

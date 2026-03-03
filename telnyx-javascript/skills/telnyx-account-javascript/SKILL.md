@@ -55,6 +55,33 @@ const balance = await client.balance.retrieve();
 console.log(balance.data);
 ```
 
+## Get monthly charges breakdown
+
+Retrieve a detailed breakdown of monthly charges for phone numbers in a specified date range.
+
+`GET /charges_breakdown`
+
+```javascript
+const chargesBreakdown = await client.chargesBreakdown.retrieve({ start_date: '2025-05-01' });
+
+console.log(chargesBreakdown.data);
+```
+
+## Get monthly charges summary
+
+Retrieve a summary of monthly charges for a specified date range.
+
+`GET /charges_summary`
+
+```javascript
+const chargesSummary = await client.chargesSummary.retrieve({
+  end_date: '2025-06-01',
+  start_date: '2025-05-01',
+});
+
+console.log(chargesSummary.data);
+```
+
 ## Search detail records
 
 Search for any detail record across the Telnyx Platform
@@ -97,7 +124,7 @@ console.log(invoice.data);
 
 Returns the payment auto recharge preferences.
 
-`GET /payments/auto_recharge_prefs`
+`GET /payment/auto_recharge_prefs`
 
 ```javascript
 const autoRechargePrefs = await client.payment.autoRechargePrefs.list();
@@ -109,7 +136,7 @@ console.log(autoRechargePrefs.data);
 
 Update payment auto recharge preferences.
 
-`PATCH /payments/auto_recharge_prefs`
+`PATCH /payment/auto_recharge_prefs`
 
 Optional: `enabled` (boolean), `invoice_enabled` (boolean), `preference` (enum), `recharge_amount` (string), `threshold_amount` (string)
 
@@ -129,6 +156,16 @@ List all user tags.
 const userTags = await client.userTags.list();
 
 console.log(userTags.data);
+```
+
+## Create a stored payment transaction
+
+`POST /v2/payment/stored_payment_transactions` — Required: `amount`
+
+```javascript
+const response = await client.payment.createStoredPaymentTransaction({ amount: '120.00' });
+
+console.log(response.data);
 ```
 
 ## List webhook deliveries

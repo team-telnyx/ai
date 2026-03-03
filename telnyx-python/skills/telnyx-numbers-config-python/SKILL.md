@@ -34,38 +34,50 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Lists the phone number blocks jobs
+## Bulk update phone number profiles
 
-`GET /phone_number_blocks/jobs`
+`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+
+Optional: `assign_only` (boolean)
 
 ```python
-page = client.phone_number_blocks.jobs.list()
+messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.create(
+    messaging_profile_id="00000000-0000-0000-0000-000000000000",
+    numbers=["+18880000000", "+18880000001", "+18880000002"],
+)
+print(messaging_numbers_bulk_update.data)
+```
+
+## Retrieve bulk update status
+
+`GET /messaging_numbers_bulk_updates/{order_id}`
+
+```python
+messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.retrieve(
+    "order_id",
+)
+print(messaging_numbers_bulk_update.data)
+```
+
+## List mobile phone numbers with messaging settings
+
+`GET /mobile_phone_numbers/messaging`
+
+```python
+page = client.mobile_phone_numbers.messaging.list()
 page = page.data[0]
 print(page.id)
 ```
 
-## Retrieves a phone number blocks job
+## Retrieve a mobile phone number with messaging settings
 
-`GET /phone_number_blocks/jobs/{id}`
+`GET /mobile_phone_numbers/{id}/messaging`
 
 ```python
-job = client.phone_number_blocks.jobs.retrieve(
+messaging = client.mobile_phone_numbers.messaging.retrieve(
     "id",
 )
-print(job.data)
-```
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
-
-```python
-response = client.phone_number_blocks.jobs.delete_phone_number_block(
-    phone_number_block_id="f3946371-7199-4261-9c3d-81a0d7935146",
-)
-print(response.data)
+print(messaging.data)
 ```
 
 ## List phone numbers
@@ -74,6 +86,116 @@ print(response.data)
 
 ```python
 page = client.phone_numbers.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Verify ownership of phone numbers
+
+Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
+
+`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+
+```python
+response = client.phone_numbers.actions.verify_ownership(
+    phone_numbers=["+15551234567"],
+)
+print(response.data)
+```
+
+## Lists the phone numbers jobs
+
+`GET /phone_numbers/jobs`
+
+```python
+page = client.phone_numbers.jobs.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Delete a batch of numbers
+
+Creates a new background job to delete a batch of numbers.
+
+`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+
+```python
+response = client.phone_numbers.jobs.delete_batch(
+    phone_numbers=["+19705555098", "+19715555098", "32873127836"],
+)
+print(response.data)
+```
+
+## Update the emergency settings from a batch of numbers
+
+Creates a background job to update the emergency settings of a collection of phone numbers.
+
+`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+
+Optional: `emergency_address_id` (['string', 'null'])
+
+```python
+response = client.phone_numbers.jobs.update_emergency_settings_batch(
+    emergency_enabled=True,
+    phone_numbers=["+19705555098", "+19715555098", "32873127836"],
+)
+print(response.data)
+```
+
+## Update a batch of numbers
+
+Creates a new background job to update a batch of numbers.
+
+`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+
+Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+
+```python
+response = client.phone_numbers.jobs.update_batch(
+    phone_numbers=["1583466971586889004", "+13127367254"],
+)
+print(response.data)
+```
+
+## Retrieve a phone numbers job
+
+`GET /phone_numbers/jobs/{id}`
+
+```python
+job = client.phone_numbers.jobs.retrieve(
+    "id",
+)
+print(job.data)
+```
+
+## List phone numbers with messaging settings
+
+`GET /phone_numbers/messaging`
+
+```python
+page = client.phone_numbers.messaging.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Slim List phone numbers
+
+List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
+
+`GET /phone_numbers/slim`
+
+```python
+page = client.phone_numbers.slim_list()
+page = page.data[0]
+print(page.id)
+```
+
+## List phone numbers with voice settings
+
+`GET /phone_numbers/voice`
+
+```python
+page = client.phone_numbers.voice.list()
 page = page.data[0]
 print(page.id)
 ```
@@ -138,6 +260,30 @@ response = client.phone_numbers.actions.enable_emergency(
 print(response.data)
 ```
 
+## Retrieve a phone number with messaging settings
+
+`GET /phone_numbers/{id}/messaging`
+
+```python
+messaging = client.phone_numbers.messaging.retrieve(
+    "id",
+)
+print(messaging.data)
+```
+
+## Update the messaging profile and/or messaging product of a phone number
+
+`PATCH /phone_numbers/{id}/messaging`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```python
+messaging = client.phone_numbers.messaging.update(
+    id="id",
+)
+print(messaging.data)
+```
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -160,145 +306,6 @@ voice = client.phone_numbers.voice.update(
     id="1293384261075731499",
 )
 print(voice.data)
-```
-
-## Verify ownership of phone numbers
-
-Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
-
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
-
-```python
-response = client.phone_numbers.actions.verify_ownership(
-    phone_numbers=["+15551234567"],
-)
-print(response.data)
-```
-
-## List CSV downloads
-
-`GET /phone_numbers/csv_downloads`
-
-```python
-page = client.phone_numbers.csv_downloads.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create a CSV download
-
-`POST /phone_numbers/csv_downloads`
-
-```python
-csv_download = client.phone_numbers.csv_downloads.create()
-print(csv_download.data)
-```
-
-## Retrieve a CSV download
-
-`GET /phone_numbers/csv_downloads/{id}`
-
-```python
-csv_download = client.phone_numbers.csv_downloads.retrieve(
-    "id",
-)
-print(csv_download.data)
-```
-
-## Lists the phone numbers jobs
-
-`GET /phone_numbers/jobs`
-
-```python
-page = client.phone_numbers.jobs.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Retrieve a phone numbers job
-
-`GET /phone_numbers/jobs/{id}`
-
-```python
-job = client.phone_numbers.jobs.retrieve(
-    "id",
-)
-print(job.data)
-```
-
-## Delete a batch of numbers
-
-Creates a new background job to delete a batch of numbers.
-
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
-
-```python
-response = client.phone_numbers.jobs.delete_batch(
-    phone_numbers=["+19705555098", "+19715555098", "32873127836"],
-)
-print(response.data)
-```
-
-## Update the emergency settings from a batch of numbers
-
-Creates a background job to update the emergency settings of a collection of phone numbers.
-
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
-
-Optional: `emergency_address_id` (['string', 'null'])
-
-```python
-response = client.phone_numbers.jobs.update_emergency_settings_batch(
-    emergency_enabled=True,
-    phone_numbers=["+19705555098", "+19715555098", "32873127836"],
-)
-print(response.data)
-```
-
-## Update a batch of numbers
-
-Creates a new background job to update a batch of numbers.
-
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
-
-```python
-response = client.phone_numbers.jobs.update_batch(
-    phone_numbers=["1583466971586889004", "+13127367254"],
-)
-print(response.data)
-```
-
-## Retrieve regulatory requirements for a list of phone numbers
-
-`GET /phone_numbers/regulatory_requirements`
-
-```python
-phone_numbers_regulatory_requirement = client.phone_numbers_regulatory_requirements.retrieve()
-print(phone_numbers_regulatory_requirement.data)
-```
-
-## Slim List phone numbers
-
-List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
-
-`GET /phone_numbers/slim`
-
-```python
-page = client.phone_numbers.slim_list()
-page = page.data[0]
-print(page.id)
-```
-
-## List phone numbers with voice settings
-
-`GET /phone_numbers/voice`
-
-```python
-page = client.phone_numbers.voice.list()
-page = page.data[0]
-print(page.id)
 ```
 
 ## List Mobile Phone Numbers

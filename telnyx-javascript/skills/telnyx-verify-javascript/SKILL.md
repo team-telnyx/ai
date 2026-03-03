@@ -45,6 +45,29 @@ const numberLookup = await client.numberLookup.retrieve('+18665552368');
 console.log(numberLookup.data);
 ```
 
+## List verifications by phone number
+
+`GET /verifications/by_phone_number/{phone_number}`
+
+```javascript
+const byPhoneNumbers = await client.verifications.byPhoneNumber.list('+13035551234');
+
+console.log(byPhoneNumbers.data);
+```
+
+## Verify verification code by phone number
+
+`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+
+```javascript
+const verifyVerificationCodeResponse = await client.verifications.byPhoneNumber.actions.verify(
+  '+13035551234',
+  { code: '17686', verify_profile_id: '12ade33a-21c0-473b-b055-b3c836e1c292' },
+);
+
+console.log(verifyVerificationCodeResponse.data);
+```
+
 ## Trigger Call verification
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
@@ -114,29 +137,6 @@ const verifyVerificationCodeResponse = await client.verifications.actions.verify
 console.log(verifyVerificationCodeResponse.data);
 ```
 
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
-
-```javascript
-const byPhoneNumbers = await client.verifications.byPhoneNumber.list('+13035551234');
-
-console.log(byPhoneNumbers.data);
-```
-
-## Verify verification code by phone number
-
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
-
-```javascript
-const verifyVerificationCodeResponse = await client.verifications.byPhoneNumber.actions.verify(
-  '+13035551234',
-  { code: '17686', verify_profile_id: '12ade33a-21c0-473b-b055-b3c836e1c292' },
-);
-
-console.log(verifyVerificationCodeResponse.data);
-```
-
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
@@ -160,46 +160,6 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (obj
 
 ```javascript
 const verifyProfileData = await client.verifyProfiles.create({ name: 'Test Profile' });
-
-console.log(verifyProfileData.data);
-```
-
-## Retrieve Verify profile
-
-Gets a single Verify profile.
-
-`GET /verify_profiles/{verify_profile_id}`
-
-```javascript
-const verifyProfileData = await client.verifyProfiles.retrieve(
-  '12ade33a-21c0-473b-b055-b3c836e1c292',
-);
-
-console.log(verifyProfileData.data);
-```
-
-## Update Verify profile
-
-`PATCH /verify_profiles/{verify_profile_id}`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```javascript
-const verifyProfileData = await client.verifyProfiles.update(
-  '12ade33a-21c0-473b-b055-b3c836e1c292',
-);
-
-console.log(verifyProfileData.data);
-```
-
-## Delete Verify profile
-
-`DELETE /verify_profiles/{verify_profile_id}`
-
-```javascript
-const verifyProfileData = await client.verifyProfiles.delete(
-  '12ade33a-21c0-473b-b055-b3c836e1c292',
-);
 
 console.log(verifyProfileData.data);
 ```
@@ -243,4 +203,44 @@ const messageTemplate = await client.verifyProfiles.updateTemplate(
 );
 
 console.log(messageTemplate.data);
+```
+
+## Retrieve Verify profile
+
+Gets a single Verify profile.
+
+`GET /verify_profiles/{verify_profile_id}`
+
+```javascript
+const verifyProfileData = await client.verifyProfiles.retrieve(
+  '12ade33a-21c0-473b-b055-b3c836e1c292',
+);
+
+console.log(verifyProfileData.data);
+```
+
+## Update Verify profile
+
+`PATCH /verify_profiles/{verify_profile_id}`
+
+Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+
+```javascript
+const verifyProfileData = await client.verifyProfiles.update(
+  '12ade33a-21c0-473b-b055-b3c836e1c292',
+);
+
+console.log(verifyProfileData.data);
+```
+
+## Delete Verify profile
+
+`DELETE /verify_profiles/{verify_profile_id}`
+
+```javascript
+const verifyProfileData = await client.verifyProfiles.delete(
+  '12ade33a-21c0-473b-b055-b3c836e1c292',
+);
+
+console.log(verifyProfileData.data);
 ```

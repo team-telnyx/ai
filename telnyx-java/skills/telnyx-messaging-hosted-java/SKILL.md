@@ -32,156 +32,6 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## List messaging hosted number orders
-
-`GET /messaging_hosted_number_orders`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderListPage;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderListParams;
-
-MessagingHostedNumberOrderListPage page = client.messagingHostedNumberOrders().list();
-```
-
-## Create a messaging hosted number order
-
-`POST /messaging_hosted_number_orders`
-
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateResponse;
-
-MessagingHostedNumberOrderCreateResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().create();
-```
-
-## Retrieve a messaging hosted number order
-
-`GET /messaging_hosted_number_orders/{id}`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveResponse;
-
-MessagingHostedNumberOrderRetrieveResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().retrieve("id");
-```
-
-## Delete a messaging hosted number order
-
-Delete a messaging hosted number order and all associated phone numbers.
-
-`DELETE /messaging_hosted_number_orders/{id}`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteResponse;
-
-MessagingHostedNumberOrderDeleteResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().delete("id");
-```
-
-## Upload hosted number document
-
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileResponse;
-
-ActionUploadFileResponse response = client.messagingHostedNumberOrders().actions().uploadFile("id");
-```
-
-## Validate hosted number codes
-
-Validate the verification codes sent to the numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesResponse;
-
-MessagingHostedNumberOrderValidateCodesParams params = MessagingHostedNumberOrderValidateCodesParams.builder()
-    .id("id")
-    .addVerificationCode(MessagingHostedNumberOrderValidateCodesParams.VerificationCode.builder()
-        .code("code")
-        .phoneNumber("phone_number")
-        .build())
-    .build();
-MessagingHostedNumberOrderValidateCodesResponse response = client.messagingHostedNumberOrders().validateCodes(params);
-```
-
-## Create hosted number verification codes
-
-Create verification codes to validate numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesResponse;
-
-MessagingHostedNumberOrderCreateVerificationCodesParams params = MessagingHostedNumberOrderCreateVerificationCodesParams.builder()
-    .id("id")
-    .addPhoneNumber("string")
-    .verificationMethod(MessagingHostedNumberOrderCreateVerificationCodesParams.VerificationMethod.SMS)
-    .build();
-MessagingHostedNumberOrderCreateVerificationCodesResponse response = client.messagingHostedNumberOrders().createVerificationCodes(params);
-```
-
-## Check hosted messaging eligibility
-
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCheckEligibilityParams;
-import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCheckEligibilityResponse;
-
-MessagingHostedNumberOrderCheckEligibilityParams params = MessagingHostedNumberOrderCheckEligibilityParams.builder()
-    .addPhoneNumber("string")
-    .build();
-MessagingHostedNumberOrderCheckEligibilityResponse response = client.messagingHostedNumberOrders().checkEligibility(params);
-```
-
-## Retrieve a messaging hosted number
-
-Retrieve a specific messaging hosted number by its ID or phone number.
-
-`GET /messaging_hosted_numbers/{id}`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberRetrieveParams;
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberRetrieveResponse;
-
-MessagingHostedNumberRetrieveResponse messagingHostedNumber = client.messagingHostedNumbers().retrieve("id");
-```
-
-## Update a messaging hosted number
-
-Update the messaging settings for a hosted number.
-
-`PATCH /messaging_hosted_numbers/{id}`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
-
-```java
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberUpdateParams;
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberUpdateResponse;
-
-MessagingHostedNumberUpdateResponse messagingHostedNumber = client.messagingHostedNumbers().update("id");
-```
-
-## Delete a messaging hosted number
-
-`DELETE /messaging_hosted_numbers/{id}`
-
-```java
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteParams;
-import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteResponse;
-
-MessagingHostedNumberDeleteResponse messagingHostedNumber = client.messagingHostedNumbers().delete("id");
-```
-
 ## Send an RCS message
 
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
@@ -200,6 +50,19 @@ RcSendParams params = RcSendParams.builder()
     .to("+13125551234")
     .build();
 RcSendResponse response = client.messages().rcs().send(params);
+```
+
+## Generate RCS deeplink
+
+Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
+
+`GET /messages/rcs/deeplinks/{agent_id}`
+
+```java
+import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkParams;
+import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkResponse;
+
+RcGenerateDeeplinkResponse response = client.messages().rcs().generateDeeplink("agent_id");
 ```
 
 ## List all RCS agents
@@ -284,17 +147,126 @@ RcInviteTestNumberParams params = RcInviteTestNumberParams.builder()
 RcInviteTestNumberResponse response = client.messaging().rcs().inviteTestNumber(params);
 ```
 
-## Generate RCS deeplink
+## List messaging hosted number orders
 
-Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
-
-`GET /messages/rcs_deeplinks/{agent_id}`
+`GET /messaging_hosted_number_orders`
 
 ```java
-import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkParams;
-import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkResponse;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderListPage;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderListParams;
 
-RcGenerateDeeplinkResponse response = client.messages().rcs().generateDeeplink("agent_id");
+MessagingHostedNumberOrderListPage page = client.messagingHostedNumberOrders().list();
+```
+
+## Create a messaging hosted number order
+
+`POST /messaging_hosted_number_orders`
+
+Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateResponse;
+
+MessagingHostedNumberOrderCreateResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().create();
+```
+
+## Check hosted messaging eligibility
+
+`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCheckEligibilityParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCheckEligibilityResponse;
+
+MessagingHostedNumberOrderCheckEligibilityParams params = MessagingHostedNumberOrderCheckEligibilityParams.builder()
+    .addPhoneNumber("string")
+    .build();
+MessagingHostedNumberOrderCheckEligibilityResponse response = client.messagingHostedNumberOrders().checkEligibility(params);
+```
+
+## Retrieve a messaging hosted number order
+
+`GET /messaging_hosted_number_orders/{id}`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveResponse;
+
+MessagingHostedNumberOrderRetrieveResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().retrieve("id");
+```
+
+## Delete a messaging hosted number order
+
+Delete a messaging hosted number order and all associated phone numbers.
+
+`DELETE /messaging_hosted_number_orders/{id}`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteResponse;
+
+MessagingHostedNumberOrderDeleteResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().delete("id");
+```
+
+## Upload hosted number document
+
+`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileResponse;
+
+ActionUploadFileResponse response = client.messagingHostedNumberOrders().actions().uploadFile("id");
+```
+
+## Validate hosted number codes
+
+Validate the verification codes sent to the numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesResponse;
+
+MessagingHostedNumberOrderValidateCodesParams params = MessagingHostedNumberOrderValidateCodesParams.builder()
+    .id("id")
+    .addVerificationCode(MessagingHostedNumberOrderValidateCodesParams.VerificationCode.builder()
+        .code("code")
+        .phoneNumber("phone_number")
+        .build())
+    .build();
+MessagingHostedNumberOrderValidateCodesResponse response = client.messagingHostedNumberOrders().validateCodes(params);
+```
+
+## Create hosted number verification codes
+
+Create verification codes to validate numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesParams;
+import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesResponse;
+
+MessagingHostedNumberOrderCreateVerificationCodesParams params = MessagingHostedNumberOrderCreateVerificationCodesParams.builder()
+    .id("id")
+    .addPhoneNumber("string")
+    .verificationMethod(MessagingHostedNumberOrderCreateVerificationCodesParams.VerificationMethod.SMS)
+    .build();
+MessagingHostedNumberOrderCreateVerificationCodesResponse response = client.messagingHostedNumberOrders().createVerificationCodes(params);
+```
+
+## Delete a messaging hosted number
+
+`DELETE /messaging_hosted_numbers/{id}`
+
+```java
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteParams;
+import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteResponse;
+
+MessagingHostedNumberDeleteResponse messagingHostedNumber = client.messagingHostedNumbers().delete("id");
 ```
 
 ## List Verification Requests
@@ -442,4 +414,33 @@ A request may only be deleted when when the request is in the "rejected" state.
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestDeleteParams;
 
 client.messagingTollfree().verification().requests().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Get Verification Request Status History
+
+Get the history of status changes for a verification request.
+
+`GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+```java
+import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestRetrieveStatusHistoryParams;
+import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestRetrieveStatusHistoryResponse;
+
+RequestRetrieveStatusHistoryParams params = RequestRetrieveStatusHistoryParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .pageNumber(1L)
+    .pageSize(1L)
+    .build();
+RequestRetrieveStatusHistoryResponse response = client.messagingTollfree().verification().requests().retrieveStatusHistory(params);
+```
+
+## List messaging URL domains
+
+`GET /messaging_url_domains`
+
+```java
+import com.telnyx.sdk.models.messagingurldomains.MessagingUrlDomainListPage;
+import com.telnyx.sdk.models.messagingurldomains.MessagingUrlDomainListParams;
+
+MessagingUrlDomainListPage page = client.messagingUrlDomains().list();
 ```

@@ -39,28 +39,6 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Create Presigned Object URL
-
-Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
-
-`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
-
-Optional: `ttl` (integer)
-
-```go
-	response, err := client.Storage.Buckets.NewPresignedURL(
-		context.TODO(),
-		"",
-		telnyx.StorageBucketNewPresignedURLParams{
-			BucketName: "",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Content)
-```
-
 ## Get Bucket SSL Certificate
 
 Returns the stored certificate detail of a bucket, if applicable.
@@ -144,130 +122,24 @@ Returns the amount of storage space and number of files a bucket takes up.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List Migration Source coverage
+## Create Presigned Object URL
 
-`GET /storage/migration_source_coverage`
+Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
 
-```go
-	response, err := client.Storage.ListMigrationSourceCoverage(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
+`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
 
-## List all Migration Sources
-
-`GET /storage/migration_sources`
+Optional: `ttl` (integer)
 
 ```go
-	migrationSources, err := client.Storage.MigrationSources.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migrationSources.Data)
-```
-
-## Create a Migration Source
-
-Create a source from which data can be migrated from.
-
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
-
-Optional: `id` (string), `source_region` (string)
-
-```go
-	migrationSource, err := client.Storage.MigrationSources.New(context.TODO(), telnyx.StorageMigrationSourceNewParams{
-		MigrationSourceParams: telnyx.MigrationSourceParams{
-			BucketName:   "bucket_name",
-			Provider:     telnyx.MigrationSourceParamsProviderAws,
-			ProviderAuth: telnyx.MigrationSourceParamsProviderAuth{},
+	response, err := client.Storage.Buckets.NewPresignedURL(
+		context.TODO(),
+		"",
+		telnyx.StorageBucketNewPresignedURLParams{
+			BucketName: "",
 		},
-	})
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", migrationSource.Data)
-```
-
-## Get a Migration Source
-
-`GET /storage/migration_sources/{id}`
-
-```go
-	migrationSource, err := client.Storage.MigrationSources.Get(context.TODO(), "")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migrationSource.Data)
-```
-
-## Delete a Migration Source
-
-`DELETE /storage/migration_sources/{id}`
-
-```go
-	migrationSource, err := client.Storage.MigrationSources.Delete(context.TODO(), "")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migrationSource.Data)
-```
-
-## List all Migrations
-
-`GET /storage/migrations`
-
-```go
-	migrations, err := client.Storage.Migrations.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migrations.Data)
-```
-
-## Create a Migration
-
-Initiate a migration of data from an external provider into Telnyx Cloud Storage.
-
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
-
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
-
-```go
-	migration, err := client.Storage.Migrations.New(context.TODO(), telnyx.StorageMigrationNewParams{
-		MigrationParams: telnyx.MigrationParams{
-			SourceID:         "source_id",
-			TargetBucketName: "target_bucket_name",
-			TargetRegion:     "target_region",
-		},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migration.Data)
-```
-
-## Get a Migration
-
-`GET /storage/migrations/{id}`
-
-```go
-	migration, err := client.Storage.Migrations.Get(context.TODO(), "")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", migration.Data)
-```
-
-## Stop a Migration
-
-`POST /storage/migrations/{id}/actions/stop`
-
-```go
-	response, err := client.Storage.Migrations.Actions.Stop(context.TODO(), "")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
+	fmt.Printf("%+v\n", response.Content)
 ```

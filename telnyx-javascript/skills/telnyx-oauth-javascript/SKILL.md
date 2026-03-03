@@ -70,74 +70,6 @@ await client.oauth.retrieveAuthorize({
 });
 ```
 
-## List OAuth clients
-
-Retrieve a paginated list of OAuth clients for the authenticated user
-
-`GET /oauth/clients`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const oauthClient of client.oauthClients.list()) {
-  console.log(oauthClient.client_id);
-}
-```
-
-## Create OAuth client
-
-Create a new OAuth client
-
-`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
-
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```javascript
-const oauthClient = await client.oauthClients.create({
-  allowed_grant_types: ['client_credentials'],
-  allowed_scopes: ['admin'],
-  client_type: 'public',
-  name: 'My OAuth client',
-});
-
-console.log(oauthClient.data);
-```
-
-## Get OAuth client
-
-Retrieve a single OAuth client by ID
-
-`GET /oauth/clients/{id}`
-
-```javascript
-const oauthClient = await client.oauthClients.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(oauthClient.data);
-```
-
-## Update OAuth client
-
-Update an existing OAuth client
-
-`PUT /oauth/clients/{id}`
-
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
-
-```javascript
-const oauthClient = await client.oauthClients.update('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(oauthClient.data);
-```
-
-## Delete OAuth client
-
-Delete an OAuth client
-
-`DELETE /oauth/clients/{id}`
-
-```javascript
-await client.oauthClients.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-```
-
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -150,41 +82,16 @@ const oauth = await client.oauth.retrieve('consent_token');
 console.log(oauth.data);
 ```
 
-## List OAuth grants
+## Create OAuth grant
 
-Retrieve a paginated list of OAuth grants for the authenticated user
+Create an OAuth authorization grant
 
-`GET /oauth/grants`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const oauthGrant of client.oauthGrants.list()) {
-  console.log(oauthGrant.id);
-}
-```
-
-## Get OAuth grant
-
-Retrieve a single OAuth grant by ID
-
-`GET /oauth/grants/{id}`
+`POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```javascript
-const oauthGrant = await client.oauthGrants.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+const response = await client.oauth.grants({ allowed: true, consent_token: 'consent_token' });
 
-console.log(oauthGrant.data);
-```
-
-## Revoke OAuth grant
-
-Revoke an OAuth grant
-
-`DELETE /oauth/grants/{id}`
-
-```javascript
-const oauthGrant = await client.oauthGrants.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(oauthGrant.data);
+console.log(response.redirect_uri);
 ```
 
 ## Token introspection
@@ -237,4 +144,109 @@ Optional: `client_id` (string), `client_secret` (string), `code` (string), `code
 const response = await client.oauth.token({ grant_type: 'client_credentials' });
 
 console.log(response.access_token);
+```
+
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth_clients`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const oauthClient of client.oauthClients.list()) {
+  console.log(oauthClient.client_id);
+}
+```
+
+## Create OAuth client
+
+Create a new OAuth client
+
+`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```javascript
+const oauthClient = await client.oauthClients.create({
+  allowed_grant_types: ['client_credentials'],
+  allowed_scopes: ['admin'],
+  client_type: 'public',
+  name: 'My OAuth client',
+});
+
+console.log(oauthClient.data);
+```
+
+## Get OAuth client
+
+Retrieve a single OAuth client by ID
+
+`GET /oauth_clients/{id}`
+
+```javascript
+const oauthClient = await client.oauthClients.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(oauthClient.data);
+```
+
+## Update OAuth client
+
+Update an existing OAuth client
+
+`PUT /oauth_clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```javascript
+const oauthClient = await client.oauthClients.update('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(oauthClient.data);
+```
+
+## Delete OAuth client
+
+Delete an OAuth client
+
+`DELETE /oauth_clients/{id}`
+
+```javascript
+await client.oauthClients.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+```
+
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth_grants`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const oauthGrant of client.oauthGrants.list()) {
+  console.log(oauthGrant.id);
+}
+```
+
+## Get OAuth grant
+
+Retrieve a single OAuth grant by ID
+
+`GET /oauth_grants/{id}`
+
+```javascript
+const oauthGrant = await client.oauthGrants.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(oauthGrant.data);
+```
+
+## Revoke OAuth grant
+
+Revoke an OAuth grant
+
+`DELETE /oauth_grants/{id}`
+
+```javascript
+const oauthGrant = await client.oauthGrants.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(oauthGrant.data);
 ```

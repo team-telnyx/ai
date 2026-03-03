@@ -176,17 +176,3 @@ Delete an existing credential.
 	}
 	fmt.Printf("%+v\n", telephonyCredential.Data)
 ```
-
-## Create an Access Token.
-
-Create an Access Token (JWT) for the credential.
-
-`POST /telephony_credentials/{id}/token`
-
-```go
-	response, err := client.TelephonyCredentials.NewToken(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response)
-```

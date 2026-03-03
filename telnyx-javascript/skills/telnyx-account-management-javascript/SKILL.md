@@ -61,6 +61,16 @@ const managedAccount = await client.managedAccounts.create({
 console.log(managedAccount.data);
 ```
 
+## Display information about allocatable global outbound channels for the current user.
+
+`GET /managed_accounts/allocatable_global_outbound_channels`
+
+```javascript
+const response = await client.managedAccounts.getAllocatableGlobalOutboundChannels();
+
+console.log(response.data);
+```
+
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
@@ -125,12 +135,51 @@ const response = await client.managedAccounts.updateGlobalChannelLimit('id');
 console.log(response.data);
 ```
 
-## Display information about allocatable global outbound channels for the current user.
+## List organization users
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+Returns a list of the users in your organization.
+
+`GET /organizations/users`
 
 ```javascript
-const response = await client.managedAccounts.getAllocatableGlobalOutboundChannels();
+// Automatically fetches more pages as needed.
+for await (const organizationUser of client.organizations.users.list()) {
+  console.log(organizationUser.id);
+}
+```
+
+## Get organization users groups report
+
+Returns a report of all users in your organization with their group memberships.
+
+`GET /organizations/users/users_groups_report`
+
+```javascript
+const response = await client.organizations.users.getGroupsReport();
 
 console.log(response.data);
+```
+
+## Get organization user
+
+Returns a user in your organization.
+
+`GET /organizations/users/{id}`
+
+```javascript
+const user = await client.organizations.users.retrieve('id');
+
+console.log(user.data);
+```
+
+## Delete organization user
+
+Deletes a user in your organization.
+
+`POST /organizations/users/{id}/actions/remove`
+
+```javascript
+const action = await client.organizations.users.actions.remove('id');
+
+console.log(action.data);
 ```

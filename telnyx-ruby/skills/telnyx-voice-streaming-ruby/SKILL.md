@@ -128,9 +128,9 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 |-------|-------------|
 | `callForkStarted` | Call Fork Started |
 | `callForkStopped` | Call Fork Stopped |
+| `callStreamingFailed` | Call Streaming Failed |
 | `callStreamingStarted` | Call Streaming Started |
 | `callStreamingStopped` | Call Streaming Stopped |
-| `callStreamingFailed` | Call Streaming Failed |
 | `transcription` | Transcription |
 
 ### Webhook payload fields
@@ -165,6 +165,23 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_type` | enum | Type of media streamed. |
 
+**`callStreamingFailed`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum | Identifies the resource. |
+| `data.event_type` | enum | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.failure_reason` | string | A short description explaning why the media streaming failed. |
+| `data.payload.stream_id` | uuid | Identifies the streaming. |
+| `data.payload.stream_type` | enum | The type of stream connection the stream is performing. |
+
 **`callStreamingStarted`**
 
 | Field | Type | Description |
@@ -194,23 +211,6 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_url` | string | Destination WebSocket address where the stream is going to be delivered. |
-
-**`callStreamingFailed`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum | Identifies the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.failure_reason` | string | A short description explaning why the media streaming failed. |
-| `data.payload.stream_id` | uuid | Identifies the streaming. |
-| `data.payload.stream_type` | enum | The type of stream connection the stream is performing. |
 
 **`transcription`**
 

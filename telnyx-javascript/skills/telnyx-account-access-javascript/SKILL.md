@@ -33,6 +33,49 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## List all Access IP Addresses
+
+`GET /access_ip_address`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const accessIPAddressResponse of client.accessIPAddress.list()) {
+  console.log(accessIPAddressResponse.id);
+}
+```
+
+## Create new Access IP Address
+
+`POST /access_ip_address` — Required: `ip_address`
+
+Optional: `description` (string)
+
+```javascript
+const accessIPAddressResponse = await client.accessIPAddress.create({ ip_address: 'ip_address' });
+
+console.log(accessIPAddressResponse.id);
+```
+
+## Retrieve an access IP address
+
+`GET /access_ip_address/{access_ip_address_id}`
+
+```javascript
+const accessIPAddressResponse = await client.accessIPAddress.retrieve('access_ip_address_id');
+
+console.log(accessIPAddressResponse.id);
+```
+
+## Delete access IP address
+
+`DELETE /access_ip_address/{access_ip_address_id}`
+
+```javascript
+const accessIPAddressResponse = await client.accessIPAddress.delete('access_ip_address_id');
+
+console.log(accessIPAddressResponse.id);
+```
+
 ## List all addresses
 
 Returns a list of your addresses.
@@ -65,6 +108,24 @@ const address = await client.addresses.create({
 });
 
 console.log(address.data);
+```
+
+## Validate an address
+
+Validates an address for emergency services.
+
+`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+
+Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+
+```javascript
+const response = await client.addresses.actions.validate({
+  country_code: 'US',
+  postal_code: '78701',
+  street_address: '600 Congress Avenue',
+});
+
+console.log(response.data);
 ```
 
 ## Retrieve an address
@@ -101,24 +162,6 @@ Optional: `id` (string)
 const response = await client.addresses.actions.acceptSuggestions(
   '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
 );
-
-console.log(response.data);
-```
-
-## Validate an address
-
-Validates an address for emergency services.
-
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
-
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
-
-```javascript
-const response = await client.addresses.actions.validate({
-  country_code: 'US',
-  postal_code: '78701',
-  street_address: '600 Congress Avenue',
-});
 
 console.log(response.data);
 ```
@@ -304,78 +347,14 @@ Delete an integration secret given its ID.
 await client.integrationSecrets.delete('id');
 ```
 
-## List all Access IP Addresses
+## Create an Access Token.
 
-`GET /access_ip_address`
+Create an Access Token (JWT) for the credential.
 
-```javascript
-// Automatically fetches more pages as needed.
-for await (const accessIPAddressResponse of client.accessIPAddress.list()) {
-  console.log(accessIPAddressResponse.id);
-}
-```
-
-## Create new Access IP Address
-
-`POST /access_ip_address` — Required: `ip_address`
-
-Optional: `description` (string)
+`POST /telephony_credentials/{id}/token`
 
 ```javascript
-const accessIPAddressResponse = await client.accessIPAddress.create({ ip_address: 'ip_address' });
+const response = await client.telephonyCredentials.createToken('id');
 
-console.log(accessIPAddressResponse.id);
-```
-
-## Retrieve an access IP address
-
-`GET /access_ip_address/{access_ip_address_id}`
-
-```javascript
-const accessIPAddressResponse = await client.accessIPAddress.retrieve('access_ip_address_id');
-
-console.log(accessIPAddressResponse.id);
-```
-
-## Delete access IP address
-
-`DELETE /access_ip_address/{access_ip_address_id}`
-
-```javascript
-const accessIPAddressResponse = await client.accessIPAddress.delete('access_ip_address_id');
-
-console.log(accessIPAddressResponse.id);
-```
-
-## List all Access IP Ranges
-
-`GET /access_ip_ranges`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const accessIPRange of client.accessIPRanges.list()) {
-  console.log(accessIPRange.id);
-}
-```
-
-## Create new Access IP Range
-
-`POST /access_ip_ranges` — Required: `cidr_block`
-
-Optional: `description` (string)
-
-```javascript
-const accessIPRange = await client.accessIPRanges.create({ cidr_block: 'cidr_block' });
-
-console.log(accessIPRange.id);
-```
-
-## Delete access IP ranges
-
-`DELETE /access_ip_ranges/{access_ip_range_id}`
-
-```javascript
-const accessIPRange = await client.accessIPRanges.delete('access_ip_range_id');
-
-console.log(accessIPRange.id);
+console.log(response);
 ```

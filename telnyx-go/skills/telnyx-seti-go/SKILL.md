@@ -39,6 +39,18 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Get Enum
+
+`GET /10dlc/enum/{endpoint}`
+
+```go
+	response, err := client.Messaging10dlc.GetEnum(context.TODO(), telnyx.Messaging10dlcGetEnumParamsEndpointMno)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
 ## Retrieve Black Box Test Results
 
 Returns the results of the various black box tests

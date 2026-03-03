@@ -39,6 +39,58 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List all Access IP Addresses
+
+`GET /access_ip_address`
+
+```go
+	page, err := client.AccessIPAddress.List(context.TODO(), telnyx.AccessIPAddressListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create new Access IP Address
+
+`POST /access_ip_address` — Required: `ip_address`
+
+Optional: `description` (string)
+
+```go
+	accessIPAddressResponse, err := client.AccessIPAddress.New(context.TODO(), telnyx.AccessIPAddressNewParams{
+		IPAddress: "ip_address",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
+```
+
+## Retrieve an access IP address
+
+`GET /access_ip_address/{access_ip_address_id}`
+
+```go
+	accessIPAddressResponse, err := client.AccessIPAddress.Get(context.TODO(), "access_ip_address_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
+```
+
+## Delete access IP address
+
+`DELETE /access_ip_address/{access_ip_address_id}`
+
+```go
+	accessIPAddressResponse, err := client.AccessIPAddress.Delete(context.TODO(), "access_ip_address_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
+```
+
 ## List all addresses
 
 Returns a list of your addresses.
@@ -74,6 +126,26 @@ Optional: `address_book` (boolean), `administrative_area` (string), `borough` (s
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", address.Data)
+```
+
+## Validate an address
+
+Validates an address for emergency services.
+
+`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+
+Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+
+```go
+	response, err := client.Addresses.Actions.Validate(context.TODO(), telnyx.AddressActionValidateParams{
+		CountryCode:   "US",
+		PostalCode:    "78701",
+		StreetAddress: "600 Congress Avenue",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
 ```
 
 ## Retrieve an address
@@ -116,26 +188,6 @@ Optional: `id` (string)
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AddressActionAcceptSuggestionsParams{},
 	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Validate an address
-
-Validates an address for emergency services.
-
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
-
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
-
-```go
-	response, err := client.Addresses.Actions.Validate(context.TODO(), telnyx.AddressActionValidateParams{
-		CountryCode:   "US",
-		PostalCode:    "78701",
-		StreetAddress: "600 Congress Avenue",
-	})
 	if err != nil {
 		panic(err.Error())
 	}
@@ -357,94 +409,16 @@ Delete an integration secret given its ID.
 	}
 ```
 
-## List all Access IP Addresses
+## Create an Access Token.
 
-`GET /access_ip_address`
+Create an Access Token (JWT) for the credential.
+
+`POST /telephony_credentials/{id}/token`
 
 ```go
-	page, err := client.AccessIPAddress.List(context.TODO(), telnyx.AccessIPAddressListParams{})
+	response, err := client.TelephonyCredentials.NewToken(context.TODO(), "id")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create new Access IP Address
-
-`POST /access_ip_address` — Required: `ip_address`
-
-Optional: `description` (string)
-
-```go
-	accessIPAddressResponse, err := client.AccessIPAddress.New(context.TODO(), telnyx.AccessIPAddressNewParams{
-		IPAddress: "ip_address",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
-```
-
-## Retrieve an access IP address
-
-`GET /access_ip_address/{access_ip_address_id}`
-
-```go
-	accessIPAddressResponse, err := client.AccessIPAddress.Get(context.TODO(), "access_ip_address_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
-```
-
-## Delete access IP address
-
-`DELETE /access_ip_address/{access_ip_address_id}`
-
-```go
-	accessIPAddressResponse, err := client.AccessIPAddress.Delete(context.TODO(), "access_ip_address_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
-```
-
-## List all Access IP Ranges
-
-`GET /access_ip_ranges`
-
-```go
-	page, err := client.AccessIPRanges.List(context.TODO(), telnyx.AccessIPRangeListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create new Access IP Range
-
-`POST /access_ip_ranges` — Required: `cidr_block`
-
-Optional: `description` (string)
-
-```go
-	accessIPRange, err := client.AccessIPRanges.New(context.TODO(), telnyx.AccessIPRangeNewParams{
-		CidrBlock: "cidr_block",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", accessIPRange.ID)
-```
-
-## Delete access IP ranges
-
-`DELETE /access_ip_ranges/{access_ip_range_id}`
-
-```go
-	accessIPRange, err := client.AccessIPRanges.Delete(context.TODO(), "access_ip_range_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", accessIPRange.ID)
+	fmt.Printf("%+v\n", response)
 ```

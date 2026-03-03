@@ -33,6 +33,40 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Transcribe speech to text
+
+Transcribe speech to text.
+
+`POST /ai/audio/transcriptions`
+
+```python
+response = client.ai.audio.transcribe(
+    model="distil-whisper/distil-large-v2",
+)
+print(response.text)
+```
+
+## Create a chat completion
+
+Chat with a language model.
+
+`POST /ai/chat/completions` — Required: `messages`
+
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+
+```python
+response = client.ai.chat.create_completion(
+    messages=[{
+        "role": "system",
+        "content": "You are a friendly chatbot.",
+    }, {
+        "role": "user",
+        "content": "Hello, world!",
+    }],
+)
+print(response)
+```
+
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user.
@@ -404,99 +438,6 @@ embedding = client.ai.embeddings.retrieve(
 print(embedding.data)
 ```
 
-## List all clusters
-
-`GET /ai/clusters`
-
-```python
-page = client.ai.clusters.list()
-page = page.data[0]
-print(page.task_id)
-```
-
-## Compute new clusters
-
-Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
-
-`POST /ai/clusters` — Required: `bucket`
-
-Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
-
-```python
-response = client.ai.clusters.compute(
-    bucket="bucket",
-)
-print(response.data)
-```
-
-## Fetch a cluster
-
-`GET /ai/clusters/{task_id}`
-
-```python
-cluster = client.ai.clusters.retrieve(
-    task_id="task_id",
-)
-print(cluster.data)
-```
-
-## Delete a cluster
-
-`DELETE /ai/clusters/{task_id}`
-
-```python
-client.ai.clusters.delete(
-    "task_id",
-)
-```
-
-## Fetch a cluster visualization
-
-`GET /ai/clusters/{task_id}/graph`
-
-```python
-response = client.ai.clusters.fetch_graph(
-    task_id="task_id",
-)
-print(response)
-content = response.read()
-print(content)
-```
-
-## Transcribe speech to text
-
-Transcribe speech to text.
-
-`POST /ai/audio/transcriptions`
-
-```python
-response = client.ai.audio.transcribe(
-    model="distil-whisper/distil-large-v2",
-)
-print(response.text)
-```
-
-## Create a chat completion
-
-Chat with a language model.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```python
-response = client.ai.chat.create_completion(
-    messages=[{
-        "role": "system",
-        "content": "You are a friendly chatbot.",
-    }, {
-        "role": "user",
-        "content": "Hello, world!",
-    }],
-)
-print(response)
-```
-
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
@@ -550,6 +491,17 @@ fine_tuning_job = client.ai.fine_tuning.jobs.cancel(
 print(fine_tuning_job.id)
 ```
 
+## Get available models
+
+This endpoint returns a list of Open Source and OpenAI models that are available for use.
+
+`GET /ai/models`
+
+```python
+response = client.ai.retrieve_models()
+print(response.data)
+```
+
 ## Create embeddings
 
 Creates an embedding vector representing the input text.
@@ -577,17 +529,6 @@ response = client.ai.openai.embeddings.list_embedding_models()
 print(response.data)
 ```
 
-## Get available models
-
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
-
-`GET /ai/models`
-
-```python
-response = client.ai.retrieve_models()
-print(response.data)
-```
-
 ## Summarize file content
 
 Generate a summary of a file's contents.
@@ -602,4 +543,165 @@ response = client.ai.summarize(
     filename="filename",
 )
 print(response.data)
+```
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text`
+
+```python
+speech_to_texts = client.legacy.reporting.batch_detail_records.speech_to_text.list()
+print(speech_to_texts.data)
+```
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+
+```python
+from datetime import datetime
+
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.create(
+    end_date=datetime.fromisoformat("2020-07-01T00:00:00-06:00"),
+    start_date=datetime.fromisoformat("2020-07-01T00:00:00-06:00"),
+)
+print(speech_to_text.data)
+```
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```python
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(speech_to_text.data)
+```
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```python
+speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.delete(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(speech_to_text.data)
+```
+
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously.
+
+`GET /legacy/reporting/usage_reports/speech_to_text`
+
+```python
+response = client.legacy.reporting.usage_reports.retrieve_speech_to_text()
+print(response.data)
+```
+
+## Speech to text over websocket
+
+Transcribe audio streams to text over WebSocket.
+
+`GET /speech-to-text/transcription`
+
+```python
+client.speech_to_text.transcribe(
+    input_format="mp3",
+    transcription_engine="Azure",
+)
+```
+
+## Stream text to speech over WebSocket
+
+Open a WebSocket connection to stream text and receive synthesized audio in real time.
+
+`GET /text-to-speech/speech`
+
+```python
+client.text_to_speech.stream()
+```
+
+## Generate speech from text
+
+Generate synthesized speech audio from text input.
+
+`POST /text-to-speech/speech`
+
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+
+```python
+response = client.text_to_speech.generate()
+print(response.base64_audio)
+```
+
+## List available voices
+
+Retrieve a list of available voices from one or all TTS providers.
+
+`GET /text-to-speech/voices`
+
+```python
+response = client.text_to_speech.list_voices()
+print(response.voices)
+```
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`GET /wireless/detail_records_reports`
+
+```python
+detail_records_reports = client.wireless.detail_records_reports.list()
+print(detail_records_reports.data)
+```
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail_records_reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```python
+detail_records_report = client.wireless.detail_records_reports.create()
+print(detail_records_report.data)
+```
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`GET /wireless/detail_records_reports/{id}`
+
+```python
+detail_records_report = client.wireless.detail_records_reports.retrieve(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(detail_records_report.data)
+```
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`DELETE /wireless/detail_records_reports/{id}`
+
+```python
+detail_records_report = client.wireless.detail_records_reports.delete(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(detail_records_report.data)
 ```

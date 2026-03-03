@@ -155,15 +155,3 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialDeleteRespo
 
 TelephonyCredentialDeleteResponse telephonyCredential = client.telephonyCredentials().delete("id");
 ```
-
-## Create an Access Token.
-
-Create an Access Token (JWT) for the credential.
-
-`POST /telephony_credentials/{id}/token`
-
-```java
-import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialCreateTokenParams;
-
-String response = client.telephonyCredentials().createToken("id");
-```

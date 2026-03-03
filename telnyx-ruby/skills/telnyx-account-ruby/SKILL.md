@@ -54,6 +54,30 @@ balance = client.balance.retrieve
 puts(balance)
 ```
 
+## Get monthly charges breakdown
+
+Retrieve a detailed breakdown of monthly charges for phone numbers in a specified date range.
+
+`GET /charges_breakdown`
+
+```ruby
+charges_breakdown = client.charges_breakdown.retrieve(start_date: "2025-05-01")
+
+puts(charges_breakdown)
+```
+
+## Get monthly charges summary
+
+Retrieve a summary of monthly charges for a specified date range.
+
+`GET /charges_summary`
+
+```ruby
+charges_summary = client.charges_summary.retrieve(end_date: "2025-06-01", start_date: "2025-05-01")
+
+puts(charges_summary)
+```
+
 ## Search detail records
 
 Search for any detail record across the Telnyx Platform
@@ -94,7 +118,7 @@ puts(invoice)
 
 Returns the payment auto recharge preferences.
 
-`GET /payments/auto_recharge_prefs`
+`GET /payment/auto_recharge_prefs`
 
 ```ruby
 auto_recharge_prefs = client.payment.auto_recharge_prefs.list
@@ -106,7 +130,7 @@ puts(auto_recharge_prefs)
 
 Update payment auto recharge preferences.
 
-`PATCH /payments/auto_recharge_prefs`
+`PATCH /payment/auto_recharge_prefs`
 
 Optional: `enabled` (boolean), `invoice_enabled` (boolean), `preference` (enum), `recharge_amount` (string), `threshold_amount` (string)
 
@@ -126,6 +150,16 @@ List all user tags.
 user_tags = client.user_tags.list
 
 puts(user_tags)
+```
+
+## Create a stored payment transaction
+
+`POST /v2/payment/stored_payment_transactions` — Required: `amount`
+
+```ruby
+response = client.payment.create_stored_payment_transaction(amount: "120.00")
+
+puts(response)
 ```
 
 ## List webhook deliveries

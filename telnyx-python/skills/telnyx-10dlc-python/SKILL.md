@@ -65,6 +65,32 @@ telnyx_brand = client.messaging_10dlc.brand.create(
 print(telnyx_brand.identity_status)
 ```
 
+## Get Brand Feedback By Id
+
+Get feedback about a brand by ID.
+
+`GET /10dlc/brand/feedback/{brandId}`
+
+```python
+response = client.messaging_10dlc.brand.get_feedback(
+    "brandId",
+)
+print(response.brand_id)
+```
+
+## Get Brand SMS OTP Status
+
+Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
+
+`GET /10dlc/brand/smsOtp/{referenceId}`
+
+```python
+response = client.messaging_10dlc.brand.get_sms_otp_by_reference(
+    reference_id="OTP4B2001",
+)
+print(response.brand_id)
+```
+
 ## Get Brand
 
 Retrieve a brand by `brandId`.
@@ -220,63 +246,6 @@ client.messaging_10dlc.brand.verify_sms_otp(
 )
 ```
 
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```python
-response = client.messaging_10dlc.brand.get_sms_otp_by_reference(
-    reference_id="OTP4B2001",
-)
-print(response.brand_id)
-```
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID.
-
-`GET /10dlc/brand_feedback/{brandId}`
-
-```python
-response = client.messaging_10dlc.brand.get_feedback(
-    "brandId",
-)
-print(response.brand_id)
-```
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```python
-telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
-    brand_id="brandId",
-    description="description",
-    usecase="usecase",
-)
-print(telnyx_campaign_csp.brand_id)
-```
-
-## Qualify By Usecase
-
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
-
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
-
-```python
-response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase(
-    usecase="usecase",
-    brand_id="brandId",
-)
-print(response.annual_fee)
-```
-
 ## List Campaigns
 
 Retrieve a list of campaigns associated with a supplied `brandId`.
@@ -289,6 +258,30 @@ page = client.messaging_10dlc.campaign.list(
 )
 page = page.records[0]
 print(page.age_gated)
+```
+
+## Accept Shared Campaign
+
+Manually accept a campaign shared with Telnyx
+
+`POST /10dlc/campaign/acceptSharing/{campaignId}`
+
+```python
+response = client.messaging_10dlc.campaign.accept_sharing(
+    "C26F1KLZN",
+)
+print(response)
+```
+
+## Get Campaign Cost
+
+`GET /10dlc/campaign/usecase/cost`
+
+```python
+response = client.messaging_10dlc.campaign.usecase.get_cost(
+    usecase="usecase",
+)
+print(response.campaign_usecase)
 ```
 
 ## Get campaign
@@ -374,7 +367,7 @@ print(response)
 
 ## Get OSR campaign attributes
 
-`GET /10dlc/campaign/{campaignId}/osr_attributes`
+`GET /10dlc/campaign/{campaignId}/osr/attributes`
 
 ```python
 response = client.messaging_10dlc.campaign.osr.get_attributes(
@@ -394,28 +387,61 @@ response = client.messaging_10dlc.campaign.get_sharing_status(
 print(response.shared_by_me)
 ```
 
-## Accept Shared Campaign
+## Submit Campaign
 
-Manually accept a campaign shared with Telnyx
+Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign...
 
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
+`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
 
-```python
-response = client.messaging_10dlc.campaign.accept_sharing(
-    "C26F1KLZN",
-)
-print(response)
-```
-
-## Get Campaign Cost
-
-`GET /10dlc/campaign/usecase_cost`
+Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
 
 ```python
-response = client.messaging_10dlc.campaign.usecase.get_cost(
+telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
+    brand_id="brandId",
+    description="description",
     usecase="usecase",
 )
-print(response.campaign_usecase)
+print(telnyx_campaign_csp.brand_id)
+```
+
+## Qualify By Usecase
+
+This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+
+`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+```python
+response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase(
+    usecase="usecase",
+    brand_id="brandId",
+)
+print(response.annual_fee)
+```
+
+## List shared partner campaigns
+
+Get all partner campaigns you have shared to Telnyx in a paginated fashion
+
+This endpoint is currently limited to only returning shared campaigns that Telnyx
+has accepted.
+
+`GET /10dlc/partnerCampaign/sharedByMe`
+
+```python
+page = client.messaging_10dlc.partner_campaigns.list_shared_by_me()
+page = page.records[0]
+print(page.brand_id)
+```
+
+## Get Sharing Status
+
+`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+
+```python
+response = client.messaging_10dlc.partner_campaigns.retrieve_sharing_status(
+    "campaignId",
+)
+print(response)
 ```
 
 ## List Shared Campaigns
@@ -458,30 +484,45 @@ telnyx_downstream_campaign = client.messaging_10dlc.partner_campaigns.update(
 print(telnyx_downstream_campaign.tcr_brand_id)
 ```
 
-## Get Sharing Status
+## Assign Messaging Profile To Campaign
 
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
+This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
+
+`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
+
+Optional: `campaignId` (string), `tcrCampaignId` (string)
 
 ```python
-response = client.messaging_10dlc.partner_campaigns.retrieve_sharing_status(
-    "campaignId",
+response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
+    messaging_profile_id="4001767e-ce0f-4cae-9d5f-0d5e636e7809",
 )
-print(response)
+print(response.messaging_profile_id)
 ```
 
-## List shared partner campaigns
+## Get Assignment Task Status
 
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
+Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
 
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
 
 ```python
-page = client.messaging_10dlc.partner_campaigns.list_shared_by_me()
-page = page.records[0]
-print(page.brand_id)
+response = client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status(
+    "taskId",
+)
+print(response.status)
+```
+
+## Get Phone Number Status
+
+Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
+
+`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
+
+```python
+response = client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status(
+    task_id="taskId",
+)
+print(response.records)
 ```
 
 ## List phone number campaigns
@@ -543,47 +584,6 @@ phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.delete(
     "phoneNumber",
 )
 print(phone_number_campaign.campaign_id)
-```
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
-
-```python
-response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
-    messaging_profile_id="4001767e-ce0f-4cae-9d5f-0d5e636e7809",
-)
-print(response.messaging_profile_id)
-```
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```python
-response = client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status(
-    "taskId",
-)
-print(response.status)
-```
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```python
-response = client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status(
-    task_id="taskId",
-)
-print(response.records)
 ```
 
 ---

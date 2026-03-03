@@ -44,95 +44,6 @@ import com.telnyx.sdk.models.portouts.PortoutListParams;
 PortoutListPage page = client.portouts().list();
 ```
 
-## Get a portout request
-
-Returns the portout request based on the ID provided
-
-`GET /portouts/{id}`
-
-```java
-import com.telnyx.sdk.models.portouts.PortoutRetrieveParams;
-import com.telnyx.sdk.models.portouts.PortoutRetrieveResponse;
-
-PortoutRetrieveResponse portout = client.portouts().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## List all comments for a portout request
-
-Returns a list of comments for a portout request.
-
-`GET /portouts/{id}/comments`
-
-```java
-import com.telnyx.sdk.models.portouts.comments.CommentListParams;
-import com.telnyx.sdk.models.portouts.comments.CommentListResponse;
-
-CommentListResponse comments = client.portouts().comments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Create a comment on a portout request
-
-Creates a comment on a portout request.
-
-`POST /portouts/{id}/comments`
-
-Optional: `body` (string)
-
-```java
-import com.telnyx.sdk.models.portouts.comments.CommentCreateParams;
-import com.telnyx.sdk.models.portouts.comments.CommentCreateResponse;
-
-CommentCreateResponse comment = client.portouts().comments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## List supporting documents on a portout request
-
-List every supporting documents for a portout request.
-
-`GET /portouts/{id}/supporting_documents`
-
-```java
-import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentListParams;
-import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentListResponse;
-
-SupportingDocumentListResponse supportingDocuments = client.portouts().supportingDocuments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Create a list of supporting documents on a portout request
-
-Creates a list of supporting documents on a portout request.
-
-`POST /portouts/{id}/supporting_documents`
-
-Optional: `documents` (array[object])
-
-```java
-import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCreateParams;
-import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCreateResponse;
-
-SupportingDocumentCreateResponse supportingDocument = client.portouts().supportingDocuments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Update Status
-
-Authorize or reject portout request
-
-`PATCH /portouts/{id}/{status}` — Required: `reason`
-
-Optional: `host_messaging` (boolean)
-
-```java
-import com.telnyx.sdk.models.portouts.PortoutUpdateStatusParams;
-import com.telnyx.sdk.models.portouts.PortoutUpdateStatusResponse;
-
-PortoutUpdateStatusParams params = PortoutUpdateStatusParams.builder()
-    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .status(PortoutUpdateStatusParams.Status.AUTHORIZED)
-    .reason("I do not recognize this transaction")
-    .build();
-PortoutUpdateStatusResponse response = client.portouts().updateStatus(params);
-```
-
 ## List all port-out events
 
 Returns a list of all port-out events.
@@ -228,4 +139,93 @@ import com.telnyx.sdk.models.portouts.reports.ReportRetrieveParams;
 import com.telnyx.sdk.models.portouts.reports.ReportRetrieveResponse;
 
 ReportRetrieveResponse report = client.portouts().reports().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Get a portout request
+
+Returns the portout request based on the ID provided
+
+`GET /portouts/{id}`
+
+```java
+import com.telnyx.sdk.models.portouts.PortoutRetrieveParams;
+import com.telnyx.sdk.models.portouts.PortoutRetrieveResponse;
+
+PortoutRetrieveResponse portout = client.portouts().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List all comments for a portout request
+
+Returns a list of comments for a portout request.
+
+`GET /portouts/{id}/comments`
+
+```java
+import com.telnyx.sdk.models.portouts.comments.CommentListParams;
+import com.telnyx.sdk.models.portouts.comments.CommentListResponse;
+
+CommentListResponse comments = client.portouts().comments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Create a comment on a portout request
+
+Creates a comment on a portout request.
+
+`POST /portouts/{id}/comments`
+
+Optional: `body` (string)
+
+```java
+import com.telnyx.sdk.models.portouts.comments.CommentCreateParams;
+import com.telnyx.sdk.models.portouts.comments.CommentCreateResponse;
+
+CommentCreateResponse comment = client.portouts().comments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List supporting documents on a portout request
+
+List every supporting documents for a portout request.
+
+`GET /portouts/{id}/supporting_documents`
+
+```java
+import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentListParams;
+import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentListResponse;
+
+SupportingDocumentListResponse supportingDocuments = client.portouts().supportingDocuments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Create a list of supporting documents on a portout request
+
+Creates a list of supporting documents on a portout request.
+
+`POST /portouts/{id}/supporting_documents`
+
+Optional: `documents` (array[object])
+
+```java
+import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCreateParams;
+import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCreateResponse;
+
+SupportingDocumentCreateResponse supportingDocument = client.portouts().supportingDocuments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Update Status
+
+Authorize or reject portout request
+
+`PATCH /portouts/{id}/{status}` — Required: `reason`
+
+Optional: `host_messaging` (boolean)
+
+```java
+import com.telnyx.sdk.models.portouts.PortoutUpdateStatusParams;
+import com.telnyx.sdk.models.portouts.PortoutUpdateStatusResponse;
+
+PortoutUpdateStatusParams params = PortoutUpdateStatusParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .status(PortoutUpdateStatusParams.Status.AUTHORIZED)
+    .reason("I do not recognize this transaction")
+    .build();
+PortoutUpdateStatusResponse response = client.portouts().updateStatus(params);
 ```

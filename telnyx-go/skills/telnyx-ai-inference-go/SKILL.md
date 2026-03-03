@@ -39,6 +39,50 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Transcribe speech to text
+
+Transcribe speech to text.
+
+`POST /ai/audio/transcriptions`
+
+```go
+	response, err := client.AI.Audio.Transcribe(context.TODO(), telnyx.AIAudioTranscribeParams{
+		Model: telnyx.AIAudioTranscribeParamsModelDistilWhisperDistilLargeV2,
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Text)
+```
+
+## Create a chat completion
+
+Chat with a language model.
+
+`POST /ai/chat/completions` — Required: `messages`
+
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+
+```go
+	response, err := client.AI.Chat.NewCompletion(context.TODO(), telnyx.AIChatNewCompletionParams{
+		Messages: []telnyx.AIChatNewCompletionParamsMessage{{
+			Role: "system",
+			Content: telnyx.AIChatNewCompletionParamsMessageContentUnion{
+				OfString: telnyx.String("You are a friendly chatbot."),
+			},
+		}, {
+			Role: "user",
+			Content: telnyx.AIChatNewCompletionParamsMessageContentUnion{
+				OfString: telnyx.String("Hello, world!"),
+			},
+		}},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user.
@@ -485,123 +529,6 @@ Check the status of a current embedding task.
 	fmt.Printf("%+v\n", embedding.Data)
 ```
 
-## List all clusters
-
-`GET /ai/clusters`
-
-```go
-	page, err := client.AI.Clusters.List(context.TODO(), telnyx.AIClusterListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Compute new clusters
-
-Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
-
-`POST /ai/clusters` — Required: `bucket`
-
-Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
-
-```go
-	response, err := client.AI.Clusters.Compute(context.TODO(), telnyx.AIClusterComputeParams{
-		Bucket: "bucket",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Fetch a cluster
-
-`GET /ai/clusters/{task_id}`
-
-```go
-	cluster, err := client.AI.Clusters.Get(
-		context.TODO(),
-		"task_id",
-		telnyx.AIClusterGetParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", cluster.Data)
-```
-
-## Delete a cluster
-
-`DELETE /ai/clusters/{task_id}`
-
-```go
-	err := client.AI.Clusters.Delete(context.TODO(), "task_id")
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
-## Fetch a cluster visualization
-
-`GET /ai/clusters/{task_id}/graph`
-
-```go
-	response, err := client.AI.Clusters.FetchGraph(
-		context.TODO(),
-		"task_id",
-		telnyx.AIClusterFetchGraphParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response)
-```
-
-## Transcribe speech to text
-
-Transcribe speech to text.
-
-`POST /ai/audio/transcriptions`
-
-```go
-	response, err := client.AI.Audio.Transcribe(context.TODO(), telnyx.AIAudioTranscribeParams{
-		Model: telnyx.AIAudioTranscribeParamsModelDistilWhisperDistilLargeV2,
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Text)
-```
-
-## Create a chat completion
-
-Chat with a language model.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```go
-	response, err := client.AI.Chat.NewCompletion(context.TODO(), telnyx.AIChatNewCompletionParams{
-		Messages: []telnyx.AIChatNewCompletionParamsMessage{{
-			Role: "system",
-			Content: telnyx.AIChatNewCompletionParamsMessageContentUnion{
-				OfString: telnyx.String("You are a friendly chatbot."),
-			},
-		}, {
-			Role: "user",
-			Content: telnyx.AIChatNewCompletionParamsMessageContentUnion{
-				OfString: telnyx.String("Hello, world!"),
-			},
-		}},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response)
-```
-
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
@@ -663,6 +590,20 @@ Cancel a fine tuning job.
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
+## Get available models
+
+This endpoint returns a list of Open Source and OpenAI models that are available for use.
+
+`GET /ai/models`
+
+```go
+	response, err := client.AI.GetModels(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
 ## Create embeddings
 
 Creates an embedding vector representing the input text.
@@ -698,20 +639,6 @@ Returns a list of available embedding models.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Get available models
-
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
-
-`GET /ai/models`
-
-```go
-	response, err := client.AI.GetModels(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
 ## Summarize file content
 
 Generate a summary of a file's contents.
@@ -729,4 +656,194 @@ Optional: `system_prompt` (string)
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response.Data)
+```
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text`
+
+```go
+	speechToTexts, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", speechToTexts.Data)
+```
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+
+```go
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.New(context.TODO(), telnyx.LegacyReportingBatchDetailRecordSpeechToTextNewParams{
+		EndDate:   time.Now(),
+		StartDate: time.Now(),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", speechToText.Data)
+```
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```go
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", speechToText.Data)
+```
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```go
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", speechToText.Data)
+```
+
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously.
+
+`GET /legacy/reporting/usage_reports/speech_to_text`
+
+```go
+	response, err := client.Legacy.Reporting.UsageReports.GetSpeechToText(context.TODO(), telnyx.LegacyReportingUsageReportGetSpeechToTextParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Speech to text over websocket
+
+Transcribe audio streams to text over WebSocket.
+
+`GET /speech-to-text/transcription`
+
+```go
+	err := client.SpeechToText.Transcribe(context.TODO(), telnyx.SpeechToTextTranscribeParams{
+		InputFormat:         telnyx.SpeechToTextTranscribeParamsInputFormatMP3,
+		TranscriptionEngine: telnyx.SpeechToTextTranscribeParamsTranscriptionEngineAzure,
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Stream text to speech over WebSocket
+
+Open a WebSocket connection to stream text and receive synthesized audio in real time.
+
+`GET /text-to-speech/speech`
+
+```go
+	err := client.TextToSpeech.Stream(context.TODO(), telnyx.TextToSpeechStreamParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Generate speech from text
+
+Generate synthesized speech audio from text input.
+
+`POST /text-to-speech/speech`
+
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+
+```go
+	response, err := client.TextToSpeech.Generate(context.TODO(), telnyx.TextToSpeechGenerateParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Base64Audio)
+```
+
+## List available voices
+
+Retrieve a list of available voices from one or all TTS providers.
+
+`GET /text-to-speech/voices`
+
+```go
+	response, err := client.TextToSpeech.ListVoices(context.TODO(), telnyx.TextToSpeechListVoicesParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Voices)
+```
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`GET /wireless/detail_records_reports`
+
+```go
+	detailRecordsReports, err := client.Wireless.DetailRecordsReports.List(context.TODO(), telnyx.WirelessDetailRecordsReportListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", detailRecordsReports.Data)
+```
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail_records_reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```go
+	detailRecordsReport, err := client.Wireless.DetailRecordsReports.New(context.TODO(), telnyx.WirelessDetailRecordsReportNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", detailRecordsReport.Data)
+```
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`GET /wireless/detail_records_reports/{id}`
+
+```go
+	detailRecordsReport, err := client.Wireless.DetailRecordsReports.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", detailRecordsReport.Data)
+```
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`DELETE /wireless/detail_records_reports/{id}`
+
+```go
+	detailRecordsReport, err := client.Wireless.DetailRecordsReports.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", detailRecordsReport.Data)
 ```

@@ -32,92 +32,6 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all call recordings
-
-Returns a list of your call recordings.
-
-`GET /recordings`
-
-```ruby
-page = client.recordings.list
-
-puts(page)
-```
-
-## Retrieve a call recording
-
-Retrieves the details of an existing call recording.
-
-`GET /recordings/{recording_id}`
-
-```ruby
-recording = client.recordings.retrieve("recording_id")
-
-puts(recording)
-```
-
-## Delete a call recording
-
-Permanently deletes a call recording.
-
-`DELETE /recordings/{recording_id}`
-
-```ruby
-recording = client.recordings.delete("recording_id")
-
-puts(recording)
-```
-
-## Delete a list of call recordings
-
-Permanently deletes a list of call recordings.
-
-`POST /recordings/actions/delete`
-
-```ruby
-result = client.recordings.actions.delete(
-  ids: ["428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"]
-)
-
-puts(result)
-```
-
-## List all recording transcriptions
-
-Returns a list of your recording transcriptions.
-
-`GET /recording_transcriptions`
-
-```ruby
-recording_transcriptions = client.recording_transcriptions.list
-
-puts(recording_transcriptions)
-```
-
-## Retrieve a recording transcription
-
-Retrieves the details of an existing recording transcription.
-
-`GET /recording_transcriptions/{recording_transcription_id}`
-
-```ruby
-recording_transcription = client.recording_transcriptions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(recording_transcription)
-```
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /recording_transcriptions/{recording_transcription_id}`
-
-```ruby
-recording_transcription = client.recording_transcriptions.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(recording_transcription)
-```
-
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
@@ -266,6 +180,42 @@ Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webho
 external_connection = client.external_connections.create(external_sip_connection: :zoom, outbound: {})
 
 puts(external_connection)
+```
+
+## List all log messages
+
+Retrieve a list of log messages for all external connections associated with your account.
+
+`GET /external_connections/log_messages`
+
+```ruby
+page = client.external_connections.log_messages.list
+
+puts(page)
+```
+
+## Retrieve a log message
+
+Retrieve a log message for an external connection associated with your account.
+
+`GET /external_connections/log_messages/{id}`
+
+```ruby
+log_message = client.external_connections.log_messages.retrieve("1293384261075731499")
+
+puts(log_message)
+```
+
+## Dismiss a log message
+
+Dismiss a log message for an external connection associated with your account.
+
+`DELETE /external_connections/log_messages/{id}`
+
+```ruby
+response = client.external_connections.log_messages.dismiss("1293384261075731499")
+
+puts(response)
 ```
 
 ## Retrieve an External Connection
@@ -498,54 +448,6 @@ response = client.external_connections.uploads.retry_(
 puts(response)
 ```
 
-## List all log messages
-
-Retrieve a list of log messages for all external connections associated with your account.
-
-`GET /external_connections/log_messages`
-
-```ruby
-page = client.external_connections.log_messages.list
-
-puts(page)
-```
-
-## Retrieve a log message
-
-Retrieve a log message for an external connection associated with your account.
-
-`GET /external_connections/log_messages/{id}`
-
-```ruby
-log_message = client.external_connections.log_messages.retrieve("1293384261075731499")
-
-puts(log_message)
-```
-
-## Dismiss a log message
-
-Dismiss a log message for an external connection associated with your account.
-
-`DELETE /external_connections/log_messages/{id}`
-
-```ruby
-response = client.external_connections.log_messages.dismiss("1293384261075731499")
-
-puts(response)
-```
-
-## Refresh Operator Connect integration
-
-This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
-
-`POST /operator_connect/actions/refresh`
-
-```ruby
-response = client.operator_connect.actions.refresh
-
-puts(response)
-```
-
 ## List uploaded media
 
 Returns a list of stored media files.
@@ -620,4 +522,155 @@ Downloads a stored media file.
 response = client.media.download("media_name")
 
 puts(response)
+```
+
+## Refresh Operator Connect integration
+
+This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
+
+`POST /operator_connect/actions/refresh`
+
+```ruby
+response = client.operator_connect.actions.refresh
+
+puts(response)
+```
+
+## List all recording transcriptions
+
+Returns a list of your recording transcriptions.
+
+`GET /recording_transcriptions`
+
+```ruby
+recording_transcriptions = client.recording_transcriptions.list
+
+puts(recording_transcriptions)
+```
+
+## Retrieve a recording transcription
+
+Retrieves the details of an existing recording transcription.
+
+`GET /recording_transcriptions/{recording_transcription_id}`
+
+```ruby
+recording_transcription = client.recording_transcriptions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(recording_transcription)
+```
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`DELETE /recording_transcriptions/{recording_transcription_id}`
+
+```ruby
+recording_transcription = client.recording_transcriptions.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(recording_transcription)
+```
+
+## List all call recordings
+
+Returns a list of your call recordings.
+
+`GET /recordings`
+
+```ruby
+page = client.recordings.list
+
+puts(page)
+```
+
+## Delete a list of call recordings
+
+Permanently deletes a list of call recordings.
+
+`POST /recordings/actions/delete`
+
+```ruby
+result = client.recordings.actions.delete(
+  ids: ["428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"]
+)
+
+puts(result)
+```
+
+## Retrieve a call recording
+
+Retrieves the details of an existing call recording.
+
+`GET /recordings/{recording_id}`
+
+```ruby
+recording = client.recordings.retrieve("recording_id")
+
+puts(recording)
+```
+
+## Delete a call recording
+
+Permanently deletes a call recording.
+
+`DELETE /recordings/{recording_id}`
+
+```ruby
+recording = client.recordings.delete("recording_id")
+
+puts(recording)
+```
+
+## Create a SIPREC connector
+
+Creates a new SIPREC connector configuration.
+
+`POST /siprec_connectors`
+
+```ruby
+siprec_connector = client.siprec_connectors.create(host: "siprec.client.com", name: "my-siprec-connector", port: 5060)
+
+puts(siprec_connector)
+```
+
+## Retrieve a SIPREC connector
+
+Returns details of a stored SIPREC connector.
+
+`GET /siprec_connectors/{connector_name}`
+
+```ruby
+siprec_connector = client.siprec_connectors.retrieve("connector_name")
+
+puts(siprec_connector)
+```
+
+## Update a SIPREC connector
+
+Updates a stored SIPREC connector configuration.
+
+`PUT /siprec_connectors/{connector_name}`
+
+```ruby
+siprec_connector = client.siprec_connectors.update(
+  "connector_name",
+  host: "siprec.client.com",
+  name: "my-siprec-connector",
+  port: 5060
+)
+
+puts(siprec_connector)
+```
+
+## Delete a SIPREC connector
+
+Deletes a stored SIPREC connector.
+
+`DELETE /siprec_connectors/{connector_name}`
+
+```ruby
+result = client.siprec_connectors.delete("connector_name")
+
+puts(result)
 ```

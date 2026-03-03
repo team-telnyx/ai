@@ -31,17 +31,379 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all Regions
+## List all clusters
 
-List all regions and the interfaces that region supports
-
-`GET /regions`
+`GET /ai/clusters`
 
 ```java
-import com.telnyx.sdk.models.regions.RegionListParams;
-import com.telnyx.sdk.models.regions.RegionListResponse;
+import com.telnyx.sdk.models.ai.clusters.ClusterListPage;
+import com.telnyx.sdk.models.ai.clusters.ClusterListParams;
 
-RegionListResponse regions = client.regions().list();
+ClusterListPage page = client.ai().clusters().list();
+```
+
+## Compute new clusters
+
+Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
+
+`POST /ai/clusters` — Required: `bucket`
+
+Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
+
+```java
+import com.telnyx.sdk.models.ai.clusters.ClusterComputeParams;
+import com.telnyx.sdk.models.ai.clusters.ClusterComputeResponse;
+
+ClusterComputeParams params = ClusterComputeParams.builder()
+    .bucket("bucket")
+    .build();
+ClusterComputeResponse response = client.ai().clusters().compute(params);
+```
+
+## Fetch a cluster
+
+`GET /ai/clusters/{task_id}`
+
+```java
+import com.telnyx.sdk.models.ai.clusters.ClusterRetrieveParams;
+import com.telnyx.sdk.models.ai.clusters.ClusterRetrieveResponse;
+
+ClusterRetrieveResponse cluster = client.ai().clusters().retrieve("task_id");
+```
+
+## Delete a cluster
+
+`DELETE /ai/clusters/{task_id}`
+
+```java
+import com.telnyx.sdk.models.ai.clusters.ClusterDeleteParams;
+
+client.ai().clusters().delete("task_id");
+```
+
+## Fetch a cluster visualization
+
+`GET /ai/clusters/{task_id}/graph`
+
+```java
+import com.telnyx.sdk.core.http.HttpResponse;
+import com.telnyx.sdk.models.ai.clusters.ClusterFetchGraphParams;
+
+HttpResponse response = client.ai().clusters().fetchGraph("task_id");
+```
+
+## List Integrations
+
+List all available integrations.
+
+`GET /ai/integrations`
+
+```java
+import com.telnyx.sdk.models.ai.integrations.IntegrationListParams;
+import com.telnyx.sdk.models.ai.integrations.IntegrationListResponse;
+
+IntegrationListResponse integrations = client.ai().integrations().list();
+```
+
+## List User Integrations
+
+List user setup integrations
+
+`GET /ai/integrations/connections`
+
+```java
+import com.telnyx.sdk.models.ai.integrations.connections.ConnectionListParams;
+import com.telnyx.sdk.models.ai.integrations.connections.ConnectionListResponse;
+
+ConnectionListResponse connections = client.ai().integrations().connections().list();
+```
+
+## Get User Integration connection By Id
+
+Get user setup integrations
+
+`GET /ai/integrations/connections/{user_connection_id}`
+
+```java
+import com.telnyx.sdk.models.ai.integrations.connections.ConnectionRetrieveParams;
+import com.telnyx.sdk.models.ai.integrations.connections.ConnectionRetrieveResponse;
+
+ConnectionRetrieveResponse connection = client.ai().integrations().connections().retrieve("user_connection_id");
+```
+
+## Delete Integration Connection
+
+Delete a specific integration connection.
+
+`DELETE /ai/integrations/connections/{user_connection_id}`
+
+```java
+import com.telnyx.sdk.models.ai.integrations.connections.ConnectionDeleteParams;
+
+client.ai().integrations().connections().delete("user_connection_id");
+```
+
+## List Integration By Id
+
+Retrieve integration details
+
+`GET /ai/integrations/{integration_id}`
+
+```java
+import com.telnyx.sdk.models.ai.integrations.IntegrationRetrieveParams;
+import com.telnyx.sdk.models.ai.integrations.IntegrationRetrieveResponse;
+
+IntegrationRetrieveResponse integration = client.ai().integrations().retrieve("integration_id");
+```
+
+## List all Global IP Allowed Ports
+
+`GET /global_ip_allowed_ports`
+
+```java
+import com.telnyx.sdk.models.globalipallowedports.GlobalIpAllowedPortListParams;
+import com.telnyx.sdk.models.globalipallowedports.GlobalIpAllowedPortListResponse;
+
+GlobalIpAllowedPortListResponse globalIpAllowedPorts = client.globalIpAllowedPorts().list();
+```
+
+## Global IP Assignment Health Check Metrics
+
+`GET /global_ip_assignment_health`
+
+```java
+import com.telnyx.sdk.models.globalipassignmenthealth.GlobalIpAssignmentHealthRetrieveParams;
+import com.telnyx.sdk.models.globalipassignmenthealth.GlobalIpAssignmentHealthRetrieveResponse;
+
+GlobalIpAssignmentHealthRetrieveResponse globalIpAssignmentHealth = client.globalIpAssignmentHealth().retrieve();
+```
+
+## List all Global IP assignments
+
+List all Global IP assignments.
+
+`GET /global_ip_assignments`
+
+```java
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentListPage;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentListParams;
+
+GlobalIpAssignmentListPage page = client.globalIpAssignments().list();
+```
+
+## Create a Global IP assignment
+
+Create a Global IP assignment.
+
+`POST /global_ip_assignments`
+
+```java
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignment;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateParams;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateResponse;
+
+GlobalIpAssignment params = GlobalIpAssignment.builder().build();
+GlobalIpAssignmentCreateResponse globalIpAssignment = client.globalIpAssignments().create(params);
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP assignment.
+
+`GET /global_ip_assignments/{id}`
+
+```java
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentRetrieveParams;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentRetrieveResponse;
+
+GlobalIpAssignmentRetrieveResponse globalIpAssignment = client.globalIpAssignments().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Update a Global IP assignment
+
+Update a Global IP assignment.
+
+`PATCH /global_ip_assignments/{id}`
+
+```java
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentUpdateParams;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentUpdateResponse;
+
+GlobalIpAssignmentUpdateResponse globalIpAssignment = client.globalIpAssignments().update("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Global IP assignment
+
+Delete a Global IP assignment.
+
+`DELETE /global_ip_assignments/{id}`
+
+```java
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentDeleteParams;
+import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentDeleteResponse;
+
+GlobalIpAssignmentDeleteResponse globalIpAssignment = client.globalIpAssignments().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Global IP Assignment Usage Metrics
+
+`GET /global_ip_assignments_usage`
+
+```java
+import com.telnyx.sdk.models.globalipassignmentsusage.GlobalIpAssignmentsUsageRetrieveParams;
+import com.telnyx.sdk.models.globalipassignmentsusage.GlobalIpAssignmentsUsageRetrieveResponse;
+
+GlobalIpAssignmentsUsageRetrieveResponse globalIpAssignmentsUsage = client.globalIpAssignmentsUsage().retrieve();
+```
+
+## List all Global IP Health check types
+
+List all Global IP Health check types.
+
+`GET /global_ip_health_check_types`
+
+```java
+import com.telnyx.sdk.models.globaliphealthchecktypes.GlobalIpHealthCheckTypeListParams;
+import com.telnyx.sdk.models.globaliphealthchecktypes.GlobalIpHealthCheckTypeListResponse;
+
+GlobalIpHealthCheckTypeListResponse globalIpHealthCheckTypes = client.globalIpHealthCheckTypes().list();
+```
+
+## List all Global IP health checks
+
+List all Global IP health checks.
+
+`GET /global_ip_health_checks`
+
+```java
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckListPage;
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckListParams;
+
+GlobalIpHealthCheckListPage page = client.globalIpHealthChecks().list();
+```
+
+## Create a Global IP health check
+
+Create a Global IP health check.
+
+`POST /global_ip_health_checks`
+
+```java
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckCreateParams;
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckCreateResponse;
+
+GlobalIpHealthCheckCreateResponse globalIpHealthCheck = client.globalIpHealthChecks().create();
+```
+
+## Retrieve a Global IP health check
+
+Retrieve a Global IP health check.
+
+`GET /global_ip_health_checks/{id}`
+
+```java
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckRetrieveParams;
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckRetrieveResponse;
+
+GlobalIpHealthCheckRetrieveResponse globalIpHealthCheck = client.globalIpHealthChecks().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Global IP health check
+
+Delete a Global IP health check.
+
+`DELETE /global_ip_health_checks/{id}`
+
+```java
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckDeleteParams;
+import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckDeleteResponse;
+
+GlobalIpHealthCheckDeleteResponse globalIpHealthCheck = client.globalIpHealthChecks().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Global IP Latency Metrics
+
+`GET /global_ip_latency`
+
+```java
+import com.telnyx.sdk.models.globaliplatency.GlobalIpLatencyRetrieveParams;
+import com.telnyx.sdk.models.globaliplatency.GlobalIpLatencyRetrieveResponse;
+
+GlobalIpLatencyRetrieveResponse globalIpLatency = client.globalIpLatency().retrieve();
+```
+
+## List all Global IP Protocols
+
+`GET /global_ip_protocols`
+
+```java
+import com.telnyx.sdk.models.globalipprotocols.GlobalIpProtocolListParams;
+import com.telnyx.sdk.models.globalipprotocols.GlobalIpProtocolListResponse;
+
+GlobalIpProtocolListResponse globalIpProtocols = client.globalIpProtocols().list();
+```
+
+## Global IP Usage Metrics
+
+`GET /global_ip_usage`
+
+```java
+import com.telnyx.sdk.models.globalipusage.GlobalIpUsageRetrieveParams;
+import com.telnyx.sdk.models.globalipusage.GlobalIpUsageRetrieveResponse;
+
+GlobalIpUsageRetrieveResponse globalIpUsage = client.globalIpUsage().retrieve();
+```
+
+## List all Global IPs
+
+List all Global IPs.
+
+`GET /global_ips`
+
+```java
+import com.telnyx.sdk.models.globalips.GlobalIpListPage;
+import com.telnyx.sdk.models.globalips.GlobalIpListParams;
+
+GlobalIpListPage page = client.globalIps().list();
+```
+
+## Create a Global IP
+
+Create a Global IP.
+
+`POST /global_ips`
+
+```java
+import com.telnyx.sdk.models.globalips.GlobalIpCreateParams;
+import com.telnyx.sdk.models.globalips.GlobalIpCreateResponse;
+
+GlobalIpCreateResponse globalIp = client.globalIps().create();
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP.
+
+`GET /global_ips/{id}`
+
+```java
+import com.telnyx.sdk.models.globalips.GlobalIpRetrieveParams;
+import com.telnyx.sdk.models.globalips.GlobalIpRetrieveResponse;
+
+GlobalIpRetrieveResponse globalIp = client.globalIps().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Global IP
+
+Delete a Global IP.
+
+`DELETE /global_ips/{id}`
+
+```java
+import com.telnyx.sdk.models.globalips.GlobalIpDeleteParams;
+import com.telnyx.sdk.models.globalips.GlobalIpDeleteResponse;
+
+GlobalIpDeleteResponse globalIp = client.globalIps().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
 ## List all Networks
@@ -162,6 +524,210 @@ import com.telnyx.sdk.models.networks.NetworkListInterfacesPage;
 import com.telnyx.sdk.models.networks.NetworkListInterfacesParams;
 
 NetworkListInterfacesPage page = client.networks().listInterfaces("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Get all Private Wireless Gateways
+
+Get all Private Wireless Gateways belonging to the user.
+
+`GET /private_wireless_gateways`
+
+```java
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListPage;
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListParams;
+
+PrivateWirelessGatewayListPage page = client.privateWirelessGateways().list();
+```
+
+## Create a Private Wireless Gateway
+
+Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+
+`POST /private_wireless_gateways` — Required: `network_id`, `name`
+
+Optional: `region_code` (string)
+
+```java
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateParams;
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateResponse;
+
+PrivateWirelessGatewayCreateParams params = PrivateWirelessGatewayCreateParams.builder()
+    .name("My private wireless gateway")
+    .networkId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+PrivateWirelessGatewayCreateResponse privateWirelessGateway = client.privateWirelessGateways().create(params);
+```
+
+## Get a Private Wireless Gateway
+
+Retrieve information about a Private Wireless Gateway.
+
+`GET /private_wireless_gateways/{id}`
+
+```java
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveParams;
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveResponse;
+
+PrivateWirelessGatewayRetrieveResponse privateWirelessGateway = client.privateWirelessGateways().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Private Wireless Gateway
+
+Deletes the Private Wireless Gateway.
+
+`DELETE /private_wireless_gateways/{id}`
+
+```java
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteParams;
+import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteResponse;
+
+PrivateWirelessGatewayDeleteResponse privateWirelessGateway = client.privateWirelessGateways().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List all Public Internet Gateways
+
+List all Public Internet Gateways.
+
+`GET /public_internet_gateways`
+
+```java
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayListPage;
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayListParams;
+
+PublicInternetGatewayListPage page = client.publicInternetGateways().list();
+```
+
+## Create a Public Internet Gateway
+
+Create a new Public Internet Gateway.
+
+`POST /public_internet_gateways`
+
+```java
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayCreateParams;
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayCreateResponse;
+
+PublicInternetGatewayCreateResponse publicInternetGateway = client.publicInternetGateways().create();
+```
+
+## Retrieve a Public Internet Gateway
+
+Retrieve a Public Internet Gateway.
+
+`GET /public_internet_gateways/{id}`
+
+```java
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayRetrieveParams;
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayRetrieveResponse;
+
+PublicInternetGatewayRetrieveResponse publicInternetGateway = client.publicInternetGateways().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Public Internet Gateway
+
+Delete a Public Internet Gateway.
+
+`DELETE /public_internet_gateways/{id}`
+
+```java
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayDeleteParams;
+import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayDeleteResponse;
+
+PublicInternetGatewayDeleteResponse publicInternetGateway = client.publicInternetGateways().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List all Regions
+
+List all regions and the interfaces that region supports
+
+`GET /regions`
+
+```java
+import com.telnyx.sdk.models.regions.RegionListParams;
+import com.telnyx.sdk.models.regions.RegionListResponse;
+
+RegionListResponse regions = client.regions().list();
+```
+
+## List all Virtual Cross Connects
+
+List all Virtual Cross Connects.
+
+`GET /virtual_cross_connects`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectListPage;
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectListParams;
+
+VirtualCrossConnectListPage page = client.virtualCrossConnects().list();
+```
+
+## Create a Virtual Cross Connect
+
+Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
+
+`POST /virtual_cross_connects`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectCreateParams;
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectCreateResponse;
+
+VirtualCrossConnectCreateParams params = VirtualCrossConnectCreateParams.builder()
+    .regionCode("ashburn-va")
+    .build();
+VirtualCrossConnectCreateResponse virtualCrossConnect = client.virtualCrossConnects().create(params);
+```
+
+## Retrieve a Virtual Cross Connect
+
+Retrieve a Virtual Cross Connect.
+
+`GET /virtual_cross_connects/{id}`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectRetrieveParams;
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectRetrieveResponse;
+
+VirtualCrossConnectRetrieveResponse virtualCrossConnect = client.virtualCrossConnects().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Update the Virtual Cross Connect
+
+Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
+
+`PATCH /virtual_cross_connects/{id}`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectUpdateParams;
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectUpdateResponse;
+
+VirtualCrossConnectUpdateResponse virtualCrossConnect = client.virtualCrossConnects().update("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a Virtual Cross Connect
+
+Delete a Virtual Cross Connect.
+
+`DELETE /virtual_cross_connects/{id}`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectDeleteParams;
+import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectDeleteResponse;
+
+VirtualCrossConnectDeleteResponse virtualCrossConnect = client.virtualCrossConnects().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List Virtual Cross Connect Cloud Coverage
+
+List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
+
+`GET /virtual_cross_connects_coverage`
+
+```java
+import com.telnyx.sdk.models.virtualcrossconnectscoverage.VirtualCrossConnectsCoverageListPage;
+import com.telnyx.sdk.models.virtualcrossconnectscoverage.VirtualCrossConnectsCoverageListParams;
+
+VirtualCrossConnectsCoverageListPage page = client.virtualCrossConnectsCoverage().list();
 ```
 
 ## List all WireGuard Interfaces
@@ -299,442 +865,4 @@ WireguardPeerDeleteResponse wireguardPeer = client.wireguardPeers().delete("6a09
 import com.telnyx.sdk.models.wireguardpeers.WireguardPeerRetrieveConfigParams;
 
 String response = client.wireguardPeers().retrieveConfig("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Get all Private Wireless Gateways
-
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListPage;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayListParams;
-
-PrivateWirelessGatewayListPage page = client.privateWirelessGateways().list();
-```
-
-## Create a Private Wireless Gateway
-
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
-
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayCreateResponse;
-
-PrivateWirelessGatewayCreateParams params = PrivateWirelessGatewayCreateParams.builder()
-    .name("My private wireless gateway")
-    .networkId("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-PrivateWirelessGatewayCreateResponse privateWirelessGateway = client.privateWirelessGateways().create(params);
-```
-
-## Get a Private Wireless Gateway
-
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayRetrieveResponse;
-
-PrivateWirelessGatewayRetrieveResponse privateWirelessGateway = client.privateWirelessGateways().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Private Wireless Gateway
-
-Deletes the Private Wireless Gateway.
-
-`DELETE /private_wireless_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteParams;
-import com.telnyx.sdk.models.privatewirelessgateways.PrivateWirelessGatewayDeleteResponse;
-
-PrivateWirelessGatewayDeleteResponse privateWirelessGateway = client.privateWirelessGateways().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List all Public Internet Gateways
-
-List all Public Internet Gateways.
-
-`GET /public_internet_gateways`
-
-```java
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayListPage;
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayListParams;
-
-PublicInternetGatewayListPage page = client.publicInternetGateways().list();
-```
-
-## Create a Public Internet Gateway
-
-Create a new Public Internet Gateway.
-
-`POST /public_internet_gateways`
-
-```java
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayCreateParams;
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayCreateResponse;
-
-PublicInternetGatewayCreateResponse publicInternetGateway = client.publicInternetGateways().create();
-```
-
-## Retrieve a Public Internet Gateway
-
-Retrieve a Public Internet Gateway.
-
-`GET /public_internet_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayRetrieveParams;
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayRetrieveResponse;
-
-PublicInternetGatewayRetrieveResponse publicInternetGateway = client.publicInternetGateways().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Public Internet Gateway
-
-Delete a Public Internet Gateway.
-
-`DELETE /public_internet_gateways/{id}`
-
-```java
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayDeleteParams;
-import com.telnyx.sdk.models.publicinternetgateways.PublicInternetGatewayDeleteResponse;
-
-PublicInternetGatewayDeleteResponse publicInternetGateway = client.publicInternetGateways().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List all Virtual Cross Connects
-
-List all Virtual Cross Connects.
-
-`GET /virtual_cross_connects`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectListPage;
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectListParams;
-
-VirtualCrossConnectListPage page = client.virtualCrossConnects().list();
-```
-
-## Create a Virtual Cross Connect
-
-Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
-
-`POST /virtual_cross_connects`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectCreateParams;
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectCreateResponse;
-
-VirtualCrossConnectCreateResponse virtualCrossConnect = client.virtualCrossConnects().create();
-```
-
-## Retrieve a Virtual Cross Connect
-
-Retrieve a Virtual Cross Connect.
-
-`GET /virtual_cross_connects/{id}`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectRetrieveParams;
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectRetrieveResponse;
-
-VirtualCrossConnectRetrieveResponse virtualCrossConnect = client.virtualCrossConnects().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Update the Virtual Cross Connect
-
-Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
-
-`PATCH /virtual_cross_connects/{id}`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectUpdateParams;
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectUpdateResponse;
-
-VirtualCrossConnectUpdateResponse virtualCrossConnect = client.virtualCrossConnects().update("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Virtual Cross Connect
-
-Delete a Virtual Cross Connect.
-
-`DELETE /virtual_cross_connects/{id}`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectDeleteParams;
-import com.telnyx.sdk.models.virtualcrossconnects.VirtualCrossConnectDeleteResponse;
-
-VirtualCrossConnectDeleteResponse virtualCrossConnect = client.virtualCrossConnects().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List Virtual Cross Connect Cloud Coverage
-
-List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
-
-`GET /virtual_cross_connects/coverage`
-
-```java
-import com.telnyx.sdk.models.virtualcrossconnectscoverage.VirtualCrossConnectsCoverageListPage;
-import com.telnyx.sdk.models.virtualcrossconnectscoverage.VirtualCrossConnectsCoverageListParams;
-
-VirtualCrossConnectsCoverageListPage page = client.virtualCrossConnectsCoverage().list();
-```
-
-## List all Global IPs
-
-List all Global IPs.
-
-`GET /global_ips`
-
-```java
-import com.telnyx.sdk.models.globalips.GlobalIpListPage;
-import com.telnyx.sdk.models.globalips.GlobalIpListParams;
-
-GlobalIpListPage page = client.globalIps().list();
-```
-
-## Create a Global IP
-
-Create a Global IP.
-
-`POST /global_ips`
-
-```java
-import com.telnyx.sdk.models.globalips.GlobalIpCreateParams;
-import com.telnyx.sdk.models.globalips.GlobalIpCreateResponse;
-
-GlobalIpCreateResponse globalIp = client.globalIps().create();
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP.
-
-`GET /global_ips/{id}`
-
-```java
-import com.telnyx.sdk.models.globalips.GlobalIpRetrieveParams;
-import com.telnyx.sdk.models.globalips.GlobalIpRetrieveResponse;
-
-GlobalIpRetrieveResponse globalIp = client.globalIps().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Global IP
-
-Delete a Global IP.
-
-`DELETE /global_ips/{id}`
-
-```java
-import com.telnyx.sdk.models.globalips.GlobalIpDeleteParams;
-import com.telnyx.sdk.models.globalips.GlobalIpDeleteResponse;
-
-GlobalIpDeleteResponse globalIp = client.globalIps().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## List all Global IP Allowed Ports
-
-`GET /global_ip_allowed_ports`
-
-```java
-import com.telnyx.sdk.models.globalipallowedports.GlobalIpAllowedPortListParams;
-import com.telnyx.sdk.models.globalipallowedports.GlobalIpAllowedPortListResponse;
-
-GlobalIpAllowedPortListResponse globalIpAllowedPorts = client.globalIpAllowedPorts().list();
-```
-
-## Global IP Assignment Health Check Metrics
-
-`GET /global_ip_assignment_health`
-
-```java
-import com.telnyx.sdk.models.globalipassignmenthealth.GlobalIpAssignmentHealthRetrieveParams;
-import com.telnyx.sdk.models.globalipassignmenthealth.GlobalIpAssignmentHealthRetrieveResponse;
-
-GlobalIpAssignmentHealthRetrieveResponse globalIpAssignmentHealth = client.globalIpAssignmentHealth().retrieve();
-```
-
-## List all Global IP assignments
-
-List all Global IP assignments.
-
-`GET /global_ip_assignments`
-
-```java
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentListPage;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentListParams;
-
-GlobalIpAssignmentListPage page = client.globalIpAssignments().list();
-```
-
-## Create a Global IP assignment
-
-Create a Global IP assignment.
-
-`POST /global_ip_assignments`
-
-```java
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignment;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateParams;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateResponse;
-
-GlobalIpAssignment params = GlobalIpAssignment.builder().build();
-GlobalIpAssignmentCreateResponse globalIpAssignment = client.globalIpAssignments().create(params);
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP assignment.
-
-`GET /global_ip_assignments/{id}`
-
-```java
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentRetrieveParams;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentRetrieveResponse;
-
-GlobalIpAssignmentRetrieveResponse globalIpAssignment = client.globalIpAssignments().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Update a Global IP assignment
-
-Update a Global IP assignment.
-
-`PATCH /global_ip_assignments/{id}`
-
-```java
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentUpdateParams;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentUpdateResponse;
-
-GlobalIpAssignmentUpdateResponse globalIpAssignment = client.globalIpAssignments().update("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Global IP assignment
-
-Delete a Global IP assignment.
-
-`DELETE /global_ip_assignments/{id}`
-
-```java
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentDeleteParams;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentDeleteResponse;
-
-GlobalIpAssignmentDeleteResponse globalIpAssignment = client.globalIpAssignments().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Global IP Assignment Usage Metrics
-
-`GET /global_ip_assignments/usage`
-
-```java
-import com.telnyx.sdk.models.globalipassignmentsusage.GlobalIpAssignmentsUsageRetrieveParams;
-import com.telnyx.sdk.models.globalipassignmentsusage.GlobalIpAssignmentsUsageRetrieveResponse;
-
-GlobalIpAssignmentsUsageRetrieveResponse globalIpAssignmentsUsage = client.globalIpAssignmentsUsage().retrieve();
-```
-
-## List all Global IP Health check types
-
-List all Global IP Health check types.
-
-`GET /global_ip_health_check_types`
-
-```java
-import com.telnyx.sdk.models.globaliphealthchecktypes.GlobalIpHealthCheckTypeListParams;
-import com.telnyx.sdk.models.globaliphealthchecktypes.GlobalIpHealthCheckTypeListResponse;
-
-GlobalIpHealthCheckTypeListResponse globalIpHealthCheckTypes = client.globalIpHealthCheckTypes().list();
-```
-
-## List all Global IP health checks
-
-List all Global IP health checks.
-
-`GET /global_ip_health_checks`
-
-```java
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckListPage;
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckListParams;
-
-GlobalIpHealthCheckListPage page = client.globalIpHealthChecks().list();
-```
-
-## Create a Global IP health check
-
-Create a Global IP health check.
-
-`POST /global_ip_health_checks`
-
-```java
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckCreateParams;
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckCreateResponse;
-
-GlobalIpHealthCheckCreateResponse globalIpHealthCheck = client.globalIpHealthChecks().create();
-```
-
-## Retrieve a Global IP health check
-
-Retrieve a Global IP health check.
-
-`GET /global_ip_health_checks/{id}`
-
-```java
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckRetrieveParams;
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckRetrieveResponse;
-
-GlobalIpHealthCheckRetrieveResponse globalIpHealthCheck = client.globalIpHealthChecks().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a Global IP health check
-
-Delete a Global IP health check.
-
-`DELETE /global_ip_health_checks/{id}`
-
-```java
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckDeleteParams;
-import com.telnyx.sdk.models.globaliphealthchecks.GlobalIpHealthCheckDeleteResponse;
-
-GlobalIpHealthCheckDeleteResponse globalIpHealthCheck = client.globalIpHealthChecks().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Global IP Latency Metrics
-
-`GET /global_ip_latency`
-
-```java
-import com.telnyx.sdk.models.globaliplatency.GlobalIpLatencyRetrieveParams;
-import com.telnyx.sdk.models.globaliplatency.GlobalIpLatencyRetrieveResponse;
-
-GlobalIpLatencyRetrieveResponse globalIpLatency = client.globalIpLatency().retrieve();
-```
-
-## List all Global IP Protocols
-
-`GET /global_ip_protocols`
-
-```java
-import com.telnyx.sdk.models.globalipprotocols.GlobalIpProtocolListParams;
-import com.telnyx.sdk.models.globalipprotocols.GlobalIpProtocolListResponse;
-
-GlobalIpProtocolListResponse globalIpProtocols = client.globalIpProtocols().list();
-```
-
-## Global IP Usage Metrics
-
-`GET /global_ip_usage`
-
-```java
-import com.telnyx.sdk.models.globalipusage.GlobalIpUsageRetrieveParams;
-import com.telnyx.sdk.models.globalipusage.GlobalIpUsageRetrieveResponse;
-
-GlobalIpUsageRetrieveResponse globalIpUsage = client.globalIpUsage().retrieve();
 ```

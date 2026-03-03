@@ -32,6 +32,37 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## Transcribe speech to text
+
+Transcribe speech to text.
+
+`POST /ai/audio/transcriptions`
+
+```javascript
+const response = await client.ai.audio.transcribe({ model: 'distil-whisper/distil-large-v2' });
+
+console.log(response.text);
+```
+
+## Create a chat completion
+
+Chat with a language model.
+
+`POST /ai/chat/completions` — Required: `messages`
+
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+
+```javascript
+const response = await client.ai.chat.createCompletion({
+  messages: [
+    { role: 'system', content: 'You are a friendly chatbot.' },
+    { role: 'user', content: 'Hello, world!' },
+  ],
+});
+
+console.log(response);
+```
+
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user.
@@ -399,93 +430,6 @@ const embedding = await client.ai.embeddings.retrieve('task_id');
 console.log(embedding.data);
 ```
 
-## List all clusters
-
-`GET /ai/clusters`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const clusterListResponse of client.ai.clusters.list()) {
-  console.log(clusterListResponse.task_id);
-}
-```
-
-## Compute new clusters
-
-Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
-
-`POST /ai/clusters` — Required: `bucket`
-
-Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
-
-```javascript
-const response = await client.ai.clusters.compute({ bucket: 'bucket' });
-
-console.log(response.data);
-```
-
-## Fetch a cluster
-
-`GET /ai/clusters/{task_id}`
-
-```javascript
-const cluster = await client.ai.clusters.retrieve('task_id');
-
-console.log(cluster.data);
-```
-
-## Delete a cluster
-
-`DELETE /ai/clusters/{task_id}`
-
-```javascript
-await client.ai.clusters.delete('task_id');
-```
-
-## Fetch a cluster visualization
-
-`GET /ai/clusters/{task_id}/graph`
-
-```javascript
-const response = await client.ai.clusters.fetchGraph('task_id');
-
-console.log(response);
-
-const content = await response.blob();
-console.log(content);
-```
-
-## Transcribe speech to text
-
-Transcribe speech to text.
-
-`POST /ai/audio/transcriptions`
-
-```javascript
-const response = await client.ai.audio.transcribe({ model: 'distil-whisper/distil-large-v2' });
-
-console.log(response.text);
-```
-
-## Create a chat completion
-
-Chat with a language model.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```javascript
-const response = await client.ai.chat.createCompletion({
-  messages: [
-    { role: 'system', content: 'You are a friendly chatbot.' },
-    { role: 'user', content: 'Hello, world!' },
-  ],
-});
-
-console.log(response);
-```
-
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
@@ -539,6 +483,18 @@ const fineTuningJob = await client.ai.fineTuning.jobs.cancel('job_id');
 console.log(fineTuningJob.id);
 ```
 
+## Get available models
+
+This endpoint returns a list of Open Source and OpenAI models that are available for use.
+
+`GET /ai/models`
+
+```javascript
+const response = await client.ai.retrieveModels();
+
+console.log(response.data);
+```
+
 ## Create embeddings
 
 Creates an embedding vector representing the input text.
@@ -568,18 +524,6 @@ const response = await client.ai.openai.embeddings.listEmbeddingModels();
 console.log(response.data);
 ```
 
-## Get available models
-
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
-
-`GET /ai/models`
-
-```javascript
-const response = await client.ai.retrieveModels();
-
-console.log(response.data);
-```
-
 ## Summarize file content
 
 Generate a summary of a file's contents.
@@ -592,4 +536,171 @@ Optional: `system_prompt` (string)
 const response = await client.ai.summarize({ bucket: 'bucket', filename: 'filename' });
 
 console.log(response.data);
+```
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text`
+
+```javascript
+const speechToTexts = await client.legacy.reporting.batchDetailRecords.speechToText.list();
+
+console.log(speechToTexts.data);
+```
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+
+```javascript
+const speechToText = await client.legacy.reporting.batchDetailRecords.speechToText.create({
+  end_date: '2020-07-01T00:00:00-06:00',
+  start_date: '2020-07-01T00:00:00-06:00',
+});
+
+console.log(speechToText.data);
+```
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```javascript
+const speechToText = await client.legacy.reporting.batchDetailRecords.speechToText.retrieve(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(speechToText.data);
+```
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+```javascript
+const speechToText = await client.legacy.reporting.batchDetailRecords.speechToText.delete(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(speechToText.data);
+```
+
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously.
+
+`GET /legacy/reporting/usage_reports/speech_to_text`
+
+```javascript
+const response = await client.legacy.reporting.usageReports.retrieveSpeechToText();
+
+console.log(response.data);
+```
+
+## Speech to text over websocket
+
+Transcribe audio streams to text over WebSocket.
+
+`GET /speech-to-text/transcription`
+
+```javascript
+await client.speechToText.transcribe({ input_format: 'mp3', transcription_engine: 'Azure' });
+```
+
+## Stream text to speech over WebSocket
+
+Open a WebSocket connection to stream text and receive synthesized audio in real time.
+
+`GET /text-to-speech/speech`
+
+```javascript
+await client.textToSpeech.stream();
+```
+
+## Generate speech from text
+
+Generate synthesized speech audio from text input.
+
+`POST /text-to-speech/speech`
+
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+
+```javascript
+const response = await client.textToSpeech.generate();
+
+console.log(response.base64_audio);
+```
+
+## List available voices
+
+Retrieve a list of available voices from one or all TTS providers.
+
+`GET /text-to-speech/voices`
+
+```javascript
+const response = await client.textToSpeech.listVoices();
+
+console.log(response.voices);
+```
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`GET /wireless/detail_records_reports`
+
+```javascript
+const detailRecordsReports = await client.wireless.detailRecordsReports.list();
+
+console.log(detailRecordsReports.data);
+```
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail_records_reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.create();
+
+console.log(detailRecordsReport.data);
+```
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`GET /wireless/detail_records_reports/{id}`
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.retrieve(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(detailRecordsReport.data);
+```
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`DELETE /wireless/detail_records_reports/{id}`
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.delete(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(detailRecordsReport.data);
 ```

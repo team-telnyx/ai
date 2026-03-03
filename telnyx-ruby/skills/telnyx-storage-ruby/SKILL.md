@@ -32,20 +32,6 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Create Presigned Object URL
-
-Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
-
-`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
-
-Optional: `ttl` (integer)
-
-```ruby
-response = client.storage.buckets.create_presigned_url("", bucket_name: "")
-
-puts(response)
-```
-
 ## Get Bucket SSL Certificate
 
 Returns the stored certificate detail of a bucket, if applicable.
@@ -109,104 +95,16 @@ response = client.storage.buckets.usage.get_bucket_usage("")
 puts(response)
 ```
 
-## List Migration Source coverage
+## Create Presigned Object URL
 
-`GET /storage/migration_source_coverage`
+Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
 
-```ruby
-response = client.storage.list_migration_source_coverage
+`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
 
-puts(response)
-```
-
-## List all Migration Sources
-
-`GET /storage/migration_sources`
+Optional: `ttl` (integer)
 
 ```ruby
-migration_sources = client.storage.migration_sources.list
-
-puts(migration_sources)
-```
-
-## Create a Migration Source
-
-Create a source from which data can be migrated from.
-
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
-
-Optional: `id` (string), `source_region` (string)
-
-```ruby
-migration_source = client.storage.migration_sources.create(bucket_name: "bucket_name", provider: :aws, provider_auth: {})
-
-puts(migration_source)
-```
-
-## Get a Migration Source
-
-`GET /storage/migration_sources/{id}`
-
-```ruby
-migration_source = client.storage.migration_sources.retrieve("")
-
-puts(migration_source)
-```
-
-## Delete a Migration Source
-
-`DELETE /storage/migration_sources/{id}`
-
-```ruby
-migration_source = client.storage.migration_sources.delete("")
-
-puts(migration_source)
-```
-
-## List all Migrations
-
-`GET /storage/migrations`
-
-```ruby
-migrations = client.storage.migrations.list
-
-puts(migrations)
-```
-
-## Create a Migration
-
-Initiate a migration of data from an external provider into Telnyx Cloud Storage.
-
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
-
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
-
-```ruby
-migration = client.storage.migrations.create(
-  source_id: "source_id",
-  target_bucket_name: "target_bucket_name",
-  target_region: "target_region"
-)
-
-puts(migration)
-```
-
-## Get a Migration
-
-`GET /storage/migrations/{id}`
-
-```ruby
-migration = client.storage.migrations.retrieve("")
-
-puts(migration)
-```
-
-## Stop a Migration
-
-`POST /storage/migrations/{id}/actions/stop`
-
-```ruby
-response = client.storage.migrations.actions.stop("")
+response = client.storage.buckets.create_presigned_url("", bucket_name: "")
 
 puts(response)
 ```

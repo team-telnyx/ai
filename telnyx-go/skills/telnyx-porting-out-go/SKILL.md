@@ -53,111 +53,6 @@ Returns the portout requests according to filters
 	fmt.Printf("%+v\n", page)
 ```
 
-## Get a portout request
-
-Returns the portout request based on the ID provided
-
-`GET /portouts/{id}`
-
-```go
-	portout, err := client.Portouts.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", portout.Data)
-```
-
-## List all comments for a portout request
-
-Returns a list of comments for a portout request.
-
-`GET /portouts/{id}/comments`
-
-```go
-	comments, err := client.Portouts.Comments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", comments.Data)
-```
-
-## Create a comment on a portout request
-
-Creates a comment on a portout request.
-
-`POST /portouts/{id}/comments`
-
-Optional: `body` (string)
-
-```go
-	comment, err := client.Portouts.Comments.New(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.PortoutCommentNewParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", comment.Data)
-```
-
-## List supporting documents on a portout request
-
-List every supporting documents for a portout request.
-
-`GET /portouts/{id}/supporting_documents`
-
-```go
-	supportingDocuments, err := client.Portouts.SupportingDocuments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", supportingDocuments.Data)
-```
-
-## Create a list of supporting documents on a portout request
-
-Creates a list of supporting documents on a portout request.
-
-`POST /portouts/{id}/supporting_documents`
-
-Optional: `documents` (array[object])
-
-```go
-	supportingDocument, err := client.Portouts.SupportingDocuments.New(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.PortoutSupportingDocumentNewParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", supportingDocument.Data)
-```
-
-## Update Status
-
-Authorize or reject portout request
-
-`PATCH /portouts/{id}/{status}` — Required: `reason`
-
-Optional: `host_messaging` (boolean)
-
-```go
-	response, err := client.Portouts.UpdateStatus(
-		context.TODO(),
-		telnyx.PortoutUpdateStatusParamsStatusAuthorized,
-		telnyx.PortoutUpdateStatusParams{
-			ID:     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-			Reason: "I do not recognize this transaction",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
 ## List all port-out events
 
 Returns a list of all port-out events.
@@ -262,4 +157,109 @@ Retrieve a specific report generated.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", report.Data)
+```
+
+## Get a portout request
+
+Returns the portout request based on the ID provided
+
+`GET /portouts/{id}`
+
+```go
+	portout, err := client.Portouts.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", portout.Data)
+```
+
+## List all comments for a portout request
+
+Returns a list of comments for a portout request.
+
+`GET /portouts/{id}/comments`
+
+```go
+	comments, err := client.Portouts.Comments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", comments.Data)
+```
+
+## Create a comment on a portout request
+
+Creates a comment on a portout request.
+
+`POST /portouts/{id}/comments`
+
+Optional: `body` (string)
+
+```go
+	comment, err := client.Portouts.Comments.New(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.PortoutCommentNewParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", comment.Data)
+```
+
+## List supporting documents on a portout request
+
+List every supporting documents for a portout request.
+
+`GET /portouts/{id}/supporting_documents`
+
+```go
+	supportingDocuments, err := client.Portouts.SupportingDocuments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", supportingDocuments.Data)
+```
+
+## Create a list of supporting documents on a portout request
+
+Creates a list of supporting documents on a portout request.
+
+`POST /portouts/{id}/supporting_documents`
+
+Optional: `documents` (array[object])
+
+```go
+	supportingDocument, err := client.Portouts.SupportingDocuments.New(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.PortoutSupportingDocumentNewParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", supportingDocument.Data)
+```
+
+## Update Status
+
+Authorize or reject portout request
+
+`PATCH /portouts/{id}/{status}` — Required: `reason`
+
+Optional: `host_messaging` (boolean)
+
+```go
+	response, err := client.Portouts.UpdateStatus(
+		context.TODO(),
+		telnyx.PortoutUpdateStatusParamsStatusAuthorized,
+		telnyx.PortoutUpdateStatusParams{
+			ID:     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+			Reason: "I do not recognize this transaction",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
 ```

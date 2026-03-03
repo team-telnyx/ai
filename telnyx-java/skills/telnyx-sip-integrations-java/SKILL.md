@@ -31,100 +31,6 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all call recordings
-
-Returns a list of your call recordings.
-
-`GET /recordings`
-
-```java
-import com.telnyx.sdk.models.recordings.RecordingListPage;
-import com.telnyx.sdk.models.recordings.RecordingListParams;
-
-RecordingListPage page = client.recordings().list();
-```
-
-## Retrieve a call recording
-
-Retrieves the details of an existing call recording.
-
-`GET /recordings/{recording_id}`
-
-```java
-import com.telnyx.sdk.models.recordings.RecordingRetrieveParams;
-import com.telnyx.sdk.models.recordings.RecordingRetrieveResponse;
-
-RecordingRetrieveResponse recording = client.recordings().retrieve("recording_id");
-```
-
-## Delete a call recording
-
-Permanently deletes a call recording.
-
-`DELETE /recordings/{recording_id}`
-
-```java
-import com.telnyx.sdk.models.recordings.RecordingDeleteParams;
-import com.telnyx.sdk.models.recordings.RecordingDeleteResponse;
-
-RecordingDeleteResponse recording = client.recordings().delete("recording_id");
-```
-
-## Delete a list of call recordings
-
-Permanently deletes a list of call recordings.
-
-`POST /recordings/actions/delete`
-
-```java
-import com.telnyx.sdk.models.recordings.actions.ActionDeleteParams;
-
-ActionDeleteParams params = ActionDeleteParams.builder()
-    .addId("428c31b6-7af4-4bcb-b7f5-5013ef9657c1")
-    .addId("428c31b6-7af4-4bcb-b7f5-5013ef9657c2")
-    .build();
-client.recordings().actions().delete(params);
-```
-
-## List all recording transcriptions
-
-Returns a list of your recording transcriptions.
-
-`GET /recording_transcriptions`
-
-```java
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionListParams;
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionListResponse;
-
-RecordingTranscriptionListResponse recordingTranscriptions = client.recordingTranscriptions().list();
-```
-
-## Retrieve a recording transcription
-
-Retrieves the details of an existing recording transcription.
-
-`GET /recording_transcriptions/{recording_transcription_id}`
-
-```java
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionRetrieveParams;
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionRetrieveResponse;
-
-RecordingTranscriptionRetrieveResponse recordingTranscription = client.recordingTranscriptions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /recording_transcriptions/{recording_transcription_id}`
-
-```java
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionDeleteParams;
-import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionDeleteResponse;
-
-RecordingTranscriptionDeleteResponse recordingTranscription = client.recordingTranscriptions().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
-```
-
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
@@ -311,6 +217,45 @@ ExternalConnectionCreateParams params = ExternalConnectionCreateParams.builder()
     .outbound(ExternalConnectionCreateParams.Outbound.builder().build())
     .build();
 ExternalConnectionCreateResponse externalConnection = client.externalConnections().create(params);
+```
+
+## List all log messages
+
+Retrieve a list of log messages for all external connections associated with your account.
+
+`GET /external_connections/log_messages`
+
+```java
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageListPage;
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageListParams;
+
+LogMessageListPage page = client.externalConnections().logMessages().list();
+```
+
+## Retrieve a log message
+
+Retrieve a log message for an external connection associated with your account.
+
+`GET /external_connections/log_messages/{id}`
+
+```java
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageRetrieveParams;
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageRetrieveResponse;
+
+LogMessageRetrieveResponse logMessage = client.externalConnections().logMessages().retrieve("1293384261075731499");
+```
+
+## Dismiss a log message
+
+Dismiss a log message for an external connection associated with your account.
+
+`DELETE /external_connections/log_messages/{id}`
+
+```java
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageDismissParams;
+import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageDismissResponse;
+
+LogMessageDismissResponse response = client.externalConnections().logMessages().dismiss("1293384261075731499");
 ```
 
 ## Retrieve an External Connection
@@ -583,58 +528,6 @@ UploadRetryParams params = UploadRetryParams.builder()
 UploadRetryResponse response = client.externalConnections().uploads().retry(params);
 ```
 
-## List all log messages
-
-Retrieve a list of log messages for all external connections associated with your account.
-
-`GET /external_connections/log_messages`
-
-```java
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageListPage;
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageListParams;
-
-LogMessageListPage page = client.externalConnections().logMessages().list();
-```
-
-## Retrieve a log message
-
-Retrieve a log message for an external connection associated with your account.
-
-`GET /external_connections/log_messages/{id}`
-
-```java
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageRetrieveParams;
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageRetrieveResponse;
-
-LogMessageRetrieveResponse logMessage = client.externalConnections().logMessages().retrieve("1293384261075731499");
-```
-
-## Dismiss a log message
-
-Dismiss a log message for an external connection associated with your account.
-
-`DELETE /external_connections/log_messages/{id}`
-
-```java
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageDismissParams;
-import com.telnyx.sdk.models.externalconnections.logmessages.LogMessageDismissResponse;
-
-LogMessageDismissResponse response = client.externalConnections().logMessages().dismiss("1293384261075731499");
-```
-
-## Refresh Operator Connect integration
-
-This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
-
-`POST /operator_connect/actions/refresh`
-
-```java
-import com.telnyx.sdk.models.operatorconnect.actions.ActionRefreshParams;
-import com.telnyx.sdk.models.operatorconnect.actions.ActionRefreshResponse;
-
-ActionRefreshResponse response = client.operatorConnect().actions().refresh();
-```
-
 ## List uploaded media
 
 Returns a list of stored media files.
@@ -717,4 +610,173 @@ import com.telnyx.sdk.core.http.HttpResponse;
 import com.telnyx.sdk.models.media.MediaDownloadParams;
 
 HttpResponse response = client.media().download("media_name");
+```
+
+## Refresh Operator Connect integration
+
+This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
+
+`POST /operator_connect/actions/refresh`
+
+```java
+import com.telnyx.sdk.models.operatorconnect.actions.ActionRefreshParams;
+import com.telnyx.sdk.models.operatorconnect.actions.ActionRefreshResponse;
+
+ActionRefreshResponse response = client.operatorConnect().actions().refresh();
+```
+
+## List all recording transcriptions
+
+Returns a list of your recording transcriptions.
+
+`GET /recording_transcriptions`
+
+```java
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionListParams;
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionListResponse;
+
+RecordingTranscriptionListResponse recordingTranscriptions = client.recordingTranscriptions().list();
+```
+
+## Retrieve a recording transcription
+
+Retrieves the details of an existing recording transcription.
+
+`GET /recording_transcriptions/{recording_transcription_id}`
+
+```java
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionRetrieveParams;
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionRetrieveResponse;
+
+RecordingTranscriptionRetrieveResponse recordingTranscription = client.recordingTranscriptions().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`DELETE /recording_transcriptions/{recording_transcription_id}`
+
+```java
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionDeleteParams;
+import com.telnyx.sdk.models.recordingtranscriptions.RecordingTranscriptionDeleteResponse;
+
+RecordingTranscriptionDeleteResponse recordingTranscription = client.recordingTranscriptions().delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+## List all call recordings
+
+Returns a list of your call recordings.
+
+`GET /recordings`
+
+```java
+import com.telnyx.sdk.models.recordings.RecordingListPage;
+import com.telnyx.sdk.models.recordings.RecordingListParams;
+
+RecordingListPage page = client.recordings().list();
+```
+
+## Delete a list of call recordings
+
+Permanently deletes a list of call recordings.
+
+`POST /recordings/actions/delete`
+
+```java
+import com.telnyx.sdk.models.recordings.actions.ActionDeleteParams;
+
+ActionDeleteParams params = ActionDeleteParams.builder()
+    .addId("428c31b6-7af4-4bcb-b7f5-5013ef9657c1")
+    .addId("428c31b6-7af4-4bcb-b7f5-5013ef9657c2")
+    .build();
+client.recordings().actions().delete(params);
+```
+
+## Retrieve a call recording
+
+Retrieves the details of an existing call recording.
+
+`GET /recordings/{recording_id}`
+
+```java
+import com.telnyx.sdk.models.recordings.RecordingRetrieveParams;
+import com.telnyx.sdk.models.recordings.RecordingRetrieveResponse;
+
+RecordingRetrieveResponse recording = client.recordings().retrieve("recording_id");
+```
+
+## Delete a call recording
+
+Permanently deletes a call recording.
+
+`DELETE /recordings/{recording_id}`
+
+```java
+import com.telnyx.sdk.models.recordings.RecordingDeleteParams;
+import com.telnyx.sdk.models.recordings.RecordingDeleteResponse;
+
+RecordingDeleteResponse recording = client.recordings().delete("recording_id");
+```
+
+## Create a SIPREC connector
+
+Creates a new SIPREC connector configuration.
+
+`POST /siprec_connectors`
+
+```java
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorCreateParams;
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorCreateResponse;
+
+SiprecConnectorCreateParams params = SiprecConnectorCreateParams.builder()
+    .host("siprec.telnyx.com")
+    .name("my-siprec-connector")
+    .port(5060L)
+    .build();
+SiprecConnectorCreateResponse siprecConnector = client.siprecConnectors().create(params);
+```
+
+## Retrieve a SIPREC connector
+
+Returns details of a stored SIPREC connector.
+
+`GET /siprec_connectors/{connector_name}`
+
+```java
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorRetrieveParams;
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorRetrieveResponse;
+
+SiprecConnectorRetrieveResponse siprecConnector = client.siprecConnectors().retrieve("connector_name");
+```
+
+## Update a SIPREC connector
+
+Updates a stored SIPREC connector configuration.
+
+`PUT /siprec_connectors/{connector_name}`
+
+```java
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorUpdateParams;
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorUpdateResponse;
+
+SiprecConnectorUpdateParams params = SiprecConnectorUpdateParams.builder()
+    .connectorName("connector_name")
+    .host("siprec.telnyx.com")
+    .name("my-siprec-connector")
+    .port(5060L)
+    .build();
+SiprecConnectorUpdateResponse siprecConnector = client.siprecConnectors().update(params);
+```
+
+## Delete a SIPREC connector
+
+Deletes a stored SIPREC connector.
+
+`DELETE /siprec_connectors/{connector_name}`
+
+```java
+import com.telnyx.sdk.models.siprecconnectors.SiprecConnectorDeleteParams;
+
+client.siprecConnectors().delete("connector_name");
 ```

@@ -31,11 +31,48 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
+## List call events
+
+Filters call events by given filter parameters.
+
+`GET /call_events`
+
+```java
+import com.telnyx.sdk.models.callevents.CallEventListPage;
+import com.telnyx.sdk.models.callevents.CallEventListParams;
+
+CallEventListPage page = client.callEvents().list();
+```
+
+## Create a ledger billing group report
+
+`POST /ledger_billing_group_reports`
+
+Optional: `month` (integer), `year` (integer)
+
+```java
+import com.telnyx.sdk.models.ledgerbillinggroupreports.LedgerBillingGroupReportCreateParams;
+import com.telnyx.sdk.models.ledgerbillinggroupreports.LedgerBillingGroupReportCreateResponse;
+
+LedgerBillingGroupReportCreateResponse ledgerBillingGroupReport = client.ledgerBillingGroupReports().create();
+```
+
+## Get a ledger billing group report
+
+`GET /ledger_billing_group_reports/{id}`
+
+```java
+import com.telnyx.sdk.models.ledgerbillinggroupreports.LedgerBillingGroupReportRetrieveParams;
+import com.telnyx.sdk.models.ledgerbillinggroupreports.LedgerBillingGroupReportRetrieveResponse;
+
+LedgerBillingGroupReportRetrieveResponse ledgerBillingGroupReport = client.ledgerBillingGroupReports().retrieve("f5586561-8ff0-4291-a0ac-84fe544797bd");
+```
+
 ## Get all MDR detailed report requests
 
 Retrieves all MDR detailed report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/messaging`
+`GET /legacy/reporting/batch_detail_records/messaging`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.messaging.MessagingListParams;
@@ -48,7 +85,7 @@ MessagingListResponse messagings = client.legacy().reporting().batchDetailRecord
 
 Creates a new MDR detailed report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
 
 Optional: `connections` (array[integer]), `directions` (array[integer]), `filters` (array[object]), `include_message_body` (boolean), `managed_accounts` (array[string]), `profiles` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `timezone` (string)
 
@@ -68,7 +105,7 @@ MessagingCreateResponse messaging = client.legacy().reporting().batchDetailRecor
 
 Retrieves a specific MDR detailed report request by ID
 
-`GET /legacy_reporting/batch_detail_records/messaging/{id}`
+`GET /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.messaging.MessagingRetrieveParams;
@@ -81,7 +118,7 @@ MessagingRetrieveResponse messaging = client.legacy().reporting().batchDetailRec
 
 Deletes a specific MDR detailed report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/messaging/{id}`
+`DELETE /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.messaging.MessagingDeleteParams;
@@ -94,7 +131,7 @@ MessagingDeleteResponse messaging = client.legacy().reporting().batchDetailRecor
 
 Retrieves all CDR report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/voice`
+`GET /legacy/reporting/batch_detail_records/voice`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceListParams;
@@ -107,7 +144,7 @@ VoiceListResponse voices = client.legacy().reporting().batchDetailRecords().voic
 
 Creates a new CDR report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
 
 Optional: `call_types` (array[integer]), `connections` (array[integer]), `fields` (array[string]), `filters` (array[object]), `include_all_metadata` (boolean), `managed_accounts` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `source` (string), `timezone` (string)
 
@@ -123,11 +160,24 @@ VoiceCreateParams params = VoiceCreateParams.builder()
 VoiceCreateResponse voice = client.legacy().reporting().batchDetailRecords().voice().create(params);
 ```
 
+## Get available CDR report fields
+
+Retrieves all available fields that can be used in CDR reports
+
+`GET /legacy/reporting/batch_detail_records/voice/fields`
+
+```java
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceRetrieveFieldsParams;
+import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceRetrieveFieldsResponse;
+
+VoiceRetrieveFieldsResponse response = client.legacy().reporting().batchDetailRecords().voice().retrieveFields();
+```
+
 ## Get a specific CDR report request
 
 Retrieves a specific CDR report request by ID
 
-`GET /legacy_reporting/batch_detail_records/voice/{id}`
+`GET /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceRetrieveParams;
@@ -140,7 +190,7 @@ VoiceRetrieveResponse voice = client.legacy().reporting().batchDetailRecords().v
 
 Deletes a specific CDR report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/voice/{id}`
+`DELETE /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceDeleteParams;
@@ -149,24 +199,11 @@ import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceDele
 VoiceDeleteResponse voice = client.legacy().reporting().batchDetailRecords().voice().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## Get available CDR report fields
-
-Retrieves all available fields that can be used in CDR reports
-
-`GET /legacy_reporting/batch_detail_records/voice/fields`
-
-```java
-import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceRetrieveFieldsParams;
-import com.telnyx.sdk.models.legacy.reporting.batchdetailrecords.voice.VoiceRetrieveFieldsResponse;
-
-VoiceRetrieveFieldsResponse response = client.legacy().reporting().batchDetailRecords().voice().retrieveFields();
-```
-
 ## List MDR usage reports
 
 Fetch all previous requests for MDR usage reports.
 
-`GET /legacy_reporting/usage_reports/messaging`
+`GET /legacy/reporting/usage_reports/messaging`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.messaging.MessagingListPage;
@@ -179,7 +216,7 @@ MessagingListPage page = client.legacy().reporting().usageReports().messaging().
 
 Creates a new legacy usage V2 MDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/messaging`
+`POST /legacy/reporting/usage_reports/messaging`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.messaging.MessagingCreateParams;
@@ -195,7 +232,7 @@ MessagingCreateResponse messaging = client.legacy().reporting().usageReports().m
 
 Fetch single MDR usage report by id.
 
-`GET /legacy_reporting/usage_reports/messaging/{id}`
+`GET /legacy/reporting/usage_reports/messaging/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.messaging.MessagingRetrieveParams;
@@ -208,7 +245,7 @@ MessagingRetrieveResponse messaging = client.legacy().reporting().usageReports()
 
 Deletes a specific V2 legacy usage MDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/messaging/{id}`
+`DELETE /legacy/reporting/usage_reports/messaging/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.messaging.MessagingDeleteParams;
@@ -221,7 +258,7 @@ MessagingDeleteResponse messaging = client.legacy().reporting().usageReports().m
 
 Retrieve a paginated list of telco data usage reports
 
-`GET /legacy_reporting/usage_reports/number_lookup`
+`GET /legacy/reporting/usage_reports/number_lookup`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.numberlookup.NumberLookupListParams;
@@ -234,7 +271,7 @@ NumberLookupListResponse numberLookups = client.legacy().reporting().usageReport
 
 Submit a new telco data usage report
 
-`POST /legacy_reporting/usage_reports/number_lookup`
+`POST /legacy/reporting/usage_reports/number_lookup`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.numberlookup.NumberLookupCreateParams;
@@ -247,7 +284,7 @@ NumberLookupCreateResponse numberLookup = client.legacy().reporting().usageRepor
 
 Retrieve a specific telco data usage report by its ID
 
-`GET /legacy_reporting/usage_reports/number_lookup/{id}`
+`GET /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.numberlookup.NumberLookupRetrieveParams;
@@ -260,7 +297,7 @@ NumberLookupRetrieveResponse numberLookup = client.legacy().reporting().usageRep
 
 Delete a specific telco data usage report by its ID
 
-`DELETE /legacy_reporting/usage_reports/number_lookup/{id}`
+`DELETE /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.numberlookup.NumberLookupDeleteParams;
@@ -268,24 +305,11 @@ import com.telnyx.sdk.models.legacy.reporting.usagereports.numberlookup.NumberLo
 client.legacy().reporting().usageReports().numberLookup().delete("id");
 ```
 
-## Get speech to text usage report
-
-Generate and fetch speech to text usage report synchronously.
-
-`GET /legacy_reporting/usage_reports/speech_to_text`
-
-```java
-import com.telnyx.sdk.models.legacy.reporting.usagereports.UsageReportRetrieveSpeechToTextParams;
-import com.telnyx.sdk.models.legacy.reporting.usagereports.UsageReportRetrieveSpeechToTextResponse;
-
-UsageReportRetrieveSpeechToTextResponse response = client.legacy().reporting().usageReports().retrieveSpeechToText();
-```
-
 ## List CDR usage reports
 
 Fetch all previous requests for cdr usage reports.
 
-`GET /legacy_reporting/usage_reports/voice`
+`GET /legacy/reporting/usage_reports/voice`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.voice.VoiceListPage;
@@ -298,7 +322,7 @@ VoiceListPage page = client.legacy().reporting().usageReports().voice().list();
 
 Creates a new legacy usage V2 CDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/voice`
+`POST /legacy/reporting/usage_reports/voice`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.voice.VoiceCreateParams;
@@ -316,7 +340,7 @@ VoiceCreateResponse voice = client.legacy().reporting().usageReports().voice().c
 
 Fetch single cdr usage report by id.
 
-`GET /legacy_reporting/usage_reports/voice/{id}`
+`GET /legacy/reporting/usage_reports/voice/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.voice.VoiceRetrieveParams;
@@ -329,13 +353,63 @@ VoiceRetrieveResponse voice = client.legacy().reporting().usageReports().voice()
 
 Deletes a specific V2 legacy usage CDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/voice/{id}`
+`DELETE /legacy/reporting/usage_reports/voice/{id}`
 
 ```java
 import com.telnyx.sdk.models.legacy.reporting.usagereports.voice.VoiceDeleteParams;
 import com.telnyx.sdk.models.legacy.reporting.usagereports.voice.VoiceDeleteResponse;
 
 VoiceDeleteResponse voice = client.legacy().reporting().usageReports().voice().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## List CSV downloads
+
+`GET /phone_numbers/csv_downloads`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadListPage;
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadListParams;
+
+CsvDownloadListPage page = client.phoneNumbers().csvDownloads().list();
+```
+
+## Create a CSV download
+
+`POST /phone_numbers/csv_downloads`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadCreateParams;
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadCreateResponse;
+
+CsvDownloadCreateResponse csvDownload = client.phoneNumbers().csvDownloads().create();
+```
+
+## Retrieve a CSV download
+
+`GET /phone_numbers/csv_downloads/{id}`
+
+```java
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadRetrieveParams;
+import com.telnyx.sdk.models.phonenumbers.csvdownloads.CsvDownloadRetrieveResponse;
+
+CsvDownloadRetrieveResponse csvDownload = client.phoneNumbers().csvDownloads().retrieve("id");
+```
+
+## Generates and fetches CDR Usage Reports
+
+Generate and fetch voice usage report synchronously.
+
+`GET /reports/cdr_usage_reports/sync`
+
+```java
+import com.telnyx.sdk.models.reports.cdrusagereports.CdrUsageReportFetchSyncParams;
+import com.telnyx.sdk.models.reports.cdrusagereports.CdrUsageReportFetchSyncResponse;
+
+CdrUsageReportFetchSyncParams params = CdrUsageReportFetchSyncParams.builder()
+    .aggregationType(CdrUsageReportFetchSyncParams.AggregationType.NO_AGGREGATION)
+    .productBreakdown(CdrUsageReportFetchSyncParams.ProductBreakdown.NO_BREAKDOWN)
+    .build();
+CdrUsageReportFetchSyncResponse response = client.reports().cdrUsageReports().fetchSync(params);
 ```
 
 ## Fetch all Messaging usage reports
@@ -370,6 +444,22 @@ MdrUsageReportCreateParams params = MdrUsageReportCreateParams.builder()
 MdrUsageReportCreateResponse mdrUsageReport = client.reports().mdrUsageReports().create(params);
 ```
 
+## Generate and fetch MDR Usage Report
+
+Generate and fetch messaging usage report synchronously.
+
+`GET /reports/mdr_usage_reports/sync`
+
+```java
+import com.telnyx.sdk.models.reports.mdrusagereports.MdrUsageReportFetchSyncParams;
+import com.telnyx.sdk.models.reports.mdrusagereports.MdrUsageReportFetchSyncResponse;
+
+MdrUsageReportFetchSyncParams params = MdrUsageReportFetchSyncParams.builder()
+    .aggregationType(MdrUsageReportFetchSyncParams.AggregationType.PROFILE)
+    .build();
+MdrUsageReportFetchSyncResponse response = client.reports().mdrUsageReports().fetchSync(params);
+```
+
 ## Retrieve messaging report
 
 Fetch a single messaging usage report by id
@@ -396,37 +486,28 @@ import com.telnyx.sdk.models.reports.mdrusagereports.MdrUsageReportDeleteRespons
 MdrUsageReportDeleteResponse mdrUsageReport = client.reports().mdrUsageReports().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-## Generate and fetch MDR Usage Report
+## Fetch all Mdr records
 
-Generate and fetch messaging usage report synchronously.
-
-`GET /reports/mdr_usage_reports/sync`
+`GET /reports/mdrs`
 
 ```java
-import com.telnyx.sdk.models.reports.mdrusagereports.MdrUsageReportFetchSyncParams;
-import com.telnyx.sdk.models.reports.mdrusagereports.MdrUsageReportFetchSyncResponse;
+import com.telnyx.sdk.models.reports.ReportListMdrsParams;
+import com.telnyx.sdk.models.reports.ReportListMdrsResponse;
 
-MdrUsageReportFetchSyncParams params = MdrUsageReportFetchSyncParams.builder()
-    .aggregationType(MdrUsageReportFetchSyncParams.AggregationType.PROFILE)
-    .build();
-MdrUsageReportFetchSyncResponse response = client.reports().mdrUsageReports().fetchSync(params);
+ReportListMdrsResponse response = client.reports().listMdrs();
 ```
 
-## Generates and fetches CDR Usage Reports
+## Fetches all Wdr records
 
-Generate and fetch voice usage report synchronously.
+Fetch all Wdr records
 
-`GET /reports/cdr_usage_reports/sync`
+`GET /reports/wdrs`
 
 ```java
-import com.telnyx.sdk.models.reports.cdrusagereports.CdrUsageReportFetchSyncParams;
-import com.telnyx.sdk.models.reports.cdrusagereports.CdrUsageReportFetchSyncResponse;
+import com.telnyx.sdk.models.reports.ReportListWdrsPage;
+import com.telnyx.sdk.models.reports.ReportListWdrsParams;
 
-CdrUsageReportFetchSyncParams params = CdrUsageReportFetchSyncParams.builder()
-    .aggregationType(CdrUsageReportFetchSyncParams.AggregationType.NO_AGGREGATION)
-    .productBreakdown(CdrUsageReportFetchSyncParams.ProductBreakdown.NO_BREAKDOWN)
-    .build();
-CdrUsageReportFetchSyncResponse response = client.reports().cdrUsageReports().fetchSync(params);
+ReportListWdrsPage page = client.reports().listWdrs();
 ```
 
 ## Get Telnyx product usage data (BETA)

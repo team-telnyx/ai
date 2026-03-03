@@ -39,264 +39,96 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all wireless regions
+## Purchase eSIMs
 
-Retrieve all wireless regions for the given product.
+Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
 
-`GET /wireless/regions`
+`POST /actions/purchase/esims` — Required: `amount`
+
+Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
 
 ```go
-	response, err := client.Wireless.GetRegions(context.TODO(), telnyx.WirelessGetRegionsParams{
-		Product: "public_ips",
+	purchase, err := client.Actions.Purchase.New(context.TODO(), telnyx.ActionPurchaseNewParams{
+		Amount: 10,
 	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", response.Data)
+	fmt.Printf("%+v\n", purchase.Data)
 ```
 
-## Get all SIM cards
+## Register SIM cards
 
-Get all SIM cards belonging to the user that match the given filters.
+Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
 
-`GET /sim_cards`
+`POST /actions/register/sim_cards` — Required: `registration_codes`
+
+Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
 
 ```go
-	page, err := client.SimCards.List(context.TODO(), telnyx.SimCardListParams{})
+	register, err := client.Actions.Register.New(context.TODO(), telnyx.ActionRegisterNewParams{
+		RegistrationCodes: []string{"0000000001", "0000000002", "0000000003"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", register.Data)
+```
+
+## List bulk SIM card actions
+
+This API lists a paginated collection of bulk SIM card actions.
+
+`GET /bulk_sim_card_actions`
+
+```go
+	page, err := client.BulkSimCardActions.List(context.TODO(), telnyx.BulkSimCardActionListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Get SIM card
+## Get bulk SIM card action details
 
-Returns the details regarding a specific SIM card.
+This API fetches information about a bulk SIM card action.
 
-`GET /sim_cards/{id}`
+`GET /bulk_sim_card_actions/{id}`
 
 ```go
-	simCard, err := client.SimCards.Get(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardGetParams{},
-	)
+	bulkSimCardAction, err := client.BulkSimCardActions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", simCard.Data)
+	fmt.Printf("%+v\n", bulkSimCardAction.Data)
 ```
 
-## Update a SIM card
+## List OTA updates
 
-Updates SIM card data
-
-`PATCH /sim_cards/{id}`
-
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+`GET /ota_updates`
 
 ```go
-	simCard, err := client.SimCards.Update(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardUpdateParams{
-			SimCard: telnyx.SimCardParam{},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", simCard.Data)
-```
-
-## Deletes a SIM card
-
-The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
-
-`DELETE /sim_cards/{id}`
-
-```go
-	simCard, err := client.SimCards.Delete(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardDeleteParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", simCard.Data)
-```
-
-## Get activation code for an eSIM
-
-It returns the activation code for an eSIM.<br/><br/>
- This API is only available for eSIMs.
-
-`GET /sim_cards/{id}/activation_code`
-
-```go
-	response, err := client.SimCards.GetActivationCode(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Get SIM card device details
-
-It returns the device details where a SIM card is currently being used.
-
-`GET /sim_cards/{id}/device_details`
-
-```go
-	response, err := client.SimCards.GetDeviceDetails(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Get SIM card public IP definition
-
-It returns the public IP requested for a SIM card.
-
-`GET /sim_cards/{id}/public_ip`
-
-```go
-	response, err := client.SimCards.GetPublicIP(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## List wireless connectivity logs
-
-This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
-
-`GET /sim_cards/{id}/wireless_connectivity_logs`
-
-```go
-	page, err := client.SimCards.ListWirelessConnectivityLogs(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardListWirelessConnectivityLogsParams{},
-	)
+	page, err := client.OtaUpdates.List(context.TODO(), telnyx.OtaUpdateListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Request a SIM card disable
+## Get OTA update
 
-This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
-The API will trigger an asynchronous operation called a SIM Card Action.
+This API returns the details of an Over the Air (OTA) update.
 
-`POST /sim_cards/{id}/actions/disable`
+`GET /ota_updates/{id}`
 
 ```go
-	response, err := client.SimCards.Actions.Disable(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	otaUpdate, err := client.OtaUpdates.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Request a SIM card enable
-
-This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
-To enable a SIM card, it must be associated with a SIM card group.<br/>
-The API will trigger a...
-
-`POST /sim_cards/{id}/actions/enable`
-
-```go
-	response, err := client.SimCards.Actions.Enable(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Request removing a SIM card public IP
-
-This API removes an existing public IP from a SIM card.
-
-`POST /sim_cards/{id}/actions/remove_public_ip`
-
-```go
-	response, err := client.SimCards.Actions.RemovePublicIP(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Request setting a SIM card public IP
-
-This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
-
-`POST /sim_cards/{id}/actions/set_public_ip`
-
-```go
-	response, err := client.SimCards.Actions.SetPublicIP(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardActionSetPublicIPParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Request setting a SIM card to standby
-
-The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
-To set a SIM card to standby, it must be ...
-
-`POST /sim_cards/{id}/actions/set_standby`
-
-```go
-	response, err := client.SimCards.Actions.SetStandby(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Request bulk setting SIM card public IPs.
-
-This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
-For each SIM Card a SIM Card Action will be generated.
-
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
-
-```go
-	response, err := client.SimCards.Actions.BulkSetPublicIPs(context.TODO(), telnyx.SimCardActionBulkSetPublicIPsParams{
-		SimCardIDs: []string{"6b14e151-8493-4fa1-8664-1cc4e6d14158"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Validate SIM cards registration codes
-
-It validates whether SIM card registration codes are valid or not.
-
-`POST /sim_cards/actions/validate_registration_codes`
-
-Optional: `registration_codes` (array[string])
-
-```go
-	response, err := client.SimCards.Actions.ValidateRegistrationCodes(context.TODO(), telnyx.SimCardActionValidateRegistrationCodesParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
+	fmt.Printf("%+v\n", otaUpdate.Data)
 ```
 
 ## List SIM card actions
@@ -327,32 +159,113 @@ This API fetches detailed information about a SIM card action to follow-up on an
 	fmt.Printf("%+v\n", action.Data)
 ```
 
-## List bulk SIM card actions
+## List SIM card data usage notifications
 
-This API lists a paginated collection of bulk SIM card actions.
+Lists a paginated collection of SIM card data usage notifications.
 
-`GET /bulk_sim_card_actions`
+`GET /sim_card_data_usage_notifications`
 
 ```go
-	page, err := client.BulkSimCardActions.List(context.TODO(), telnyx.BulkSimCardActionListParams{})
+	page, err := client.SimCardDataUsageNotifications.List(context.TODO(), telnyx.SimCardDataUsageNotificationListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Get bulk SIM card action details
+## Create a new SIM card data usage notification
 
-This API fetches information about a bulk SIM card action.
+Creates a new SIM card data usage notification.
 
-`GET /bulk_sim_card_actions/{id}`
+`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
 
 ```go
-	bulkSimCardAction, err := client.BulkSimCardActions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.New(context.TODO(), telnyx.SimCardDataUsageNotificationNewParams{
+		SimCardID: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		Threshold: telnyx.SimCardDataUsageNotificationNewParamsThreshold{},
+	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", bulkSimCardAction.Data)
+	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+```
+
+## Get a single SIM card data usage notification
+
+Get a single SIM Card Data Usage Notification.
+
+`GET /sim_card_data_usage_notifications/{id}`
+
+```go
+	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+```
+
+## Updates information for a SIM Card Data Usage Notification
+
+Updates information for a SIM Card Data Usage Notification.
+
+`PATCH /sim_card_data_usage_notifications/{id}`
+
+Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+
+```go
+	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Update(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.SimCardDataUsageNotificationUpdateParams{
+			SimCardDataUsageNotification: telnyx.SimCardDataUsageNotificationParam{},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+```
+
+## Delete SIM card data usage notifications
+
+Delete the SIM Card Data Usage Notification.
+
+`DELETE /sim_card_data_usage_notifications/{id}`
+
+```go
+	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+```
+
+## List SIM card group actions
+
+This API allows listing a paginated collection a SIM card group actions.
+
+`GET /sim_card_group_actions`
+
+```go
+	page, err := client.SimCardGroups.Actions.List(context.TODO(), telnyx.SimCardGroupActionListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Get SIM card group action details
+
+This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
+
+`GET /sim_card_group_actions/{id}`
+
+```go
+	action, err := client.SimCardGroups.Actions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", action.Data)
 ```
 
 ## Get all SIM card groups
@@ -507,32 +420,21 @@ This action will asynchronously assign a Wireless Blocklist to all the SIMs in t
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List SIM card group actions
+## Preview SIM card orders
 
-This API allows listing a paginated collection a SIM card group actions.
+Preview SIM card order purchases.
 
-`GET /sim_card_group_actions`
+`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
 
 ```go
-	page, err := client.SimCardGroups.Actions.List(context.TODO(), telnyx.SimCardGroupActionListParams{})
+	response, err := client.SimCardOrderPreview.Preview(context.TODO(), telnyx.SimCardOrderPreviewPreviewParams{
+		AddressID: "1293384261075731499",
+		Quantity:  21,
+	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Get SIM card group action details
-
-This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
-
-`GET /sim_card_group_actions/{id}`
-
-```go
-	action, err := client.SimCardGroups.Actions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", action.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
 ## Get all SIM card orders
@@ -580,16 +482,30 @@ Get a single SIM card order by its ID.
 	fmt.Printf("%+v\n", simCardOrder.Data)
 ```
 
-## Preview SIM card orders
+## Get all SIM cards
 
-Preview SIM card order purchases.
+Get all SIM cards belonging to the user that match the given filters.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`GET /sim_cards`
 
 ```go
-	response, err := client.SimCardOrderPreview.Preview(context.TODO(), telnyx.SimCardOrderPreviewPreviewParams{
-		AddressID: "1293384261075731499",
-		Quantity:  21,
+	page, err := client.SimCards.List(context.TODO(), telnyx.SimCardListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Request bulk setting SIM card public IPs.
+
+This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
+For each SIM Card a SIM Card Action will be generated.
+
+`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+
+```go
+	response, err := client.SimCards.Actions.BulkSetPublicIPs(context.TODO(), telnyx.SimCardActionBulkSetPublicIPsParams{
+		SimCardIDs: []string{"6b14e151-8493-4fa1-8664-1cc4e6d14158"},
 	})
 	if err != nil {
 		panic(err.Error())
@@ -597,210 +513,445 @@ Preview SIM card order purchases.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List SIM card data usage notifications
+## Validate SIM cards registration codes
 
-Lists a paginated collection of SIM card data usage notifications.
+It validates whether SIM card registration codes are valid or not.
 
-`GET /sim_card_data_usage_notifications`
+`POST /sim_cards/actions/validate_registration_codes`
+
+Optional: `registration_codes` (array[string])
 
 ```go
-	page, err := client.SimCardDataUsageNotifications.List(context.TODO(), telnyx.SimCardDataUsageNotificationListParams{})
+	response, err := client.SimCards.Actions.ValidateRegistrationCodes(context.TODO(), telnyx.SimCardActionValidateRegistrationCodesParams{})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Create a new SIM card data usage notification
+## Get SIM card
 
-Creates a new SIM card data usage notification.
+Returns the details regarding a specific SIM card.
 
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
-
-```go
-	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.New(context.TODO(), telnyx.SimCardDataUsageNotificationNewParams{
-		SimCardID: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		Threshold: telnyx.SimCardDataUsageNotificationNewParamsThreshold{},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
-```
-
-## Get a single SIM card data usage notification
-
-Get a single SIM Card Data Usage Notification.
-
-`GET /sim_card_data_usage_notifications/{id}`
+`GET /sim_cards/{id}`
 
 ```go
-	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
-```
-
-## Updates information for a SIM Card Data Usage Notification
-
-Updates information for a SIM Card Data Usage Notification.
-
-`PATCH /sim_card_data_usage_notifications/{id}`
-
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
-
-```go
-	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Update(
+	simCard, err := client.SimCards.Get(
 		context.TODO(),
 		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.SimCardDataUsageNotificationUpdateParams{
-			SimCardDataUsageNotification: telnyx.SimCardDataUsageNotificationParam{},
+		telnyx.SimCardGetParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", simCard.Data)
+```
+
+## Update a SIM card
+
+Updates SIM card data
+
+`PATCH /sim_cards/{id}`
+
+Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+
+```go
+	simCard, err := client.SimCards.Update(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.SimCardUpdateParams{
+			SimCard: telnyx.SimCardParam{},
 		},
 	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+	fmt.Printf("%+v\n", simCard.Data)
 ```
 
-## Delete SIM card data usage notifications
+## Deletes a SIM card
 
-Delete the SIM Card Data Usage Notification.
+The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
 
-`DELETE /sim_card_data_usage_notifications/{id}`
+`DELETE /sim_cards/{id}`
 
 ```go
-	simCardDataUsageNotification, err := client.SimCardDataUsageNotifications.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	simCard, err := client.SimCards.Delete(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.SimCardDeleteParams{},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", simCardDataUsageNotification.Data)
+	fmt.Printf("%+v\n", simCard.Data)
 ```
 
-## Purchase eSIMs
+## Request a SIM card disable
 
-Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
+This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
+The API will trigger an asynchronous operation called a SIM Card Action.
 
-`POST /actions/purchase/esims` — Required: `amount`
-
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
+`POST /sim_cards/{id}/actions/disable`
 
 ```go
-	purchase, err := client.Actions.Purchase.New(context.TODO(), telnyx.ActionPurchaseNewParams{
-		Amount: 10,
-	})
+	response, err := client.SimCards.Actions.Disable(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", purchase.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Register SIM cards
+## Request a SIM card enable
 
-Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
+This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
+To enable a SIM card, it must be associated with a SIM card group.<br/>
+The API will trigger a...
 
-`POST /actions/register/sim_cards` — Required: `registration_codes`
-
-Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
+`POST /sim_cards/{id}/actions/enable`
 
 ```go
-	register, err := client.Actions.Register.New(context.TODO(), telnyx.ActionRegisterNewParams{
-		RegistrationCodes: []string{"0000000001", "0000000002", "0000000003"},
-	})
+	response, err := client.SimCards.Actions.Enable(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", register.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List OTA updates
+## Request removing a SIM card public IP
 
-`GET /ota_updates`
+This API removes an existing public IP from a SIM card.
+
+`POST /sim_cards/{id}/actions/remove_public_ip`
 
 ```go
-	page, err := client.OtaUpdates.List(context.TODO(), telnyx.OtaUpdateListParams{})
+	response, err := client.SimCards.Actions.RemovePublicIP(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Request setting a SIM card public IP
+
+This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
+
+`POST /sim_cards/{id}/actions/set_public_ip`
+
+```go
+	response, err := client.SimCards.Actions.SetPublicIP(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.SimCardActionSetPublicIPParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Request setting a SIM card to standby
+
+The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
+To set a SIM card to standby, it must be ...
+
+`POST /sim_cards/{id}/actions/set_standby`
+
+```go
+	response, err := client.SimCards.Actions.SetStandby(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Get activation code for an eSIM
+
+It returns the activation code for an eSIM.<br/><br/>
+ This API is only available for eSIMs.
+
+`GET /sim_cards/{id}/activation_code`
+
+```go
+	response, err := client.SimCards.GetActivationCode(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Get SIM card device details
+
+It returns the device details where a SIM card is currently being used.
+
+`GET /sim_cards/{id}/device_details`
+
+```go
+	response, err := client.SimCards.GetDeviceDetails(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Get SIM card public IP definition
+
+It returns the public IP requested for a SIM card.
+
+`GET /sim_cards/{id}/public_ip`
+
+```go
+	response, err := client.SimCards.GetPublicIP(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## List wireless connectivity logs
+
+This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
+
+`GET /sim_cards/{id}/wireless_connectivity_logs`
+
+```go
+	page, err := client.SimCards.ListWirelessConnectivityLogs(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.SimCardListWirelessConnectivityLogsParams{},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Get OTA update
+## List Migration Source coverage
 
-This API returns the details of an Over the Air (OTA) update.
-
-`GET /ota_updates/{id}`
+`GET /storage/migration_source_coverage`
 
 ```go
-	otaUpdate, err := client.OtaUpdates.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	response, err := client.Storage.ListMigrationSourceCoverage(context.TODO())
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", otaUpdate.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Get all Private Wireless Gateways
+## List all Migration Sources
 
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
+`GET /storage/migration_sources`
 
 ```go
-	page, err := client.PrivateWirelessGateways.List(context.TODO(), telnyx.PrivateWirelessGatewayListParams{})
+	migrationSources, err := client.Storage.MigrationSources.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migrationSources.Data)
+```
+
+## Create a Migration Source
+
+Create a source from which data can be migrated from.
+
+`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+
+Optional: `id` (string), `source_region` (string)
+
+```go
+	migrationSource, err := client.Storage.MigrationSources.New(context.TODO(), telnyx.StorageMigrationSourceNewParams{
+		MigrationSourceParams: telnyx.MigrationSourceParams{
+			BucketName:   "bucket_name",
+			Provider:     telnyx.MigrationSourceParamsProviderAws,
+			ProviderAuth: telnyx.MigrationSourceParamsProviderAuth{},
+		},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migrationSource.Data)
+```
+
+## Get a Migration Source
+
+`GET /storage/migration_sources/{id}`
+
+```go
+	migrationSource, err := client.Storage.MigrationSources.Get(context.TODO(), "")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migrationSource.Data)
+```
+
+## Delete a Migration Source
+
+`DELETE /storage/migration_sources/{id}`
+
+```go
+	migrationSource, err := client.Storage.MigrationSources.Delete(context.TODO(), "")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migrationSource.Data)
+```
+
+## List all Migrations
+
+`GET /storage/migrations`
+
+```go
+	migrations, err := client.Storage.Migrations.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migrations.Data)
+```
+
+## Create a Migration
+
+Initiate a migration of data from an external provider into Telnyx Cloud Storage.
+
+`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+
+Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
+
+```go
+	migration, err := client.Storage.Migrations.New(context.TODO(), telnyx.StorageMigrationNewParams{
+		MigrationParams: telnyx.MigrationParams{
+			SourceID:         "source_id",
+			TargetBucketName: "target_bucket_name",
+			TargetRegion:     "target_region",
+		},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migration.Data)
+```
+
+## Get a Migration
+
+`GET /storage/migrations/{id}`
+
+```go
+	migration, err := client.Storage.Migrations.Get(context.TODO(), "")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", migration.Data)
+```
+
+## Stop a Migration
+
+`POST /storage/migrations/{id}/actions/stop`
+
+```go
+	response, err := client.Storage.Migrations.Actions.Stop(context.TODO(), "")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## List Mobile Voice Connections
+
+`GET /v2/mobile_voice_connections`
+
+```go
+	page, err := client.MobileVoiceConnections.List(context.TODO(), telnyx.MobileVoiceConnectionListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-## Create a Private Wireless Gateway
+## Create a Mobile Voice Connection
 
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+`POST /v2/mobile_voice_connections`
 
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
 
 ```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.New(context.TODO(), telnyx.PrivateWirelessGatewayNewParams{
-		Name:      "My private wireless gateway",
-		NetworkID: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+	mobileVoiceConnection, err := client.MobileVoiceConnections.New(context.TODO(), telnyx.MobileVoiceConnectionNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+## Retrieve a Mobile Voice Connection
+
+`GET /v2/mobile_voice_connections/{id}`
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+## Update a Mobile Voice Connection
+
+`PATCH /v2/mobile_voice_connections/{id}`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Update(
+		context.TODO(),
+		"id",
+		telnyx.MobileVoiceConnectionUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+## Delete a Mobile Voice Connection
+
+`DELETE /v2/mobile_voice_connections/{id}`
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Delete(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+## Get all wireless regions
+
+Retrieve all wireless regions for the given product.
+
+`GET /wireless/regions`
+
+```go
+	response, err := client.Wireless.GetRegions(context.TODO(), telnyx.WirelessGetRegionsParams{
+		Product: "public_ips",
 	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Get a Private Wireless Gateway
+## Get all possible wireless blocklist values
 
-Retrieve information about a Private Wireless Gateway.
+Retrieve all wireless blocklist values for a given blocklist type.
 
-`GET /private_wireless_gateways/{id}`
+`GET /wireless_blocklist_values`
 
 ```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	wirelessBlocklistValues, err := client.WirelessBlocklistValues.List(context.TODO(), telnyx.WirelessBlocklistValueListParams{
+		Type: telnyx.WirelessBlocklistValueListParamsTypeCountry,
+	})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
-```
-
-## Delete a Private Wireless Gateway
-
-Deletes the Private Wireless Gateway.
-
-`DELETE /private_wireless_gateways/{id}`
-
-```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
+	fmt.Printf("%+v\n", wirelessBlocklistValues.Data)
 ```
 
 ## Get all Wireless Blocklists
@@ -877,20 +1028,4 @@ Deletes the Wireless Blocklist.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", wirelessBlocklist.Data)
-```
-
-## Get all possible wireless blocklist values
-
-Retrieve all wireless blocklist values for a given blocklist type.
-
-`GET /wireless_blocklist_values`
-
-```go
-	wirelessBlocklistValues, err := client.WirelessBlocklistValues.List(context.TODO(), telnyx.WirelessBlocklistValueListParams{
-		Type: telnyx.WirelessBlocklistValueListParamsTypeCountry,
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", wirelessBlocklistValues.Data)
 ```

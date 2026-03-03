@@ -291,60 +291,34 @@ Generates a temporary pre-signed URL that can be used to download the document d
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## List all requirements
+## Update requirement group for a phone number order
 
-List all requirements with filtering, sorting, and pagination
-
-`GET /requirements`
+`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
 ```go
-	page, err := client.Requirements.List(context.TODO(), telnyx.RequirementListParams{})
+	response, err := client.NumberOrderPhoneNumbers.UpdateRequirementGroup(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.NumberOrderPhoneNumberUpdateRequirementGroupParams{
+			RequirementGroupID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", page)
+	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Retrieve a document requirement
+## Retrieve regulatory requirements for a list of phone numbers
 
-Retrieve a document requirement record
-
-`GET /requirements/{id}`
+`GET /phone_numbers_regulatory_requirements`
 
 ```go
-	requirement, err := client.Requirements.Get(context.TODO(), "a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa")
+	phoneNumbersRegulatoryRequirement, err := client.PhoneNumbersRegulatoryRequirements.Get(context.TODO(), telnyx.PhoneNumbersRegulatoryRequirementGetParams{})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", requirement.Data)
-```
-
-## List all requirement types
-
-List all requirement types ordered by created_at descending
-
-`GET /requirement_types`
-
-```go
-	requirementTypes, err := client.RequirementTypes.List(context.TODO(), telnyx.RequirementTypeListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", requirementTypes.Data)
-```
-
-## Retrieve a requirement types
-
-Retrieve a requirement type by id
-
-`GET /requirement_types/{id}`
-
-```go
-	requirementType, err := client.RequirementTypes.Get(context.TODO(), "a38c217a-8019-48f8-bff6-0fdd9939075b")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", requirementType.Data)
+	fmt.Printf("%+v\n", phoneNumbersRegulatoryRequirement.Data)
 ```
 
 ## Retrieve regulatory requirements
@@ -441,6 +415,131 @@ Optional: `customer_reference` (string), `regulatory_requirements` (array[object
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", requirementGroup.ID)
+```
+
+## List all requirement types
+
+List all requirement types ordered by created_at descending
+
+`GET /requirement_types`
+
+```go
+	requirementTypes, err := client.RequirementTypes.List(context.TODO(), telnyx.RequirementTypeListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", requirementTypes.Data)
+```
+
+## Retrieve a requirement types
+
+Retrieve a requirement type by id
+
+`GET /requirement_types/{id}`
+
+```go
+	requirementType, err := client.RequirementTypes.Get(context.TODO(), "a38c217a-8019-48f8-bff6-0fdd9939075b")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", requirementType.Data)
+```
+
+## List all requirements
+
+List all requirements with filtering, sorting, and pagination
+
+`GET /requirements`
+
+```go
+	page, err := client.Requirements.List(context.TODO(), telnyx.RequirementListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Retrieve a document requirement
+
+Retrieve a document requirement record
+
+`GET /requirements/{id}`
+
+```go
+	requirement, err := client.Requirements.Get(context.TODO(), "a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", requirement.Data)
+```
+
+## Update requirement group for a sub number order
+
+`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
+
+```go
+	response, err := client.SubNumberOrders.UpdateRequirementGroup(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.SubNumberOrderUpdateRequirementGroupParams{
+			RequirementGroupID: "a4b201f9-8646-4e54-a7d2-b2e403eeaf8c",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## List all user addresses
+
+Returns a list of your user addresses.
+
+`GET /user_addresses`
+
+```go
+	page, err := client.UserAddresses.List(context.TODO(), telnyx.UserAddressListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Creates a user address
+
+Creates a user address.
+
+`POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```go
+	userAddress, err := client.UserAddresses.New(context.TODO(), telnyx.UserAddressNewParams{
+		BusinessName:  "Toy-O'Kon",
+		CountryCode:   "US",
+		FirstName:     "Alfred",
+		LastName:      "Foster",
+		Locality:      "Austin",
+		StreetAddress: "600 Congress Avenue",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", userAddress.Data)
+```
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user_addresses/{id}`
+
+```go
+	userAddress, err := client.UserAddresses.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", userAddress.Data)
 ```
 
 ## List all Verified Numbers

@@ -45,91 +45,6 @@ for await (const portoutDetails of client.portouts.list()) {
 }
 ```
 
-## Get a portout request
-
-Returns the portout request based on the ID provided
-
-`GET /portouts/{id}`
-
-```javascript
-const portout = await client.portouts.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(portout.data);
-```
-
-## List all comments for a portout request
-
-Returns a list of comments for a portout request.
-
-`GET /portouts/{id}/comments`
-
-```javascript
-const comments = await client.portouts.comments.list('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(comments.data);
-```
-
-## Create a comment on a portout request
-
-Creates a comment on a portout request.
-
-`POST /portouts/{id}/comments`
-
-Optional: `body` (string)
-
-```javascript
-const comment = await client.portouts.comments.create('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(comment.data);
-```
-
-## List supporting documents on a portout request
-
-List every supporting documents for a portout request.
-
-`GET /portouts/{id}/supporting_documents`
-
-```javascript
-const supportingDocuments = await client.portouts.supportingDocuments.list(
-  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-);
-
-console.log(supportingDocuments.data);
-```
-
-## Create a list of supporting documents on a portout request
-
-Creates a list of supporting documents on a portout request.
-
-`POST /portouts/{id}/supporting_documents`
-
-Optional: `documents` (array[object])
-
-```javascript
-const supportingDocument = await client.portouts.supportingDocuments.create(
-  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-);
-
-console.log(supportingDocument.data);
-```
-
-## Update Status
-
-Authorize or reject portout request
-
-`PATCH /portouts/{id}/{status}` — Required: `reason`
-
-Optional: `host_messaging` (boolean)
-
-```javascript
-const response = await client.portouts.updateStatus('authorized', {
-  id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-  reason: 'I do not recognize this transaction',
-});
-
-console.log(response.data);
-```
-
 ## List all port-out events
 
 Returns a list of all port-out events.
@@ -215,4 +130,89 @@ Retrieve a specific report generated.
 const report = await client.portouts.reports.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 
 console.log(report.data);
+```
+
+## Get a portout request
+
+Returns the portout request based on the ID provided
+
+`GET /portouts/{id}`
+
+```javascript
+const portout = await client.portouts.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(portout.data);
+```
+
+## List all comments for a portout request
+
+Returns a list of comments for a portout request.
+
+`GET /portouts/{id}/comments`
+
+```javascript
+const comments = await client.portouts.comments.list('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(comments.data);
+```
+
+## Create a comment on a portout request
+
+Creates a comment on a portout request.
+
+`POST /portouts/{id}/comments`
+
+Optional: `body` (string)
+
+```javascript
+const comment = await client.portouts.comments.create('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(comment.data);
+```
+
+## List supporting documents on a portout request
+
+List every supporting documents for a portout request.
+
+`GET /portouts/{id}/supporting_documents`
+
+```javascript
+const supportingDocuments = await client.portouts.supportingDocuments.list(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(supportingDocuments.data);
+```
+
+## Create a list of supporting documents on a portout request
+
+Creates a list of supporting documents on a portout request.
+
+`POST /portouts/{id}/supporting_documents`
+
+Optional: `documents` (array[object])
+
+```javascript
+const supportingDocument = await client.portouts.supportingDocuments.create(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(supportingDocument.data);
+```
+
+## Update Status
+
+Authorize or reject portout request
+
+`PATCH /portouts/{id}/{status}` — Required: `reason`
+
+Optional: `host_messaging` (boolean)
+
+```javascript
+const response = await client.portouts.updateStatus('authorized', {
+  id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  reason: 'I do not recognize this transaction',
+});
+
+console.log(response.data);
 ```

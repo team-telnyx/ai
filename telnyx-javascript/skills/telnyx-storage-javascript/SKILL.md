@@ -32,20 +32,6 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
-## Create Presigned Object URL
-
-Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
-
-`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
-
-Optional: `ttl` (integer)
-
-```javascript
-const response = await client.storage.buckets.createPresignedURL('', { bucketName: '' });
-
-console.log(response.content);
-```
-
 ## Get Bucket SSL Certificate
 
 Returns the stored certificate detail of a bucket, if applicable.
@@ -108,108 +94,16 @@ const response = await client.storage.buckets.usage.getBucketUsage('');
 console.log(response.data);
 ```
 
-## List Migration Source coverage
+## Create Presigned Object URL
 
-`GET /storage/migration_source_coverage`
+Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
 
-```javascript
-const response = await client.storage.listMigrationSourceCoverage();
+`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
 
-console.log(response.data);
-```
-
-## List all Migration Sources
-
-`GET /storage/migration_sources`
+Optional: `ttl` (integer)
 
 ```javascript
-const migrationSources = await client.storage.migrationSources.list();
+const response = await client.storage.buckets.createPresignedURL('', { bucketName: '' });
 
-console.log(migrationSources.data);
-```
-
-## Create a Migration Source
-
-Create a source from which data can be migrated from.
-
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
-
-Optional: `id` (string), `source_region` (string)
-
-```javascript
-const migrationSource = await client.storage.migrationSources.create({
-  bucket_name: 'bucket_name',
-  provider: 'aws',
-  provider_auth: {},
-});
-
-console.log(migrationSource.data);
-```
-
-## Get a Migration Source
-
-`GET /storage/migration_sources/{id}`
-
-```javascript
-const migrationSource = await client.storage.migrationSources.retrieve('');
-
-console.log(migrationSource.data);
-```
-
-## Delete a Migration Source
-
-`DELETE /storage/migration_sources/{id}`
-
-```javascript
-const migrationSource = await client.storage.migrationSources.delete('');
-
-console.log(migrationSource.data);
-```
-
-## List all Migrations
-
-`GET /storage/migrations`
-
-```javascript
-const migrations = await client.storage.migrations.list();
-
-console.log(migrations.data);
-```
-
-## Create a Migration
-
-Initiate a migration of data from an external provider into Telnyx Cloud Storage.
-
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
-
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
-
-```javascript
-const migration = await client.storage.migrations.create({
-  source_id: 'source_id',
-  target_bucket_name: 'target_bucket_name',
-  target_region: 'target_region',
-});
-
-console.log(migration.data);
-```
-
-## Get a Migration
-
-`GET /storage/migrations/{id}`
-
-```javascript
-const migration = await client.storage.migrations.retrieve('');
-
-console.log(migration.data);
-```
-
-## Stop a Migration
-
-`POST /storage/migrations/{id}/actions/stop`
-
-```javascript
-const response = await client.storage.migrations.actions.stop('');
-
-console.log(response.data);
+console.log(response.content);
 ```

@@ -153,15 +153,3 @@ const telephonyCredential = await client.telephonyCredentials.delete('id');
 
 console.log(telephonyCredential.data);
 ```
-
-## Create an Access Token.
-
-Create an Access Token (JWT) for the credential.
-
-`POST /telephony_credentials/{id}/token`
-
-```javascript
-const response = await client.telephonyCredentials.createToken('id');
-
-console.log(response);
-```

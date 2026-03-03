@@ -33,11 +33,48 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
+## List call events
+
+Filters call events by given filter parameters.
+
+`GET /call_events`
+
+```python
+page = client.call_events.list()
+page = page.data[0]
+print(page.call_leg_id)
+```
+
+## Create a ledger billing group report
+
+`POST /ledger_billing_group_reports`
+
+Optional: `month` (integer), `year` (integer)
+
+```python
+ledger_billing_group_report = client.ledger_billing_group_reports.create(
+    month=10,
+    year=2019,
+)
+print(ledger_billing_group_report.data)
+```
+
+## Get a ledger billing group report
+
+`GET /ledger_billing_group_reports/{id}`
+
+```python
+ledger_billing_group_report = client.ledger_billing_group_reports.retrieve(
+    "f5586561-8ff0-4291-a0ac-84fe544797bd",
+)
+print(ledger_billing_group_report.data)
+```
+
 ## Get all MDR detailed report requests
 
 Retrieves all MDR detailed report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/messaging`
+`GET /legacy/reporting/batch_detail_records/messaging`
 
 ```python
 messagings = client.legacy.reporting.batch_detail_records.messaging.list()
@@ -48,7 +85,7 @@ print(messagings.data)
 
 Creates a new MDR detailed report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
 
 Optional: `connections` (array[integer]), `directions` (array[integer]), `filters` (array[object]), `include_message_body` (boolean), `managed_accounts` (array[string]), `profiles` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `timezone` (string)
 
@@ -66,7 +103,7 @@ print(messaging.data)
 
 Retrieves a specific MDR detailed report request by ID
 
-`GET /legacy_reporting/batch_detail_records/messaging/{id}`
+`GET /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```python
 messaging = client.legacy.reporting.batch_detail_records.messaging.retrieve(
@@ -79,7 +116,7 @@ print(messaging.data)
 
 Deletes a specific MDR detailed report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/messaging/{id}`
+`DELETE /legacy/reporting/batch_detail_records/messaging/{id}`
 
 ```python
 messaging = client.legacy.reporting.batch_detail_records.messaging.delete(
@@ -92,7 +129,7 @@ print(messaging.data)
 
 Retrieves all CDR report requests for the authenticated user
 
-`GET /legacy_reporting/batch_detail_records/voice`
+`GET /legacy/reporting/batch_detail_records/voice`
 
 ```python
 voices = client.legacy.reporting.batch_detail_records.voice.list()
@@ -103,7 +140,7 @@ print(voices.data)
 
 Creates a new CDR report request with the specified filters
 
-`POST /legacy_reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
+`POST /legacy/reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
 
 Optional: `call_types` (array[integer]), `connections` (array[integer]), `fields` (array[string]), `filters` (array[object]), `include_all_metadata` (boolean), `managed_accounts` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `source` (string), `timezone` (string)
 
@@ -117,11 +154,22 @@ voice = client.legacy.reporting.batch_detail_records.voice.create(
 print(voice.data)
 ```
 
+## Get available CDR report fields
+
+Retrieves all available fields that can be used in CDR reports
+
+`GET /legacy/reporting/batch_detail_records/voice/fields`
+
+```python
+response = client.legacy.reporting.batch_detail_records.voice.retrieve_fields()
+print(response.billing)
+```
+
 ## Get a specific CDR report request
 
 Retrieves a specific CDR report request by ID
 
-`GET /legacy_reporting/batch_detail_records/voice/{id}`
+`GET /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```python
 voice = client.legacy.reporting.batch_detail_records.voice.retrieve(
@@ -134,7 +182,7 @@ print(voice.data)
 
 Deletes a specific CDR report request by ID
 
-`DELETE /legacy_reporting/batch_detail_records/voice/{id}`
+`DELETE /legacy/reporting/batch_detail_records/voice/{id}`
 
 ```python
 voice = client.legacy.reporting.batch_detail_records.voice.delete(
@@ -143,22 +191,11 @@ voice = client.legacy.reporting.batch_detail_records.voice.delete(
 print(voice.data)
 ```
 
-## Get available CDR report fields
-
-Retrieves all available fields that can be used in CDR reports
-
-`GET /legacy_reporting/batch_detail_records/voice/fields`
-
-```python
-response = client.legacy.reporting.batch_detail_records.voice.retrieve_fields()
-print(response.billing)
-```
-
 ## List MDR usage reports
 
 Fetch all previous requests for MDR usage reports.
 
-`GET /legacy_reporting/usage_reports/messaging`
+`GET /legacy/reporting/usage_reports/messaging`
 
 ```python
 page = client.legacy.reporting.usage_reports.messaging.list()
@@ -170,7 +207,7 @@ print(page.id)
 
 Creates a new legacy usage V2 MDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/messaging`
+`POST /legacy/reporting/usage_reports/messaging`
 
 ```python
 messaging = client.legacy.reporting.usage_reports.messaging.create(
@@ -183,7 +220,7 @@ print(messaging.data)
 
 Fetch single MDR usage report by id.
 
-`GET /legacy_reporting/usage_reports/messaging/{id}`
+`GET /legacy/reporting/usage_reports/messaging/{id}`
 
 ```python
 messaging = client.legacy.reporting.usage_reports.messaging.retrieve(
@@ -196,7 +233,7 @@ print(messaging.data)
 
 Deletes a specific V2 legacy usage MDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/messaging/{id}`
+`DELETE /legacy/reporting/usage_reports/messaging/{id}`
 
 ```python
 messaging = client.legacy.reporting.usage_reports.messaging.delete(
@@ -209,7 +246,7 @@ print(messaging.data)
 
 Retrieve a paginated list of telco data usage reports
 
-`GET /legacy_reporting/usage_reports/number_lookup`
+`GET /legacy/reporting/usage_reports/number_lookup`
 
 ```python
 number_lookups = client.legacy.reporting.usage_reports.number_lookup.list()
@@ -220,7 +257,7 @@ print(number_lookups.data)
 
 Submit a new telco data usage report
 
-`POST /legacy_reporting/usage_reports/number_lookup`
+`POST /legacy/reporting/usage_reports/number_lookup`
 
 ```python
 number_lookup = client.legacy.reporting.usage_reports.number_lookup.create()
@@ -231,7 +268,7 @@ print(number_lookup.data)
 
 Retrieve a specific telco data usage report by its ID
 
-`GET /legacy_reporting/usage_reports/number_lookup/{id}`
+`GET /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```python
 number_lookup = client.legacy.reporting.usage_reports.number_lookup.retrieve(
@@ -244,7 +281,7 @@ print(number_lookup.data)
 
 Delete a specific telco data usage report by its ID
 
-`DELETE /legacy_reporting/usage_reports/number_lookup/{id}`
+`DELETE /legacy/reporting/usage_reports/number_lookup/{id}`
 
 ```python
 client.legacy.reporting.usage_reports.number_lookup.delete(
@@ -252,22 +289,11 @@ client.legacy.reporting.usage_reports.number_lookup.delete(
 )
 ```
 
-## Get speech to text usage report
-
-Generate and fetch speech to text usage report synchronously.
-
-`GET /legacy_reporting/usage_reports/speech_to_text`
-
-```python
-response = client.legacy.reporting.usage_reports.retrieve_speech_to_text()
-print(response.data)
-```
-
 ## List CDR usage reports
 
 Fetch all previous requests for cdr usage reports.
 
-`GET /legacy_reporting/usage_reports/voice`
+`GET /legacy/reporting/usage_reports/voice`
 
 ```python
 page = client.legacy.reporting.usage_reports.voice.list()
@@ -279,7 +305,7 @@ print(page.id)
 
 Creates a new legacy usage V2 CDR report request with the specified filters
 
-`POST /legacy_reporting/usage_reports/voice`
+`POST /legacy/reporting/usage_reports/voice`
 
 ```python
 from datetime import datetime
@@ -295,7 +321,7 @@ print(voice.data)
 
 Fetch single cdr usage report by id.
 
-`GET /legacy_reporting/usage_reports/voice/{id}`
+`GET /legacy/reporting/usage_reports/voice/{id}`
 
 ```python
 voice = client.legacy.reporting.usage_reports.voice.retrieve(
@@ -308,13 +334,57 @@ print(voice.data)
 
 Deletes a specific V2 legacy usage CDR report request by ID
 
-`DELETE /legacy_reporting/usage_reports/voice/{id}`
+`DELETE /legacy/reporting/usage_reports/voice/{id}`
 
 ```python
 voice = client.legacy.reporting.usage_reports.voice.delete(
     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
 print(voice.data)
+```
+
+## List CSV downloads
+
+`GET /phone_numbers/csv_downloads`
+
+```python
+page = client.phone_numbers.csv_downloads.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create a CSV download
+
+`POST /phone_numbers/csv_downloads`
+
+```python
+csv_download = client.phone_numbers.csv_downloads.create()
+print(csv_download.data)
+```
+
+## Retrieve a CSV download
+
+`GET /phone_numbers/csv_downloads/{id}`
+
+```python
+csv_download = client.phone_numbers.csv_downloads.retrieve(
+    "id",
+)
+print(csv_download.data)
+```
+
+## Generates and fetches CDR Usage Reports
+
+Generate and fetch voice usage report synchronously.
+
+`GET /reports/cdr_usage_reports/sync`
+
+```python
+response = client.reports.cdr_usage_reports.fetch_sync(
+    aggregation_type="NO_AGGREGATION",
+    product_breakdown="NO_BREAKDOWN",
+)
+print(response.data)
 ```
 
 ## Fetch all Messaging usage reports
@@ -346,6 +416,19 @@ mdr_usage_report = client.reports.mdr_usage_reports.create(
 print(mdr_usage_report.data)
 ```
 
+## Generate and fetch MDR Usage Report
+
+Generate and fetch messaging usage report synchronously.
+
+`GET /reports/mdr_usage_reports/sync`
+
+```python
+response = client.reports.mdr_usage_reports.fetch_sync(
+    aggregation_type="PROFILE",
+)
+print(response.data)
+```
+
 ## Retrieve messaging report
 
 Fetch a single messaging usage report by id
@@ -372,31 +455,25 @@ mdr_usage_report = client.reports.mdr_usage_reports.delete(
 print(mdr_usage_report.data)
 ```
 
-## Generate and fetch MDR Usage Report
+## Fetch all Mdr records
 
-Generate and fetch messaging usage report synchronously.
-
-`GET /reports/mdr_usage_reports/sync`
+`GET /reports/mdrs`
 
 ```python
-response = client.reports.mdr_usage_reports.fetch_sync(
-    aggregation_type="PROFILE",
-)
+response = client.reports.list_mdrs()
 print(response.data)
 ```
 
-## Generates and fetches CDR Usage Reports
+## Fetches all Wdr records
 
-Generate and fetch voice usage report synchronously.
+Fetch all Wdr records
 
-`GET /reports/cdr_usage_reports/sync`
+`GET /reports/wdrs`
 
 ```python
-response = client.reports.cdr_usage_reports.fetch_sync(
-    aggregation_type="NO_AGGREGATION",
-    product_breakdown="NO_BREAKDOWN",
-)
-print(response.data)
+page = client.reports.list_wdrs()
+page = page.data[0]
+print(page.id)
 ```
 
 ## Get Telnyx product usage data (BETA)

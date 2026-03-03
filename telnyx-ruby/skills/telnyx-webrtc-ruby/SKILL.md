@@ -147,15 +147,3 @@ telephony_credential = client.telephony_credentials.delete("id")
 
 puts(telephony_credential)
 ```
-
-## Create an Access Token.
-
-Create an Access Token (JWT) for the credential.
-
-`POST /telephony_credentials/{id}/token`
-
-```ruby
-response = client.telephony_credentials.create_token("id")
-
-puts(response)
-```

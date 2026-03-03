@@ -32,206 +32,80 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all wireless regions
+## Purchase eSIMs
 
-Retrieve all wireless regions for the given product.
+Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
 
-`GET /wireless/regions`
+`POST /actions/purchase/esims` — Required: `amount`
+
+Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
 
 ```ruby
-response = client.wireless.retrieve_regions(product: "public_ips")
+purchase = client.actions.purchase.create(amount: 10)
 
-puts(response)
+puts(purchase)
 ```
 
-## Get all SIM cards
+## Register SIM cards
 
-Get all SIM cards belonging to the user that match the given filters.
+Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
 
-`GET /sim_cards`
+`POST /actions/register/sim_cards` — Required: `registration_codes`
+
+Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
 
 ```ruby
-page = client.sim_cards.list
+register = client.actions.register.create(registration_codes: ["0000000001", "0000000002", "0000000003"])
+
+puts(register)
+```
+
+## List bulk SIM card actions
+
+This API lists a paginated collection of bulk SIM card actions.
+
+`GET /bulk_sim_card_actions`
+
+```ruby
+page = client.bulk_sim_card_actions.list
 
 puts(page)
 ```
 
-## Get SIM card
+## Get bulk SIM card action details
 
-Returns the details regarding a specific SIM card.
+This API fetches information about a bulk SIM card action.
 
-`GET /sim_cards/{id}`
+`GET /bulk_sim_card_actions/{id}`
 
 ```ruby
-sim_card = client.sim_cards.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+bulk_sim_card_action = client.bulk_sim_card_actions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
-puts(sim_card)
+puts(bulk_sim_card_action)
 ```
 
-## Update a SIM card
+## List OTA updates
 
-Updates SIM card data
-
-`PATCH /sim_cards/{id}`
-
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+`GET /ota_updates`
 
 ```ruby
-sim_card = client.sim_cards.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(sim_card)
-```
-
-## Deletes a SIM card
-
-The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
-
-`DELETE /sim_cards/{id}`
-
-```ruby
-sim_card = client.sim_cards.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(sim_card)
-```
-
-## Get activation code for an eSIM
-
-It returns the activation code for an eSIM.<br/><br/>
- This API is only available for eSIMs.
-
-`GET /sim_cards/{id}/activation_code`
-
-```ruby
-response = client.sim_cards.get_activation_code("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Get SIM card device details
-
-It returns the device details where a SIM card is currently being used.
-
-`GET /sim_cards/{id}/device_details`
-
-```ruby
-response = client.sim_cards.get_device_details("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Get SIM card public IP definition
-
-It returns the public IP requested for a SIM card.
-
-`GET /sim_cards/{id}/public_ip`
-
-```ruby
-response = client.sim_cards.get_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## List wireless connectivity logs
-
-This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
-
-`GET /sim_cards/{id}/wireless_connectivity_logs`
-
-```ruby
-page = client.sim_cards.list_wireless_connectivity_logs("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+page = client.ota_updates.list
 
 puts(page)
 ```
 
-## Request a SIM card disable
+## Get OTA update
 
-This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
-The API will trigger an asynchronous operation called a SIM Card Action.
+This API returns the details of an Over the Air (OTA) update.
 
-`POST /sim_cards/{id}/actions/disable`
-
-```ruby
-response = client.sim_cards.actions.disable("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Request a SIM card enable
-
-This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
-To enable a SIM card, it must be associated with a SIM card group.<br/>
-The API will trigger a...
-
-`POST /sim_cards/{id}/actions/enable`
+`GET /ota_updates/{id}`
 
 ```ruby
-response = client.sim_cards.actions.enable("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+ota_update = client.ota_updates.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
-puts(response)
-```
-
-## Request removing a SIM card public IP
-
-This API removes an existing public IP from a SIM card.
-
-`POST /sim_cards/{id}/actions/remove_public_ip`
-
-```ruby
-response = client.sim_cards.actions.remove_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Request setting a SIM card public IP
-
-This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
-
-`POST /sim_cards/{id}/actions/set_public_ip`
-
-```ruby
-response = client.sim_cards.actions.set_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Request setting a SIM card to standby
-
-The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
-To set a SIM card to standby, it must be ...
-
-`POST /sim_cards/{id}/actions/set_standby`
-
-```ruby
-response = client.sim_cards.actions.set_standby("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(response)
-```
-
-## Request bulk setting SIM card public IPs.
-
-This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
-For each SIM Card a SIM Card Action will be generated.
-
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
-
-```ruby
-response = client.sim_cards.actions.bulk_set_public_ips(sim_card_ids: ["6b14e151-8493-4fa1-8664-1cc4e6d14158"])
-
-puts(response)
-```
-
-## Validate SIM cards registration codes
-
-It validates whether SIM card registration codes are valid or not.
-
-`POST /sim_cards/actions/validate_registration_codes`
-
-Optional: `registration_codes` (array[string])
-
-```ruby
-response = client.sim_cards.actions.validate_registration_codes
-
-puts(response)
+puts(ota_update)
 ```
 
 ## List SIM card actions
@@ -258,28 +132,93 @@ action = client.sim_cards.actions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58
 puts(action)
 ```
 
-## List bulk SIM card actions
+## List SIM card data usage notifications
 
-This API lists a paginated collection of bulk SIM card actions.
+Lists a paginated collection of SIM card data usage notifications.
 
-`GET /bulk_sim_card_actions`
+`GET /sim_card_data_usage_notifications`
 
 ```ruby
-page = client.bulk_sim_card_actions.list
+page = client.sim_card_data_usage_notifications.list
 
 puts(page)
 ```
 
-## Get bulk SIM card action details
+## Create a new SIM card data usage notification
 
-This API fetches information about a bulk SIM card action.
+Creates a new SIM card data usage notification.
 
-`GET /bulk_sim_card_actions/{id}`
+`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
 
 ```ruby
-bulk_sim_card_action = client.bulk_sim_card_actions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.create(
+  sim_card_id: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+  threshold: {}
+)
 
-puts(bulk_sim_card_action)
+puts(sim_card_data_usage_notification)
+```
+
+## Get a single SIM card data usage notification
+
+Get a single SIM Card Data Usage Notification.
+
+`GET /sim_card_data_usage_notifications/{id}`
+
+```ruby
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card_data_usage_notification)
+```
+
+## Updates information for a SIM Card Data Usage Notification
+
+Updates information for a SIM Card Data Usage Notification.
+
+`PATCH /sim_card_data_usage_notifications/{id}`
+
+Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+
+```ruby
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card_data_usage_notification)
+```
+
+## Delete SIM card data usage notifications
+
+Delete the SIM Card Data Usage Notification.
+
+`DELETE /sim_card_data_usage_notifications/{id}`
+
+```ruby
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card_data_usage_notification)
+```
+
+## List SIM card group actions
+
+This API allows listing a paginated collection a SIM card group actions.
+
+`GET /sim_card_group_actions`
+
+```ruby
+page = client.sim_card_groups.actions.list
+
+puts(page)
+```
+
+## Get SIM card group action details
+
+This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
+
+`GET /sim_card_group_actions/{id}`
+
+```ruby
+action = client.sim_card_groups.actions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(action)
 ```
 
 ## Get all SIM card groups
@@ -400,28 +339,16 @@ response = client.sim_card_groups.actions.set_wireless_blocklist(
 puts(response)
 ```
 
-## List SIM card group actions
+## Preview SIM card orders
 
-This API allows listing a paginated collection a SIM card group actions.
+Preview SIM card order purchases.
 
-`GET /sim_card_group_actions`
-
-```ruby
-page = client.sim_card_groups.actions.list
-
-puts(page)
-```
-
-## Get SIM card group action details
-
-This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
-
-`GET /sim_card_group_actions/{id}`
+`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
 
 ```ruby
-action = client.sim_card_groups.actions.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+response = client.sim_card_order_preview.preview(address_id: "1293384261075731499", quantity: 21)
 
-puts(action)
+puts(response)
 ```
 
 ## Get all SIM card orders
@@ -460,186 +387,374 @@ sim_card_order = client.sim_card_orders.retrieve("6a09cdc3-8948-47f0-aa62-74ac94
 puts(sim_card_order)
 ```
 
-## Preview SIM card orders
+## Get all SIM cards
 
-Preview SIM card order purchases.
+Get all SIM cards belonging to the user that match the given filters.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`GET /sim_cards`
 
 ```ruby
-response = client.sim_card_order_preview.preview(address_id: "1293384261075731499", quantity: 21)
+page = client.sim_cards.list
+
+puts(page)
+```
+
+## Request bulk setting SIM card public IPs.
+
+This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
+For each SIM Card a SIM Card Action will be generated.
+
+`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+
+```ruby
+response = client.sim_cards.actions.bulk_set_public_ips(sim_card_ids: ["6b14e151-8493-4fa1-8664-1cc4e6d14158"])
 
 puts(response)
 ```
 
-## List SIM card data usage notifications
+## Validate SIM cards registration codes
 
-Lists a paginated collection of SIM card data usage notifications.
+It validates whether SIM card registration codes are valid or not.
 
-`GET /sim_card_data_usage_notifications`
+`POST /sim_cards/actions/validate_registration_codes`
+
+Optional: `registration_codes` (array[string])
 
 ```ruby
-page = client.sim_card_data_usage_notifications.list
+response = client.sim_cards.actions.validate_registration_codes
+
+puts(response)
+```
+
+## Get SIM card
+
+Returns the details regarding a specific SIM card.
+
+`GET /sim_cards/{id}`
+
+```ruby
+sim_card = client.sim_cards.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card)
+```
+
+## Update a SIM card
+
+Updates SIM card data
+
+`PATCH /sim_cards/{id}`
+
+Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+
+```ruby
+sim_card = client.sim_cards.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card)
+```
+
+## Deletes a SIM card
+
+The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
+
+`DELETE /sim_cards/{id}`
+
+```ruby
+sim_card = client.sim_cards.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(sim_card)
+```
+
+## Request a SIM card disable
+
+This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
+The API will trigger an asynchronous operation called a SIM Card Action.
+
+`POST /sim_cards/{id}/actions/disable`
+
+```ruby
+response = client.sim_cards.actions.disable("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Request a SIM card enable
+
+This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
+To enable a SIM card, it must be associated with a SIM card group.<br/>
+The API will trigger a...
+
+`POST /sim_cards/{id}/actions/enable`
+
+```ruby
+response = client.sim_cards.actions.enable("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Request removing a SIM card public IP
+
+This API removes an existing public IP from a SIM card.
+
+`POST /sim_cards/{id}/actions/remove_public_ip`
+
+```ruby
+response = client.sim_cards.actions.remove_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Request setting a SIM card public IP
+
+This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
+
+`POST /sim_cards/{id}/actions/set_public_ip`
+
+```ruby
+response = client.sim_cards.actions.set_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Request setting a SIM card to standby
+
+The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
+To set a SIM card to standby, it must be ...
+
+`POST /sim_cards/{id}/actions/set_standby`
+
+```ruby
+response = client.sim_cards.actions.set_standby("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Get activation code for an eSIM
+
+It returns the activation code for an eSIM.<br/><br/>
+ This API is only available for eSIMs.
+
+`GET /sim_cards/{id}/activation_code`
+
+```ruby
+response = client.sim_cards.get_activation_code("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Get SIM card device details
+
+It returns the device details where a SIM card is currently being used.
+
+`GET /sim_cards/{id}/device_details`
+
+```ruby
+response = client.sim_cards.get_device_details("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## Get SIM card public IP definition
+
+It returns the public IP requested for a SIM card.
+
+`GET /sim_cards/{id}/public_ip`
+
+```ruby
+response = client.sim_cards.get_public_ip("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(response)
+```
+
+## List wireless connectivity logs
+
+This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
+
+`GET /sim_cards/{id}/wireless_connectivity_logs`
+
+```ruby
+page = client.sim_cards.list_wireless_connectivity_logs("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
 puts(page)
 ```
 
-## Create a new SIM card data usage notification
+## List Migration Source coverage
 
-Creates a new SIM card data usage notification.
-
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
+`GET /storage/migration_source_coverage`
 
 ```ruby
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.create(
-  sim_card_id: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  threshold: {}
+response = client.storage.list_migration_source_coverage
+
+puts(response)
+```
+
+## List all Migration Sources
+
+`GET /storage/migration_sources`
+
+```ruby
+migration_sources = client.storage.migration_sources.list
+
+puts(migration_sources)
+```
+
+## Create a Migration Source
+
+Create a source from which data can be migrated from.
+
+`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+
+Optional: `id` (string), `source_region` (string)
+
+```ruby
+migration_source = client.storage.migration_sources.create(bucket_name: "bucket_name", provider: :aws, provider_auth: {})
+
+puts(migration_source)
+```
+
+## Get a Migration Source
+
+`GET /storage/migration_sources/{id}`
+
+```ruby
+migration_source = client.storage.migration_sources.retrieve("")
+
+puts(migration_source)
+```
+
+## Delete a Migration Source
+
+`DELETE /storage/migration_sources/{id}`
+
+```ruby
+migration_source = client.storage.migration_sources.delete("")
+
+puts(migration_source)
+```
+
+## List all Migrations
+
+`GET /storage/migrations`
+
+```ruby
+migrations = client.storage.migrations.list
+
+puts(migrations)
+```
+
+## Create a Migration
+
+Initiate a migration of data from an external provider into Telnyx Cloud Storage.
+
+`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+
+Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
+
+```ruby
+migration = client.storage.migrations.create(
+  source_id: "source_id",
+  target_bucket_name: "target_bucket_name",
+  target_region: "target_region"
 )
 
-puts(sim_card_data_usage_notification)
+puts(migration)
 ```
 
-## Get a single SIM card data usage notification
+## Get a Migration
 
-Get a single SIM Card Data Usage Notification.
-
-`GET /sim_card_data_usage_notifications/{id}`
+`GET /storage/migrations/{id}`
 
 ```ruby
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+migration = client.storage.migrations.retrieve("")
 
-puts(sim_card_data_usage_notification)
+puts(migration)
 ```
 
-## Updates information for a SIM Card Data Usage Notification
+## Stop a Migration
 
-Updates information for a SIM Card Data Usage Notification.
-
-`PATCH /sim_card_data_usage_notifications/{id}`
-
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+`POST /storage/migrations/{id}/actions/stop`
 
 ```ruby
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+response = client.storage.migrations.actions.stop("")
 
-puts(sim_card_data_usage_notification)
+puts(response)
 ```
 
-## Delete SIM card data usage notifications
+## List Mobile Voice Connections
 
-Delete the SIM Card Data Usage Notification.
-
-`DELETE /sim_card_data_usage_notifications/{id}`
+`GET /v2/mobile_voice_connections`
 
 ```ruby
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(sim_card_data_usage_notification)
-```
-
-## Purchase eSIMs
-
-Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
-
-`POST /actions/purchase/esims` — Required: `amount`
-
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
-
-```ruby
-purchase = client.actions.purchase.create(amount: 10)
-
-puts(purchase)
-```
-
-## Register SIM cards
-
-Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
-
-`POST /actions/register/sim_cards` — Required: `registration_codes`
-
-Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
-
-```ruby
-register = client.actions.register.create(registration_codes: ["0000000001", "0000000002", "0000000003"])
-
-puts(register)
-```
-
-## List OTA updates
-
-`GET /ota_updates`
-
-```ruby
-page = client.ota_updates.list
+page = client.mobile_voice_connections.list
 
 puts(page)
 ```
 
-## Get OTA update
+## Create a Mobile Voice Connection
 
-This API returns the details of an Over the Air (OTA) update.
+`POST /v2/mobile_voice_connections`
 
-`GET /ota_updates/{id}`
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
 
 ```ruby
-ota_update = client.ota_updates.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+mobile_voice_connection = client.mobile_voice_connections.create
 
-puts(ota_update)
+puts(mobile_voice_connection)
 ```
 
-## Get all Private Wireless Gateways
+## Retrieve a Mobile Voice Connection
 
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
+`GET /v2/mobile_voice_connections/{id}`
 
 ```ruby
-page = client.private_wireless_gateways.list
+mobile_voice_connection = client.mobile_voice_connections.retrieve("id")
 
-puts(page)
+puts(mobile_voice_connection)
 ```
 
-## Create a Private Wireless Gateway
+## Update a Mobile Voice Connection
 
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+`PATCH /v2/mobile_voice_connections/{id}`
 
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
 
 ```ruby
-private_wireless_gateway = client.private_wireless_gateways.create(
-  name: "My private wireless gateway",
-  network_id: "6a09cdc3-8948-47f0-aa62-74ac943d6c58"
-)
+mobile_voice_connection = client.mobile_voice_connections.update("id")
 
-puts(private_wireless_gateway)
+puts(mobile_voice_connection)
 ```
 
-## Get a Private Wireless Gateway
+## Delete a Mobile Voice Connection
 
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
+`DELETE /v2/mobile_voice_connections/{id}`
 
 ```ruby
-private_wireless_gateway = client.private_wireless_gateways.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+mobile_voice_connection = client.mobile_voice_connections.delete("id")
 
-puts(private_wireless_gateway)
+puts(mobile_voice_connection)
 ```
 
-## Delete a Private Wireless Gateway
+## Get all wireless regions
 
-Deletes the Private Wireless Gateway.
+Retrieve all wireless regions for the given product.
 
-`DELETE /private_wireless_gateways/{id}`
+`GET /wireless/regions`
 
 ```ruby
-private_wireless_gateway = client.private_wireless_gateways.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+response = client.wireless.retrieve_regions(product: "public_ips")
 
-puts(private_wireless_gateway)
+puts(response)
+```
+
+## Get all possible wireless blocklist values
+
+Retrieve all wireless blocklist values for a given blocklist type.
+
+`GET /wireless_blocklist_values`
+
+```ruby
+wireless_blocklist_values = client.wireless_blocklist_values.list(type: :country)
+
+puts(wireless_blocklist_values)
 ```
 
 ## Get all Wireless Blocklists
@@ -702,16 +817,4 @@ Deletes the Wireless Blocklist.
 wireless_blocklist = client.wireless_blocklists.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
 puts(wireless_blocklist)
-```
-
-## Get all possible wireless blocklist values
-
-Retrieve all wireless blocklist values for a given blocklist type.
-
-`GET /wireless_blocklist_values`
-
-```ruby
-wireless_blocklist_values = client.wireless_blocklist_values.list(type: :country)
-
-puts(wireless_blocklist_values)
 ```

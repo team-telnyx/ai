@@ -31,25 +31,6 @@ TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
 All examples below assume `client` is already initialized as shown above.
 
-## Create Presigned Object URL
-
-Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
-
-`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
-
-Optional: `ttl` (integer)
-
-```java
-import com.telnyx.sdk.models.storage.buckets.BucketCreatePresignedUrlParams;
-import com.telnyx.sdk.models.storage.buckets.BucketCreatePresignedUrlResponse;
-
-BucketCreatePresignedUrlParams params = BucketCreatePresignedUrlParams.builder()
-    .bucketName("")
-    .objectName("")
-    .build();
-BucketCreatePresignedUrlResponse response = client.storage().buckets().createPresignedUrl(params);
-```
-
 ## Get Bucket SSL Certificate
 
 Returns the stored certificate detail of a bucket, if applicable.
@@ -123,121 +104,21 @@ import com.telnyx.sdk.models.storage.buckets.usage.UsageGetBucketUsageResponse;
 UsageGetBucketUsageResponse response = client.storage().buckets().usage().getBucketUsage("");
 ```
 
-## List Migration Source coverage
+## Create Presigned Object URL
 
-`GET /storage/migration_source_coverage`
+Returns a timed and authenticated URL to download (GET) or upload (PUT) an object.
 
-```java
-import com.telnyx.sdk.models.storage.StorageListMigrationSourceCoverageParams;
-import com.telnyx.sdk.models.storage.StorageListMigrationSourceCoverageResponse;
+`POST /storage/buckets/{bucketName}/{objectName}/presigned_url`
 
-StorageListMigrationSourceCoverageResponse response = client.storage().listMigrationSourceCoverage();
-```
-
-## List all Migration Sources
-
-`GET /storage/migration_sources`
+Optional: `ttl` (integer)
 
 ```java
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceListParams;
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceListResponse;
+import com.telnyx.sdk.models.storage.buckets.BucketCreatePresignedUrlParams;
+import com.telnyx.sdk.models.storage.buckets.BucketCreatePresignedUrlResponse;
 
-MigrationSourceListResponse migrationSources = client.storage().migrationSources().list();
-```
-
-## Create a Migration Source
-
-Create a source from which data can be migrated from.
-
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
-
-Optional: `id` (string), `source_region` (string)
-
-```java
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateParams;
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateResponse;
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceParams;
-
-MigrationSourceParams params = MigrationSourceParams.builder()
-    .bucketName("bucket_name")
-    .provider(MigrationSourceParams.Provider.AWS)
-    .providerAuth(MigrationSourceParams.ProviderAuth.builder().build())
+BucketCreatePresignedUrlParams params = BucketCreatePresignedUrlParams.builder()
+    .bucketName("")
+    .objectName("")
     .build();
-MigrationSourceCreateResponse migrationSource = client.storage().migrationSources().create(params);
-```
-
-## Get a Migration Source
-
-`GET /storage/migration_sources/{id}`
-
-```java
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceRetrieveParams;
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceRetrieveResponse;
-
-MigrationSourceRetrieveResponse migrationSource = client.storage().migrationSources().retrieve("");
-```
-
-## Delete a Migration Source
-
-`DELETE /storage/migration_sources/{id}`
-
-```java
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceDeleteParams;
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceDeleteResponse;
-
-MigrationSourceDeleteResponse migrationSource = client.storage().migrationSources().delete("");
-```
-
-## List all Migrations
-
-`GET /storage/migrations`
-
-```java
-import com.telnyx.sdk.models.storage.migrations.MigrationListParams;
-import com.telnyx.sdk.models.storage.migrations.MigrationListResponse;
-
-MigrationListResponse migrations = client.storage().migrations().list();
-```
-
-## Create a Migration
-
-Initiate a migration of data from an external provider into Telnyx Cloud Storage.
-
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
-
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
-
-```java
-import com.telnyx.sdk.models.storage.migrations.MigrationCreateParams;
-import com.telnyx.sdk.models.storage.migrations.MigrationCreateResponse;
-import com.telnyx.sdk.models.storage.migrations.MigrationParams;
-
-MigrationParams params = MigrationParams.builder()
-    .sourceId("source_id")
-    .targetBucketName("target_bucket_name")
-    .targetRegion("target_region")
-    .build();
-MigrationCreateResponse migration = client.storage().migrations().create(params);
-```
-
-## Get a Migration
-
-`GET /storage/migrations/{id}`
-
-```java
-import com.telnyx.sdk.models.storage.migrations.MigrationRetrieveParams;
-import com.telnyx.sdk.models.storage.migrations.MigrationRetrieveResponse;
-
-MigrationRetrieveResponse migration = client.storage().migrations().retrieve("");
-```
-
-## Stop a Migration
-
-`POST /storage/migrations/{id}/actions/stop`
-
-```java
-import com.telnyx.sdk.models.storage.migrations.actions.ActionStopParams;
-import com.telnyx.sdk.models.storage.migrations.actions.ActionStopResponse;
-
-ActionStopResponse response = client.storage().migrations().actions().stop("");
+BucketCreatePresignedUrlResponse response = client.storage().buckets().createPresignedUrl(params);
 ```

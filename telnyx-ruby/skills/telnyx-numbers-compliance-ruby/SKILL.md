@@ -228,52 +228,27 @@ response = client.documents.generate_download_link("550e8400-e29b-41d4-a716-4466
 puts(response)
 ```
 
-## List all requirements
+## Update requirement group for a phone number order
 
-List all requirements with filtering, sorting, and pagination
-
-`GET /requirements`
+`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
 ```ruby
-page = client.requirements.list
+response = client.number_order_phone_numbers.update_requirement_group(
+  "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+  requirement_group_id: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e"
+)
 
-puts(page)
+puts(response)
 ```
 
-## Retrieve a document requirement
+## Retrieve regulatory requirements for a list of phone numbers
 
-Retrieve a document requirement record
-
-`GET /requirements/{id}`
+`GET /phone_numbers_regulatory_requirements`
 
 ```ruby
-requirement = client.requirements.retrieve("a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa")
+phone_numbers_regulatory_requirement = client.phone_numbers_regulatory_requirements.retrieve
 
-puts(requirement)
-```
-
-## List all requirement types
-
-List all requirement types ordered by created_at descending
-
-`GET /requirement_types`
-
-```ruby
-requirement_types = client.requirement_types.list
-
-puts(requirement_types)
-```
-
-## Retrieve a requirement types
-
-Retrieve a requirement type by id
-
-`GET /requirement_types/{id}`
-
-```ruby
-requirement_type = client.requirement_types.retrieve("a38c217a-8019-48f8-bff6-0fdd9939075b")
-
-puts(requirement_type)
+puts(phone_numbers_regulatory_requirement)
 ```
 
 ## Retrieve regulatory requirements
@@ -348,6 +323,112 @@ puts(requirement_group)
 requirement_group = client.requirement_groups.submit_for_approval("id")
 
 puts(requirement_group)
+```
+
+## List all requirement types
+
+List all requirement types ordered by created_at descending
+
+`GET /requirement_types`
+
+```ruby
+requirement_types = client.requirement_types.list
+
+puts(requirement_types)
+```
+
+## Retrieve a requirement types
+
+Retrieve a requirement type by id
+
+`GET /requirement_types/{id}`
+
+```ruby
+requirement_type = client.requirement_types.retrieve("a38c217a-8019-48f8-bff6-0fdd9939075b")
+
+puts(requirement_type)
+```
+
+## List all requirements
+
+List all requirements with filtering, sorting, and pagination
+
+`GET /requirements`
+
+```ruby
+page = client.requirements.list
+
+puts(page)
+```
+
+## Retrieve a document requirement
+
+Retrieve a document requirement record
+
+`GET /requirements/{id}`
+
+```ruby
+requirement = client.requirements.retrieve("a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa")
+
+puts(requirement)
+```
+
+## Update requirement group for a sub number order
+
+`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
+
+```ruby
+response = client.sub_number_orders.update_requirement_group(
+  "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+  requirement_group_id: "a4b201f9-8646-4e54-a7d2-b2e403eeaf8c"
+)
+
+puts(response)
+```
+
+## List all user addresses
+
+Returns a list of your user addresses.
+
+`GET /user_addresses`
+
+```ruby
+page = client.user_addresses.list
+
+puts(page)
+```
+
+## Creates a user address
+
+Creates a user address.
+
+`POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```ruby
+user_address = client.user_addresses.create(
+  business_name: "Toy-O'Kon",
+  country_code: "US",
+  first_name: "Alfred",
+  last_name: "Foster",
+  locality: "Austin",
+  street_address: "600 Congress Avenue"
+)
+
+puts(user_address)
+```
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user_addresses/{id}`
+
+```ruby
+user_address = client.user_addresses.retrieve("id")
+
+puts(user_address)
 ```
 
 ## List all Verified Numbers

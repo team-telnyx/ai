@@ -65,6 +65,39 @@ Retrieve a list of audit log entries.
 	fmt.Printf("%+v\n", balance.Data)
 ```
 
+## Get monthly charges breakdown
+
+Retrieve a detailed breakdown of monthly charges for phone numbers in a specified date range.
+
+`GET /charges_breakdown`
+
+```go
+	chargesBreakdown, err := client.ChargesBreakdown.Get(context.TODO(), telnyx.ChargesBreakdownGetParams{
+		StartDate: time.Now(),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", chargesBreakdown.Data)
+```
+
+## Get monthly charges summary
+
+Retrieve a summary of monthly charges for a specified date range.
+
+`GET /charges_summary`
+
+```go
+	chargesSummary, err := client.ChargesSummary.Get(context.TODO(), telnyx.ChargesSummaryGetParams{
+		EndDate:   time.Now(),
+		StartDate: time.Now(),
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", chargesSummary.Data)
+```
+
 ## Search detail records
 
 Search for any detail record across the Telnyx Platform
@@ -115,7 +148,7 @@ Retrieve a single invoice by its unique identifier.
 
 Returns the payment auto recharge preferences.
 
-`GET /payments/auto_recharge_prefs`
+`GET /payment/auto_recharge_prefs`
 
 ```go
 	autoRechargePrefs, err := client.Payment.AutoRechargePrefs.List(context.TODO())
@@ -129,7 +162,7 @@ Returns the payment auto recharge preferences.
 
 Update payment auto recharge preferences.
 
-`PATCH /payments/auto_recharge_prefs`
+`PATCH /payment/auto_recharge_prefs`
 
 Optional: `enabled` (boolean), `invoice_enabled` (boolean), `preference` (enum), `recharge_amount` (string), `threshold_amount` (string)
 
@@ -153,6 +186,20 @@ List all user tags.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", userTags.Data)
+```
+
+## Create a stored payment transaction
+
+`POST /v2/payment/stored_payment_transactions` — Required: `amount`
+
+```go
+	response, err := client.Payment.NewStoredPaymentTransaction(context.TODO(), telnyx.PaymentNewStoredPaymentTransactionParams{
+		Amount: "120.00",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
 ```
 
 ## List webhook deliveries

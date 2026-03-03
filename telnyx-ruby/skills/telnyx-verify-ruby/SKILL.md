@@ -45,6 +45,30 @@ number_lookup = client.number_lookup.retrieve("+18665552368")
 puts(number_lookup)
 ```
 
+## List verifications by phone number
+
+`GET /verifications/by_phone_number/{phone_number}`
+
+```ruby
+by_phone_numbers = client.verifications.by_phone_number.list("+13035551234")
+
+puts(by_phone_numbers)
+```
+
+## Verify verification code by phone number
+
+`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+
+```ruby
+verify_verification_code_response = client.verifications.by_phone_number.actions.verify(
+  "+13035551234",
+  code: "17686",
+  verify_profile_id: "12ade33a-21c0-473b-b055-b3c836e1c292"
+)
+
+puts(verify_verification_code_response)
+```
+
 ## Trigger Call verification
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
@@ -112,30 +136,6 @@ verify_verification_code_response = client.verifications.actions.verify("12ade33
 puts(verify_verification_code_response)
 ```
 
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
-
-```ruby
-by_phone_numbers = client.verifications.by_phone_number.list("+13035551234")
-
-puts(by_phone_numbers)
-```
-
-## Verify verification code by phone number
-
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
-
-```ruby
-verify_verification_code_response = client.verifications.by_phone_number.actions.verify(
-  "+13035551234",
-  code: "17686",
-  verify_profile_id: "12ade33a-21c0-473b-b055-b3c836e1c292"
-)
-
-puts(verify_verification_code_response)
-```
-
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
@@ -158,40 +158,6 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (obj
 
 ```ruby
 verify_profile_data = client.verify_profiles.create(name: "Test Profile")
-
-puts(verify_profile_data)
-```
-
-## Retrieve Verify profile
-
-Gets a single Verify profile.
-
-`GET /verify_profiles/{verify_profile_id}`
-
-```ruby
-verify_profile_data = client.verify_profiles.retrieve("12ade33a-21c0-473b-b055-b3c836e1c292")
-
-puts(verify_profile_data)
-```
-
-## Update Verify profile
-
-`PATCH /verify_profiles/{verify_profile_id}`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```ruby
-verify_profile_data = client.verify_profiles.update("12ade33a-21c0-473b-b055-b3c836e1c292")
-
-puts(verify_profile_data)
-```
-
-## Delete Verify profile
-
-`DELETE /verify_profiles/{verify_profile_id}`
-
-```ruby
-verify_profile_data = client.verify_profiles.delete("12ade33a-21c0-473b-b055-b3c836e1c292")
 
 puts(verify_profile_data)
 ```
@@ -233,4 +199,38 @@ message_template = client.verify_profiles.update_template(
 )
 
 puts(message_template)
+```
+
+## Retrieve Verify profile
+
+Gets a single Verify profile.
+
+`GET /verify_profiles/{verify_profile_id}`
+
+```ruby
+verify_profile_data = client.verify_profiles.retrieve("12ade33a-21c0-473b-b055-b3c836e1c292")
+
+puts(verify_profile_data)
+```
+
+## Update Verify profile
+
+`PATCH /verify_profiles/{verify_profile_id}`
+
+Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+
+```ruby
+verify_profile_data = client.verify_profiles.update("12ade33a-21c0-473b-b055-b3c836e1c292")
+
+puts(verify_profile_data)
+```
+
+## Delete Verify profile
+
+`DELETE /verify_profiles/{verify_profile_id}`
+
+```ruby
+verify_profile_data = client.verify_profiles.delete("12ade33a-21c0-473b-b055-b3c836e1c292")
+
+puts(verify_profile_data)
 ```

@@ -32,6 +32,31 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## List your voice channels for non-US zones
+
+Returns the non-US voice channels for your account.
+
+`GET /channel_zones`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const channelZoneListResponse of client.channelZones.list()) {
+  console.log(channelZoneListResponse.id);
+}
+```
+
+## Update voice channels for non-US Zones
+
+Update the number of Voice Channels for the Non-US Zones.
+
+`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+
+```javascript
+const channelZone = await client.channelZones.update('channel_zone_id', { channels: 0 });
+
+console.log(channelZone.id);
+```
+
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
@@ -151,31 +176,6 @@ const dynamicEmergencyEndpoint = await client.dynamicEmergencyEndpoints.delete(
 );
 
 console.log(dynamicEmergencyEndpoint.data);
-```
-
-## List your voice channels for non-US zones
-
-Returns the non-US voice channels for your account.
-
-`GET /channel_zones`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const channelZoneListResponse of client.channelZones.list()) {
-  console.log(channelZoneListResponse.id);
-}
-```
-
-## Update voice channels for non-US Zones
-
-Update the number of Voice Channels for the Non-US Zones.
-
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
-
-```javascript
-const channelZone = await client.channelZones.update('channel_zone_id', { channels: 0 });
-
-console.log(channelZone.id);
 ```
 
 ## List your voice channels for US Zone

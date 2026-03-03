@@ -40,178 +40,6 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List messaging hosted number orders
-
-`GET /messaging_hosted_number_orders`
-
-```go
-	page, err := client.MessagingHostedNumberOrders.List(context.TODO(), telnyx.MessagingHostedNumberOrderListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a messaging hosted number order
-
-`POST /messaging_hosted_number_orders`
-
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
-
-```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.New(context.TODO(), telnyx.MessagingHostedNumberOrderNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
-```
-
-## Retrieve a messaging hosted number order
-
-`GET /messaging_hosted_number_orders/{id}`
-
-```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
-```
-
-## Delete a messaging hosted number order
-
-Delete a messaging hosted number order and all associated phone numbers.
-
-`DELETE /messaging_hosted_number_orders/{id}`
-
-```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Delete(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
-```
-
-## Upload hosted number document
-
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
-
-```go
-	response, err := client.MessagingHostedNumberOrders.Actions.UploadFile(
-		context.TODO(),
-		"id",
-		telnyx.MessagingHostedNumberOrderActionUploadFileParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Validate hosted number codes
-
-Validate the verification codes sent to the numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
-
-```go
-	response, err := client.MessagingHostedNumberOrders.ValidateCodes(
-		context.TODO(),
-		"id",
-		telnyx.MessagingHostedNumberOrderValidateCodesParams{
-			VerificationCodes: []telnyx.MessagingHostedNumberOrderValidateCodesParamsVerificationCode{{
-				Code:        "code",
-				PhoneNumber: "phone_number",
-			}},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Create hosted number verification codes
-
-Create verification codes to validate numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
-
-```go
-	response, err := client.MessagingHostedNumberOrders.NewVerificationCodes(
-		context.TODO(),
-		"id",
-		telnyx.MessagingHostedNumberOrderNewVerificationCodesParams{
-			PhoneNumbers:       []string{"string"},
-			VerificationMethod: telnyx.MessagingHostedNumberOrderNewVerificationCodesParamsVerificationMethodSMS,
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## Check hosted messaging eligibility
-
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
-
-```go
-	response, err := client.MessagingHostedNumberOrders.CheckEligibility(context.TODO(), telnyx.MessagingHostedNumberOrderCheckEligibilityParams{
-		PhoneNumbers: []string{"string"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.PhoneNumbers)
-```
-
-## Retrieve a messaging hosted number
-
-Retrieve a specific messaging hosted number by its ID or phone number.
-
-`GET /messaging_hosted_numbers/{id}`
-
-```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumber.Data)
-```
-
-## Update a messaging hosted number
-
-Update the messaging settings for a hosted number.
-
-`PATCH /messaging_hosted_numbers/{id}`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
-
-```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Update(
-		context.TODO(),
-		"id",
-		telnyx.MessagingHostedNumberUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumber.Data)
-```
-
-## Delete a messaging hosted number
-
-`DELETE /messaging_hosted_numbers/{id}`
-
-```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Delete(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumber.Data)
-```
-
 ## Send an RCS message
 
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
@@ -225,6 +53,24 @@ Optional: `mms_fallback` (object), `sms_fallback` (object), `type` (enum), `webh
 		MessagingProfileID: "messaging_profile_id",
 		To:                 "+13125551234",
 	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Generate RCS deeplink
+
+Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
+
+`GET /messages/rcs/deeplinks/{agent_id}`
+
+```go
+	response, err := client.Messages.Rcs.GenerateDeeplink(
+		context.TODO(),
+		"agent_id",
+		telnyx.MessageRcGenerateDeeplinkParams{},
+	)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -326,22 +172,142 @@ Adds a test phone number to an RCS agent for testing purposes.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Generate RCS deeplink
+## List messaging hosted number orders
 
-Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
-
-`GET /messages/rcs_deeplinks/{agent_id}`
+`GET /messaging_hosted_number_orders`
 
 ```go
-	response, err := client.Messages.Rcs.GenerateDeeplink(
+	page, err := client.MessagingHostedNumberOrders.List(context.TODO(), telnyx.MessagingHostedNumberOrderListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a messaging hosted number order
+
+`POST /messaging_hosted_number_orders`
+
+Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+
+```go
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.New(context.TODO(), telnyx.MessagingHostedNumberOrderNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
+```
+
+## Check hosted messaging eligibility
+
+`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+
+```go
+	response, err := client.MessagingHostedNumberOrders.CheckEligibility(context.TODO(), telnyx.MessagingHostedNumberOrderCheckEligibilityParams{
+		PhoneNumbers: []string{"string"},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.PhoneNumbers)
+```
+
+## Retrieve a messaging hosted number order
+
+`GET /messaging_hosted_number_orders/{id}`
+
+```go
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Get(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
+```
+
+## Delete a messaging hosted number order
+
+Delete a messaging hosted number order and all associated phone numbers.
+
+`DELETE /messaging_hosted_number_orders/{id}`
+
+```go
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Delete(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
+```
+
+## Upload hosted number document
+
+`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+```go
+	response, err := client.MessagingHostedNumberOrders.Actions.UploadFile(
 		context.TODO(),
-		"agent_id",
-		telnyx.MessageRcGenerateDeeplinkParams{},
+		"id",
+		telnyx.MessagingHostedNumberOrderActionUploadFileParams{},
 	)
 	if err != nil {
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response.Data)
+```
+
+## Validate hosted number codes
+
+Validate the verification codes sent to the numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+
+```go
+	response, err := client.MessagingHostedNumberOrders.ValidateCodes(
+		context.TODO(),
+		"id",
+		telnyx.MessagingHostedNumberOrderValidateCodesParams{
+			VerificationCodes: []telnyx.MessagingHostedNumberOrderValidateCodesParamsVerificationCode{{
+				Code:        "code",
+				PhoneNumber: "phone_number",
+			}},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Create hosted number verification codes
+
+Create verification codes to validate numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+
+```go
+	response, err := client.MessagingHostedNumberOrders.NewVerificationCodes(
+		context.TODO(),
+		"id",
+		telnyx.MessagingHostedNumberOrderNewVerificationCodesParams{
+			PhoneNumbers:       []string{"string"},
+			VerificationMethod: telnyx.MessagingHostedNumberOrderNewVerificationCodesParamsVerificationMethodSMS,
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Delete a messaging hosted number
+
+`DELETE /messaging_hosted_numbers/{id}`
+
+```go
+	messagingHostedNumber, err := client.MessagingHostedNumbers.Delete(context.TODO(), "id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", messagingHostedNumber.Data)
 ```
 
 ## List Verification Requests
@@ -482,4 +448,37 @@ A request may only be deleted when when the request is in the "rejected" state.
 	if err != nil {
 		panic(err.Error())
 	}
+```
+
+## Get Verification Request Status History
+
+Get the history of status changes for a verification request.
+
+`GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+```go
+	response, err := client.MessagingTollfree.Verification.Requests.GetStatusHistory(
+		context.TODO(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.MessagingTollfreeVerificationRequestGetStatusHistoryParams{
+			PageNumber: 1,
+			PageSize:   1,
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Records)
+```
+
+## List messaging URL domains
+
+`GET /messaging_url_domains`
+
+```go
+	page, err := client.MessagingURLDomains.List(context.TODO(), telnyx.MessagingURLDomainListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
 ```

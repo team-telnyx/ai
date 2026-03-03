@@ -58,6 +58,16 @@ managed_account = client.managed_accounts.create(business_name: "Larry's Cat Foo
 puts(managed_account)
 ```
 
+## Display information about allocatable global outbound channels for the current user.
+
+`GET /managed_accounts/allocatable_global_outbound_channels`
+
+```ruby
+response = client.managed_accounts.get_allocatable_global_outbound_channels
+
+puts(response)
+```
+
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
@@ -122,12 +132,50 @@ response = client.managed_accounts.update_global_channel_limit("id")
 puts(response)
 ```
 
-## Display information about allocatable global outbound channels for the current user.
+## List organization users
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+Returns a list of the users in your organization.
+
+`GET /organizations/users`
 
 ```ruby
-response = client.managed_accounts.get_allocatable_global_outbound_channels
+page = client.organizations.users.list
+
+puts(page)
+```
+
+## Get organization users groups report
+
+Returns a report of all users in your organization with their group memberships.
+
+`GET /organizations/users/users_groups_report`
+
+```ruby
+response = client.organizations.users.get_groups_report
 
 puts(response)
+```
+
+## Get organization user
+
+Returns a user in your organization.
+
+`GET /organizations/users/{id}`
+
+```ruby
+user = client.organizations.users.retrieve("id")
+
+puts(user)
+```
+
+## Delete organization user
+
+Deletes a user in your organization.
+
+`POST /organizations/users/{id}/actions/remove`
+
+```ruby
+action = client.organizations.users.actions.remove("id")
+
+puts(action)
 ```

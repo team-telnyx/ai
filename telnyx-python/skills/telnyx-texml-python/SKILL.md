@@ -34,77 +34,6 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all TeXML Applications
-
-Returns a list of your TeXML Applications.
-
-`GET /texml_applications`
-
-```python
-page = client.texml_applications.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Creates a TeXML Application
-
-Creates a TeXML Application.
-
-`POST /texml_applications` — Required: `friendly_name`, `voice_url`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
-
-```python
-texml_application = client.texml_applications.create(
-    friendly_name="call-router",
-    voice_url="https://example.com",
-)
-print(texml_application.data)
-```
-
-## Retrieve a TeXML Application
-
-Retrieves the details of an existing TeXML Application.
-
-`GET /texml_applications/{id}`
-
-```python
-texml_application = client.texml_applications.retrieve(
-    "1293384261075731499",
-)
-print(texml_application.data)
-```
-
-## Update a TeXML Application
-
-Updates settings of an existing TeXML Application.
-
-`PATCH /texml_applications/{id}` — Required: `friendly_name`, `voice_url`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
-
-```python
-texml_application = client.texml_applications.update(
-    id="1293384261075731499",
-    friendly_name="call-router",
-    voice_url="https://example.com",
-)
-print(texml_application.data)
-```
-
-## Deletes a TeXML Application
-
-Deletes a TeXML Application.
-
-`DELETE /texml_applications/{id}`
-
-```python
-texml_application = client.texml_applications.delete(
-    "1293384261075731499",
-)
-print(texml_application.data)
-```
-
 ## Fetch multiple call resources
 
 Returns multiple call resources for an account.
@@ -162,6 +91,148 @@ call = client.texml.accounts.calls.update(
     account_sid="account_sid",
 )
 print(call.account_sid)
+```
+
+## Fetch recordings for a call
+
+Returns recordings for a call identified by call_sid.
+
+`GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
+
+```python
+response = client.texml.accounts.calls.recordings_json.retrieve_recordings_json(
+    call_sid="call_sid",
+    account_sid="account_sid",
+)
+print(response.end)
+```
+
+## Request recording for a call
+
+Starts recording with specified parameters for call idientified by call_sid.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
+
+```python
+response = client.texml.accounts.calls.recordings_json.recordings_json(
+    call_sid="call_sid",
+    account_sid="account_sid",
+)
+print(response.account_sid)
+```
+
+## Update recording on a call
+
+Updates recording resource for particular call.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings/{recording_sid}.json`
+
+```python
+response = client.texml.accounts.calls.recordings.recording_sid_json(
+    recording_sid="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+    account_sid="account_sid",
+    call_sid="call_sid",
+)
+print(response.account_sid)
+```
+
+## Request siprec session for a call
+
+Starts siprec session with specified parameters for call idientified by call_sid.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json`
+
+```python
+response = client.texml.accounts.calls.siprec_json(
+    call_sid="call_sid",
+    account_sid="account_sid",
+)
+print(response.account_sid)
+```
+
+## Updates siprec session for a call
+
+Updates siprec session identified by siprec_sid.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec/{siprec_sid}.json`
+
+```python
+response = client.texml.accounts.calls.siprec.siprec_sid_json(
+    siprec_sid="siprec_sid",
+    account_sid="account_sid",
+    call_sid="call_sid",
+)
+print(response.account_sid)
+```
+
+## Start streaming media from a call.
+
+Starts streaming media from a call to a specific WebSocket address.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json`
+
+```python
+response = client.texml.accounts.calls.streams_json(
+    call_sid="call_sid",
+    account_sid="account_sid",
+)
+print(response.account_sid)
+```
+
+## Update streaming on a call
+
+Updates streaming resource for particular call.
+
+`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams/{streaming_sid}.json`
+
+```python
+response = client.texml.accounts.calls.streams.streaming_sid_json(
+    streaming_sid="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+    account_sid="account_sid",
+    call_sid="call_sid",
+)
+print(response.account_sid)
+```
+
+## List conference resources
+
+Lists conference resources.
+
+`GET /texml/Accounts/{account_sid}/Conferences`
+
+```python
+response = client.texml.accounts.conferences.retrieve_conferences(
+    account_sid="account_sid",
+)
+print(response.conferences)
+```
+
+## Fetch a conference resource
+
+Returns a conference resource.
+
+`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+
+```python
+conference = client.texml.accounts.conferences.retrieve(
+    conference_sid="conference_sid",
+    account_sid="account_sid",
+)
+print(conference.account_sid)
+```
+
+## Update a conference resource
+
+Updates a conference resource.
+
+`POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+
+```python
+conference = client.texml.accounts.conferences.update(
+    conference_sid="conference_sid",
+    account_sid="account_sid",
+)
+print(conference.account_sid)
 ```
 
 ## List conference participants
@@ -236,45 +307,32 @@ client.texml.accounts.conferences.participants.delete(
 )
 ```
 
-## List conference resources
+## List conference recordings
 
-Lists conference resources.
+Lists conference recordings
 
-`GET /texml/Accounts/{account_sid}/Conferences`
-
-```python
-response = client.texml.accounts.conferences.retrieve_conferences(
-    account_sid="account_sid",
-)
-print(response.conferences)
-```
-
-## Fetch a conference resource
-
-Returns a conference resource.
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
 
 ```python
-conference = client.texml.accounts.conferences.retrieve(
+response = client.texml.accounts.conferences.retrieve_recordings(
     conference_sid="conference_sid",
     account_sid="account_sid",
 )
-print(conference.account_sid)
+print(response.end)
 ```
 
-## Update a conference resource
+## Fetch recordings for a conference
 
-Updates a conference resource.
+Returns recordings for a conference identified by conference_sid.
 
-`POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json`
 
 ```python
-conference = client.texml.accounts.conferences.update(
+response = client.texml.accounts.conferences.retrieve_recordings_json(
     conference_sid="conference_sid",
     account_sid="account_sid",
 )
-print(conference.account_sid)
+print(response.end)
 ```
 
 ## List queue resources
@@ -385,149 +443,6 @@ client.texml.accounts.recordings.json.delete_recording_sid_json(
 )
 ```
 
-## Fetch recordings for a call
-
-Returns recordings for a call identified by call_sid.
-
-`GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
-
-```python
-response = client.texml.accounts.calls.recordings_json.retrieve_recordings_json(
-    call_sid="call_sid",
-    account_sid="account_sid",
-)
-print(response.end)
-```
-
-## Request recording for a call
-
-Starts recording with specified parameters for call idientified by call_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
-
-```python
-response = client.texml.accounts.calls.recordings_json.recordings_json(
-    call_sid="call_sid",
-    account_sid="account_sid",
-)
-print(response.account_sid)
-```
-
-## Update recording on a call
-
-Updates recording resource for particular call.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings/{recording_sid}.json`
-
-```python
-response = client.texml.accounts.calls.recordings.recording_sid_json(
-    recording_sid="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-    account_sid="account_sid",
-    call_sid="call_sid",
-)
-print(response.account_sid)
-```
-
-## List conference recordings
-
-Lists conference recordings
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
-
-```python
-response = client.texml.accounts.conferences.retrieve_recordings(
-    conference_sid="conference_sid",
-    account_sid="account_sid",
-)
-print(response.end)
-```
-
-## Fetch recordings for a conference
-
-Returns recordings for a conference identified by conference_sid.
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json`
-
-```python
-response = client.texml.accounts.conferences.retrieve_recordings_json(
-    conference_sid="conference_sid",
-    account_sid="account_sid",
-)
-print(response.end)
-```
-
-## Create a TeXML secret
-
-Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML.
-
-`POST /texml/secrets` — Required: `name`, `value`
-
-```python
-response = client.texml.secrets(
-    name="My Secret Name",
-    value="My Secret Value",
-)
-print(response.data)
-```
-
-## Request siprec session for a call
-
-Starts siprec session with specified parameters for call idientified by call_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json`
-
-```python
-response = client.texml.accounts.calls.siprec_json(
-    call_sid="call_sid",
-    account_sid="account_sid",
-)
-print(response.account_sid)
-```
-
-## Updates siprec session for a call
-
-Updates siprec session identified by siprec_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec/{siprec_sid}.json`
-
-```python
-response = client.texml.accounts.calls.siprec.siprec_sid_json(
-    siprec_sid="siprec_sid",
-    account_sid="account_sid",
-    call_sid="call_sid",
-)
-print(response.account_sid)
-```
-
-## Start streaming media from a call.
-
-Starts streaming media from a call to a specific WebSocket address.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json`
-
-```python
-response = client.texml.accounts.calls.streams_json(
-    call_sid="call_sid",
-    account_sid="account_sid",
-)
-print(response.account_sid)
-```
-
-## Update streaming on a call
-
-Updates streaming resource for particular call.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams/{streaming_sid}.json`
-
-```python
-response = client.texml.accounts.calls.streams.streaming_sid_json(
-    streaming_sid="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-    account_sid="account_sid",
-    call_sid="call_sid",
-)
-print(response.account_sid)
-```
-
 ## List recording transcriptions
 
 Returns multiple recording transcription resources for an account.
@@ -568,33 +483,87 @@ client.texml.accounts.transcriptions.json.delete_recording_transcription_sid_jso
 )
 ```
 
----
+## Create a TeXML secret
 
-## Webhooks
+Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML.
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for verification (Standard Webhooks compatible).
+`POST /texml/secrets` — Required: `name`, `value`
 
-| Event | Description |
-|-------|-------------|
-| `TexmlCallAnsweredWebhook` | TeXML Call Answered. Webhook sent when a TeXML call is answered |
-| `TexmlCallCompletedWebhook` | TeXML Call Completed. Webhook sent when a TeXML call is completed |
-| `TexmlCallInitiatedWebhook` | TeXML Call Initiated. Webhook sent when a TeXML call is initiated |
-| `TexmlCallRingingWebhook` | TeXML Call Ringing. Webhook sent when a TeXML call is ringing |
-| `TexmlCallAmdWebhook` | TeXML Call AMD. Webhook sent when Answering Machine Detection (AMD) completes during a TeXML call |
-| `TexmlCallDtmfWebhook` | TeXML Call DTMF. Webhook sent when a DTMF digit is received during a TeXML call |
-| `TexmlGatherWebhook` | TeXML Gather. Webhook sent when a Gather command completes (sent to the action URL) |
-| `TexmlHttpRequestWebhook` | TeXML HTTP Request. Webhook sent as response to an HTTP Request instruction |
-| `TexmlAiGatherWebhook` | TeXML AI Gather. Webhook sent when AI Gather completes with transcription results |
-| `TexmlReferStatusWebhook` | TeXML Refer Status. Webhook sent for SIP REFER status updates |
-| `TexmlConferenceJoinWebhook` | TeXML Conference Join. Webhook sent when a participant joins a TeXML conference |
-| `TexmlConferenceLeaveWebhook` | TeXML Conference Leave. Webhook sent when a participant leaves a TeXML conference |
-| `TexmlConferenceSpeakerWebhook` | TeXML Conference Speaker. Webhook sent when a participant starts or stops speaking in a TeXML conference |
-| `TexmlConferenceEndWebhook` | TeXML Conference End. Webhook sent when a TeXML conference ends |
-| `TexmlConferenceStartWebhook` | TeXML Conference Start. Webhook sent when a TeXML conference starts |
-| `TexmlQueueWebhook` | TeXML Queue. Webhook sent for queue status events (triggered by Enqueue command waitUrl) |
-| `TexmlRecordingCompletedWebhook` | TeXML Recording Completed. Webhook sent when a recording is completed during a TeXML call (triggered by recordingStatusCallbackEvent) |
-| `TexmlRecordingInProgressWebhook` | TeXML Recording In-Progress. Webhook sent when a recording starts during a TeXML call (triggered by recordingStatusCallbackEvent) |
-| `TexmlSiprecWebhook` | TeXML SIPREC. Webhook sent for SIPREC session status updates |
-| `TexmlStreamWebhook` | TeXML Stream. Webhook sent for media streaming status updates |
-| `TexmlTranscriptionWebhook` | TeXML Transcription. Webhook sent when a recording transcription is completed |
+```python
+response = client.texml.secrets(
+    name="My Secret Name",
+    value="My Secret Value",
+)
+print(response.data)
+```
+
+## List all TeXML Applications
+
+Returns a list of your TeXML Applications.
+
+`GET /texml_applications`
+
+```python
+page = client.texml_applications.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Creates a TeXML Application
+
+Creates a TeXML Application.
+
+`POST /texml_applications` — Required: `friendly_name`, `voice_url`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
+
+```python
+texml_application = client.texml_applications.create(
+    friendly_name="call-router",
+    voice_url="https://example.com",
+)
+print(texml_application.data)
+```
+
+## Retrieve a TeXML Application
+
+Retrieves the details of an existing TeXML Application.
+
+`GET /texml_applications/{id}`
+
+```python
+texml_application = client.texml_applications.retrieve(
+    "1293384261075731499",
+)
+print(texml_application.data)
+```
+
+## Update a TeXML Application
+
+Updates settings of an existing TeXML Application.
+
+`PATCH /texml_applications/{id}` — Required: `friendly_name`, `voice_url`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
+
+```python
+texml_application = client.texml_applications.update(
+    id="1293384261075731499",
+    friendly_name="call-router",
+    voice_url="https://example.com",
+)
+print(texml_application.data)
+```
+
+## Deletes a TeXML Application
+
+Deletes a TeXML Application.
+
+`DELETE /texml_applications/{id}`
+
+```python
+texml_application = client.texml_applications.delete(
+    "1293384261075731499",
+)
+print(texml_application.data)
+```

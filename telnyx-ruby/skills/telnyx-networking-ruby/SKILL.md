@@ -32,16 +32,349 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all Regions
+## List all clusters
 
-List all regions and the interfaces that region supports
-
-`GET /regions`
+`GET /ai/clusters`
 
 ```ruby
-regions = client.regions.list
+page = client.ai.clusters.list
 
-puts(regions)
+puts(page)
+```
+
+## Compute new clusters
+
+Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
+
+`POST /ai/clusters` — Required: `bucket`
+
+Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
+
+```ruby
+response = client.ai.clusters.compute(bucket: "bucket")
+
+puts(response)
+```
+
+## Fetch a cluster
+
+`GET /ai/clusters/{task_id}`
+
+```ruby
+cluster = client.ai.clusters.retrieve("task_id")
+
+puts(cluster)
+```
+
+## Delete a cluster
+
+`DELETE /ai/clusters/{task_id}`
+
+```ruby
+result = client.ai.clusters.delete("task_id")
+
+puts(result)
+```
+
+## Fetch a cluster visualization
+
+`GET /ai/clusters/{task_id}/graph`
+
+```ruby
+response = client.ai.clusters.fetch_graph("task_id")
+
+puts(response)
+```
+
+## List Integrations
+
+List all available integrations.
+
+`GET /ai/integrations`
+
+```ruby
+integrations = client.ai.integrations.list
+
+puts(integrations)
+```
+
+## List User Integrations
+
+List user setup integrations
+
+`GET /ai/integrations/connections`
+
+```ruby
+connections = client.ai.integrations.connections.list
+
+puts(connections)
+```
+
+## Get User Integration connection By Id
+
+Get user setup integrations
+
+`GET /ai/integrations/connections/{user_connection_id}`
+
+```ruby
+connection = client.ai.integrations.connections.retrieve("user_connection_id")
+
+puts(connection)
+```
+
+## Delete Integration Connection
+
+Delete a specific integration connection.
+
+`DELETE /ai/integrations/connections/{user_connection_id}`
+
+```ruby
+result = client.ai.integrations.connections.delete("user_connection_id")
+
+puts(result)
+```
+
+## List Integration By Id
+
+Retrieve integration details
+
+`GET /ai/integrations/{integration_id}`
+
+```ruby
+integration = client.ai.integrations.retrieve("integration_id")
+
+puts(integration)
+```
+
+## List all Global IP Allowed Ports
+
+`GET /global_ip_allowed_ports`
+
+```ruby
+global_ip_allowed_ports = client.global_ip_allowed_ports.list
+
+puts(global_ip_allowed_ports)
+```
+
+## Global IP Assignment Health Check Metrics
+
+`GET /global_ip_assignment_health`
+
+```ruby
+global_ip_assignment_health = client.global_ip_assignment_health.retrieve
+
+puts(global_ip_assignment_health)
+```
+
+## List all Global IP assignments
+
+List all Global IP assignments.
+
+`GET /global_ip_assignments`
+
+```ruby
+page = client.global_ip_assignments.list
+
+puts(page)
+```
+
+## Create a Global IP assignment
+
+Create a Global IP assignment.
+
+`POST /global_ip_assignments`
+
+```ruby
+global_ip_assignment = client.global_ip_assignments.create
+
+puts(global_ip_assignment)
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP assignment.
+
+`GET /global_ip_assignments/{id}`
+
+```ruby
+global_ip_assignment = client.global_ip_assignments.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip_assignment)
+```
+
+## Update a Global IP assignment
+
+Update a Global IP assignment.
+
+`PATCH /global_ip_assignments/{id}`
+
+```ruby
+global_ip_assignment = client.global_ip_assignments.update(
+  "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+  global_ip_assignment_update_request: {}
+)
+
+puts(global_ip_assignment)
+```
+
+## Delete a Global IP assignment
+
+Delete a Global IP assignment.
+
+`DELETE /global_ip_assignments/{id}`
+
+```ruby
+global_ip_assignment = client.global_ip_assignments.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip_assignment)
+```
+
+## Global IP Assignment Usage Metrics
+
+`GET /global_ip_assignments_usage`
+
+```ruby
+global_ip_assignments_usage = client.global_ip_assignments_usage.retrieve
+
+puts(global_ip_assignments_usage)
+```
+
+## List all Global IP Health check types
+
+List all Global IP Health check types.
+
+`GET /global_ip_health_check_types`
+
+```ruby
+global_ip_health_check_types = client.global_ip_health_check_types.list
+
+puts(global_ip_health_check_types)
+```
+
+## List all Global IP health checks
+
+List all Global IP health checks.
+
+`GET /global_ip_health_checks`
+
+```ruby
+page = client.global_ip_health_checks.list
+
+puts(page)
+```
+
+## Create a Global IP health check
+
+Create a Global IP health check.
+
+`POST /global_ip_health_checks`
+
+```ruby
+global_ip_health_check = client.global_ip_health_checks.create
+
+puts(global_ip_health_check)
+```
+
+## Retrieve a Global IP health check
+
+Retrieve a Global IP health check.
+
+`GET /global_ip_health_checks/{id}`
+
+```ruby
+global_ip_health_check = client.global_ip_health_checks.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip_health_check)
+```
+
+## Delete a Global IP health check
+
+Delete a Global IP health check.
+
+`DELETE /global_ip_health_checks/{id}`
+
+```ruby
+global_ip_health_check = client.global_ip_health_checks.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip_health_check)
+```
+
+## Global IP Latency Metrics
+
+`GET /global_ip_latency`
+
+```ruby
+global_ip_latency = client.global_ip_latency.retrieve
+
+puts(global_ip_latency)
+```
+
+## List all Global IP Protocols
+
+`GET /global_ip_protocols`
+
+```ruby
+global_ip_protocols = client.global_ip_protocols.list
+
+puts(global_ip_protocols)
+```
+
+## Global IP Usage Metrics
+
+`GET /global_ip_usage`
+
+```ruby
+global_ip_usage = client.global_ip_usage.retrieve
+
+puts(global_ip_usage)
+```
+
+## List all Global IPs
+
+List all Global IPs.
+
+`GET /global_ips`
+
+```ruby
+page = client.global_ips.list
+
+puts(page)
+```
+
+## Create a Global IP
+
+Create a Global IP.
+
+`POST /global_ips`
+
+```ruby
+global_ip = client.global_ips.create
+
+puts(global_ip)
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP.
+
+`GET /global_ips/{id}`
+
+```ruby
+global_ip = client.global_ips.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip)
+```
+
+## Delete a Global IP
+
+Delete a Global IP.
+
+`DELETE /global_ips/{id}`
+
+```ruby
+global_ip = client.global_ips.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(global_ip)
 ```
 
 ## List all Networks
@@ -140,6 +473,191 @@ puts(default_gateway)
 
 ```ruby
 page = client.networks.list_interfaces("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(page)
+```
+
+## Get all Private Wireless Gateways
+
+Get all Private Wireless Gateways belonging to the user.
+
+`GET /private_wireless_gateways`
+
+```ruby
+page = client.private_wireless_gateways.list
+
+puts(page)
+```
+
+## Create a Private Wireless Gateway
+
+Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+
+`POST /private_wireless_gateways` — Required: `network_id`, `name`
+
+Optional: `region_code` (string)
+
+```ruby
+private_wireless_gateway = client.private_wireless_gateways.create(
+  name: "My private wireless gateway",
+  network_id: "6a09cdc3-8948-47f0-aa62-74ac943d6c58"
+)
+
+puts(private_wireless_gateway)
+```
+
+## Get a Private Wireless Gateway
+
+Retrieve information about a Private Wireless Gateway.
+
+`GET /private_wireless_gateways/{id}`
+
+```ruby
+private_wireless_gateway = client.private_wireless_gateways.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(private_wireless_gateway)
+```
+
+## Delete a Private Wireless Gateway
+
+Deletes the Private Wireless Gateway.
+
+`DELETE /private_wireless_gateways/{id}`
+
+```ruby
+private_wireless_gateway = client.private_wireless_gateways.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(private_wireless_gateway)
+```
+
+## List all Public Internet Gateways
+
+List all Public Internet Gateways.
+
+`GET /public_internet_gateways`
+
+```ruby
+page = client.public_internet_gateways.list
+
+puts(page)
+```
+
+## Create a Public Internet Gateway
+
+Create a new Public Internet Gateway.
+
+`POST /public_internet_gateways`
+
+```ruby
+public_internet_gateway = client.public_internet_gateways.create
+
+puts(public_internet_gateway)
+```
+
+## Retrieve a Public Internet Gateway
+
+Retrieve a Public Internet Gateway.
+
+`GET /public_internet_gateways/{id}`
+
+```ruby
+public_internet_gateway = client.public_internet_gateways.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(public_internet_gateway)
+```
+
+## Delete a Public Internet Gateway
+
+Delete a Public Internet Gateway.
+
+`DELETE /public_internet_gateways/{id}`
+
+```ruby
+public_internet_gateway = client.public_internet_gateways.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(public_internet_gateway)
+```
+
+## List all Regions
+
+List all regions and the interfaces that region supports
+
+`GET /regions`
+
+```ruby
+regions = client.regions.list
+
+puts(regions)
+```
+
+## List all Virtual Cross Connects
+
+List all Virtual Cross Connects.
+
+`GET /virtual_cross_connects`
+
+```ruby
+page = client.virtual_cross_connects.list
+
+puts(page)
+```
+
+## Create a Virtual Cross Connect
+
+Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
+
+`POST /virtual_cross_connects`
+
+```ruby
+virtual_cross_connect = client.virtual_cross_connects.create(region_code: "ashburn-va")
+
+puts(virtual_cross_connect)
+```
+
+## Retrieve a Virtual Cross Connect
+
+Retrieve a Virtual Cross Connect.
+
+`GET /virtual_cross_connects/{id}`
+
+```ruby
+virtual_cross_connect = client.virtual_cross_connects.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(virtual_cross_connect)
+```
+
+## Update the Virtual Cross Connect
+
+Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
+
+`PATCH /virtual_cross_connects/{id}`
+
+```ruby
+virtual_cross_connect = client.virtual_cross_connects.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(virtual_cross_connect)
+```
+
+## Delete a Virtual Cross Connect
+
+Delete a Virtual Cross Connect.
+
+`DELETE /virtual_cross_connects/{id}`
+
+```ruby
+virtual_cross_connect = client.virtual_cross_connects.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+
+puts(virtual_cross_connect)
+```
+
+## List Virtual Cross Connect Cloud Coverage
+
+List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
+
+`GET /virtual_cross_connects_coverage`
+
+```ruby
+page = client.virtual_cross_connects_coverage.list
 
 puts(page)
 ```
@@ -262,408 +780,4 @@ puts(wireguard_peer)
 response = client.wireguard_peers.retrieve_config("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 
 puts(response)
-```
-
-## Get all Private Wireless Gateways
-
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
-
-```ruby
-page = client.private_wireless_gateways.list
-
-puts(page)
-```
-
-## Create a Private Wireless Gateway
-
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
-
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
-
-```ruby
-private_wireless_gateway = client.private_wireless_gateways.create(
-  name: "My private wireless gateway",
-  network_id: "6a09cdc3-8948-47f0-aa62-74ac943d6c58"
-)
-
-puts(private_wireless_gateway)
-```
-
-## Get a Private Wireless Gateway
-
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
-
-```ruby
-private_wireless_gateway = client.private_wireless_gateways.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(private_wireless_gateway)
-```
-
-## Delete a Private Wireless Gateway
-
-Deletes the Private Wireless Gateway.
-
-`DELETE /private_wireless_gateways/{id}`
-
-```ruby
-private_wireless_gateway = client.private_wireless_gateways.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(private_wireless_gateway)
-```
-
-## List all Public Internet Gateways
-
-List all Public Internet Gateways.
-
-`GET /public_internet_gateways`
-
-```ruby
-page = client.public_internet_gateways.list
-
-puts(page)
-```
-
-## Create a Public Internet Gateway
-
-Create a new Public Internet Gateway.
-
-`POST /public_internet_gateways`
-
-```ruby
-public_internet_gateway = client.public_internet_gateways.create
-
-puts(public_internet_gateway)
-```
-
-## Retrieve a Public Internet Gateway
-
-Retrieve a Public Internet Gateway.
-
-`GET /public_internet_gateways/{id}`
-
-```ruby
-public_internet_gateway = client.public_internet_gateways.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(public_internet_gateway)
-```
-
-## Delete a Public Internet Gateway
-
-Delete a Public Internet Gateway.
-
-`DELETE /public_internet_gateways/{id}`
-
-```ruby
-public_internet_gateway = client.public_internet_gateways.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(public_internet_gateway)
-```
-
-## List all Virtual Cross Connects
-
-List all Virtual Cross Connects.
-
-`GET /virtual_cross_connects`
-
-```ruby
-page = client.virtual_cross_connects.list
-
-puts(page)
-```
-
-## Create a Virtual Cross Connect
-
-Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
-
-`POST /virtual_cross_connects`
-
-```ruby
-virtual_cross_connect = client.virtual_cross_connects.create(region_code: "ashburn-va")
-
-puts(virtual_cross_connect)
-```
-
-## Retrieve a Virtual Cross Connect
-
-Retrieve a Virtual Cross Connect.
-
-`GET /virtual_cross_connects/{id}`
-
-```ruby
-virtual_cross_connect = client.virtual_cross_connects.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(virtual_cross_connect)
-```
-
-## Update the Virtual Cross Connect
-
-Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
-
-`PATCH /virtual_cross_connects/{id}`
-
-```ruby
-virtual_cross_connect = client.virtual_cross_connects.update("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(virtual_cross_connect)
-```
-
-## Delete a Virtual Cross Connect
-
-Delete a Virtual Cross Connect.
-
-`DELETE /virtual_cross_connects/{id}`
-
-```ruby
-virtual_cross_connect = client.virtual_cross_connects.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(virtual_cross_connect)
-```
-
-## List Virtual Cross Connect Cloud Coverage
-
-List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
-
-`GET /virtual_cross_connects/coverage`
-
-```ruby
-page = client.virtual_cross_connects_coverage.list
-
-puts(page)
-```
-
-## List all Global IPs
-
-List all Global IPs.
-
-`GET /global_ips`
-
-```ruby
-page = client.global_ips.list
-
-puts(page)
-```
-
-## Create a Global IP
-
-Create a Global IP.
-
-`POST /global_ips`
-
-```ruby
-global_ip = client.global_ips.create
-
-puts(global_ip)
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP.
-
-`GET /global_ips/{id}`
-
-```ruby
-global_ip = client.global_ips.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip)
-```
-
-## Delete a Global IP
-
-Delete a Global IP.
-
-`DELETE /global_ips/{id}`
-
-```ruby
-global_ip = client.global_ips.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip)
-```
-
-## List all Global IP Allowed Ports
-
-`GET /global_ip_allowed_ports`
-
-```ruby
-global_ip_allowed_ports = client.global_ip_allowed_ports.list
-
-puts(global_ip_allowed_ports)
-```
-
-## Global IP Assignment Health Check Metrics
-
-`GET /global_ip_assignment_health`
-
-```ruby
-global_ip_assignment_health = client.global_ip_assignment_health.retrieve
-
-puts(global_ip_assignment_health)
-```
-
-## List all Global IP assignments
-
-List all Global IP assignments.
-
-`GET /global_ip_assignments`
-
-```ruby
-page = client.global_ip_assignments.list
-
-puts(page)
-```
-
-## Create a Global IP assignment
-
-Create a Global IP assignment.
-
-`POST /global_ip_assignments`
-
-```ruby
-global_ip_assignment = client.global_ip_assignments.create
-
-puts(global_ip_assignment)
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP assignment.
-
-`GET /global_ip_assignments/{id}`
-
-```ruby
-global_ip_assignment = client.global_ip_assignments.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip_assignment)
-```
-
-## Update a Global IP assignment
-
-Update a Global IP assignment.
-
-`PATCH /global_ip_assignments/{id}`
-
-```ruby
-global_ip_assignment = client.global_ip_assignments.update(
-  "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  global_ip_assignment_update_request: {}
-)
-
-puts(global_ip_assignment)
-```
-
-## Delete a Global IP assignment
-
-Delete a Global IP assignment.
-
-`DELETE /global_ip_assignments/{id}`
-
-```ruby
-global_ip_assignment = client.global_ip_assignments.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip_assignment)
-```
-
-## Global IP Assignment Usage Metrics
-
-`GET /global_ip_assignments/usage`
-
-```ruby
-global_ip_assignments_usage = client.global_ip_assignments_usage.retrieve
-
-puts(global_ip_assignments_usage)
-```
-
-## List all Global IP Health check types
-
-List all Global IP Health check types.
-
-`GET /global_ip_health_check_types`
-
-```ruby
-global_ip_health_check_types = client.global_ip_health_check_types.list
-
-puts(global_ip_health_check_types)
-```
-
-## List all Global IP health checks
-
-List all Global IP health checks.
-
-`GET /global_ip_health_checks`
-
-```ruby
-page = client.global_ip_health_checks.list
-
-puts(page)
-```
-
-## Create a Global IP health check
-
-Create a Global IP health check.
-
-`POST /global_ip_health_checks`
-
-```ruby
-global_ip_health_check = client.global_ip_health_checks.create
-
-puts(global_ip_health_check)
-```
-
-## Retrieve a Global IP health check
-
-Retrieve a Global IP health check.
-
-`GET /global_ip_health_checks/{id}`
-
-```ruby
-global_ip_health_check = client.global_ip_health_checks.retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip_health_check)
-```
-
-## Delete a Global IP health check
-
-Delete a Global IP health check.
-
-`DELETE /global_ip_health_checks/{id}`
-
-```ruby
-global_ip_health_check = client.global_ip_health_checks.delete("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-
-puts(global_ip_health_check)
-```
-
-## Global IP Latency Metrics
-
-`GET /global_ip_latency`
-
-```ruby
-global_ip_latency = client.global_ip_latency.retrieve
-
-puts(global_ip_latency)
-```
-
-## List all Global IP Protocols
-
-`GET /global_ip_protocols`
-
-```ruby
-global_ip_protocols = client.global_ip_protocols.list
-
-puts(global_ip_protocols)
-```
-
-## Global IP Usage Metrics
-
-`GET /global_ip_usage`
-
-```ruby
-global_ip_usage = client.global_ip_usage.retrieve
-
-puts(global_ip_usage)
 ```

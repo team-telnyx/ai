@@ -32,95 +32,6 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all call recordings
-
-Returns a list of your call recordings.
-
-`GET /recordings`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const recordingResponseData of client.recordings.list()) {
-  console.log(recordingResponseData.id);
-}
-```
-
-## Retrieve a call recording
-
-Retrieves the details of an existing call recording.
-
-`GET /recordings/{recording_id}`
-
-```javascript
-const recording = await client.recordings.retrieve('recording_id');
-
-console.log(recording.data);
-```
-
-## Delete a call recording
-
-Permanently deletes a call recording.
-
-`DELETE /recordings/{recording_id}`
-
-```javascript
-const recording = await client.recordings.delete('recording_id');
-
-console.log(recording.data);
-```
-
-## Delete a list of call recordings
-
-Permanently deletes a list of call recordings.
-
-`POST /recordings/actions/delete`
-
-```javascript
-await client.recordings.actions.delete({
-  ids: ['428c31b6-7af4-4bcb-b7f5-5013ef9657c1', '428c31b6-7af4-4bcb-b7f5-5013ef9657c2'],
-});
-```
-
-## List all recording transcriptions
-
-Returns a list of your recording transcriptions.
-
-`GET /recording_transcriptions`
-
-```javascript
-const recordingTranscriptions = await client.recordingTranscriptions.list();
-
-console.log(recordingTranscriptions.data);
-```
-
-## Retrieve a recording transcription
-
-Retrieves the details of an existing recording transcription.
-
-`GET /recording_transcriptions/{recording_transcription_id}`
-
-```javascript
-const recordingTranscription = await client.recordingTranscriptions.retrieve(
-  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
-);
-
-console.log(recordingTranscription.data);
-```
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /recording_transcriptions/{recording_transcription_id}`
-
-```javascript
-const recordingTranscription = await client.recordingTranscriptions.delete(
-  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
-);
-
-console.log(recordingTranscription.data);
-```
-
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
@@ -273,6 +184,43 @@ const externalConnection = await client.externalConnections.create({
 });
 
 console.log(externalConnection.data);
+```
+
+## List all log messages
+
+Retrieve a list of log messages for all external connections associated with your account.
+
+`GET /external_connections/log_messages`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const logMessageListResponse of client.externalConnections.logMessages.list()) {
+  console.log(logMessageListResponse.code);
+}
+```
+
+## Retrieve a log message
+
+Retrieve a log message for an external connection associated with your account.
+
+`GET /external_connections/log_messages/{id}`
+
+```javascript
+const logMessage = await client.externalConnections.logMessages.retrieve('1293384261075731499');
+
+console.log(logMessage.log_messages);
+```
+
+## Dismiss a log message
+
+Dismiss a log message for an external connection associated with your account.
+
+`DELETE /external_connections/log_messages/{id}`
+
+```javascript
+const response = await client.externalConnections.logMessages.dismiss('1293384261075731499');
+
+console.log(response.success);
 ```
 
 ## Retrieve an External Connection
@@ -521,55 +469,6 @@ const response = await client.externalConnections.uploads.retry(
 console.log(response.data);
 ```
 
-## List all log messages
-
-Retrieve a list of log messages for all external connections associated with your account.
-
-`GET /external_connections/log_messages`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const logMessageListResponse of client.externalConnections.logMessages.list()) {
-  console.log(logMessageListResponse.code);
-}
-```
-
-## Retrieve a log message
-
-Retrieve a log message for an external connection associated with your account.
-
-`GET /external_connections/log_messages/{id}`
-
-```javascript
-const logMessage = await client.externalConnections.logMessages.retrieve('1293384261075731499');
-
-console.log(logMessage.log_messages);
-```
-
-## Dismiss a log message
-
-Dismiss a log message for an external connection associated with your account.
-
-`DELETE /external_connections/log_messages/{id}`
-
-```javascript
-const response = await client.externalConnections.logMessages.dismiss('1293384261075731499');
-
-console.log(response.success);
-```
-
-## Refresh Operator Connect integration
-
-This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
-
-`POST /operator_connect/actions/refresh`
-
-```javascript
-const response = await client.operatorConnect.actions.refresh();
-
-console.log(response.message);
-```
-
 ## List uploaded media
 
 Returns a list of stored media files.
@@ -645,4 +544,159 @@ console.log(response);
 
 const content = await response.blob();
 console.log(content);
+```
+
+## Refresh Operator Connect integration
+
+This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user.
+
+`POST /operator_connect/actions/refresh`
+
+```javascript
+const response = await client.operatorConnect.actions.refresh();
+
+console.log(response.message);
+```
+
+## List all recording transcriptions
+
+Returns a list of your recording transcriptions.
+
+`GET /recording_transcriptions`
+
+```javascript
+const recordingTranscriptions = await client.recordingTranscriptions.list();
+
+console.log(recordingTranscriptions.data);
+```
+
+## Retrieve a recording transcription
+
+Retrieves the details of an existing recording transcription.
+
+`GET /recording_transcriptions/{recording_transcription_id}`
+
+```javascript
+const recordingTranscription = await client.recordingTranscriptions.retrieve(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(recordingTranscription.data);
+```
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`DELETE /recording_transcriptions/{recording_transcription_id}`
+
+```javascript
+const recordingTranscription = await client.recordingTranscriptions.delete(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(recordingTranscription.data);
+```
+
+## List all call recordings
+
+Returns a list of your call recordings.
+
+`GET /recordings`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const recordingResponseData of client.recordings.list()) {
+  console.log(recordingResponseData.id);
+}
+```
+
+## Delete a list of call recordings
+
+Permanently deletes a list of call recordings.
+
+`POST /recordings/actions/delete`
+
+```javascript
+await client.recordings.actions.delete({
+  ids: ['428c31b6-7af4-4bcb-b7f5-5013ef9657c1', '428c31b6-7af4-4bcb-b7f5-5013ef9657c2'],
+});
+```
+
+## Retrieve a call recording
+
+Retrieves the details of an existing call recording.
+
+`GET /recordings/{recording_id}`
+
+```javascript
+const recording = await client.recordings.retrieve('recording_id');
+
+console.log(recording.data);
+```
+
+## Delete a call recording
+
+Permanently deletes a call recording.
+
+`DELETE /recordings/{recording_id}`
+
+```javascript
+const recording = await client.recordings.delete('recording_id');
+
+console.log(recording.data);
+```
+
+## Create a SIPREC connector
+
+Creates a new SIPREC connector configuration.
+
+`POST /siprec_connectors`
+
+```javascript
+const siprecConnector = await client.siprecConnectors.create({
+  host: 'siprec.telnyx.com',
+  name: 'my-siprec-connector',
+  port: 5060,
+});
+
+console.log(siprecConnector.data);
+```
+
+## Retrieve a SIPREC connector
+
+Returns details of a stored SIPREC connector.
+
+`GET /siprec_connectors/{connector_name}`
+
+```javascript
+const siprecConnector = await client.siprecConnectors.retrieve('connector_name');
+
+console.log(siprecConnector.data);
+```
+
+## Update a SIPREC connector
+
+Updates a stored SIPREC connector configuration.
+
+`PUT /siprec_connectors/{connector_name}`
+
+```javascript
+const siprecConnector = await client.siprecConnectors.update('connector_name', {
+  host: 'siprec.telnyx.com',
+  name: 'my-siprec-connector',
+  port: 5060,
+});
+
+console.log(siprecConnector.data);
+```
+
+## Delete a SIPREC connector
+
+Deletes a stored SIPREC connector.
+
+`DELETE /siprec_connectors/{connector_name}`
+
+```javascript
+await client.siprecConnectors.delete('connector_name');
 ```

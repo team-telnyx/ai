@@ -33,69 +33,37 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all outbound voice profiles
+## List all Access IP Ranges
 
-Get all outbound voice profiles belonging to the user that match the given filters.
-
-`GET /outbound_voice_profiles`
+`GET /access_ip_ranges`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const outboundVoiceProfile of client.outboundVoiceProfiles.list()) {
-  console.log(outboundVoiceProfile.id);
+for await (const accessIPRange of client.accessIPRanges.list()) {
+  console.log(accessIPRange.id);
 }
 ```
 
-## Create an outbound voice profile
+## Create new Access IP Range
 
-Create an outbound voice profile.
+`POST /access_ip_ranges` — Required: `cidr_block`
 
-`POST /outbound_voice_profiles` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+Optional: `description` (string)
 
 ```javascript
-const outboundVoiceProfile = await client.outboundVoiceProfiles.create({ name: 'office' });
+const accessIPRange = await client.accessIPRanges.create({ cidr_block: 'cidr_block' });
 
-console.log(outboundVoiceProfile.data);
+console.log(accessIPRange.id);
 ```
 
-## Retrieve an outbound voice profile
+## Delete access IP ranges
 
-Retrieves the details of an existing outbound voice profile.
-
-`GET /outbound_voice_profiles/{id}`
+`DELETE /access_ip_ranges/{access_ip_range_id}`
 
 ```javascript
-const outboundVoiceProfile = await client.outboundVoiceProfiles.retrieve('1293384261075731499');
+const accessIPRange = await client.accessIPRanges.delete('access_ip_range_id');
 
-console.log(outboundVoiceProfile.data);
-```
-
-## Updates an existing outbound voice profile.
-
-`PATCH /outbound_voice_profiles/{id}` — Required: `name`
-
-Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
-
-```javascript
-const outboundVoiceProfile = await client.outboundVoiceProfiles.update('1293384261075731499', {
-  name: 'office',
-});
-
-console.log(outboundVoiceProfile.data);
-```
-
-## Delete an outbound voice profile
-
-Deletes an existing outbound voice profile.
-
-`DELETE /outbound_voice_profiles/{id}`
-
-```javascript
-const outboundVoiceProfile = await client.outboundVoiceProfiles.delete('1293384261075731499');
-
-console.log(outboundVoiceProfile.data);
+console.log(accessIPRange.id);
 ```
 
 ## List connections
@@ -204,136 +172,69 @@ const response = await client.credentialConnections.actions.checkRegistrationSta
 console.log(response.data);
 ```
 
-## List Ips
+## List FQDN connections
 
-Get all IPs belonging to the user that match the given filters.
+Returns a list of your FQDN connections.
 
-`GET /ips`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const ip of client.ips.list()) {
-  console.log(ip.id);
-}
-```
-
-## Create an Ip
-
-Create a new IP object.
-
-`POST /ips` — Required: `ip_address`
-
-Optional: `connection_id` (string), `port` (integer)
-
-```javascript
-const ip = await client.ips.create({ ip_address: '192.168.0.0' });
-
-console.log(ip.data);
-```
-
-## Retrieve an Ip
-
-Return the details regarding a specific IP.
-
-`GET /ips/{id}`
-
-```javascript
-const ip = await client.ips.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
-
-console.log(ip.data);
-```
-
-## Update an Ip
-
-Update the details of a specific IP.
-
-`PATCH /ips/{id}` — Required: `ip_address`
-
-Optional: `connection_id` (string), `port` (integer)
-
-```javascript
-const ip = await client.ips.update('6a09cdc3-8948-47f0-aa62-74ac943d6c58', {
-  ip_address: '192.168.0.0',
-});
-
-console.log(ip.data);
-```
-
-## Delete an Ip
-
-Delete an IP.
-
-`DELETE /ips/{id}`
-
-```javascript
-const ip = await client.ips.delete('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
-
-console.log(ip.data);
-```
-
-## List Ip connections
-
-Returns a list of your IP connections.
-
-`GET /ip_connections`
+`GET /fqdn_connections`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const ipConnection of client.ipConnections.list()) {
-  console.log(ipConnection.id);
+for await (const fqdnConnection of client.fqdnConnections.list()) {
+  console.log(fqdnConnection.id);
 }
 ```
 
-## Create an Ip connection
+## Create an FQDN connection
 
-Creates an IP connection.
+Creates a FQDN connection.
 
-`POST /ip_connections`
+`POST /fqdn_connections` — Required: `connection_name`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+
+```javascript
+const fqdnConnection = await client.fqdnConnections.create({ connection_name: 'string' });
+
+console.log(fqdnConnection.data);
+```
+
+## Retrieve an FQDN connection
+
+Retrieves the details of an existing FQDN connection.
+
+`GET /fqdn_connections/{id}`
+
+```javascript
+const fqdnConnection = await client.fqdnConnections.retrieve('1293384261075731499');
+
+console.log(fqdnConnection.data);
+```
+
+## Update an FQDN connection
+
+Updates settings of an existing FQDN connection.
+
+`PATCH /fqdn_connections/{id}`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```javascript
-const ipConnection = await client.ipConnections.create();
+const fqdnConnection = await client.fqdnConnections.update('1293384261075731499');
 
-console.log(ipConnection.data);
+console.log(fqdnConnection.data);
 ```
 
-## Retrieve an Ip connection
+## Delete an FQDN connection
 
-Retrieves the details of an existing ip connection.
+Deletes an FQDN connection.
 
-`GET /ip_connections/{id}`
-
-```javascript
-const ipConnection = await client.ipConnections.retrieve('id');
-
-console.log(ipConnection.data);
-```
-
-## Update an Ip connection
-
-Updates settings of an existing IP connection.
-
-`PATCH /ip_connections/{id}`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+`DELETE /fqdn_connections/{id}`
 
 ```javascript
-const ipConnection = await client.ipConnections.update('id');
+const fqdnConnection = await client.fqdnConnections.delete('1293384261075731499');
 
-console.log(ipConnection.data);
-```
-
-## Delete an Ip connection
-
-Deletes an existing IP connection.
-
-`DELETE /ip_connections/{id}`
-
-```javascript
-const ipConnection = await client.ipConnections.delete('id');
-
-console.log(ipConnection.data);
+console.log(fqdnConnection.data);
 ```
 
 ## List FQDNs
@@ -405,122 +306,199 @@ const fqdn = await client.fqdns.delete('1517907029795014409');
 console.log(fqdn.data);
 ```
 
-## List FQDN connections
+## List Ip connections
 
-Returns a list of your FQDN connections.
+Returns a list of your IP connections.
 
-`GET /fqdn_connections`
+`GET /ip_connections`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const fqdnConnection of client.fqdnConnections.list()) {
-  console.log(fqdnConnection.id);
+for await (const ipConnection of client.ipConnections.list()) {
+  console.log(ipConnection.id);
 }
 ```
 
-## Create an FQDN connection
+## Create an Ip connection
 
-Creates a FQDN connection.
+Creates an IP connection.
 
-`POST /fqdn_connections` — Required: `connection_name`
-
-Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
-
-```javascript
-const fqdnConnection = await client.fqdnConnections.create({ connection_name: 'string' });
-
-console.log(fqdnConnection.data);
-```
-
-## Retrieve an FQDN connection
-
-Retrieves the details of an existing FQDN connection.
-
-`GET /fqdn_connections/{id}`
-
-```javascript
-const fqdnConnection = await client.fqdnConnections.retrieve('1293384261075731499');
-
-console.log(fqdnConnection.data);
-```
-
-## Update an FQDN connection
-
-Updates settings of an existing FQDN connection.
-
-`PATCH /fqdn_connections/{id}`
+`POST /ip_connections`
 
 Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```javascript
-const fqdnConnection = await client.fqdnConnections.update('1293384261075731499');
+const ipConnection = await client.ipConnections.create();
 
-console.log(fqdnConnection.data);
+console.log(ipConnection.data);
 ```
 
-## Delete an FQDN connection
+## Retrieve an Ip connection
 
-Deletes an FQDN connection.
+Retrieves the details of an existing ip connection.
 
-`DELETE /fqdn_connections/{id}`
+`GET /ip_connections/{id}`
 
 ```javascript
-const fqdnConnection = await client.fqdnConnections.delete('1293384261075731499');
+const ipConnection = await client.ipConnections.retrieve('id');
 
-console.log(fqdnConnection.data);
+console.log(ipConnection.data);
 ```
 
-## List Mobile Voice Connections
+## Update an Ip connection
 
-`GET /v2/mobile_voice_connections`
+Updates settings of an existing IP connection.
+
+`PATCH /ip_connections/{id}`
+
+Optional: `active` (boolean), `anchorsite_override` (enum), `android_push_credential_id` (['string', 'null']), `call_cost_in_webhooks` (boolean), `connection_name` (string), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum), `inbound` (object), `ios_push_credential_id` (['string', 'null']), `jitter_buffer` (object), `noise_suppression` (enum), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum), `webhook_api_version` (enum), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+
+```javascript
+const ipConnection = await client.ipConnections.update('id');
+
+console.log(ipConnection.data);
+```
+
+## Delete an Ip connection
+
+Deletes an existing IP connection.
+
+`DELETE /ip_connections/{id}`
+
+```javascript
+const ipConnection = await client.ipConnections.delete('id');
+
+console.log(ipConnection.data);
+```
+
+## List Ips
+
+Get all IPs belonging to the user that match the given filters.
+
+`GET /ips`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const mobileVoiceConnection of client.mobileVoiceConnections.list()) {
-  console.log(mobileVoiceConnection.id);
+for await (const ip of client.ips.list()) {
+  console.log(ip.id);
 }
 ```
 
-## Create a Mobile Voice Connection
+## Create an Ip
 
-`POST /v2/mobile_voice_connections`
+Create a new IP object.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
+`POST /ips` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.create();
+const ip = await client.ips.create({ ip_address: '192.168.0.0' });
 
-console.log(mobileVoiceConnection.data);
+console.log(ip.data);
 ```
 
-## Retrieve a Mobile Voice Connection
+## Retrieve an Ip
 
-`GET /v2/mobile_voice_connections/{id}`
+Return the details regarding a specific IP.
+
+`GET /ips/{id}`
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.retrieve('id');
+const ip = await client.ips.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
 
-console.log(mobileVoiceConnection.data);
+console.log(ip.data);
 ```
 
-## Update a Mobile Voice Connection
+## Update an Ip
 
-`PATCH /v2/mobile_voice_connections/{id}`
+Update the details of a specific IP.
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
+`PATCH /ips/{id}` — Required: `ip_address`
+
+Optional: `connection_id` (string), `port` (integer)
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.update('id');
+const ip = await client.ips.update('6a09cdc3-8948-47f0-aa62-74ac943d6c58', {
+  ip_address: '192.168.0.0',
+});
 
-console.log(mobileVoiceConnection.data);
+console.log(ip.data);
 ```
 
-## Delete a Mobile Voice Connection
+## Delete an Ip
 
-`DELETE /v2/mobile_voice_connections/{id}`
+Delete an IP.
+
+`DELETE /ips/{id}`
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.delete('id');
+const ip = await client.ips.delete('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
 
-console.log(mobileVoiceConnection.data);
+console.log(ip.data);
+```
+
+## Get all outbound voice profiles
+
+Get all outbound voice profiles belonging to the user that match the given filters.
+
+`GET /outbound_voice_profiles`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const outboundVoiceProfile of client.outboundVoiceProfiles.list()) {
+  console.log(outboundVoiceProfile.id);
+}
+```
+
+## Create an outbound voice profile
+
+Create an outbound voice profile.
+
+`POST /outbound_voice_profiles` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```javascript
+const outboundVoiceProfile = await client.outboundVoiceProfiles.create({ name: 'office' });
+
+console.log(outboundVoiceProfile.data);
+```
+
+## Retrieve an outbound voice profile
+
+Retrieves the details of an existing outbound voice profile.
+
+`GET /outbound_voice_profiles/{id}`
+
+```javascript
+const outboundVoiceProfile = await client.outboundVoiceProfiles.retrieve('1293384261075731499');
+
+console.log(outboundVoiceProfile.data);
+```
+
+## Updates an existing outbound voice profile.
+
+`PATCH /outbound_voice_profiles/{id}` — Required: `name`
+
+Optional: `billing_group_id` (uuid), `call_recording` (object), `calling_window` (object), `concurrent_call_limit` (['integer', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `max_destination_rate` (number), `service_plan` (enum), `tags` (array[string]), `traffic_type` (enum), `usage_payment_method` (enum), `whitelisted_destinations` (array[string])
+
+```javascript
+const outboundVoiceProfile = await client.outboundVoiceProfiles.update('1293384261075731499', {
+  name: 'office',
+});
+
+console.log(outboundVoiceProfile.data);
+```
+
+## Delete an outbound voice profile
+
+Deletes an existing outbound voice profile.
+
+`DELETE /outbound_voice_profiles/{id}`
+
+```javascript
+const outboundVoiceProfile = await client.outboundVoiceProfiles.delete('1293384261075731499');
+
+console.log(outboundVoiceProfile.data);
 ```

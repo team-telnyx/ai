@@ -1,7 +1,9 @@
 ---
 name: telnyx-missions-javascript
 description: >-
-  Telnyx Missions SDK operations. This skill provides JavaScript SDK examples.
+  Create and manage Telnyx Missions — automated workflows, tasks, and
+  sub-resources for AI-driven telecom operations. This skill provides JavaScript
+  SDK examples.
 metadata:
   author: telnyx
   product: missions
@@ -39,8 +41,8 @@ List all missions for the organization
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const missionListResponse of client.ai.missions.list()) {
-  console.log(missionListResponse.mission_id);
+for await (const missionData of client.ai.missions.list()) {
+  console.log(missionData.mission_id);
 }
 ```
 
@@ -66,8 +68,8 @@ List recent events across all missions
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const missionListEventsResponse of client.ai.missions.listEvents()) {
-  console.log(missionListEventsResponse.event_id);
+for await (const eventData of client.ai.missions.listEvents()) {
+  console.log(eventData.event_id);
 }
 ```
 
@@ -79,8 +81,8 @@ List recent runs across all missions
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const runListRunsResponse of client.ai.missions.runs.listRuns()) {
-  console.log(runListRunsResponse.mission_id);
+for await (const missionRunData of client.ai.missions.runs.listRuns()) {
+  console.log(missionRunData.mission_id);
 }
 ```
 
@@ -132,6 +134,132 @@ const response = await client.ai.missions.cloneMission('mission_id');
 console.log(response);
 ```
 
+## List knowledge bases
+
+List all knowledge bases for a mission
+
+`GET /ai/missions/{mission_id}/knowledge-bases`
+
+```javascript
+const response = await client.ai.missions.knowledgeBases.listKnowledgeBases('mission_id');
+
+console.log(response);
+```
+
+## Create knowledge base
+
+Create a new knowledge base for a mission
+
+`POST /ai/missions/{mission_id}/knowledge-bases`
+
+```javascript
+const response = await client.ai.missions.knowledgeBases.createKnowledgeBase('mission_id');
+
+console.log(response);
+```
+
+## Get knowledge base
+
+Get a specific knowledge base by ID
+
+`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```javascript
+const response = await client.ai.missions.knowledgeBases.getKnowledgeBase('knowledge_base_id', {
+  mission_id: 'mission_id',
+});
+
+console.log(response);
+```
+
+## Update knowledge base
+
+Update a knowledge base definition
+
+`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```javascript
+const response = await client.ai.missions.knowledgeBases.updateKnowledgeBase('knowledge_base_id', {
+  mission_id: 'mission_id',
+});
+
+console.log(response);
+```
+
+## Delete knowledge base
+
+Delete a knowledge base from a mission
+
+`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```javascript
+await client.ai.missions.knowledgeBases.deleteKnowledgeBase('knowledge_base_id', {
+  mission_id: 'mission_id',
+});
+```
+
+## List MCP servers
+
+List all MCP servers for a mission
+
+`GET /ai/missions/{mission_id}/mcp-servers`
+
+```javascript
+const response = await client.ai.missions.mcpServers.listMcpServers('mission_id');
+
+console.log(response);
+```
+
+## Create MCP server
+
+Create a new MCP server for a mission
+
+`POST /ai/missions/{mission_id}/mcp-servers`
+
+```javascript
+const response = await client.ai.missions.mcpServers.createMcpServer('mission_id');
+
+console.log(response);
+```
+
+## Get MCP server
+
+Get a specific MCP server by ID
+
+`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```javascript
+const response = await client.ai.missions.mcpServers.getMcpServer('mcp_server_id', {
+  mission_id: 'mission_id',
+});
+
+console.log(response);
+```
+
+## Update MCP server
+
+Update an MCP server definition
+
+`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```javascript
+const response = await client.ai.missions.mcpServers.updateMcpServer('mcp_server_id', {
+  mission_id: 'mission_id',
+});
+
+console.log(response);
+```
+
+## Delete MCP server
+
+Delete an MCP server from a mission
+
+`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```javascript
+await client.ai.missions.mcpServers.deleteMcpServer('mcp_server_id', { mission_id: 'mission_id' });
+```
+
 ## List runs for mission
 
 List all runs for a specific mission
@@ -140,10 +268,10 @@ List all runs for a specific mission
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const runListResponse of client.ai.missions.runs.list(
+for await (const missionRunData of client.ai.missions.runs.list(
   '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
 )) {
-  console.log(runListResponse.mission_id);
+  console.log(missionRunData.mission_id);
 }
 ```
 
@@ -213,11 +341,11 @@ List events for a run (paginated)
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const eventListResponse of client.ai.missions.runs.events.list(
+for await (const eventData of client.ai.missions.runs.events.list(
   '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
   { mission_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e' },
 )) {
-  console.log(eventListResponse.event_id);
+  console.log(eventData.event_id);
 }
 ```
 
@@ -414,4 +542,62 @@ await client.ai.missions.runs.telnyxAgents.unlink('telnyx_agent_id', {
   mission_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
   run_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
 });
+```
+
+## List tools
+
+List all tools for a mission
+
+`GET /ai/missions/{mission_id}/tools`
+
+```javascript
+const response = await client.ai.missions.tools.listTools('mission_id');
+
+console.log(response);
+```
+
+## Create tool
+
+Create a new tool for a mission
+
+`POST /ai/missions/{mission_id}/tools`
+
+```javascript
+const response = await client.ai.missions.tools.createTool('mission_id');
+
+console.log(response);
+```
+
+## Get tool
+
+Get a specific tool by ID
+
+`GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+```javascript
+const response = await client.ai.missions.tools.getTool('tool_id', { mission_id: 'mission_id' });
+
+console.log(response);
+```
+
+## Update tool
+
+Update a tool definition
+
+`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+```javascript
+const response = await client.ai.missions.tools.updateTool('tool_id', { mission_id: 'mission_id' });
+
+console.log(response);
+```
+
+## Delete tool
+
+Delete a tool from a mission
+
+`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+```javascript
+await client.ai.missions.tools.deleteTool('tool_id', { mission_id: 'mission_id' });
 ```

@@ -33,220 +33,84 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## Get all wireless regions
+## Purchase eSIMs
 
-Retrieve all wireless regions for the given product.
+Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
 
-`GET /wireless/regions`
+`POST /actions/purchase/esims` — Required: `amount`
+
+Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
 
 ```python
-response = client.wireless.retrieve_regions(
-    product="public_ips",
+purchase = client.actions.purchase.create(
+    amount=10,
 )
-print(response.data)
+print(purchase.data)
 ```
 
-## Get all SIM cards
+## Register SIM cards
 
-Get all SIM cards belonging to the user that match the given filters.
+Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
+If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
 
-`GET /sim_cards`
+`POST /actions/register/sim_cards` — Required: `registration_codes`
+
+Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
 
 ```python
-page = client.sim_cards.list()
+register = client.actions.register.create(
+    registration_codes=["0000000001", "0000000002", "0000000003"],
+)
+print(register.data)
+```
+
+## List bulk SIM card actions
+
+This API lists a paginated collection of bulk SIM card actions.
+
+`GET /bulk_sim_card_actions`
+
+```python
+page = client.bulk_sim_card_actions.list()
 page = page.data[0]
 print(page.id)
 ```
 
-## Get SIM card
+## Get bulk SIM card action details
 
-Returns the details regarding a specific SIM card.
+This API fetches information about a bulk SIM card action.
 
-`GET /sim_cards/{id}`
-
-```python
-sim_card = client.sim_cards.retrieve(
-    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(sim_card.data)
-```
-
-## Update a SIM card
-
-Updates SIM card data
-
-`PATCH /sim_cards/{id}`
-
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+`GET /bulk_sim_card_actions/{id}`
 
 ```python
-sim_card = client.sim_cards.update(
-    sim_card_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(sim_card.data)
-```
-
-## Deletes a SIM card
-
-The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
-
-`DELETE /sim_cards/{id}`
-
-```python
-sim_card = client.sim_cards.delete(
-    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(sim_card.data)
-```
-
-## Get activation code for an eSIM
-
-It returns the activation code for an eSIM.<br/><br/>
- This API is only available for eSIMs.
-
-`GET /sim_cards/{id}/activation_code`
-
-```python
-response = client.sim_cards.get_activation_code(
+bulk_sim_card_action = client.bulk_sim_card_actions.retrieve(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(response.data)
+print(bulk_sim_card_action.data)
 ```
 
-## Get SIM card device details
+## List OTA updates
 
-It returns the device details where a SIM card is currently being used.
-
-`GET /sim_cards/{id}/device_details`
+`GET /ota_updates`
 
 ```python
-response = client.sim_cards.get_device_details(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## Get SIM card public IP definition
-
-It returns the public IP requested for a SIM card.
-
-`GET /sim_cards/{id}/public_ip`
-
-```python
-response = client.sim_cards.get_public_ip(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## List wireless connectivity logs
-
-This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
-
-`GET /sim_cards/{id}/wireless_connectivity_logs`
-
-```python
-page = client.sim_cards.list_wireless_connectivity_logs(
-    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
+page = client.ota_updates.list()
 page = page.data[0]
 print(page.id)
 ```
 
-## Request a SIM card disable
+## Get OTA update
 
-This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
-The API will trigger an asynchronous operation called a SIM Card Action.
+This API returns the details of an Over the Air (OTA) update.
 
-`POST /sim_cards/{id}/actions/disable`
+`GET /ota_updates/{id}`
 
 ```python
-response = client.sim_cards.actions.disable(
+ota_update = client.ota_updates.retrieve(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(response.data)
-```
-
-## Request a SIM card enable
-
-This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
-To enable a SIM card, it must be associated with a SIM card group.<br/>
-The API will trigger a...
-
-`POST /sim_cards/{id}/actions/enable`
-
-```python
-response = client.sim_cards.actions.enable(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## Request removing a SIM card public IP
-
-This API removes an existing public IP from a SIM card.
-
-`POST /sim_cards/{id}/actions/remove_public_ip`
-
-```python
-response = client.sim_cards.actions.remove_public_ip(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## Request setting a SIM card public IP
-
-This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
-
-`POST /sim_cards/{id}/actions/set_public_ip`
-
-```python
-response = client.sim_cards.actions.set_public_ip(
-    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## Request setting a SIM card to standby
-
-The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
-To set a SIM card to standby, it must be ...
-
-`POST /sim_cards/{id}/actions/set_standby`
-
-```python
-response = client.sim_cards.actions.set_standby(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(response.data)
-```
-
-## Request bulk setting SIM card public IPs.
-
-This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
-For each SIM Card a SIM Card Action will be generated.
-
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
-
-```python
-response = client.sim_cards.actions.bulk_set_public_ips(
-    sim_card_ids=["6b14e151-8493-4fa1-8664-1cc4e6d14158"],
-)
-print(response.data)
-```
-
-## Validate SIM cards registration codes
-
-It validates whether SIM card registration codes are valid or not.
-
-`POST /sim_cards/actions/validate_registration_codes`
-
-Optional: `registration_codes` (array[string])
-
-```python
-response = client.sim_cards.actions.validate_registration_codes()
-print(response.data)
+print(ota_update.data)
 ```
 
 ## List SIM card actions
@@ -274,29 +138,96 @@ action = client.sim_cards.actions.retrieve(
 print(action.data)
 ```
 
-## List bulk SIM card actions
+## List SIM card data usage notifications
 
-This API lists a paginated collection of bulk SIM card actions.
+Lists a paginated collection of SIM card data usage notifications.
 
-`GET /bulk_sim_card_actions`
+`GET /sim_card_data_usage_notifications`
 
 ```python
-page = client.bulk_sim_card_actions.list()
+page = client.sim_card_data_usage_notifications.list()
 page = page.data[0]
 print(page.id)
 ```
 
-## Get bulk SIM card action details
+## Create a new SIM card data usage notification
 
-This API fetches information about a bulk SIM card action.
+Creates a new SIM card data usage notification.
 
-`GET /bulk_sim_card_actions/{id}`
+`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
 
 ```python
-bulk_sim_card_action = client.bulk_sim_card_actions.retrieve(
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.create(
+    sim_card_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+    threshold={},
+)
+print(sim_card_data_usage_notification.data)
+```
+
+## Get a single SIM card data usage notification
+
+Get a single SIM Card Data Usage Notification.
+
+`GET /sim_card_data_usage_notifications/{id}`
+
+```python
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.retrieve(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(bulk_sim_card_action.data)
+print(sim_card_data_usage_notification.data)
+```
+
+## Updates information for a SIM Card Data Usage Notification
+
+Updates information for a SIM Card Data Usage Notification.
+
+`PATCH /sim_card_data_usage_notifications/{id}`
+
+Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+
+```python
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.update(
+    sim_card_data_usage_notification_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(sim_card_data_usage_notification.data)
+```
+
+## Delete SIM card data usage notifications
+
+Delete the SIM Card Data Usage Notification.
+
+`DELETE /sim_card_data_usage_notifications/{id}`
+
+```python
+sim_card_data_usage_notification = client.sim_card_data_usage_notifications.delete(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(sim_card_data_usage_notification.data)
+```
+
+## List SIM card group actions
+
+This API allows listing a paginated collection a SIM card group actions.
+
+`GET /sim_card_group_actions`
+
+```python
+page = client.sim_card_groups.actions.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Get SIM card group action details
+
+This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
+
+`GET /sim_card_group_actions/{id}`
+
+```python
+action = client.sim_card_groups.actions.retrieve(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(action.data)
 ```
 
 ## Get all SIM card groups
@@ -421,29 +352,18 @@ response = client.sim_card_groups.actions.set_wireless_blocklist(
 print(response.data)
 ```
 
-## List SIM card group actions
+## Preview SIM card orders
 
-This API allows listing a paginated collection a SIM card group actions.
+Preview SIM card order purchases.
 
-`GET /sim_card_group_actions`
-
-```python
-page = client.sim_card_groups.actions.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Get SIM card group action details
-
-This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
-
-`GET /sim_card_group_actions/{id}`
+`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
 
 ```python
-action = client.sim_card_groups.actions.retrieve(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+response = client.sim_card_order_preview.preview(
+    address_id="1293384261075731499",
+    quantity=21,
 )
-print(action.data)
+print(response.data)
 ```
 
 ## Get all SIM card orders
@@ -485,194 +405,394 @@ sim_card_order = client.sim_card_orders.retrieve(
 print(sim_card_order.data)
 ```
 
-## Preview SIM card orders
+## Get all SIM cards
 
-Preview SIM card order purchases.
+Get all SIM cards belonging to the user that match the given filters.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`GET /sim_cards`
 
 ```python
-response = client.sim_card_order_preview.preview(
-    address_id="1293384261075731499",
-    quantity=21,
+page = client.sim_cards.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Request bulk setting SIM card public IPs.
+
+This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards.<br/>
+For each SIM Card a SIM Card Action will be generated.
+
+`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+
+```python
+response = client.sim_cards.actions.bulk_set_public_ips(
+    sim_card_ids=["6b14e151-8493-4fa1-8664-1cc4e6d14158"],
 )
 print(response.data)
 ```
 
-## List SIM card data usage notifications
+## Validate SIM cards registration codes
 
-Lists a paginated collection of SIM card data usage notifications.
+It validates whether SIM card registration codes are valid or not.
 
-`GET /sim_card_data_usage_notifications`
+`POST /sim_cards/actions/validate_registration_codes`
+
+Optional: `registration_codes` (array[string])
 
 ```python
-page = client.sim_card_data_usage_notifications.list()
-page = page.data[0]
-print(page.id)
+response = client.sim_cards.actions.validate_registration_codes()
+print(response.data)
 ```
 
-## Create a new SIM card data usage notification
+## Get SIM card
 
-Creates a new SIM card data usage notification.
+Returns the details regarding a specific SIM card.
 
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
+`GET /sim_cards/{id}`
 
 ```python
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.create(
+sim_card = client.sim_cards.retrieve(
+    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(sim_card.data)
+```
+
+## Update a SIM card
+
+Updates SIM card data
+
+`PATCH /sim_cards/{id}`
+
+Optional: `actions_in_progress` (boolean), `authorized_imeis` (['array', 'null']), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (['string', 'null']), `esim_installation_status` (enum), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum), `updated_at` (string), `version` (string)
+
+```python
+sim_card = client.sim_cards.update(
     sim_card_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-    threshold={},
 )
-print(sim_card_data_usage_notification.data)
+print(sim_card.data)
 ```
 
-## Get a single SIM card data usage notification
+## Deletes a SIM card
 
-Get a single SIM Card Data Usage Notification.
+The SIM card will be decommissioned, removed from your account and you will stop being charged.<br />The SIM card won't be able to connect to the network after the deletion is completed, thus makin...
 
-`GET /sim_card_data_usage_notifications/{id}`
+`DELETE /sim_cards/{id}`
 
 ```python
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.retrieve(
+sim_card = client.sim_cards.delete(
+    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(sim_card.data)
+```
+
+## Request a SIM card disable
+
+This API disables a SIM card, disconnecting it from the network and making it impossible to consume data.<br/>
+The API will trigger an asynchronous operation called a SIM Card Action.
+
+`POST /sim_cards/{id}/actions/disable`
+
+```python
+response = client.sim_cards.actions.disable(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(sim_card_data_usage_notification.data)
+print(response.data)
 ```
 
-## Updates information for a SIM Card Data Usage Notification
+## Request a SIM card enable
 
-Updates information for a SIM Card Data Usage Notification.
+This API enables a SIM card, connecting it to the network and making it possible to consume data.<br/>
+To enable a SIM card, it must be associated with a SIM card group.<br/>
+The API will trigger a...
 
-`PATCH /sim_card_data_usage_notifications/{id}`
-
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
-
-```python
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.update(
-    sim_card_data_usage_notification_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(sim_card_data_usage_notification.data)
-```
-
-## Delete SIM card data usage notifications
-
-Delete the SIM Card Data Usage Notification.
-
-`DELETE /sim_card_data_usage_notifications/{id}`
+`POST /sim_cards/{id}/actions/enable`
 
 ```python
-sim_card_data_usage_notification = client.sim_card_data_usage_notifications.delete(
+response = client.sim_cards.actions.enable(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(sim_card_data_usage_notification.data)
+print(response.data)
 ```
 
-## Purchase eSIMs
+## Request removing a SIM card public IP
 
-Purchases and registers the specified amount of eSIMs to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the eSIMs will be associated with that group.
+This API removes an existing public IP from a SIM card.
 
-`POST /actions/purchase/esims` — Required: `amount`
-
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string]), `whitelabel_name` (string)
+`POST /sim_cards/{id}/actions/remove_public_ip`
 
 ```python
-purchase = client.actions.purchase.create(
-    amount=10,
+response = client.sim_cards.actions.remove_public_ip(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(purchase.data)
+print(response.data)
 ```
 
-## Register SIM cards
+## Request setting a SIM card public IP
 
-Register the SIM cards associated with the provided registration codes to the current user's account.<br/><br/>
-If <code>sim_card_group_id</code> is provided, the SIM cards will be associated with ...
+This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.
 
-`POST /actions/register/sim_cards` — Required: `registration_codes`
-
-Optional: `sim_card_group_id` (uuid), `status` (enum), `tags` (array[string])
+`POST /sim_cards/{id}/actions/set_public_ip`
 
 ```python
-register = client.actions.register.create(
-    registration_codes=["0000000001", "0000000002", "0000000003"],
+response = client.sim_cards.actions.set_public_ip(
+    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
-print(register.data)
+print(response.data)
 ```
 
-## List OTA updates
+## Request setting a SIM card to standby
 
-`GET /ota_updates`
+The SIM card will be able to connect to the network once the process to set it to standby has been completed, thus making it possible to consume data.<br/>
+To set a SIM card to standby, it must be ...
+
+`POST /sim_cards/{id}/actions/set_standby`
 
 ```python
-page = client.ota_updates.list()
+response = client.sim_cards.actions.set_standby(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(response.data)
+```
+
+## Get activation code for an eSIM
+
+It returns the activation code for an eSIM.<br/><br/>
+ This API is only available for eSIMs.
+
+`GET /sim_cards/{id}/activation_code`
+
+```python
+response = client.sim_cards.get_activation_code(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(response.data)
+```
+
+## Get SIM card device details
+
+It returns the device details where a SIM card is currently being used.
+
+`GET /sim_cards/{id}/device_details`
+
+```python
+response = client.sim_cards.get_device_details(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(response.data)
+```
+
+## Get SIM card public IP definition
+
+It returns the public IP requested for a SIM card.
+
+`GET /sim_cards/{id}/public_ip`
+
+```python
+response = client.sim_cards.get_public_ip(
+    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(response.data)
+```
+
+## List wireless connectivity logs
+
+This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
+
+`GET /sim_cards/{id}/wireless_connectivity_logs`
+
+```python
+page = client.sim_cards.list_wireless_connectivity_logs(
+    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
 page = page.data[0]
 print(page.id)
 ```
 
-## Get OTA update
+## List Migration Source coverage
 
-This API returns the details of an Over the Air (OTA) update.
-
-`GET /ota_updates/{id}`
+`GET /storage/migration_source_coverage`
 
 ```python
-ota_update = client.ota_updates.retrieve(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(ota_update.data)
+response = client.storage.list_migration_source_coverage()
+print(response.data)
 ```
 
-## Get all Private Wireless Gateways
+## List all Migration Sources
 
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
+`GET /storage/migration_sources`
 
 ```python
-page = client.private_wireless_gateways.list()
+migration_sources = client.storage.migration_sources.list()
+print(migration_sources.data)
+```
+
+## Create a Migration Source
+
+Create a source from which data can be migrated from.
+
+`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+
+Optional: `id` (string), `source_region` (string)
+
+```python
+migration_source = client.storage.migration_sources.create(
+    bucket_name="bucket_name",
+    provider="aws",
+    provider_auth={},
+)
+print(migration_source.data)
+```
+
+## Get a Migration Source
+
+`GET /storage/migration_sources/{id}`
+
+```python
+migration_source = client.storage.migration_sources.retrieve(
+    "",
+)
+print(migration_source.data)
+```
+
+## Delete a Migration Source
+
+`DELETE /storage/migration_sources/{id}`
+
+```python
+migration_source = client.storage.migration_sources.delete(
+    "",
+)
+print(migration_source.data)
+```
+
+## List all Migrations
+
+`GET /storage/migrations`
+
+```python
+migrations = client.storage.migrations.list()
+print(migrations.data)
+```
+
+## Create a Migration
+
+Initiate a migration of data from an external provider into Telnyx Cloud Storage.
+
+`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+
+Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum)
+
+```python
+migration = client.storage.migrations.create(
+    source_id="source_id",
+    target_bucket_name="target_bucket_name",
+    target_region="target_region",
+)
+print(migration.data)
+```
+
+## Get a Migration
+
+`GET /storage/migrations/{id}`
+
+```python
+migration = client.storage.migrations.retrieve(
+    "",
+)
+print(migration.data)
+```
+
+## Stop a Migration
+
+`POST /storage/migrations/{id}/actions/stop`
+
+```python
+response = client.storage.migrations.actions.stop(
+    "",
+)
+print(response.data)
+```
+
+## List Mobile Voice Connections
+
+`GET /v2/mobile_voice_connections`
+
+```python
+page = client.mobile_voice_connections.list()
 page = page.data[0]
 print(page.id)
 ```
 
-## Create a Private Wireless Gateway
+## Create a Mobile Voice Connection
 
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+`POST /v2/mobile_voice_connections`
 
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (['integer', 'null'])
 
 ```python
-private_wireless_gateway = client.private_wireless_gateways.create(
-    name="My private wireless gateway",
-    network_id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-)
-print(private_wireless_gateway.data)
+mobile_voice_connection = client.mobile_voice_connections.create()
+print(mobile_voice_connection.data)
 ```
 
-## Get a Private Wireless Gateway
+## Retrieve a Mobile Voice Connection
 
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
+`GET /v2/mobile_voice_connections/{id}`
 
 ```python
-private_wireless_gateway = client.private_wireless_gateways.retrieve(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+mobile_voice_connection = client.mobile_voice_connections.retrieve(
+    "id",
 )
-print(private_wireless_gateway.data)
+print(mobile_voice_connection.data)
 ```
 
-## Delete a Private Wireless Gateway
+## Update a Mobile Voice Connection
 
-Deletes the Private Wireless Gateway.
+`PATCH /v2/mobile_voice_connections/{id}`
 
-`DELETE /private_wireless_gateways/{id}`
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum), `webhook_event_failover_url` (['string', 'null']), `webhook_event_url` (['string', 'null']), `webhook_timeout_secs` (integer)
 
 ```python
-private_wireless_gateway = client.private_wireless_gateways.delete(
-    "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+mobile_voice_connection = client.mobile_voice_connections.update(
+    id="id",
 )
-print(private_wireless_gateway.data)
+print(mobile_voice_connection.data)
+```
+
+## Delete a Mobile Voice Connection
+
+`DELETE /v2/mobile_voice_connections/{id}`
+
+```python
+mobile_voice_connection = client.mobile_voice_connections.delete(
+    "id",
+)
+print(mobile_voice_connection.data)
+```
+
+## Get all wireless regions
+
+Retrieve all wireless regions for the given product.
+
+`GET /wireless/regions`
+
+```python
+response = client.wireless.retrieve_regions(
+    product="public_ips",
+)
+print(response.data)
+```
+
+## Get all possible wireless blocklist values
+
+Retrieve all wireless blocklist values for a given blocklist type.
+
+`GET /wireless_blocklist_values`
+
+```python
+wireless_blocklist_values = client.wireless_blocklist_values.list(
+    type="country",
+)
+print(wireless_blocklist_values.data)
 ```
 
 ## Get all Wireless Blocklists
@@ -739,17 +859,4 @@ wireless_blocklist = client.wireless_blocklists.delete(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
 print(wireless_blocklist.data)
-```
-
-## Get all possible wireless blocklist values
-
-Retrieve all wireless blocklist values for a given blocklist type.
-
-`GET /wireless_blocklist_values`
-
-```python
-wireless_blocklist_values = client.wireless_blocklist_values.list(
-    type="country",
-)
-print(wireless_blocklist_values.data)
 ```

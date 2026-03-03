@@ -32,6 +32,16 @@ client = Telnyx::Client.new(
 
 All examples below assume `client` is already initialized as shown above.
 
+## Get Enum
+
+`GET /10dlc/enum/{endpoint}`
+
+```ruby
+response = client.messaging_10dlc.get_enum(:mno)
+
+puts(response)
+```
+
 ## Retrieve Black Box Test Results
 
 Returns the results of the various black box tests

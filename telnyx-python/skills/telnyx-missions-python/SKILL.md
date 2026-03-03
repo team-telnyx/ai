@@ -1,7 +1,9 @@
 ---
 name: telnyx-missions-python
 description: >-
-  Telnyx Missions SDK operations. This skill provides Python SDK examples.
+  Create and manage Telnyx Missions — automated workflows, tasks, and
+  sub-resources for AI-driven telecom operations. This skill provides Python SDK
+  examples.
 metadata:
   author: telnyx
   product: missions
@@ -134,6 +136,140 @@ response = client.ai.missions.clone_mission(
     "mission_id",
 )
 print(response)
+```
+
+## List knowledge bases
+
+List all knowledge bases for a mission
+
+`GET /ai/missions/{mission_id}/knowledge-bases`
+
+```python
+response = client.ai.missions.knowledge_bases.list_knowledge_bases(
+    "mission_id",
+)
+print(response)
+```
+
+## Create knowledge base
+
+Create a new knowledge base for a mission
+
+`POST /ai/missions/{mission_id}/knowledge-bases`
+
+```python
+response = client.ai.missions.knowledge_bases.create_knowledge_base(
+    "mission_id",
+)
+print(response)
+```
+
+## Get knowledge base
+
+Get a specific knowledge base by ID
+
+`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```python
+response = client.ai.missions.knowledge_bases.get_knowledge_base(
+    knowledge_base_id="knowledge_base_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Update knowledge base
+
+Update a knowledge base definition
+
+`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```python
+response = client.ai.missions.knowledge_bases.update_knowledge_base(
+    knowledge_base_id="knowledge_base_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Delete knowledge base
+
+Delete a knowledge base from a mission
+
+`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+```python
+client.ai.missions.knowledge_bases.delete_knowledge_base(
+    knowledge_base_id="knowledge_base_id",
+    mission_id="mission_id",
+)
+```
+
+## List MCP servers
+
+List all MCP servers for a mission
+
+`GET /ai/missions/{mission_id}/mcp-servers`
+
+```python
+response = client.ai.missions.mcp_servers.list_mcp_servers(
+    "mission_id",
+)
+print(response)
+```
+
+## Create MCP server
+
+Create a new MCP server for a mission
+
+`POST /ai/missions/{mission_id}/mcp-servers`
+
+```python
+response = client.ai.missions.mcp_servers.create_mcp_server(
+    "mission_id",
+)
+print(response)
+```
+
+## Get MCP server
+
+Get a specific MCP server by ID
+
+`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```python
+response = client.ai.missions.mcp_servers.get_mcp_server(
+    mcp_server_id="mcp_server_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Update MCP server
+
+Update an MCP server definition
+
+`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```python
+response = client.ai.missions.mcp_servers.update_mcp_server(
+    mcp_server_id="mcp_server_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Delete MCP server
+
+Delete an MCP server from a mission
+
+`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+```python
+client.ai.missions.mcp_servers.delete_mcp_server(
+    mcp_server_id="mcp_server_id",
+    mission_id="mission_id",
+)
 ```
 
 ## List runs for mission
@@ -409,5 +545,72 @@ client.ai.missions.runs.telnyx_agents.unlink(
     telnyx_agent_id="telnyx_agent_id",
     mission_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
     run_id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+```
+
+## List tools
+
+List all tools for a mission
+
+`GET /ai/missions/{mission_id}/tools`
+
+```python
+response = client.ai.missions.tools.list_tools(
+    "mission_id",
+)
+print(response)
+```
+
+## Create tool
+
+Create a new tool for a mission
+
+`POST /ai/missions/{mission_id}/tools`
+
+```python
+response = client.ai.missions.tools.create_tool(
+    "mission_id",
+)
+print(response)
+```
+
+## Get tool
+
+Get a specific tool by ID
+
+`GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+```python
+response = client.ai.missions.tools.get_tool(
+    tool_id="tool_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Update tool
+
+Update a tool definition
+
+`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+```python
+response = client.ai.missions.tools.update_tool(
+    tool_id="tool_id",
+    mission_id="mission_id",
+)
+print(response)
+```
+
+## Delete tool
+
+Delete a tool from a mission
+
+`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+```python
+client.ai.missions.tools.delete_tool(
+    tool_id="tool_id",
+    mission_id="mission_id",
 )
 ```

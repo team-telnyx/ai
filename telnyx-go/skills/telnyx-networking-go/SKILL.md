@@ -39,18 +39,424 @@ client := telnyx.NewClient(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List all Regions
+## List all clusters
 
-List all regions and the interfaces that region supports
-
-`GET /regions`
+`GET /ai/clusters`
 
 ```go
-	regions, err := client.Regions.List(context.TODO())
+	page, err := client.AI.Clusters.List(context.TODO(), telnyx.AIClusterListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Printf("%+v\n", regions.Data)
+	fmt.Printf("%+v\n", page)
+```
+
+## Compute new clusters
+
+Starts a background task to compute how the data in an [embedded storage bucket](https://developers.telnyx.com/api-reference/embeddings/embed-documents) is clustered.
+
+`POST /ai/clusters` — Required: `bucket`
+
+Optional: `files` (array[string]), `min_cluster_size` (integer), `min_subcluster_size` (integer), `prefix` (string)
+
+```go
+	response, err := client.AI.Clusters.Compute(context.TODO(), telnyx.AIClusterComputeParams{
+		Bucket: "bucket",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+## Fetch a cluster
+
+`GET /ai/clusters/{task_id}`
+
+```go
+	cluster, err := client.AI.Clusters.Get(
+		context.TODO(),
+		"task_id",
+		telnyx.AIClusterGetParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", cluster.Data)
+```
+
+## Delete a cluster
+
+`DELETE /ai/clusters/{task_id}`
+
+```go
+	err := client.AI.Clusters.Delete(context.TODO(), "task_id")
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Fetch a cluster visualization
+
+`GET /ai/clusters/{task_id}/graph`
+
+```go
+	response, err := client.AI.Clusters.FetchGraph(
+		context.TODO(),
+		"task_id",
+		telnyx.AIClusterFetchGraphParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## List Integrations
+
+List all available integrations.
+
+`GET /ai/integrations`
+
+```go
+	integrations, err := client.AI.Integrations.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", integrations.Data)
+```
+
+## List User Integrations
+
+List user setup integrations
+
+`GET /ai/integrations/connections`
+
+```go
+	connections, err := client.AI.Integrations.Connections.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", connections.Data)
+```
+
+## Get User Integration connection By Id
+
+Get user setup integrations
+
+`GET /ai/integrations/connections/{user_connection_id}`
+
+```go
+	connection, err := client.AI.Integrations.Connections.Get(context.TODO(), "user_connection_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", connection.Data)
+```
+
+## Delete Integration Connection
+
+Delete a specific integration connection.
+
+`DELETE /ai/integrations/connections/{user_connection_id}`
+
+```go
+	err := client.AI.Integrations.Connections.Delete(context.TODO(), "user_connection_id")
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## List Integration By Id
+
+Retrieve integration details
+
+`GET /ai/integrations/{integration_id}`
+
+```go
+	integration, err := client.AI.Integrations.Get(context.TODO(), "integration_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", integration.ID)
+```
+
+## List all Global IP Allowed Ports
+
+`GET /global_ip_allowed_ports`
+
+```go
+	globalIPAllowedPorts, err := client.GlobalIPAllowedPorts.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAllowedPorts.Data)
+```
+
+## Global IP Assignment Health Check Metrics
+
+`GET /global_ip_assignment_health`
+
+```go
+	globalIPAssignmentHealth, err := client.GlobalIPAssignmentHealth.Get(context.TODO(), telnyx.GlobalIPAssignmentHealthGetParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignmentHealth.Data)
+```
+
+## List all Global IP assignments
+
+List all Global IP assignments.
+
+`GET /global_ip_assignments`
+
+```go
+	page, err := client.GlobalIPAssignments.List(context.TODO(), telnyx.GlobalIPAssignmentListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Global IP assignment
+
+Create a Global IP assignment.
+
+`POST /global_ip_assignments`
+
+```go
+	globalIPAssignment, err := client.GlobalIPAssignments.New(context.TODO(), telnyx.GlobalIPAssignmentNewParams{
+		GlobalIPAssignment: telnyx.GlobalIPAssignmentParam{},
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignment.Data)
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP assignment.
+
+`GET /global_ip_assignments/{id}`
+
+```go
+	globalIPAssignment, err := client.GlobalIPAssignments.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignment.Data)
+```
+
+## Update a Global IP assignment
+
+Update a Global IP assignment.
+
+`PATCH /global_ip_assignments/{id}`
+
+```go
+	globalIPAssignment, err := client.GlobalIPAssignments.Update(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.GlobalIPAssignmentUpdateParams{
+			GlobalIPAssignmentUpdateRequest: telnyx.GlobalIPAssignmentUpdateParamsGlobalIPAssignmentUpdateRequest{
+				GlobalIPAssignmentParam: telnyx.GlobalIPAssignmentParam{},
+			},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignment.Data)
+```
+
+## Delete a Global IP assignment
+
+Delete a Global IP assignment.
+
+`DELETE /global_ip_assignments/{id}`
+
+```go
+	globalIPAssignment, err := client.GlobalIPAssignments.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignment.Data)
+```
+
+## Global IP Assignment Usage Metrics
+
+`GET /global_ip_assignments_usage`
+
+```go
+	globalIPAssignmentsUsage, err := client.GlobalIPAssignmentsUsage.Get(context.TODO(), telnyx.GlobalIPAssignmentsUsageGetParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPAssignmentsUsage.Data)
+```
+
+## List all Global IP Health check types
+
+List all Global IP Health check types.
+
+`GET /global_ip_health_check_types`
+
+```go
+	globalIPHealthCheckTypes, err := client.GlobalIPHealthCheckTypes.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPHealthCheckTypes.Data)
+```
+
+## List all Global IP health checks
+
+List all Global IP health checks.
+
+`GET /global_ip_health_checks`
+
+```go
+	page, err := client.GlobalIPHealthChecks.List(context.TODO(), telnyx.GlobalIPHealthCheckListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Global IP health check
+
+Create a Global IP health check.
+
+`POST /global_ip_health_checks`
+
+```go
+	globalIPHealthCheck, err := client.GlobalIPHealthChecks.New(context.TODO(), telnyx.GlobalIPHealthCheckNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
+```
+
+## Retrieve a Global IP health check
+
+Retrieve a Global IP health check.
+
+`GET /global_ip_health_checks/{id}`
+
+```go
+	globalIPHealthCheck, err := client.GlobalIPHealthChecks.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
+```
+
+## Delete a Global IP health check
+
+Delete a Global IP health check.
+
+`DELETE /global_ip_health_checks/{id}`
+
+```go
+	globalIPHealthCheck, err := client.GlobalIPHealthChecks.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
+```
+
+## Global IP Latency Metrics
+
+`GET /global_ip_latency`
+
+```go
+	globalIPLatency, err := client.GlobalIPLatency.Get(context.TODO(), telnyx.GlobalIPLatencyGetParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPLatency.Data)
+```
+
+## List all Global IP Protocols
+
+`GET /global_ip_protocols`
+
+```go
+	globalIPProtocols, err := client.GlobalIPProtocols.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPProtocols.Data)
+```
+
+## Global IP Usage Metrics
+
+`GET /global_ip_usage`
+
+```go
+	globalIPUsage, err := client.GlobalIPUsage.Get(context.TODO(), telnyx.GlobalIPUsageGetParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIPUsage.Data)
+```
+
+## List all Global IPs
+
+List all Global IPs.
+
+`GET /global_ips`
+
+```go
+	page, err := client.GlobalIPs.List(context.TODO(), telnyx.GlobalIPListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Global IP
+
+Create a Global IP.
+
+`POST /global_ips`
+
+```go
+	globalIP, err := client.GlobalIPs.New(context.TODO(), telnyx.GlobalIPNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIP.Data)
+```
+
+## Retrieve a Global IP
+
+Retrieve a Global IP.
+
+`GET /global_ips/{id}`
+
+```go
+	globalIP, err := client.GlobalIPs.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIP.Data)
+```
+
+## Delete a Global IP
+
+Delete a Global IP.
+
+`DELETE /global_ips/{id}`
+
+```go
+	globalIP, err := client.GlobalIPs.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", globalIP.Data)
 ```
 
 ## List all Networks
@@ -187,6 +593,227 @@ Delete a Network.
 		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 		telnyx.NetworkListInterfacesParams{},
 	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Get all Private Wireless Gateways
+
+Get all Private Wireless Gateways belonging to the user.
+
+`GET /private_wireless_gateways`
+
+```go
+	page, err := client.PrivateWirelessGateways.List(context.TODO(), telnyx.PrivateWirelessGatewayListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Private Wireless Gateway
+
+Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
+
+`POST /private_wireless_gateways` — Required: `network_id`, `name`
+
+Optional: `region_code` (string)
+
+```go
+	privateWirelessGateway, err := client.PrivateWirelessGateways.New(context.TODO(), telnyx.PrivateWirelessGatewayNewParams{
+		Name:      "My private wireless gateway",
+		NetworkID: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", privateWirelessGateway.Data)
+```
+
+## Get a Private Wireless Gateway
+
+Retrieve information about a Private Wireless Gateway.
+
+`GET /private_wireless_gateways/{id}`
+
+```go
+	privateWirelessGateway, err := client.PrivateWirelessGateways.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", privateWirelessGateway.Data)
+```
+
+## Delete a Private Wireless Gateway
+
+Deletes the Private Wireless Gateway.
+
+`DELETE /private_wireless_gateways/{id}`
+
+```go
+	privateWirelessGateway, err := client.PrivateWirelessGateways.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", privateWirelessGateway.Data)
+```
+
+## List all Public Internet Gateways
+
+List all Public Internet Gateways.
+
+`GET /public_internet_gateways`
+
+```go
+	page, err := client.PublicInternetGateways.List(context.TODO(), telnyx.PublicInternetGatewayListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Public Internet Gateway
+
+Create a new Public Internet Gateway.
+
+`POST /public_internet_gateways`
+
+```go
+	publicInternetGateway, err := client.PublicInternetGateways.New(context.TODO(), telnyx.PublicInternetGatewayNewParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", publicInternetGateway.Data)
+```
+
+## Retrieve a Public Internet Gateway
+
+Retrieve a Public Internet Gateway.
+
+`GET /public_internet_gateways/{id}`
+
+```go
+	publicInternetGateway, err := client.PublicInternetGateways.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", publicInternetGateway.Data)
+```
+
+## Delete a Public Internet Gateway
+
+Delete a Public Internet Gateway.
+
+`DELETE /public_internet_gateways/{id}`
+
+```go
+	publicInternetGateway, err := client.PublicInternetGateways.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", publicInternetGateway.Data)
+```
+
+## List all Regions
+
+List all regions and the interfaces that region supports
+
+`GET /regions`
+
+```go
+	regions, err := client.Regions.List(context.TODO())
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", regions.Data)
+```
+
+## List all Virtual Cross Connects
+
+List all Virtual Cross Connects.
+
+`GET /virtual_cross_connects`
+
+```go
+	page, err := client.VirtualCrossConnects.List(context.TODO(), telnyx.VirtualCrossConnectListParams{})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a Virtual Cross Connect
+
+Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
+
+`POST /virtual_cross_connects`
+
+```go
+	virtualCrossConnect, err := client.VirtualCrossConnects.New(context.TODO(), telnyx.VirtualCrossConnectNewParams{
+		RegionCode: "ashburn-va",
+	})
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", virtualCrossConnect.Data)
+```
+
+## Retrieve a Virtual Cross Connect
+
+Retrieve a Virtual Cross Connect.
+
+`GET /virtual_cross_connects/{id}`
+
+```go
+	virtualCrossConnect, err := client.VirtualCrossConnects.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", virtualCrossConnect.Data)
+```
+
+## Update the Virtual Cross Connect
+
+Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
+
+`PATCH /virtual_cross_connects/{id}`
+
+```go
+	virtualCrossConnect, err := client.VirtualCrossConnects.Update(
+		context.TODO(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.VirtualCrossConnectUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", virtualCrossConnect.Data)
+```
+
+## Delete a Virtual Cross Connect
+
+Delete a Virtual Cross Connect.
+
+`DELETE /virtual_cross_connects/{id}`
+
+```go
+	virtualCrossConnect, err := client.VirtualCrossConnects.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", virtualCrossConnect.Data)
+```
+
+## List Virtual Cross Connect Cloud Coverage
+
+List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
+
+`GET /virtual_cross_connects_coverage`
+
+```go
+	page, err := client.VirtualCrossConnectsCoverage.List(context.TODO(), telnyx.VirtualCrossConnectsCoverageListParams{})
 	if err != nil {
 		panic(err.Error())
 	}
@@ -341,489 +968,4 @@ Delete the WireGuard peer.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", response)
-```
-
-## Get all Private Wireless Gateways
-
-Get all Private Wireless Gateways belonging to the user.
-
-`GET /private_wireless_gateways`
-
-```go
-	page, err := client.PrivateWirelessGateways.List(context.TODO(), telnyx.PrivateWirelessGatewayListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Private Wireless Gateway
-
-Asynchronously create a Private Wireless Gateway for SIM cards for a previously created network.
-
-`POST /private_wireless_gateways` — Required: `network_id`, `name`
-
-Optional: `region_code` (string)
-
-```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.New(context.TODO(), telnyx.PrivateWirelessGatewayNewParams{
-		Name:      "My private wireless gateway",
-		NetworkID: "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
-```
-
-## Get a Private Wireless Gateway
-
-Retrieve information about a Private Wireless Gateway.
-
-`GET /private_wireless_gateways/{id}`
-
-```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
-```
-
-## Delete a Private Wireless Gateway
-
-Deletes the Private Wireless Gateway.
-
-`DELETE /private_wireless_gateways/{id}`
-
-```go
-	privateWirelessGateway, err := client.PrivateWirelessGateways.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", privateWirelessGateway.Data)
-```
-
-## List all Public Internet Gateways
-
-List all Public Internet Gateways.
-
-`GET /public_internet_gateways`
-
-```go
-	page, err := client.PublicInternetGateways.List(context.TODO(), telnyx.PublicInternetGatewayListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Public Internet Gateway
-
-Create a new Public Internet Gateway.
-
-`POST /public_internet_gateways`
-
-```go
-	publicInternetGateway, err := client.PublicInternetGateways.New(context.TODO(), telnyx.PublicInternetGatewayNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", publicInternetGateway.Data)
-```
-
-## Retrieve a Public Internet Gateway
-
-Retrieve a Public Internet Gateway.
-
-`GET /public_internet_gateways/{id}`
-
-```go
-	publicInternetGateway, err := client.PublicInternetGateways.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", publicInternetGateway.Data)
-```
-
-## Delete a Public Internet Gateway
-
-Delete a Public Internet Gateway.
-
-`DELETE /public_internet_gateways/{id}`
-
-```go
-	publicInternetGateway, err := client.PublicInternetGateways.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", publicInternetGateway.Data)
-```
-
-## List all Virtual Cross Connects
-
-List all Virtual Cross Connects.
-
-`GET /virtual_cross_connects`
-
-```go
-	page, err := client.VirtualCrossConnects.List(context.TODO(), telnyx.VirtualCrossConnectListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Virtual Cross Connect
-
-Create a new Virtual Cross Connect.<br /><br />For AWS and GCE, you have the option of creating the primary connection first and the secondary connection later.
-
-`POST /virtual_cross_connects`
-
-```go
-	virtualCrossConnect, err := client.VirtualCrossConnects.New(context.TODO(), telnyx.VirtualCrossConnectNewParams{
-		RegionCode: "ashburn-va",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", virtualCrossConnect.Data)
-```
-
-## Retrieve a Virtual Cross Connect
-
-Retrieve a Virtual Cross Connect.
-
-`GET /virtual_cross_connects/{id}`
-
-```go
-	virtualCrossConnect, err := client.VirtualCrossConnects.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", virtualCrossConnect.Data)
-```
-
-## Update the Virtual Cross Connect
-
-Update the Virtual Cross Connect.<br /><br />Cloud IPs can only be patched during the `created` state, as GCE will only inform you of your generated IP once the pending connection requested has bee...
-
-`PATCH /virtual_cross_connects/{id}`
-
-```go
-	virtualCrossConnect, err := client.VirtualCrossConnects.Update(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.VirtualCrossConnectUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", virtualCrossConnect.Data)
-```
-
-## Delete a Virtual Cross Connect
-
-Delete a Virtual Cross Connect.
-
-`DELETE /virtual_cross_connects/{id}`
-
-```go
-	virtualCrossConnect, err := client.VirtualCrossConnects.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", virtualCrossConnect.Data)
-```
-
-## List Virtual Cross Connect Cloud Coverage
-
-List Virtual Cross Connects Cloud Coverage.<br /><br />This endpoint shows which cloud regions are available for the `location_code` your Virtual Cross Connect will be provisioned in.
-
-`GET /virtual_cross_connects/coverage`
-
-```go
-	page, err := client.VirtualCrossConnectsCoverage.List(context.TODO(), telnyx.VirtualCrossConnectsCoverageListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## List all Global IPs
-
-List all Global IPs.
-
-`GET /global_ips`
-
-```go
-	page, err := client.GlobalIPs.List(context.TODO(), telnyx.GlobalIPListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Global IP
-
-Create a Global IP.
-
-`POST /global_ips`
-
-```go
-	globalIP, err := client.GlobalIPs.New(context.TODO(), telnyx.GlobalIPNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIP.Data)
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP.
-
-`GET /global_ips/{id}`
-
-```go
-	globalIP, err := client.GlobalIPs.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIP.Data)
-```
-
-## Delete a Global IP
-
-Delete a Global IP.
-
-`DELETE /global_ips/{id}`
-
-```go
-	globalIP, err := client.GlobalIPs.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIP.Data)
-```
-
-## List all Global IP Allowed Ports
-
-`GET /global_ip_allowed_ports`
-
-```go
-	globalIPAllowedPorts, err := client.GlobalIPAllowedPorts.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAllowedPorts.Data)
-```
-
-## Global IP Assignment Health Check Metrics
-
-`GET /global_ip_assignment_health`
-
-```go
-	globalIPAssignmentHealth, err := client.GlobalIPAssignmentHealth.Get(context.TODO(), telnyx.GlobalIPAssignmentHealthGetParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignmentHealth.Data)
-```
-
-## List all Global IP assignments
-
-List all Global IP assignments.
-
-`GET /global_ip_assignments`
-
-```go
-	page, err := client.GlobalIPAssignments.List(context.TODO(), telnyx.GlobalIPAssignmentListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Global IP assignment
-
-Create a Global IP assignment.
-
-`POST /global_ip_assignments`
-
-```go
-	globalIPAssignment, err := client.GlobalIPAssignments.New(context.TODO(), telnyx.GlobalIPAssignmentNewParams{
-		GlobalIPAssignment: telnyx.GlobalIPAssignmentParam{},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignment.Data)
-```
-
-## Retrieve a Global IP
-
-Retrieve a Global IP assignment.
-
-`GET /global_ip_assignments/{id}`
-
-```go
-	globalIPAssignment, err := client.GlobalIPAssignments.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignment.Data)
-```
-
-## Update a Global IP assignment
-
-Update a Global IP assignment.
-
-`PATCH /global_ip_assignments/{id}`
-
-```go
-	globalIPAssignment, err := client.GlobalIPAssignments.Update(
-		context.TODO(),
-		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-		telnyx.GlobalIPAssignmentUpdateParams{
-			GlobalIPAssignmentUpdateRequest: telnyx.GlobalIPAssignmentUpdateParamsGlobalIPAssignmentUpdateRequest{
-				GlobalIPAssignmentParam: telnyx.GlobalIPAssignmentParam{},
-			},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignment.Data)
-```
-
-## Delete a Global IP assignment
-
-Delete a Global IP assignment.
-
-`DELETE /global_ip_assignments/{id}`
-
-```go
-	globalIPAssignment, err := client.GlobalIPAssignments.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignment.Data)
-```
-
-## Global IP Assignment Usage Metrics
-
-`GET /global_ip_assignments/usage`
-
-```go
-	globalIPAssignmentsUsage, err := client.GlobalIPAssignmentsUsage.Get(context.TODO(), telnyx.GlobalIPAssignmentsUsageGetParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPAssignmentsUsage.Data)
-```
-
-## List all Global IP Health check types
-
-List all Global IP Health check types.
-
-`GET /global_ip_health_check_types`
-
-```go
-	globalIPHealthCheckTypes, err := client.GlobalIPHealthCheckTypes.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPHealthCheckTypes.Data)
-```
-
-## List all Global IP health checks
-
-List all Global IP health checks.
-
-`GET /global_ip_health_checks`
-
-```go
-	page, err := client.GlobalIPHealthChecks.List(context.TODO(), telnyx.GlobalIPHealthCheckListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a Global IP health check
-
-Create a Global IP health check.
-
-`POST /global_ip_health_checks`
-
-```go
-	globalIPHealthCheck, err := client.GlobalIPHealthChecks.New(context.TODO(), telnyx.GlobalIPHealthCheckNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
-```
-
-## Retrieve a Global IP health check
-
-Retrieve a Global IP health check.
-
-`GET /global_ip_health_checks/{id}`
-
-```go
-	globalIPHealthCheck, err := client.GlobalIPHealthChecks.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
-```
-
-## Delete a Global IP health check
-
-Delete a Global IP health check.
-
-`DELETE /global_ip_health_checks/{id}`
-
-```go
-	globalIPHealthCheck, err := client.GlobalIPHealthChecks.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPHealthCheck.Data)
-```
-
-## Global IP Latency Metrics
-
-`GET /global_ip_latency`
-
-```go
-	globalIPLatency, err := client.GlobalIPLatency.Get(context.TODO(), telnyx.GlobalIPLatencyGetParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPLatency.Data)
-```
-
-## List all Global IP Protocols
-
-`GET /global_ip_protocols`
-
-```go
-	globalIPProtocols, err := client.GlobalIPProtocols.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPProtocols.Data)
-```
-
-## Global IP Usage Metrics
-
-`GET /global_ip_usage`
-
-```go
-	globalIPUsage, err := client.GlobalIPUsage.Get(context.TODO(), telnyx.GlobalIPUsageGetParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", globalIPUsage.Data)
 ```

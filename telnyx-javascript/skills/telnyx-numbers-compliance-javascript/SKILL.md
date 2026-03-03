@@ -245,55 +245,28 @@ const response = await client.documents.generateDownloadLink(
 console.log(response.data);
 ```
 
-## List all requirements
+## Update requirement group for a phone number order
 
-List all requirements with filtering, sorting, and pagination
-
-`GET /requirements`
+`POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
 ```javascript
-// Automatically fetches more pages as needed.
-for await (const requirementListResponse of client.requirements.list()) {
-  console.log(requirementListResponse.id);
-}
-```
-
-## Retrieve a document requirement
-
-Retrieve a document requirement record
-
-`GET /requirements/{id}`
-
-```javascript
-const requirement = await client.requirements.retrieve('a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa');
-
-console.log(requirement.data);
-```
-
-## List all requirement types
-
-List all requirement types ordered by created_at descending
-
-`GET /requirement_types`
-
-```javascript
-const requirementTypes = await client.requirementTypes.list();
-
-console.log(requirementTypes.data);
-```
-
-## Retrieve a requirement types
-
-Retrieve a requirement type by id
-
-`GET /requirement_types/{id}`
-
-```javascript
-const requirementType = await client.requirementTypes.retrieve(
-  'a38c217a-8019-48f8-bff6-0fdd9939075b',
+const response = await client.numberOrderPhoneNumbers.updateRequirementGroup(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { requirement_group_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e' },
 );
 
-console.log(requirementType.data);
+console.log(response.data);
+```
+
+## Retrieve regulatory requirements for a list of phone numbers
+
+`GET /phone_numbers_regulatory_requirements`
+
+```javascript
+const phoneNumbersRegulatoryRequirement =
+  await client.phoneNumbersRegulatoryRequirements.retrieve();
+
+console.log(phoneNumbersRegulatoryRequirement.data);
 ```
 
 ## Retrieve regulatory requirements
@@ -372,6 +345,116 @@ console.log(requirementGroup.id);
 const requirementGroup = await client.requirementGroups.submitForApproval('id');
 
 console.log(requirementGroup.id);
+```
+
+## List all requirement types
+
+List all requirement types ordered by created_at descending
+
+`GET /requirement_types`
+
+```javascript
+const requirementTypes = await client.requirementTypes.list();
+
+console.log(requirementTypes.data);
+```
+
+## Retrieve a requirement types
+
+Retrieve a requirement type by id
+
+`GET /requirement_types/{id}`
+
+```javascript
+const requirementType = await client.requirementTypes.retrieve(
+  'a38c217a-8019-48f8-bff6-0fdd9939075b',
+);
+
+console.log(requirementType.data);
+```
+
+## List all requirements
+
+List all requirements with filtering, sorting, and pagination
+
+`GET /requirements`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const requirementListResponse of client.requirements.list()) {
+  console.log(requirementListResponse.id);
+}
+```
+
+## Retrieve a document requirement
+
+Retrieve a document requirement record
+
+`GET /requirements/{id}`
+
+```javascript
+const requirement = await client.requirements.retrieve('a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa');
+
+console.log(requirement.data);
+```
+
+## Update requirement group for a sub number order
+
+`POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
+
+```javascript
+const response = await client.subNumberOrders.updateRequirementGroup(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { requirement_group_id: 'a4b201f9-8646-4e54-a7d2-b2e403eeaf8c' },
+);
+
+console.log(response.data);
+```
+
+## List all user addresses
+
+Returns a list of your user addresses.
+
+`GET /user_addresses`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const userAddress of client.userAddresses.list()) {
+  console.log(userAddress.id);
+}
+```
+
+## Creates a user address
+
+Creates a user address.
+
+`POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```javascript
+const userAddress = await client.userAddresses.create({
+  business_name: "Toy-O'Kon",
+  country_code: 'US',
+  first_name: 'Alfred',
+  last_name: 'Foster',
+  locality: 'Austin',
+  street_address: '600 Congress Avenue',
+});
+
+console.log(userAddress.data);
+```
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user_addresses/{id}`
+
+```javascript
+const userAddress = await client.userAddresses.retrieve('id');
+
+console.log(userAddress.data);
 ```
 
 ## List all Verified Numbers

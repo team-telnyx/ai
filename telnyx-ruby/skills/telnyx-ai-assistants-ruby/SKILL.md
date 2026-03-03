@@ -58,86 +58,6 @@ assistant = client.ai.assistants.create(instructions: "instructions", model: "mo
 puts(assistant)
 ```
 
-## Get an assistant
-
-Retrieve an AI Assistant configuration by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}`
-
-```ruby
-assistant = client.ai.assistants.retrieve("assistant_id")
-
-puts(assistant)
-```
-
-## Update an assistant
-
-Update an AI Assistant's attributes.
-
-`POST /ai/assistants/{assistant_id}`
-
-```ruby
-assistant = client.ai.assistants.update("assistant_id")
-
-puts(assistant)
-```
-
-## Delete an assistant
-
-Delete an AI Assistant by `assistant_id`.
-
-`DELETE /ai/assistants/{assistant_id}`
-
-```ruby
-assistant = client.ai.assistants.delete("assistant_id")
-
-puts(assistant)
-```
-
-## Assistant Chat (BETA)
-
-This endpoint allows a client to send a chat message to a specific AI Assistant.
-
-`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
-
-Optional: `name` (string)
-
-```ruby
-response = client.ai.assistants.chat(
-  "assistant_id",
-  content: "Tell me a joke about cats",
-  conversation_id: "42b20469-1215-4a9a-8964-c36f66b406f4"
-)
-
-puts(response)
-```
-
-## Assistant Sms Chat
-
-Send an SMS message for an assistant.
-
-`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
-
-Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
-
-```ruby
-response = client.ai.assistants.send_sms("assistant_id", from: "from", to: "to")
-
-puts(response)
-```
-
-## Clone Assistant
-
-Clone an existing assistant, excluding telephony and messaging settings.
-
-`POST /ai/assistants/{assistant_id}/clone`
-
-```ruby
-assistant = client.ai.assistants.clone_("assistant_id")
-
-puts(assistant)
-```
-
 ## Import assistants from external provider
 
 Import assistants from external providers.
@@ -150,62 +70,6 @@ Optional: `import_ids` (array[string])
 assistants_list = client.ai.assistants.imports(api_key_ref: "api_key_ref", provider: :elevenlabs)
 
 puts(assistants_list)
-```
-
-## List scheduled events
-
-Get scheduled events for an assistant with pagination and filtering
-
-`GET /ai/assistants/{assistant_id}/scheduled_events`
-
-```ruby
-page = client.ai.assistants.scheduled_events.list("assistant_id")
-
-puts(page)
-```
-
-## Create a scheduled event
-
-Create a scheduled event for an assistant
-
-`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
-
-Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
-
-```ruby
-scheduled_event_response = client.ai.assistants.scheduled_events.create(
-  "assistant_id",
-  scheduled_at_fixed_datetime: "2025-04-15T13:07:28.764Z",
-  telnyx_agent_target: "telnyx_agent_target",
-  telnyx_conversation_channel: :phone_call,
-  telnyx_end_user_target: "telnyx_end_user_target"
-)
-
-puts(scheduled_event_response)
-```
-
-## Get a scheduled event
-
-Retrieve a scheduled event by event ID
-
-`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```ruby
-scheduled_event_response = client.ai.assistants.scheduled_events.retrieve("event_id", assistant_id: "assistant_id")
-
-puts(scheduled_event_response)
-```
-
-## Delete a scheduled event
-
-If the event is pending, this will cancel the event.
-
-`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```ruby
-result = client.ai.assistants.scheduled_events.delete("event_id", assistant_id: "assistant_id")
-
-puts(result)
 ```
 
 ## List assistant tests with pagination
@@ -356,6 +220,222 @@ test_run_response = client.ai.assistants.tests.runs.retrieve("run_id", test_id: 
 puts(test_run_response)
 ```
 
+## Get an assistant
+
+Retrieve an AI Assistant configuration by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}`
+
+```ruby
+assistant = client.ai.assistants.retrieve("assistant_id")
+
+puts(assistant)
+```
+
+## Update an assistant
+
+Update an AI Assistant's attributes.
+
+`POST /ai/assistants/{assistant_id}`
+
+```ruby
+assistant = client.ai.assistants.update("assistant_id")
+
+puts(assistant)
+```
+
+## Delete an assistant
+
+Delete an AI Assistant by `assistant_id`.
+
+`DELETE /ai/assistants/{assistant_id}`
+
+```ruby
+assistant = client.ai.assistants.delete("assistant_id")
+
+puts(assistant)
+```
+
+## Get Canary Deploy
+
+Endpoint to get a canary deploy configuration for an assistant.
+
+`GET /ai/assistants/{assistant_id}/canary-deploys`
+
+```ruby
+canary_deploy_response = client.ai.assistants.canary_deploys.retrieve("assistant_id")
+
+puts(canary_deploy_response)
+```
+
+## Create Canary Deploy
+
+Endpoint to create a canary deploy configuration for an assistant.
+
+`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```ruby
+canary_deploy_response = client.ai.assistants.canary_deploys.create(
+  "assistant_id",
+  versions: [{percentage: 1, version_id: "version_id"}]
+)
+
+puts(canary_deploy_response)
+```
+
+## Update Canary Deploy
+
+Endpoint to update a canary deploy configuration for an assistant.
+
+`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```ruby
+canary_deploy_response = client.ai.assistants.canary_deploys.update(
+  "assistant_id",
+  versions: [{percentage: 1, version_id: "version_id"}]
+)
+
+puts(canary_deploy_response)
+```
+
+## Delete Canary Deploy
+
+Endpoint to delete a canary deploy configuration for an assistant.
+
+`DELETE /ai/assistants/{assistant_id}/canary-deploys`
+
+```ruby
+result = client.ai.assistants.canary_deploys.delete("assistant_id")
+
+puts(result)
+```
+
+## Assistant Chat (BETA)
+
+This endpoint allows a client to send a chat message to a specific AI Assistant.
+
+`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
+
+Optional: `name` (string)
+
+```ruby
+response = client.ai.assistants.chat(
+  "assistant_id",
+  content: "Tell me a joke about cats",
+  conversation_id: "42b20469-1215-4a9a-8964-c36f66b406f4"
+)
+
+puts(response)
+```
+
+## Assistant Sms Chat
+
+Send an SMS message for an assistant.
+
+`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
+
+Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
+
+```ruby
+response = client.ai.assistants.send_sms("assistant_id", from: "from", to: "to")
+
+puts(response)
+```
+
+## Clone Assistant
+
+Clone an existing assistant, excluding telephony and messaging settings.
+
+`POST /ai/assistants/{assistant_id}/clone`
+
+```ruby
+assistant = client.ai.assistants.clone_("assistant_id")
+
+puts(assistant)
+```
+
+## List scheduled events
+
+Get scheduled events for an assistant with pagination and filtering
+
+`GET /ai/assistants/{assistant_id}/scheduled_events`
+
+```ruby
+page = client.ai.assistants.scheduled_events.list("assistant_id")
+
+puts(page)
+```
+
+## Create a scheduled event
+
+Create a scheduled event for an assistant
+
+`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
+
+Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
+
+```ruby
+scheduled_event_response = client.ai.assistants.scheduled_events.create(
+  "assistant_id",
+  scheduled_at_fixed_datetime: "2025-04-15T13:07:28.764Z",
+  telnyx_agent_target: "telnyx_agent_target",
+  telnyx_conversation_channel: :phone_call,
+  telnyx_end_user_target: "telnyx_end_user_target"
+)
+
+puts(scheduled_event_response)
+```
+
+## Get a scheduled event
+
+Retrieve a scheduled event by event ID
+
+`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```ruby
+scheduled_event_response = client.ai.assistants.scheduled_events.retrieve("event_id", assistant_id: "assistant_id")
+
+puts(scheduled_event_response)
+```
+
+## Delete a scheduled event
+
+If the event is pending, this will cancel the event.
+
+`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```ruby
+result = client.ai.assistants.scheduled_events.delete("event_id", assistant_id: "assistant_id")
+
+puts(result)
+```
+
+## Get assistant texml
+
+Get an assistant texml by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}/texml`
+
+```ruby
+response = client.ai.assistants.get_texml("assistant_id")
+
+puts(response)
+```
+
+## Test Assistant Tool
+
+Test a webhook tool for an assistant
+
+`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
+
+Optional: `arguments` (object), `dynamic_variables` (object)
+
+```ruby
+response = client.ai.assistants.tools.test_("tool_id", assistant_id: "assistant_id")
+
+puts(response)
+```
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -416,146 +496,6 @@ Promotes a specific version to be the main/current version of the assistant.
 assistant = client.ai.assistants.versions.promote("version_id", assistant_id: "assistant_id")
 
 puts(assistant)
-```
-
-## Get Canary Deploy
-
-Endpoint to get a canary deploy configuration for an assistant.
-
-`GET /ai/assistants/{assistant_id}/canary-deploys`
-
-```ruby
-canary_deploy_response = client.ai.assistants.canary_deploys.retrieve("assistant_id")
-
-puts(canary_deploy_response)
-```
-
-## Create Canary Deploy
-
-Endpoint to create a canary deploy configuration for an assistant.
-
-`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```ruby
-canary_deploy_response = client.ai.assistants.canary_deploys.create(
-  "assistant_id",
-  versions: [{percentage: 1, version_id: "version_id"}]
-)
-
-puts(canary_deploy_response)
-```
-
-## Update Canary Deploy
-
-Endpoint to update a canary deploy configuration for an assistant.
-
-`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```ruby
-canary_deploy_response = client.ai.assistants.canary_deploys.update(
-  "assistant_id",
-  versions: [{percentage: 1, version_id: "version_id"}]
-)
-
-puts(canary_deploy_response)
-```
-
-## Delete Canary Deploy
-
-Endpoint to delete a canary deploy configuration for an assistant.
-
-`DELETE /ai/assistants/{assistant_id}/canary-deploys`
-
-```ruby
-result = client.ai.assistants.canary_deploys.delete("assistant_id")
-
-puts(result)
-```
-
-## Get assistant texml
-
-Get an assistant texml by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}/texml`
-
-```ruby
-response = client.ai.assistants.get_texml("assistant_id")
-
-puts(response)
-```
-
-## Test Assistant Tool
-
-Test a webhook tool for an assistant
-
-`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
-
-Optional: `arguments` (object), `dynamic_variables` (object)
-
-```ruby
-response = client.ai.assistants.tools.test_("tool_id", assistant_id: "assistant_id")
-
-puts(response)
-```
-
-## List Integrations
-
-List all available integrations.
-
-`GET /ai/integrations`
-
-```ruby
-integrations = client.ai.integrations.list
-
-puts(integrations)
-```
-
-## List User Integrations
-
-List user setup integrations
-
-`GET /ai/integrations/connections`
-
-```ruby
-connections = client.ai.integrations.connections.list
-
-puts(connections)
-```
-
-## Get User Integration connection By Id
-
-Get user setup integrations
-
-`GET /ai/integrations/connections/{user_connection_id}`
-
-```ruby
-connection = client.ai.integrations.connections.retrieve("user_connection_id")
-
-puts(connection)
-```
-
-## Delete Integration Connection
-
-Delete a specific integration connection.
-
-`DELETE /ai/integrations/connections/{user_connection_id}`
-
-```ruby
-result = client.ai.integrations.connections.delete("user_connection_id")
-
-puts(result)
-```
-
-## List Integration By Id
-
-Retrieve integration details
-
-`GET /ai/integrations/{integration_id}`
-
-```ruby
-integration = client.ai.integrations.retrieve("integration_id")
-
-puts(integration)
 ```
 
 ## List MCP Servers

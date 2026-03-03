@@ -98,6 +98,19 @@ ConferenceCreateParams params = ConferenceCreateParams.builder()
 ConferenceCreateResponse conference = client.conferences().create(params);
 ```
 
+## List conference participants
+
+Lists conference participants
+
+`GET /conferences/{conference_id}/participants`
+
+```java
+import com.telnyx.sdk.models.conferences.ConferenceListParticipantsPage;
+import com.telnyx.sdk.models.conferences.ConferenceListParticipantsParams;
+
+ConferenceListParticipantsPage page = client.conferences().listParticipants("conference_id");
+```
+
 ## Retrieve a conference
 
 Retrieve an existing conference
@@ -109,6 +122,40 @@ import com.telnyx.sdk.models.conferences.ConferenceRetrieveParams;
 import com.telnyx.sdk.models.conferences.ConferenceRetrieveResponse;
 
 ConferenceRetrieveResponse conference = client.conferences().retrieve("id");
+```
+
+## End a conference
+
+End a conference and terminate all active participants.
+
+`POST /conferences/{id}/actions/end`
+
+Optional: `command_id` (string)
+
+```java
+import com.telnyx.sdk.models.conferences.actions.ActionEndConferenceParams;
+import com.telnyx.sdk.models.conferences.actions.ActionEndConferenceResponse;
+
+ActionEndConferenceResponse response = client.conferences().actions().endConference("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
+```
+
+## Gather DTMF using audio prompt in a conference
+
+Play an audio file to a specific conference participant and gather DTMF input.
+
+`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
+
+Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
+
+```java
+import com.telnyx.sdk.models.conferences.actions.ActionGatherDtmfAudioParams;
+import com.telnyx.sdk.models.conferences.actions.ActionGatherDtmfAudioResponse;
+
+ActionGatherDtmfAudioParams params = ActionGatherDtmfAudioParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .callControlId("v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg")
+    .build();
+ActionGatherDtmfAudioResponse response = client.conferences().actions().gatherDtmfAudio(params);
 ```
 
 ## Hold conference participants
@@ -230,7 +277,7 @@ Start recording the conference.
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
+Optional: `channels` (enum), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum), `trim` (enum)
 
 ```java
 import com.telnyx.sdk.models.conferences.actions.ActionRecordStartParams;
@@ -256,6 +303,25 @@ import com.telnyx.sdk.models.conferences.actions.ActionRecordStopParams;
 import com.telnyx.sdk.models.conferences.actions.ActionRecordStopResponse;
 
 ActionRecordStopResponse response = client.conferences().actions().recordStop("id");
+```
+
+## Send DTMF to conference participants
+
+Send DTMF tones to one or more conference participants.
+
+`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+
+Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+
+```java
+import com.telnyx.sdk.models.conferences.actions.ActionSendDtmfParams;
+import com.telnyx.sdk.models.conferences.actions.ActionSendDtmfResponse;
+
+ActionSendDtmfParams params = ActionSendDtmfParams.builder()
+    .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+    .digits("1234#")
+    .build();
+ActionSendDtmfResponse response = client.conferences().actions().sendDtmf(params);
 ```
 
 ## Speak text to conference participants
@@ -350,70 +416,177 @@ ActionUpdateParams params = ActionUpdateParams.builder()
 ActionUpdateResponse action = client.conferences().actions().update(params);
 ```
 
-## End a conference
+## Retrieve a conference participant
 
-End a conference and terminate all active participants.
+Retrieve details of a specific conference participant by their ID or label.
 
-`POST /conferences/{id}/actions/end`
-
-Optional: `command_id` (string)
+`GET /conferences/{id}/participants/{participant_id}`
 
 ```java
-import com.telnyx.sdk.models.conferences.actions.ActionEndConferenceParams;
-import com.telnyx.sdk.models.conferences.actions.ActionEndConferenceResponse;
+import com.telnyx.sdk.models.conferences.ConferenceRetrieveParticipantParams;
+import com.telnyx.sdk.models.conferences.ConferenceRetrieveParticipantResponse;
 
-ActionEndConferenceResponse response = client.conferences().actions().endConference("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-## Gather DTMF using audio prompt in a conference
-
-Play an audio file to a specific conference participant and gather DTMF input.
-
-`POST /conferences/{id}/actions/gather_using_audio` — Required: `call_control_id`
-
-Optional: `audio_url` (string), `client_state` (string), `gather_id` (string), `initial_timeout_millis` (integer), `inter_digit_timeout_millis` (integer), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (integer), `maximum_tries` (integer), `media_name` (string), `minimum_digits` (integer), `stop_playback_on_dtmf` (boolean), `terminating_digit` (string), `timeout_millis` (integer), `valid_digits` (string)
-
-```java
-import com.telnyx.sdk.models.conferences.actions.ActionGatherDtmfAudioParams;
-import com.telnyx.sdk.models.conferences.actions.ActionGatherDtmfAudioResponse;
-
-ActionGatherDtmfAudioParams params = ActionGatherDtmfAudioParams.builder()
+ConferenceRetrieveParticipantParams params = ConferenceRetrieveParticipantParams.builder()
     .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .callControlId("v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg")
+    .participantId("participant_id")
     .build();
-ActionGatherDtmfAudioResponse response = client.conferences().actions().gatherDtmfAudio(params);
+ConferenceRetrieveParticipantResponse response = client.conferences().retrieveParticipant(params);
 ```
 
-## Send DTMF to conference participants
+## Update a conference participant
 
-Send DTMF tones to one or more conference participants.
+Update properties of a conference participant.
 
-`POST /conferences/{id}/actions/send_dtmf` — Required: `digits`
+`PATCH /conferences/{id}/participants/{participant_id}`
 
-Optional: `call_control_ids` (array[string]), `client_state` (string), `duration_millis` (integer)
+Optional: `beep_enabled` (enum), `end_conference_on_exit` (boolean), `soft_end_conference_on_exit` (boolean)
 
 ```java
-import com.telnyx.sdk.models.conferences.actions.ActionSendDtmfParams;
-import com.telnyx.sdk.models.conferences.actions.ActionSendDtmfResponse;
+import com.telnyx.sdk.models.conferences.ConferenceUpdateParticipantParams;
+import com.telnyx.sdk.models.conferences.ConferenceUpdateParticipantResponse;
 
-ActionSendDtmfParams params = ActionSendDtmfParams.builder()
+ConferenceUpdateParticipantParams params = ConferenceUpdateParticipantParams.builder()
     .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .digits("1234#")
+    .participantId("participant_id")
     .build();
-ActionSendDtmfResponse response = client.conferences().actions().sendDtmf(params);
+ConferenceUpdateParticipantResponse response = client.conferences().updateParticipant(params);
 ```
 
-## List conference participants
+## List queues
 
-Lists conference participants
+List all queues for the authenticated user.
 
-`GET /conferences/{conference_id}/participants`
+`GET /queues`
 
 ```java
-import com.telnyx.sdk.models.conferences.ConferenceListParticipantsPage;
-import com.telnyx.sdk.models.conferences.ConferenceListParticipantsParams;
+import com.telnyx.sdk.models.queues.QueueListPage;
+import com.telnyx.sdk.models.queues.QueueListParams;
 
-ConferenceListParticipantsPage page = client.conferences().listParticipants("conference_id");
+QueueListPage page = client.queues().list();
+```
+
+## Create a queue
+
+Create a new call queue.
+
+`POST /queues` — Required: `queue_name`
+
+Optional: `max_size` (integer)
+
+```java
+import com.telnyx.sdk.models.queues.QueueCreateParams;
+import com.telnyx.sdk.models.queues.QueueCreateResponse;
+
+QueueCreateParams params = QueueCreateParams.builder()
+    .queueName("tier_1_support")
+    .build();
+QueueCreateResponse queue = client.queues().create(params);
+```
+
+## Retrieve a call queue
+
+Retrieve an existing call queue
+
+`GET /queues/{queue_name}`
+
+```java
+import com.telnyx.sdk.models.queues.QueueRetrieveParams;
+import com.telnyx.sdk.models.queues.QueueRetrieveResponse;
+
+QueueRetrieveResponse queue = client.queues().retrieve("queue_name");
+```
+
+## Update a queue
+
+Update properties of an existing call queue.
+
+`POST /queues/{queue_name}` — Required: `max_size`
+
+```java
+import com.telnyx.sdk.models.queues.QueueUpdateParams;
+import com.telnyx.sdk.models.queues.QueueUpdateResponse;
+
+QueueUpdateParams params = QueueUpdateParams.builder()
+    .queueName("queue_name")
+    .maxSize(200L)
+    .build();
+QueueUpdateResponse queue = client.queues().update(params);
+```
+
+## Delete a queue
+
+Delete an existing call queue.
+
+`DELETE /queues/{queue_name}`
+
+```java
+import com.telnyx.sdk.models.queues.QueueDeleteParams;
+
+client.queues().delete("queue_name");
+```
+
+## Retrieve calls from a queue
+
+Retrieve the list of calls in an existing queue
+
+`GET /queues/{queue_name}/calls`
+
+```java
+import com.telnyx.sdk.models.queues.calls.CallListPage;
+import com.telnyx.sdk.models.queues.calls.CallListParams;
+
+CallListPage page = client.queues().calls().list("queue_name");
+```
+
+## Retrieve a call from a queue
+
+Retrieve an existing call from an existing queue
+
+`GET /queues/{queue_name}/calls/{call_control_id}`
+
+```java
+import com.telnyx.sdk.models.queues.calls.CallRetrieveParams;
+import com.telnyx.sdk.models.queues.calls.CallRetrieveResponse;
+
+CallRetrieveParams params = CallRetrieveParams.builder()
+    .queueName("queue_name")
+    .callControlId("call_control_id")
+    .build();
+CallRetrieveResponse call = client.queues().calls().retrieve(params);
+```
+
+## Update queued call
+
+Update queued call's keep_after_hangup flag
+
+`PATCH /queues/{queue_name}/calls/{call_control_id}`
+
+Optional: `keep_after_hangup` (boolean)
+
+```java
+import com.telnyx.sdk.models.queues.calls.CallUpdateParams;
+
+CallUpdateParams params = CallUpdateParams.builder()
+    .queueName("queue_name")
+    .callControlId("call_control_id")
+    .build();
+client.queues().calls().update(params);
+```
+
+## Force remove a call from a queue
+
+Removes an inactive call from a queue.
+
+`DELETE /queues/{queue_name}/calls/{call_control_id}`
+
+```java
+import com.telnyx.sdk.models.queues.calls.CallRemoveParams;
+
+CallRemoveParams params = CallRemoveParams.builder()
+    .queueName("queue_name")
+    .callControlId("call_control_id")
+    .build();
+client.queues().calls().remove(params);
 ```
 
 ---

@@ -73,116 +73,6 @@ Optional: `description` (string), `dynamic_variables` (object), `dynamic_variabl
 	fmt.Printf("%+v\n", assistant.ID)
 ```
 
-## Get an assistant
-
-Retrieve an AI Assistant configuration by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}`
-
-```go
-	assistant, err := client.AI.Assistants.Get(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantGetParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", assistant.ID)
-```
-
-## Update an assistant
-
-Update an AI Assistant's attributes.
-
-`POST /ai/assistants/{assistant_id}`
-
-```go
-	assistant, err := client.AI.Assistants.Update(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", assistant.ID)
-```
-
-## Delete an assistant
-
-Delete an AI Assistant by `assistant_id`.
-
-`DELETE /ai/assistants/{assistant_id}`
-
-```go
-	assistant, err := client.AI.Assistants.Delete(context.TODO(), "assistant_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", assistant.ID)
-```
-
-## Assistant Chat (BETA)
-
-This endpoint allows a client to send a chat message to a specific AI Assistant.
-
-`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
-
-Optional: `name` (string)
-
-```go
-	response, err := client.AI.Assistants.Chat(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantChatParams{
-			Content:        "Tell me a joke about cats",
-			ConversationID: "42b20469-1215-4a9a-8964-c36f66b406f4",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Content)
-```
-
-## Assistant Sms Chat
-
-Send an SMS message for an assistant.
-
-`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
-
-Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
-
-```go
-	response, err := client.AI.Assistants.SendSMS(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantSendSMSParams{
-			From: "from",
-			To:   "to",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.ConversationID)
-```
-
-## Clone Assistant
-
-Clone an existing assistant, excluding telephony and messaging settings.
-
-`POST /ai/assistants/{assistant_id}/clone`
-
-```go
-	assistant, err := client.AI.Assistants.Clone(context.TODO(), "assistant_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", assistant.ID)
-```
-
 ## Import assistants from external provider
 
 Import assistants from external providers.
@@ -200,88 +90,6 @@ Optional: `import_ids` (array[string])
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", assistantsList.Data)
-```
-
-## List scheduled events
-
-Get scheduled events for an assistant with pagination and filtering
-
-`GET /ai/assistants/{assistant_id}/scheduled_events`
-
-```go
-	page, err := client.AI.Assistants.ScheduledEvents.List(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantScheduledEventListParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-## Create a scheduled event
-
-Create a scheduled event for an assistant
-
-`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
-
-Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
-
-```go
-	scheduledEventResponse, err := client.AI.Assistants.ScheduledEvents.New(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantScheduledEventNewParams{
-			ScheduledAtFixedDatetime:  time.Now(),
-			TelnyxAgentTarget:         "telnyx_agent_target",
-			TelnyxConversationChannel: telnyx.ConversationChannelTypePhoneCall,
-			TelnyxEndUserTarget:       "telnyx_end_user_target",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", scheduledEventResponse)
-```
-
-## Get a scheduled event
-
-Retrieve a scheduled event by event ID
-
-`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```go
-	scheduledEventResponse, err := client.AI.Assistants.ScheduledEvents.Get(
-		context.TODO(),
-		"event_id",
-		telnyx.AIAssistantScheduledEventGetParams{
-			AssistantID: "assistant_id",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", scheduledEventResponse)
-```
-
-## Delete a scheduled event
-
-If the event is pending, this will cancel the event.
-
-`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```go
-	err := client.AI.Assistants.ScheduledEvents.Delete(
-		context.TODO(),
-		"event_id",
-		telnyx.AIAssistantScheduledEventDeleteParams{
-			AssistantID: "assistant_id",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
 ```
 
 ## List assistant tests with pagination
@@ -482,6 +290,311 @@ Retrieves detailed information about a specific test run execution
 	fmt.Printf("%+v\n", testRunResponse.RunID)
 ```
 
+## Get an assistant
+
+Retrieve an AI Assistant configuration by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}`
+
+```go
+	assistant, err := client.AI.Assistants.Get(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantGetParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", assistant.ID)
+```
+
+## Update an assistant
+
+Update an AI Assistant's attributes.
+
+`POST /ai/assistants/{assistant_id}`
+
+```go
+	assistant, err := client.AI.Assistants.Update(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantUpdateParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", assistant.ID)
+```
+
+## Delete an assistant
+
+Delete an AI Assistant by `assistant_id`.
+
+`DELETE /ai/assistants/{assistant_id}`
+
+```go
+	assistant, err := client.AI.Assistants.Delete(context.TODO(), "assistant_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", assistant.ID)
+```
+
+## Get Canary Deploy
+
+Endpoint to get a canary deploy configuration for an assistant.
+
+`GET /ai/assistants/{assistant_id}/canary-deploys`
+
+```go
+	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.Get(context.TODO(), "assistant_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
+```
+
+## Create Canary Deploy
+
+Endpoint to create a canary deploy configuration for an assistant.
+
+`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```go
+	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.New(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantCanaryDeployNewParams{
+			CanaryDeploy: telnyx.CanaryDeployParam{
+				Versions: []telnyx.VersionConfigParam{{
+					Percentage: 1,
+					VersionID:  "version_id",
+				}},
+			},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
+```
+
+## Update Canary Deploy
+
+Endpoint to update a canary deploy configuration for an assistant.
+
+`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
+
+```go
+	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.Update(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantCanaryDeployUpdateParams{
+			CanaryDeploy: telnyx.CanaryDeployParam{
+				Versions: []telnyx.VersionConfigParam{{
+					Percentage: 1,
+					VersionID:  "version_id",
+				}},
+			},
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
+```
+
+## Delete Canary Deploy
+
+Endpoint to delete a canary deploy configuration for an assistant.
+
+`DELETE /ai/assistants/{assistant_id}/canary-deploys`
+
+```go
+	err := client.AI.Assistants.CanaryDeploys.Delete(context.TODO(), "assistant_id")
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Assistant Chat (BETA)
+
+This endpoint allows a client to send a chat message to a specific AI Assistant.
+
+`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
+
+Optional: `name` (string)
+
+```go
+	response, err := client.AI.Assistants.Chat(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantChatParams{
+			Content:        "Tell me a joke about cats",
+			ConversationID: "42b20469-1215-4a9a-8964-c36f66b406f4",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Content)
+```
+
+## Assistant Sms Chat
+
+Send an SMS message for an assistant.
+
+`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
+
+Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
+
+```go
+	response, err := client.AI.Assistants.SendSMS(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantSendSMSParams{
+			From: "from",
+			To:   "to",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.ConversationID)
+```
+
+## Clone Assistant
+
+Clone an existing assistant, excluding telephony and messaging settings.
+
+`POST /ai/assistants/{assistant_id}/clone`
+
+```go
+	assistant, err := client.AI.Assistants.Clone(context.TODO(), "assistant_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", assistant.ID)
+```
+
+## List scheduled events
+
+Get scheduled events for an assistant with pagination and filtering
+
+`GET /ai/assistants/{assistant_id}/scheduled_events`
+
+```go
+	page, err := client.AI.Assistants.ScheduledEvents.List(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantScheduledEventListParams{},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+## Create a scheduled event
+
+Create a scheduled event for an assistant
+
+`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
+
+Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
+
+```go
+	scheduledEventResponse, err := client.AI.Assistants.ScheduledEvents.New(
+		context.TODO(),
+		"assistant_id",
+		telnyx.AIAssistantScheduledEventNewParams{
+			ScheduledAtFixedDatetime:  time.Now(),
+			TelnyxAgentTarget:         "telnyx_agent_target",
+			TelnyxConversationChannel: telnyx.ConversationChannelTypePhoneCall,
+			TelnyxEndUserTarget:       "telnyx_end_user_target",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", scheduledEventResponse)
+```
+
+## Get a scheduled event
+
+Retrieve a scheduled event by event ID
+
+`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```go
+	scheduledEventResponse, err := client.AI.Assistants.ScheduledEvents.Get(
+		context.TODO(),
+		"event_id",
+		telnyx.AIAssistantScheduledEventGetParams{
+			AssistantID: "assistant_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", scheduledEventResponse)
+```
+
+## Delete a scheduled event
+
+If the event is pending, this will cancel the event.
+
+`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
+
+```go
+	err := client.AI.Assistants.ScheduledEvents.Delete(
+		context.TODO(),
+		"event_id",
+		telnyx.AIAssistantScheduledEventDeleteParams{
+			AssistantID: "assistant_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+```
+
+## Get assistant texml
+
+Get an assistant texml by `assistant_id`.
+
+`GET /ai/assistants/{assistant_id}/texml`
+
+```go
+	response, err := client.AI.Assistants.GetTexml(context.TODO(), "assistant_id")
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response)
+```
+
+## Test Assistant Tool
+
+Test a webhook tool for an assistant
+
+`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
+
+Optional: `arguments` (object), `dynamic_variables` (object)
+
+```go
+	response, err := client.AI.Assistants.Tools.Test(
+		context.TODO(),
+		"tool_id",
+		telnyx.AIAssistantToolTestParams{
+			AssistantID: "assistant_id",
+		},
+	)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -576,188 +689,6 @@ Promotes a specific version to be the main/current version of the assistant.
 		panic(err.Error())
 	}
 	fmt.Printf("%+v\n", assistant.ID)
-```
-
-## Get Canary Deploy
-
-Endpoint to get a canary deploy configuration for an assistant.
-
-`GET /ai/assistants/{assistant_id}/canary-deploys`
-
-```go
-	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.Get(context.TODO(), "assistant_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
-```
-
-## Create Canary Deploy
-
-Endpoint to create a canary deploy configuration for an assistant.
-
-`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```go
-	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.New(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantCanaryDeployNewParams{
-			CanaryDeploy: telnyx.CanaryDeployParam{
-				Versions: []telnyx.VersionConfigParam{{
-					Percentage: 1,
-					VersionID:  "version_id",
-				}},
-			},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
-```
-
-## Update Canary Deploy
-
-Endpoint to update a canary deploy configuration for an assistant.
-
-`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```go
-	canaryDeployResponse, err := client.AI.Assistants.CanaryDeploys.Update(
-		context.TODO(),
-		"assistant_id",
-		telnyx.AIAssistantCanaryDeployUpdateParams{
-			CanaryDeploy: telnyx.CanaryDeployParam{
-				Versions: []telnyx.VersionConfigParam{{
-					Percentage: 1,
-					VersionID:  "version_id",
-				}},
-			},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", canaryDeployResponse.AssistantID)
-```
-
-## Delete Canary Deploy
-
-Endpoint to delete a canary deploy configuration for an assistant.
-
-`DELETE /ai/assistants/{assistant_id}/canary-deploys`
-
-```go
-	err := client.AI.Assistants.CanaryDeploys.Delete(context.TODO(), "assistant_id")
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
-## Get assistant texml
-
-Get an assistant texml by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}/texml`
-
-```go
-	response, err := client.AI.Assistants.GetTexml(context.TODO(), "assistant_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response)
-```
-
-## Test Assistant Tool
-
-Test a webhook tool for an assistant
-
-`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
-
-Optional: `arguments` (object), `dynamic_variables` (object)
-
-```go
-	response, err := client.AI.Assistants.Tools.Test(
-		context.TODO(),
-		"tool_id",
-		telnyx.AIAssistantToolTestParams{
-			AssistantID: "assistant_id",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-## List Integrations
-
-List all available integrations.
-
-`GET /ai/integrations`
-
-```go
-	integrations, err := client.AI.Integrations.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", integrations.Data)
-```
-
-## List User Integrations
-
-List user setup integrations
-
-`GET /ai/integrations/connections`
-
-```go
-	connections, err := client.AI.Integrations.Connections.List(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", connections.Data)
-```
-
-## Get User Integration connection By Id
-
-Get user setup integrations
-
-`GET /ai/integrations/connections/{user_connection_id}`
-
-```go
-	connection, err := client.AI.Integrations.Connections.Get(context.TODO(), "user_connection_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", connection.Data)
-```
-
-## Delete Integration Connection
-
-Delete a specific integration connection.
-
-`DELETE /ai/integrations/connections/{user_connection_id}`
-
-```go
-	err := client.AI.Integrations.Connections.Delete(context.TODO(), "user_connection_id")
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
-## List Integration By Id
-
-Retrieve integration details
-
-`GET /ai/integrations/{integration_id}`
-
-```go
-	integration, err := client.AI.Integrations.Get(context.TODO(), "integration_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", integration.ID)
 ```
 
 ## List MCP Servers

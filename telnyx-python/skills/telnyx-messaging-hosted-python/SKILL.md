@@ -34,144 +34,6 @@ client = Telnyx(
 
 All examples below assume `client` is already initialized as shown above.
 
-## List messaging hosted number orders
-
-`GET /messaging_hosted_number_orders`
-
-```python
-page = client.messaging_hosted_number_orders.list()
-page = page.data[0]
-print(page.id)
-```
-
-## Create a messaging hosted number order
-
-`POST /messaging_hosted_number_orders`
-
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
-
-```python
-messaging_hosted_number_order = client.messaging_hosted_number_orders.create()
-print(messaging_hosted_number_order.data)
-```
-
-## Retrieve a messaging hosted number order
-
-`GET /messaging_hosted_number_orders/{id}`
-
-```python
-messaging_hosted_number_order = client.messaging_hosted_number_orders.retrieve(
-    "id",
-)
-print(messaging_hosted_number_order.data)
-```
-
-## Delete a messaging hosted number order
-
-Delete a messaging hosted number order and all associated phone numbers.
-
-`DELETE /messaging_hosted_number_orders/{id}`
-
-```python
-messaging_hosted_number_order = client.messaging_hosted_number_orders.delete(
-    "id",
-)
-print(messaging_hosted_number_order.data)
-```
-
-## Upload hosted number document
-
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
-
-```python
-response = client.messaging_hosted_number_orders.actions.upload_file(
-    id="id",
-)
-print(response.data)
-```
-
-## Validate hosted number codes
-
-Validate the verification codes sent to the numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
-
-```python
-response = client.messaging_hosted_number_orders.validate_codes(
-    id="id",
-    verification_codes=[{
-        "code": "code",
-        "phone_number": "phone_number",
-    }],
-)
-print(response.data)
-```
-
-## Create hosted number verification codes
-
-Create verification codes to validate numbers of the hosted order.
-
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
-
-```python
-response = client.messaging_hosted_number_orders.create_verification_codes(
-    id="id",
-    phone_numbers=["string"],
-    verification_method="sms",
-)
-print(response.data)
-```
-
-## Check hosted messaging eligibility
-
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
-
-```python
-response = client.messaging_hosted_number_orders.check_eligibility(
-    phone_numbers=["string"],
-)
-print(response.phone_numbers)
-```
-
-## Retrieve a messaging hosted number
-
-Retrieve a specific messaging hosted number by its ID or phone number.
-
-`GET /messaging_hosted_numbers/{id}`
-
-```python
-messaging_hosted_number = client.messaging_hosted_numbers.retrieve(
-    "id",
-)
-print(messaging_hosted_number.data)
-```
-
-## Update a messaging hosted number
-
-Update the messaging settings for a hosted number.
-
-`PATCH /messaging_hosted_numbers/{id}`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
-
-```python
-messaging_hosted_number = client.messaging_hosted_numbers.update(
-    id="id",
-)
-print(messaging_hosted_number.data)
-```
-
-## Delete a messaging hosted number
-
-`DELETE /messaging_hosted_numbers/{id}`
-
-```python
-messaging_hosted_number = client.messaging_hosted_numbers.delete(
-    "id",
-)
-print(messaging_hosted_number.data)
-```
-
 ## Send an RCS message
 
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
@@ -184,6 +46,19 @@ response = client.messages.rcs.send(
     agent_message={},
     messaging_profile_id="messaging_profile_id",
     to="+13125551234",
+)
+print(response.data)
+```
+
+## Generate RCS deeplink
+
+Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
+
+`GET /messages/rcs/deeplinks/{agent_id}`
+
+```python
+response = client.messages.rcs.generate_deeplink(
+    agent_id="agent_id",
 )
 print(response.data)
 ```
@@ -260,17 +135,114 @@ response = client.messaging.rcs.invite_test_number(
 print(response.data)
 ```
 
-## Generate RCS deeplink
+## List messaging hosted number orders
 
-Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
-
-`GET /messages/rcs_deeplinks/{agent_id}`
+`GET /messaging_hosted_number_orders`
 
 ```python
-response = client.messages.rcs.generate_deeplink(
-    agent_id="agent_id",
+page = client.messaging_hosted_number_orders.list()
+page = page.data[0]
+print(page.id)
+```
+
+## Create a messaging hosted number order
+
+`POST /messaging_hosted_number_orders`
+
+Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+
+```python
+messaging_hosted_number_order = client.messaging_hosted_number_orders.create()
+print(messaging_hosted_number_order.data)
+```
+
+## Check hosted messaging eligibility
+
+`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+
+```python
+response = client.messaging_hosted_number_orders.check_eligibility(
+    phone_numbers=["string"],
+)
+print(response.phone_numbers)
+```
+
+## Retrieve a messaging hosted number order
+
+`GET /messaging_hosted_number_orders/{id}`
+
+```python
+messaging_hosted_number_order = client.messaging_hosted_number_orders.retrieve(
+    "id",
+)
+print(messaging_hosted_number_order.data)
+```
+
+## Delete a messaging hosted number order
+
+Delete a messaging hosted number order and all associated phone numbers.
+
+`DELETE /messaging_hosted_number_orders/{id}`
+
+```python
+messaging_hosted_number_order = client.messaging_hosted_number_orders.delete(
+    "id",
+)
+print(messaging_hosted_number_order.data)
+```
+
+## Upload hosted number document
+
+`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+```python
+response = client.messaging_hosted_number_orders.actions.upload_file(
+    id="id",
 )
 print(response.data)
+```
+
+## Validate hosted number codes
+
+Validate the verification codes sent to the numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+
+```python
+response = client.messaging_hosted_number_orders.validate_codes(
+    id="id",
+    verification_codes=[{
+        "code": "code",
+        "phone_number": "phone_number",
+    }],
+)
+print(response.data)
+```
+
+## Create hosted number verification codes
+
+Create verification codes to validate numbers of the hosted order.
+
+`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+
+```python
+response = client.messaging_hosted_number_orders.create_verification_codes(
+    id="id",
+    phone_numbers=["string"],
+    verification_method="sms",
+)
+print(response.data)
+```
+
+## Delete a messaging hosted number
+
+`DELETE /messaging_hosted_numbers/{id}`
+
+```python
+messaging_hosted_number = client.messaging_hosted_numbers.delete(
+    "id",
+)
+print(messaging_hosted_number.data)
 ```
 
 ## List Verification Requests
@@ -394,4 +366,29 @@ A request may only be deleted when when the request is in the "rejected" state.
 client.messaging_tollfree.verification.requests.delete(
     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 )
+```
+
+## Get Verification Request Status History
+
+Get the history of status changes for a verification request.
+
+`GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+```python
+response = client.messaging_tollfree.verification.requests.retrieve_status_history(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+    page_number=1,
+    page_size=1,
+)
+print(response.records)
+```
+
+## List messaging URL domains
+
+`GET /messaging_url_domains`
+
+```python
+page = client.messaging_url_domains.list()
+page = page.data[0]
+print(page.id)
 ```

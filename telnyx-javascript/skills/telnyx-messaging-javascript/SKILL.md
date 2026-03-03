@@ -33,6 +33,60 @@ const client = new Telnyx({
 
 All examples below assume `client` is already initialized as shown above.
 
+## List alphanumeric sender IDs
+
+List all alphanumeric sender IDs for the authenticated user.
+
+`GET /alphanumeric_sender_ids`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const alphanumericSenderID of client.alphanumericSenderIDs.list()) {
+  console.log(alphanumericSenderID.id);
+}
+```
+
+## Create an alphanumeric sender ID
+
+Create a new alphanumeric sender ID associated with a messaging profile.
+
+`POST /alphanumeric_sender_ids` — Required: `alphanumeric_sender_id`, `messaging_profile_id`
+
+Optional: `us_long_code_fallback` (string)
+
+```javascript
+const alphanumericSenderID = await client.alphanumericSenderIDs.create({
+  alphanumeric_sender_id: 'MyCompany',
+  messaging_profile_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+});
+
+console.log(alphanumericSenderID.data);
+```
+
+## Retrieve an alphanumeric sender ID
+
+Retrieve a specific alphanumeric sender ID.
+
+`GET /alphanumeric_sender_ids/{id}`
+
+```javascript
+const alphanumericSenderID = await client.alphanumericSenderIDs.retrieve('id');
+
+console.log(alphanumericSenderID.data);
+```
+
+## Delete an alphanumeric sender ID
+
+Delete an alphanumeric sender ID and disassociate it from its messaging profile.
+
+`DELETE /alphanumeric_sender_ids/{id}`
+
+```javascript
+const alphanumericSenderID = await client.alphanumericSenderIDs.delete('id');
+
+console.log(alphanumericSenderID.data);
+```
+
 ## Send a message
 
 Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
@@ -47,42 +101,35 @@ const response = await client.messages.send({ to: '+18445550001' });
 console.log(response.data);
 ```
 
-## Retrieve a message
+## Send a message using an alphanumeric sender ID
 
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+Send an SMS message using an alphanumeric sender ID.
 
-`GET /messages/{id}`
+`POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
 
-```javascript
-const message = await client.messages.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(message.data);
-```
-
-## Cancel a scheduled message
-
-Cancel a scheduled message that has not yet been sent.
-
-`DELETE /messages/{id}`
+Optional: `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```javascript
-const response = await client.messages.cancelScheduled('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
-
-console.log(response.id);
-```
-
-## Send a Whatsapp message
-
-`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
-
-Optional: `type` (enum), `webhook_url` (url)
-
-```javascript
-const response = await client.messages.sendWhatsapp({
-  from: '+13125551234',
-  to: '+13125551234',
-  whatsapp_message: {},
+const response = await client.messages.sendWithAlphanumericSender({
+  from: 'MyCompany',
+  messaging_profile_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  text: 'text',
+  to: '+E.164',
 });
+
+console.log(response.data);
+```
+
+## Retrieve group MMS messages
+
+Retrieve all messages in a group MMS conversation by the group message ID.
+
+`GET /messages/group/{message_id}`
+
+```javascript
+const response = await client.messages.retrieveGroupMessages(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
 
 console.log(response.data);
 ```
@@ -155,6 +202,85 @@ const response = await client.messages.sendShortCode({ from: '+18445550001', to:
 console.log(response.data);
 ```
 
+## Send a Whatsapp message
+
+`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
+
+Optional: `type` (enum), `webhook_url` (url)
+
+```javascript
+const response = await client.messages.sendWhatsapp({
+  from: '+13125551234',
+  to: '+13125551234',
+  whatsapp_message: {},
+});
+
+console.log(response.data);
+```
+
+## Retrieve a message
+
+Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+
+`GET /messages/{id}`
+
+```javascript
+const message = await client.messages.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(message.data);
+```
+
+## Cancel a scheduled message
+
+Cancel a scheduled message that has not yet been sent.
+
+`DELETE /messages/{id}`
+
+```javascript
+const response = await client.messages.cancelScheduled('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
+
+console.log(response.id);
+```
+
+## List messaging hosted numbers
+
+List all hosted numbers associated with the authenticated user.
+
+`GET /messaging_hosted_numbers`
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const phoneNumberWithMessagingSettings of client.messagingHostedNumbers.list()) {
+  console.log(phoneNumberWithMessagingSettings.id);
+}
+```
+
+## Retrieve a messaging hosted number
+
+Retrieve a specific messaging hosted number by its ID or phone number.
+
+`GET /messaging_hosted_numbers/{id}`
+
+```javascript
+const messagingHostedNumber = await client.messagingHostedNumbers.retrieve('id');
+
+console.log(messagingHostedNumber.data);
+```
+
+## Update a messaging hosted number
+
+Update the messaging settings for a hosted number.
+
+`PATCH /messaging_hosted_numbers/{id}`
+
+Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+
+```javascript
+const messagingHostedNumber = await client.messagingHostedNumbers.update('id');
+
+console.log(messagingHostedNumber.data);
+```
+
 ## List opt-outs
 
 Retrieve a list of opt-out blocks.
@@ -168,83 +294,133 @@ for await (const messagingOptoutListResponse of client.messagingOptouts.list()) 
 }
 ```
 
-## Retrieve a phone number with messaging settings
+## List high-level messaging profile metrics
 
-`GET /phone_numbers/{id}/messaging`
+List high-level metrics for all messaging profiles belonging to the authenticated user.
 
-```javascript
-const messaging = await client.phoneNumbers.messaging.retrieve('id');
-
-console.log(messaging.data);
-```
-
-## Update the messaging profile and/or messaging product of a phone number
-
-`PATCH /phone_numbers/{id}/messaging`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+`GET /messaging_profile_metrics`
 
 ```javascript
-const messaging = await client.phoneNumbers.messaging.update('id');
+const messagingProfileMetrics = await client.messagingProfileMetrics.list();
 
-console.log(messaging.data);
+console.log(messagingProfileMetrics.data);
 ```
 
-## List phone numbers with messaging settings
+## Regenerate messaging profile secret
 
-`GET /phone_numbers/messaging`
+Regenerate the v1 secret for a messaging profile.
+
+`POST /messaging_profiles/{id}/actions/regenerate_secret`
+
+```javascript
+const response = await client.messagingProfiles.actions.regenerateSecret(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(response.data);
+```
+
+## List alphanumeric sender IDs for a messaging profile
+
+List all alphanumeric sender IDs associated with a specific messaging profile.
+
+`GET /messaging_profiles/{id}/alphanumeric_sender_ids`
 
 ```javascript
 // Automatically fetches more pages as needed.
-for await (const phoneNumberWithMessagingSettings of client.phoneNumbers.messaging.list()) {
-  console.log(phoneNumberWithMessagingSettings.id);
+for await (const alphanumericSenderID of client.messagingProfiles.listAlphanumericSenderIDs(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+)) {
+  console.log(alphanumericSenderID.id);
 }
 ```
 
-## Retrieve a mobile phone number with messaging settings
+## Get detailed messaging profile metrics
 
-`GET /mobile_phone_numbers/{id}/messaging`
+Get detailed metrics for a specific messaging profile, broken down by time interval.
+
+`GET /messaging_profiles/{id}/metrics`
 
 ```javascript
-const messaging = await client.mobilePhoneNumbers.messaging.retrieve('id');
+const response = await client.messagingProfiles.retrieveMetrics(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
 
-console.log(messaging.data);
+console.log(response.data);
 ```
 
-## List mobile phone numbers with messaging settings
+## List Auto-Response Settings
 
-`GET /mobile_phone_numbers/messaging`
+`GET /messaging_profiles/{profile_id}/autoresp_configs`
 
 ```javascript
-// Automatically fetches more pages as needed.
-for await (const messagingListResponse of client.mobilePhoneNumbers.messaging.list()) {
-  console.log(messagingListResponse.id);
-}
+const autorespConfigs = await client.messagingProfiles.autorespConfigs.list(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+);
+
+console.log(autorespConfigs.data);
 ```
 
-## Bulk update phone number profiles
+## Create auto-response setting
 
-`POST /messaging_numbers/bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`POST /messaging_profiles/{profile_id}/autoresp_configs` — Required: `op`, `keywords`, `country_code`
 
-Optional: `assign_only` (boolean)
+Optional: `resp_text` (string)
 
 ```javascript
-const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.create({
-  messaging_profile_id: '00000000-0000-0000-0000-000000000000',
-  numbers: ['+18880000000', '+18880000001', '+18880000002'],
+const autoRespConfigResponse = await client.messagingProfiles.autorespConfigs.create('profile_id', {
+  country_code: 'US',
+  keywords: ['keyword1', 'keyword2'],
+  op: 'start',
 });
 
-console.log(messagingNumbersBulkUpdate.data);
+console.log(autoRespConfigResponse.data);
 ```
 
-## Retrieve bulk update status
+## Get Auto-Response Setting
 
-`GET /messaging_numbers/bulk_updates/{order_id}`
+`GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
 
 ```javascript
-const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.retrieve('order_id');
+const autoRespConfigResponse = await client.messagingProfiles.autorespConfigs.retrieve(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { profile_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e' },
+);
 
-console.log(messagingNumbersBulkUpdate.data);
+console.log(autoRespConfigResponse.data);
+```
+
+## Update Auto-Response Setting
+
+`PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` — Required: `op`, `keywords`, `country_code`
+
+Optional: `resp_text` (string)
+
+```javascript
+const autoRespConfigResponse = await client.messagingProfiles.autorespConfigs.update(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  {
+    profile_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+    country_code: 'US',
+    keywords: ['keyword1', 'keyword2'],
+    op: 'start',
+  },
+);
+
+console.log(autoRespConfigResponse.data);
+```
+
+## Delete Auto-Response Setting
+
+`DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
+
+```javascript
+const autorespConfig = await client.messagingProfiles.autorespConfigs.delete(
+  '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
+  { profile_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e' },
+);
+
+console.log(autorespConfig);
 ```
 
 ---
