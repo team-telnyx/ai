@@ -21,6 +21,14 @@
       "skills": [
         "./telnyx-twilio-migration/skills/telnyx-twilio-migration"
       ]
+    },
+    {
+      "name": "telnyx-cli",
+      "description": "Telnyx CLI — manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
+      "source": "./telnyx-cli",
+      "skills": [
+        "./telnyx-cli/skills/telnyx-cli"
+      ]
     }
   ]
 }
