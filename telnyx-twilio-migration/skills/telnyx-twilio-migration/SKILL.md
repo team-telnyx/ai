@@ -309,6 +309,16 @@ If validation fails and you cannot fix the issue, document it and continue to th
 - Access fields via `data.payload.*` — `from` is an object (`from.phone_number`), `to` is an array
 - Replace HMAC-SHA1 (`RequestValidator`) with Ed25519 signature verification using `telnyx-signature-ed25519` + `telnyx-timestamp` headers
 
+**Error Handling (all products):**
+When transforming API calls, always wrap in try/catch with proper error handling. Telnyx errors return `{ "errors": [{ "code": "...", "title": "...", "detail": "..." }] }`. Handle these HTTP status codes:
+- **400** — Bad request: check parameter values and format
+- **401** — Authentication failed: verify `TELNYX_API_KEY` is set and valid
+- **404** — Resource not found: check resource ID (profile, connection, call control ID)
+- **422** — Validation error: check field values (e.g., E.164 format, valid profile ID)
+- **429** — Rate limited: implement exponential backoff with jitter
+
+See `{baseDir}/references/error-code-mapping.md` for the full Twilio→Telnyx error code mapping and before/after code examples.
+
 ---
 
 ## Phase 5: Validation
