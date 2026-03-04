@@ -64,6 +64,8 @@ for d in "${EXCLUDE_DIRS[@]}"; do
 done
 # Exclude minified/bundled files (can cause grep OOM and produce false positives)
 EXCLUDE_ARGS+=(--exclude='*.min.js' --exclude='*.min.css' --exclude='*.bundle.js' --exclude='*.chunk.js')
+# Exclude lock files (contain Twilio version strings but aren't source code)
+EXCLUDE_ARGS+=(--exclude='package-lock.json' --exclude='yarn.lock' --exclude='pnpm-lock.yaml' --exclude='Gemfile.lock' --exclude='Pipfile.lock' --exclude='poetry.lock' --exclude='go.sum')
 
 # ---------------------------------------------------------------------------
 # State — associative arrays / arrays collected during the scan

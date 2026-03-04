@@ -39,6 +39,7 @@ PROJECT_ROOT=""
 
 EXCLUDE_DIRS="node_modules .git vendor __pycache__ venv .venv dist build"
 EXCLUDE_FILES="MIGRATION-PLAN.md MIGRATION-REPORT.md"
+EXCLUDE_LOCK_FILES="--exclude=package-lock.json --exclude=yarn.lock --exclude=pnpm-lock.yaml --exclude=Gemfile.lock --exclude=Pipfile.lock --exclude=poetry.lock --exclude=go.sum"
 
 # JSON accumulator
 JSON_CHECKS="[]"
@@ -123,6 +124,8 @@ build_exclude_args() {
   for d in $EXCLUDE_DIRS; do
     args="$args --exclude-dir=$d"
   done
+  # Exclude lock files (contain dependency version strings, not source code)
+  args="$args $EXCLUDE_LOCK_FILES"
   echo "$args"
 }
 
@@ -152,6 +155,21 @@ search_source_files() {
   done
   # shellcheck disable=SC2086
   grep -rn $GREP_EXCLUDES --exclude='*.md' --exclude='*.min.js' $include_args -E "$pattern" "$PROJECT_ROOT" 2>/dev/null || true
+}
+
+# Search helper that filters out comment-only lines to reduce false positives.
+# Strips lines where the match is in a comment (# // /* -- %) before counting.
+search_code_only() {
+  local pattern="$1"
+  shift
+  local raw
+  raw=$(search_files "$pattern" "$@")
+  if [ -z "$raw" ]; then
+    echo ""
+    return
+  fi
+  # Filter out lines that are comments (leading # // /* -- % after optional whitespace)
+  echo "$raw" | grep -v '^\([^:]*:[0-9]*:\)\s*\(#\|//\|/\*\|\*\|--\|%\|<!--\)' || true
 }
 
 # Convert grep output lines to JSON files array
