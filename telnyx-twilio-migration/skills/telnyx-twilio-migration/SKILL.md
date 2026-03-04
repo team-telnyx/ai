@@ -453,10 +453,6 @@ Present to user:
 - [ ] If hybrid deployment: maintain both Twilio and Telnyx API keys, monitor usage on both platforms, revisit kept products periodically
 - [ ] Cancel Twilio account after validation period (skip if hybrid — only cancel when all products are fully migrated)
 
-### Step 6.3: Explore Telnyx-Only Features
-
-Highlight capabilities unavailable on Twilio: AI Assistants (voice/chat AI agents), Inference API (OpenAI-compatible LLM hosting), Embeddings (vector search/RAG), Cloud Storage (S3-compatible), multiple STT engines (Google/Deepgram/Telnyx/Azure in `<Gather>`), ElevenLabs TTS (in `<Say>`), FastPort (same-day porting), Private Wireless Gateway (IoT networking).
-
 ---
 
 ## Scripts Reference
@@ -469,15 +465,3 @@ All scripts are in `{baseDir}/scripts/`. Run them — do not substitute your own
 **Validators (free)**: `validate-migration.sh <root> [--product X] [--json]`, `validate-texml.sh <file>`
 **Tests (free)**: `test-migration/smoke-test.sh`, `test-migration/webhook-receiver.py`, `test-migration/test-webhooks-local.py`
 **Tests (paid, --confirm)**: `test-migration/test-voice.sh` (~$0.01), `test-migration/test-messaging.sh` (~$0.004), `test-migration/test-verify.sh` (~$0.05)
-
-## Related Skills
-
-For ongoing Telnyx development after migration: `telnyx-python`, `telnyx-javascript`, `telnyx-go`, `telnyx-java`, `telnyx-ruby`, `telnyx-curl`. Pattern: `telnyx-{product}-{language}` (e.g., `telnyx-voice-python`).
-
-## Resources
-
-- Telnyx Mission Control Portal: https://portal.telnyx.com
-- Telnyx Developer Docs: https://developers.telnyx.com
-- Telnyx API Reference: https://developers.telnyx.com/api/overview
-- Telnyx Status Page: https://status.telnyx.com
-- Telnyx Support: https://support.telnyx.com
