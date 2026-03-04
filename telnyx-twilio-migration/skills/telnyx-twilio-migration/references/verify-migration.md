@@ -2,6 +2,8 @@
 
 Migrate from Twilio Verify to the Telnyx Verify API for phone number verification and 2FA.
 
+> **CRITICAL: `verify_profile_id` is REQUIRED on every Telnyx Verify API call.** Unlike Twilio where the Service SID is in the URL path, Telnyx requires `verify_profile_id` as a body parameter on both send and check requests. Omitting it will cause a 422 error. Create a profile first (see Setup below), then include it in every request.
+
 ## Table of Contents
 
 - [Overview](#overview)
