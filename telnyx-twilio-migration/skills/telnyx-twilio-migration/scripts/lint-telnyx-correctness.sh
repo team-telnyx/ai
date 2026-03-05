@@ -482,7 +482,7 @@ if [ "$doc_count" -gt 0 ]; then
   lint_issue "docs_still_twilio" \
     "Documentation files still reference Twilio (not migration-related references) in $doc_count file(s)" \
     "Update README/docs: replace Twilio service names, env vars, setup instructions, and URLs with Telnyx equivalents" \
-    "$(echo "$doc_files" | sed '/^$/d' | head -10 | jq -R -s 'split("\n") | map(select(length > 0))' 2>/dev/null || echo "[]")"
+    "$(echo "$doc_files" | sed '/^$/d' | head -10 | jq -R -s '{files: (split("\n") | map(select(length > 0)))}' 2>/dev/null || echo '{"files":[]}')"
 else
   lint_pass "docs_still_twilio" "No Twilio references in documentation files (README, CONTRIBUTING)"
 fi
