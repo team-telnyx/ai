@@ -182,13 +182,27 @@ if [ -z "${TELNYX_FROM_NUMBER:-}" ]; then
         exit 1
       fi
     else
-      # Pick the first messaging-capable number
-      # Try to find one with a messaging profile already assigned
-      TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '
-        [.data[] | select(.messaging_profile_id != null and .messaging_profile_id != "")] | .[0].phone_number // empty
+      # Pick a sender number — messaging profile assignment is critical
+      TO_PREFIX=$(echo "${TELNYX_TO_NUMBER}" | grep -o '^+[0-9]\{1,3\}')
+
+      # 1. Same-country number already on a messaging profile (best)
+      TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r --arg pfx "$TO_PREFIX" '
+        [.data[] | select(.phone_number | startswith($pfx)) | select(.messaging_profile_id != null and .messaging_profile_id != "")] | .[0].phone_number // empty
       ' 2>/dev/null)
+      # 2. Any number already on a messaging profile (number must be on profile to send)
       if [ -z "$TELNYX_FROM_NUMBER" ]; then
-        # Fall back to any active number
+        TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '
+          [.data[] | select(.messaging_profile_id != null and .messaging_profile_id != "")] | .[0].phone_number // empty
+        ' 2>/dev/null)
+      fi
+      # 3. Same-country number (will try to assign to profile)
+      if [ -z "$TELNYX_FROM_NUMBER" ]; then
+        TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r --arg pfx "$TO_PREFIX" '
+          [.data[] | select(.phone_number | startswith($pfx))] | .[0].phone_number // empty
+        ' 2>/dev/null)
+      fi
+      # 4. Any active number
+      if [ -z "$TELNYX_FROM_NUMBER" ]; then
         TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '.data[0].phone_number // empty' 2>/dev/null)
       fi
       if [ -n "$TELNYX_FROM_NUMBER" ]; then
@@ -211,7 +225,7 @@ MESSAGING_PROFILE_ID="${TELNYX_MESSAGING_PROFILE_ID:-}"
 if [ -z "$MESSAGING_PROFILE_ID" ]; then
   echo ""
   echo -e "${BOLD}Auto-detecting messaging profile...${NC}"
-  PROFILE_RESPONSE=$(curl -s \
+  PROFILE_RESPONSE=$(curl -s -g \
     -H "Authorization: Bearer ${TELNYX_API_KEY}" \
     "https://api.telnyx.com/v2/messaging_profiles?page[size]=10" 2>/dev/null || echo "")
   PROFILE_COUNT=$(echo "$PROFILE_RESPONSE" | jq -r '.data | length' 2>/dev/null || echo "0")
@@ -223,10 +237,10 @@ if [ -z "$MESSAGING_PROFILE_ID" ]; then
   else
     # Auto-create a messaging profile
     echo -e "  ${BLUE}INFO${NC}  No messaging profile found — creating one..."
-    CREATE_RESPONSE=$(curl -s -X POST \
+    CREATE_RESPONSE=$(curl -s -g -X POST \
       -H "Authorization: Bearer ${TELNYX_API_KEY}" \
       -H "Content-Type: application/json" \
-      -d "{\"name\": \"Migration Test Profile (auto-created)\"}" \
+      -d "{\"name\": \"Migration Test Profile $(date +%s)\", \"whitelisted_destinations\": [\"*\"]}" \
       "https://api.telnyx.com/v2/messaging_profiles" 2>/dev/null || echo "")
     MESSAGING_PROFILE_ID=$(echo "$CREATE_RESPONSE" | jq -r '.data.id // empty' 2>/dev/null)
     CREATE_ERROR=$(echo "$CREATE_RESPONSE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
@@ -253,11 +267,11 @@ if [ -z "$MESSAGING_PROFILE_ID" ]; then
     if [ "$CURRENT_PROFILE" = "$MESSAGING_PROFILE_ID" ]; then
       echo -e "  ${GREEN}PASS${NC}  Number already assigned to this profile"
     else
-      ASSIGN_RESPONSE=$(curl -s -X PATCH \
+      ASSIGN_RESPONSE=$(curl -s -g -X PATCH \
         -H "Authorization: Bearer ${TELNYX_API_KEY}" \
         -H "Content-Type: application/json" \
         -d "{\"messaging_profile_id\": \"${MESSAGING_PROFILE_ID}\"}" \
-        "https://api.telnyx.com/v2/phone_numbers/${PHONE_ID}" 2>/dev/null || echo "")
+        "https://api.telnyx.com/v2/phone_numbers/${PHONE_ID}/messaging" 2>/dev/null || echo "")
       ASSIGN_ERROR=$(echo "$ASSIGN_RESPONSE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
       if [ -n "$ASSIGN_ERROR" ]; then
         echo -e "  ${YELLOW}WARN${NC}  Could not assign number to profile: $ASSIGN_ERROR"

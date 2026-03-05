@@ -176,10 +176,25 @@ if [ -z "${TELNYX_FROM_NUMBER:-}" ]; then
       exit 1
     fi
   else
-    # Pick a number that has a connection assigned, preferring voice-enabled
-    TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '
-      [.data[] | select(.connection_id != null and .connection_id != "")] | .[0].phone_number // empty
+    # Pick a caller ID — prefer same-country number with a connection assigned
+    TO_PREFIX=$(echo "${TELNYX_TO_NUMBER}" | grep -o '^+[0-9]\{1,3\}')
+    # Same-country with connection
+    TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r --arg pfx "$TO_PREFIX" '
+      [.data[] | select(.phone_number | startswith($pfx)) | select(.connection_id != null and .connection_id != "")] | .[0].phone_number // empty
     ' 2>/dev/null)
+    # Same-country without connection
+    if [ -z "$TELNYX_FROM_NUMBER" ]; then
+      TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r --arg pfx "$TO_PREFIX" '
+        [.data[] | select(.phone_number | startswith($pfx))] | .[0].phone_number // empty
+      ' 2>/dev/null)
+    fi
+    # Any number with connection
+    if [ -z "$TELNYX_FROM_NUMBER" ]; then
+      TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '
+        [.data[] | select(.connection_id != null and .connection_id != "")] | .[0].phone_number // empty
+      ' 2>/dev/null)
+    fi
+    # Any number at all
     if [ -z "$TELNYX_FROM_NUMBER" ]; then
       TELNYX_FROM_NUMBER=$(echo "$NUMS_RESPONSE" | jq -r '.data[0].phone_number // empty' 2>/dev/null)
     fi
@@ -225,25 +240,113 @@ CONNECTION_ID="${TELNYX_CONNECTION_ID:-}"
 if [ -z "$CONNECTION_ID" ]; then
   echo ""
   echo -e "${BOLD}Auto-detecting connection ID...${NC}"
-  CONN_RESPONSE=$(curl -s \
-    -H "Authorization: Bearer ${TELNYX_API_KEY}" \
-    "https://api.telnyx.com/v2/connections?page[size]=1" 2>/dev/null || echo "")
-  if [ "$HAS_JQ" = true ] && [ -n "$CONN_RESPONSE" ]; then
-    CONNECTION_ID=$(echo "$CONN_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
+
+  # Determine destination country for OVP matching
+  TO_COUNTRY="US"
+  if [[ "${TELNYX_TO_NUMBER}" == +353* ]]; then TO_COUNTRY="IE"
+  elif [[ "${TELNYX_TO_NUMBER}" == +44* ]]; then TO_COUNTRY="GB"
+  elif [[ "${TELNYX_TO_NUMBER}" == +1* ]]; then TO_COUNTRY="US"
+  elif [[ "${TELNYX_TO_NUMBER}" == +61* ]]; then TO_COUNTRY="AU"
+  elif [[ "${TELNYX_TO_NUMBER}" == +49* ]]; then TO_COUNTRY="DE"
+  elif [[ "${TELNYX_TO_NUMBER}" == +33* ]]; then TO_COUNTRY="FR"
   fi
-  if [ -n "$CONNECTION_ID" ]; then
-    echo -e "  ${GREEN}PASS${NC}  Using existing connection: ${CONNECTION_ID}"
-  else
-    # Auto-create a Call Control connection
+
+  # First check Call Control Applications (the right type for voice calls)
+  CCA_RESPONSE=$(curl -s -g \
+    -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+    "https://api.telnyx.com/v2/call_control_applications?page[size]=10" 2>/dev/null || echo "")
+  if [ "$HAS_JQ" = true ] && [ -n "$CCA_RESPONSE" ]; then
+    # Get all apps with OVPs
+    APPS_WITH_OVP=$(echo "$CCA_RESPONSE" | jq -r '
+      [.data[] | select(.outbound.outbound_voice_profile_id != null and .outbound.outbound_voice_profile_id != "")]
+    ' 2>/dev/null)
+    APP_COUNT=$(echo "$APPS_WITH_OVP" | jq -r 'length' 2>/dev/null)
+
+    # Check each app's OVP for destination country whitelisting
+    if [ "$APP_COUNT" -gt 0 ] 2>/dev/null; then
+      for i in $(seq 0 $((APP_COUNT - 1))); do
+        CANDIDATE_ID=$(echo "$APPS_WITH_OVP" | jq -r ".[$i].id" 2>/dev/null)
+        CANDIDATE_OVP=$(echo "$APPS_WITH_OVP" | jq -r ".[$i].outbound.outbound_voice_profile_id" 2>/dev/null)
+        # Check if this OVP whitelists the destination country
+        OVP_DETAILS=$(curl -s -g \
+          -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+          "https://api.telnyx.com/v2/outbound_voice_profiles/${CANDIDATE_OVP}" 2>/dev/null || echo "")
+        COUNTRY_MATCH=$(echo "$OVP_DETAILS" | jq -r ".data.whitelisted_destinations // [] | map(select(. == \"${TO_COUNTRY}\" or . == \"*\")) | length" 2>/dev/null)
+        if [ "$COUNTRY_MATCH" -gt 0 ] 2>/dev/null; then
+          CONNECTION_ID="$CANDIDATE_ID"
+          echo -e "  ${GREEN}PASS${NC}  Using Call Control app with OVP whitelisting ${TO_COUNTRY}: ${CONNECTION_ID}"
+          break
+        fi
+      done
+
+      # Fall back to first app with OVP if no country match
+      if [ -z "$CONNECTION_ID" ]; then
+        CONNECTION_ID=$(echo "$APPS_WITH_OVP" | jq -r '.[0].id' 2>/dev/null)
+        echo -e "  ${YELLOW}WARN${NC}  Using Call Control app (OVP may not whitelist ${TO_COUNTRY}): ${CONNECTION_ID}"
+        echo -e "  ${BLUE}INFO${NC}  If call fails with D13, add ${TO_COUNTRY} to the OVP's whitelisted destinations in portal"
+      fi
+    else
+      # Fall back to any Call Control app
+      CONNECTION_ID=$(echo "$CCA_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
+      if [ -n "$CONNECTION_ID" ]; then
+        echo -e "  ${GREEN}PASS${NC}  Using existing Call Control app: ${CONNECTION_ID}"
+        echo -e "  ${YELLOW}WARN${NC}  This app has no Outbound Voice Profile — call may fail"
+      fi
+    fi
+  fi
+
+  # Fall back to generic connections endpoint
+  if [ -z "$CONNECTION_ID" ]; then
+    CONN_RESPONSE=$(curl -s -g \
+      -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+      "https://api.telnyx.com/v2/connections?page[size]=1" 2>/dev/null || echo "")
+    if [ "$HAS_JQ" = true ] && [ -n "$CONN_RESPONSE" ]; then
+      CONNECTION_ID=$(echo "$CONN_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
+    fi
+    if [ -n "$CONNECTION_ID" ]; then
+      echo -e "  ${GREEN}PASS${NC}  Using existing connection: ${CONNECTION_ID}"
+    fi
+  fi
+
+  if [ -z "$CONNECTION_ID" ]; then
+    # Auto-create: first create an Outbound Voice Profile, then the Call Control app
     echo -e "  ${BLUE}INFO${NC}  No connection found — creating Call Control app..."
-    CONN_CREATE_RESPONSE=$(curl -s -X POST \
+
+    # Create OVP with destination country whitelisted (TO_COUNTRY set above)
+    UNIQUE_SUFFIX=$(date +%s)
+    OVP_RESPONSE=$(curl -s -g -X POST \
       -H "Authorization: Bearer ${TELNYX_API_KEY}" \
       -H "Content-Type: application/json" \
       -d "{
-        \"application_name\": \"Migration Test (auto-created)\",
-        \"webhook_event_url\": \"https://example.com/webhooks\",
-        \"connection_name\": \"Migration Test Connection\"
+        \"name\": \"Migration Test OVP ${UNIQUE_SUFFIX}\",
+        \"whitelisted_destinations\": [\"US\", \"${TO_COUNTRY}\"]
       }" \
+      "https://api.telnyx.com/v2/outbound_voice_profiles" 2>/dev/null || echo "")
+    OVP_ID=""
+    if [ "$HAS_JQ" = true ] && [ -n "$OVP_RESPONSE" ]; then
+      OVP_ID=$(echo "$OVP_RESPONSE" | jq -r '.data.id // empty' 2>/dev/null)
+      OVP_ERROR=$(echo "$OVP_RESPONSE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
+      if [ -n "$OVP_ERROR" ]; then
+        echo -e "  ${YELLOW}WARN${NC}  Could not create OVP: $OVP_ERROR"
+      fi
+    fi
+    if [ -n "$OVP_ID" ]; then
+      echo -e "  ${GREEN}PASS${NC}  Created Outbound Voice Profile: ${OVP_ID} (whitelisted: US, ${TO_COUNTRY})"
+    fi
+
+    # Build the Call Control app payload with OVP if available
+    CCA_PAYLOAD="{
+      \"application_name\": \"Migration Test ${UNIQUE_SUFFIX}\",
+      \"webhook_event_url\": \"https://example.com/webhooks\""
+    if [ -n "$OVP_ID" ]; then
+      CCA_PAYLOAD="${CCA_PAYLOAD}, \"outbound\": {\"outbound_voice_profile_id\": \"${OVP_ID}\"}"
+    fi
+    CCA_PAYLOAD="${CCA_PAYLOAD}}"
+
+    CONN_CREATE_RESPONSE=$(curl -s -g -X POST \
+      -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+      -H "Content-Type: application/json" \
+      -d "$CCA_PAYLOAD" \
       "https://api.telnyx.com/v2/call_control_applications" 2>/dev/null || echo "")
     if [ "$HAS_JQ" = true ] && [ -n "$CONN_CREATE_RESPONSE" ]; then
       CONNECTION_ID=$(echo "$CONN_CREATE_RESPONSE" | jq -r '.data.id // empty' 2>/dev/null)
@@ -265,7 +368,7 @@ if [ -z "$CONNECTION_ID" ]; then
         PHONE_ID=$(echo "$NUM_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
       fi
       if [ -n "$PHONE_ID" ]; then
-        ASSIGN_RESPONSE=$(curl -s -X PATCH \
+        ASSIGN_RESPONSE=$(curl -s -g -X PATCH \
           -H "Authorization: Bearer ${TELNYX_API_KEY}" \
           -H "Content-Type: application/json" \
           -d "{\"connection_id\": \"${CONNECTION_ID}\"}" \

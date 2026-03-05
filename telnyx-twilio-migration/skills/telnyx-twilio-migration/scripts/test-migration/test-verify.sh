@@ -37,11 +37,13 @@ fi
 # --- Parse arguments ---
 CONFIRMED=false
 DRY_RUN=false
+SEND_ONLY=false
 
 for arg in "$@"; do
   case "$arg" in
     --confirm) CONFIRMED=true ;;
     --dry-run) DRY_RUN=true ;;
+    --send-only) SEND_ONLY=true ;;
     --help|-h)
       echo "Usage: bash test-verify.sh --confirm [--dry-run]"
       echo ""
@@ -50,6 +52,7 @@ for arg in "$@"; do
       echo "Flags:"
       echo "  --confirm    Required to actually send the OTP"
       echo "  --dry-run    Validate setup without sending"
+      echo "  --send-only  Send OTP but skip interactive code entry (for automated testing)"
       echo ""
       echo "Environment variables:"
       echo "  TELNYX_API_KEY             (required) Your Telnyx API key"
@@ -146,25 +149,32 @@ if [ -z "$VERIFY_PROFILE_ID" ]; then
   fi
 
   # Try to find an existing verify profile
-  VP_RESPONSE=$(curl -s \
+  # Note: GET /v2/verify_profiles may return 10009 when no profiles exist (API quirk)
+  VP_RESPONSE=$(curl -s -g \
     -H "Authorization: Bearer ${TELNYX_API_KEY}" \
-    "https://api.telnyx.com/v2/verify_profiles?page[size]=1" 2>/dev/null || echo "")
+    "https://api.telnyx.com/v2/verify_profiles" 2>/dev/null || echo "")
   if [ "$HAS_JQ_EARLY" = true ] && [ -n "$VP_RESPONSE" ]; then
-    VERIFY_PROFILE_ID=$(echo "$VP_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
+    VP_ERROR_CODE=$(echo "$VP_RESPONSE" | jq -r '.errors[0].code // empty' 2>/dev/null)
+    if [ "$VP_ERROR_CODE" != "10009" ]; then
+      VERIFY_PROFILE_ID=$(echo "$VP_RESPONSE" | jq -r '.data[0].id // empty' 2>/dev/null)
+    fi
   fi
 
   if [ -n "$VERIFY_PROFILE_ID" ]; then
     echo -e "  ${GREEN}PASS${NC}  Using existing verify profile: ${VERIFY_PROFILE_ID}"
   else
-    # Auto-create a verify profile
+    # Auto-create a verify profile with SMS channel + whitelisted destinations
     echo -e "  ${BLUE}INFO${NC}  No verify profile found — creating one..."
-    VP_CREATE_RESPONSE=$(curl -s -X POST \
+    VP_CREATE_RESPONSE=$(curl -s -g -X POST \
       -H "Authorization: Bearer ${TELNYX_API_KEY}" \
       -H "Content-Type: application/json" \
       -d "{
-        \"name\": \"Migration Test Verify Profile (auto-created)\",
-        \"messaging_enabled\": true,
-        \"default_timeout_secs\": 300
+        \"name\": \"Migration Test Verify $(date +%s)\",
+        \"default_timeout_secs\": 300,
+        \"sms\": {
+          \"messaging_enabled\": true,
+          \"whitelisted_destinations\": [\"*\"]
+        }
       }" \
       "https://api.telnyx.com/v2/verify_profiles" 2>/dev/null || echo "")
     if [ "$HAS_JQ_EARLY" = true ] && [ -n "$VP_CREATE_RESPONSE" ]; then
@@ -264,6 +274,19 @@ fi
 echo -e "  ${GREEN}PASS${NC}  Verification sent"
 echo "  Verification ID: ${VERIFICATION_ID}"
 echo "  Status:          ${VERIFY_STATUS:-pending}"
+
+# --- Send-only mode exits here ---
+if [ "$SEND_ONLY" = true ]; then
+  echo ""
+  echo "==================="
+  echo -e "${BOLD}Results (send-only mode)${NC}"
+  echo "  Verification ID: ${VERIFICATION_ID}"
+  echo "  Phone Number:    ${TELNYX_TO_NUMBER}"
+  echo "  Status:          ${VERIFY_STATUS:-pending}"
+  echo ""
+  echo -e "  ${GREEN}${BOLD}PASS${NC}  OTP sent successfully (code verification skipped — use without --send-only to verify interactively)"
+  exit 0
+fi
 
 # --- Prompt for code ---
 echo ""

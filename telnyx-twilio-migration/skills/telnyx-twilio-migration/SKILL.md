@@ -372,7 +372,7 @@ Real API calls with small charges (~$0.064 total, already approved in Phase 0). 
 # Run whichever tests match the migrated products:
 bash {baseDir}/scripts/test-migration/test-messaging.sh --confirm  # ~$0.004
 bash {baseDir}/scripts/test-migration/test-voice.sh --confirm      # ~$0.01
-bash {baseDir}/scripts/test-migration/test-verify.sh --confirm     # ~$0.05
+bash {baseDir}/scripts/test-migration/test-verify.sh --confirm --send-only  # ~$0.05
 bash {baseDir}/scripts/test-migration/test-lookup.sh --confirm     # ~$0.01
 bash {baseDir}/scripts/test-migration/test-fax.sh --confirm        # ~$0.07 (requires fax-capable destination)
 ```
