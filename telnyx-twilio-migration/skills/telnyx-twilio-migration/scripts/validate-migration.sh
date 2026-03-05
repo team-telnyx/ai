@@ -451,7 +451,7 @@ fi
 
 # --- Check 3: Twilio env vars (excludes .md docs and minified JS) ---
 if product_applies "all"; then
-  matches=$(search_source_files "(TWILIO_ACCOUNT_SID|TWILIO_AUTH_TOKEN|TWILIO_API_KEY|TWILIO_API_SECRET|TWILIO_SID)")
+  matches=$(search_source_files "(TWILIO_ACCOUNT_SID|TWILIO_AUTH_TOKEN|TWILIO_API_KEY|TWILIO_API_SECRET|TWILIO_SID|TWILIO_NUMBER|TWILIO_PHONE_NUMBER|TWILIO_MESSAGING_SERVICE_SID|TWILIO_VERIFY_SERVICE_SID|TWILIO_TWIML_APP_SID)")
   count=$(count_matches "$matches")
   if [ "$count" -gt 0 ]; then
     check_fail_or_hybrid_warn "twilio_env_vars" "Twilio environment variables found in $count file(s):" "$(matches_to_json "$matches")"

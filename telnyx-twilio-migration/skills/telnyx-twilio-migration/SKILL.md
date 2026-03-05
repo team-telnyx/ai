@@ -317,11 +317,12 @@ If validation fails and you cannot fix the issue, document it and continue to th
 - Check response: `approved` → `accepted`, `pending` → `rejected`
 
 **Webhook Receivers (all products):**
-- **You MUST migrate webhook handlers** — this is half the migration for most apps. See `{baseDir}/references/webhook-migration.md` for complete receive + parse + verify examples in Python (Flask), JavaScript (Express), Ruby (Sinatra), and Go (net/http).
+- **You MUST migrate webhook handlers** — this is half the migration for most apps. See `{baseDir}/references/webhook-migration.md` for complete receive + parse + verify examples in Python (Flask, Django), JavaScript (Express), Ruby (Sinatra, **Rails**), and Go (net/http).
 - Parse JSON body instead of form data: `request.json['data']['payload']` not `request.form`
 - Access fields via `data.payload.*` — `from` is an object (`from.phone_number`), `to` is an array
 - Replace HMAC-SHA1 (`RequestValidator`) with Ed25519 signature verification using `telnyx-signature-ed25519` + `telnyx-timestamp` headers
 - **If the original code used `twilio.webhook()` middleware** (even with `{validate: false}`), you MUST replace it with Telnyx Ed25519 verification — do NOT just delete it. Removing webhook validation without replacement leaves endpoints unprotected in production.
+- **Rails `before_action`**: If the original code used a Twilio `before_action` filter (e.g., `before_action :validate_twilio_request`), replace it with a Telnyx Ed25519 `before_action` using `Telnyx::Webhook.construct_event()`. Also add `skip_before_action :verify_authenticity_token` since webhooks don't carry CSRF tokens. See `{baseDir}/references/webhook-migration.md` → "Rails" for the complete pattern.
 - **Use the exact signature verification pattern from `webhook-migration.md`** — do NOT use patterns from your own training data. Do NOT use `new TelnyxWebhook()`.
 
 > **CRITICAL (Express/Node.js only):** Webhook signature verification requires the **raw request body** (original bytes), NOT `JSON.stringify(req.body)`. You MUST add the `verify` callback to `express.json()` in your main app file AND use `req.rawBody` in your verification middleware:

@@ -300,6 +300,87 @@ post '/webhooks/messaging' do
 end
 ```
 
+### Rails (Ruby on Rails)
+
+**Important**: Rails controllers need `skip_before_action :verify_authenticity_token` since Telnyx webhooks don't include CSRF tokens. If the original code used `twilio.webhook()` or Twilio's `RequestValidator` in a `before_action`, replace it with Ed25519 verification — do NOT just remove it.
+
+```ruby
+# app/controllers/webhooks_controller.rb
+class WebhooksController < ApplicationController
+  skip_before_action :verify_authenticity_token
+
+  before_action :verify_telnyx_signature
+
+  def messaging
+    event_type = params.dig('data', 'event_type')
+    payload = params.dig('data', 'payload')
+
+    case event_type
+    when 'message.received'
+      from_number = payload.dig('from', 'phone_number')
+      text = payload['text']
+      # Process inbound message...
+    when 'message.delivered'
+      # Handle delivery confirmation...
+    when 'message.failed'
+      errors = payload['errors'] || []
+      # Handle failure...
+    end
+
+    render json: { status: 'ok' }
+  end
+
+  def voice
+    event_type = params.dig('data', 'event_type')
+    payload = params.dig('data', 'payload')
+
+    case event_type
+    when 'call.initiated'
+      call_control_id = payload['call_control_id']
+      # Handle call event...
+    when 'call.answered'
+      # Handle answered...
+    when 'call.hangup'
+      # Handle hangup...
+    end
+
+    render json: { status: 'ok' }
+  end
+
+  private
+
+  def verify_telnyx_signature
+    payload = request.body.read
+    signature = request.headers['HTTP_TELNYX_SIGNATURE_ED25519'] ||
+                request.headers['telnyx-signature-ed25519']
+    timestamp = request.headers['HTTP_TELNYX_TIMESTAMP'] ||
+                request.headers['telnyx-timestamp']
+
+    begin
+      Telnyx::Webhook.construct_event(
+        payload,
+        signature,
+        timestamp,
+        public_key: ENV['TELNYX_PUBLIC_KEY']
+      )
+    rescue StandardError => e
+      Rails.logger.warn "Webhook signature verification failed: #{e.message}"
+      head :forbidden
+    end
+  end
+end
+```
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  post '/webhooks/messaging', to: 'webhooks#messaging'
+  post '/webhooks/voice', to: 'webhooks#voice'
+end
+```
+
+**Rails note**: Use `request.body.read` for signature verification (raw bytes), not `params` (which is parsed). Access Telnyx webhook headers via `request.headers` — Rails may prefix with `HTTP_` and uppercase them (`HTTP_TELNYX_SIGNATURE_ED25519`), so check both forms.
+
 ### Go (net/http)
 
 ```go
