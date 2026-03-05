@@ -234,6 +234,39 @@ if [ -z "$MESSAGING_PROFILE_ID" ]; then
   fi
   if [ -n "$MESSAGING_PROFILE_ID" ]; then
     echo -e "  ${GREEN}PASS${NC}  Using existing messaging profile: ${MESSAGING_PROFILE_ID}"
+
+    # Verify the existing profile's whitelisted_destinations include the destination country (or "*")
+    TO_COUNTRY="US"
+    if [[ "${TELNYX_TO_NUMBER}" == +353* ]]; then TO_COUNTRY="IE"
+    elif [[ "${TELNYX_TO_NUMBER}" == +44* ]]; then TO_COUNTRY="GB"
+    elif [[ "${TELNYX_TO_NUMBER}" == +1* ]]; then TO_COUNTRY="US"
+    elif [[ "${TELNYX_TO_NUMBER}" == +61* ]]; then TO_COUNTRY="AU"
+    elif [[ "${TELNYX_TO_NUMBER}" == +49* ]]; then TO_COUNTRY="DE"
+    elif [[ "${TELNYX_TO_NUMBER}" == +33* ]]; then TO_COUNTRY="FR"
+    fi
+
+    MP_DETAILS=$(curl -s -g \
+      -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+      "https://api.telnyx.com/v2/messaging_profiles/${MESSAGING_PROFILE_ID}" 2>/dev/null || echo "")
+    MP_WHITELIST_MATCH=$(echo "$MP_DETAILS" | jq -r ".data.whitelisted_destinations // [] | map(select(. == \"${TO_COUNTRY}\" or . == \"*\")) | length" 2>/dev/null)
+    if [ "${MP_WHITELIST_MATCH:-0}" = "0" ]; then
+      echo -e "  ${BLUE}INFO${NC}  Profile doesn't whitelist ${TO_COUNTRY} — adding it..."
+      CURRENT_WL=$(echo "$MP_DETAILS" | jq -r '.data.whitelisted_destinations // []' 2>/dev/null)
+      UPDATED_WL=$(echo "$CURRENT_WL" | jq --arg c "$TO_COUNTRY" '. + [$c] | unique' 2>/dev/null)
+      MP_UPDATE=$(curl -s -g -X PATCH \
+        -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+        -H "Content-Type: application/json" \
+        -d "{\"whitelisted_destinations\": ${UPDATED_WL}}" \
+        "https://api.telnyx.com/v2/messaging_profiles/${MESSAGING_PROFILE_ID}" 2>/dev/null || echo "")
+      MP_UPDATE_ERR=$(echo "$MP_UPDATE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
+      if [ -n "$MP_UPDATE_ERR" ]; then
+        echo -e "  ${YELLOW}WARN${NC}  Could not update whitelist: $MP_UPDATE_ERR"
+      else
+        echo -e "  ${GREEN}PASS${NC}  Added ${TO_COUNTRY} to messaging profile whitelist"
+      fi
+    else
+      echo -e "  ${GREEN}PASS${NC}  Profile whitelists ${TO_COUNTRY}"
+    fi
   else
     # Auto-create a messaging profile
     echo -e "  ${BLUE}INFO${NC}  No messaging profile found — creating one..."

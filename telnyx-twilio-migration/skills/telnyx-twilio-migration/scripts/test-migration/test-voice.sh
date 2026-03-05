@@ -279,11 +279,32 @@ if [ -z "$CONNECTION_ID" ]; then
         fi
       done
 
-      # Fall back to first app with OVP if no country match
+      # No OVP whitelists the destination country — update the first one to add it
       if [ -z "$CONNECTION_ID" ]; then
         CONNECTION_ID=$(echo "$APPS_WITH_OVP" | jq -r '.[0].id' 2>/dev/null)
-        echo -e "  ${YELLOW}WARN${NC}  Using Call Control app (OVP may not whitelist ${TO_COUNTRY}): ${CONNECTION_ID}"
-        echo -e "  ${BLUE}INFO${NC}  If call fails with D13, add ${TO_COUNTRY} to the OVP's whitelisted destinations in portal"
+        FIRST_OVP_ID=$(echo "$APPS_WITH_OVP" | jq -r '.[0].outbound.outbound_voice_profile_id' 2>/dev/null)
+        echo -e "  ${BLUE}INFO${NC}  No OVP whitelists ${TO_COUNTRY} — adding it to OVP ${FIRST_OVP_ID}..."
+
+        # Get current whitelist and add the destination country
+        CURRENT_WHITELIST=$(curl -s -g \
+          -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+          "https://api.telnyx.com/v2/outbound_voice_profiles/${FIRST_OVP_ID}" 2>/dev/null \
+          | jq -r '.data.whitelisted_destinations // []' 2>/dev/null)
+        UPDATED_WHITELIST=$(echo "$CURRENT_WHITELIST" | jq --arg c "$TO_COUNTRY" '. + [$c] | unique' 2>/dev/null)
+
+        UPDATE_RESPONSE=$(curl -s -g -X PATCH \
+          -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+          -H "Content-Type: application/json" \
+          -d "{\"whitelisted_destinations\": ${UPDATED_WHITELIST}}" \
+          "https://api.telnyx.com/v2/outbound_voice_profiles/${FIRST_OVP_ID}" 2>/dev/null || echo "")
+        UPDATE_ERROR=$(echo "$UPDATE_RESPONSE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
+        if [ -n "$UPDATE_ERROR" ]; then
+          echo -e "  ${YELLOW}WARN${NC}  Could not update OVP whitelist: $UPDATE_ERROR"
+          echo -e "  ${BLUE}INFO${NC}  Add ${TO_COUNTRY} manually in portal if call fails"
+        else
+          echo -e "  ${GREEN}PASS${NC}  Added ${TO_COUNTRY} to OVP whitelist"
+        fi
+        echo -e "  ${GREEN}PASS${NC}  Using Call Control app: ${CONNECTION_ID}"
       fi
     else
       # Fall back to any Call Control app

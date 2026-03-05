@@ -202,6 +202,12 @@ Install Telnyx SDK **alongside** Twilio — do NOT remove Twilio from the packag
 
 Update `.env`, `.env.example`, secrets manager, CI/CD variables, and deployment configs. **Ensure every env var used in the migrated code is present in `.env.example`** — missing env vars are a top cause of runtime failures.
 
+> **Whitelisted destinations (CRITICAL):** When creating or reusing Telnyx resources, you MUST ensure `whitelisted_destinations` includes the target country. Without this, sends/calls will fail silently or with cryptic errors.
+> - **Messaging profiles**: `whitelisted_destinations` on the profile itself. Use `["*"]` for all countries or specify e.g. `["US", "GB", "IE"]`. Check existing profiles via `GET /v2/messaging_profiles/{id}` and update with `PATCH` if needed.
+> - **Outbound Voice Profiles (OVP)**: `whitelisted_destinations` controls which countries you can call. Create/update OVP via `/v2/outbound_voice_profiles`. Assign the OVP to your Call Control app or TeXML app's `outbound.outbound_voice_profile_id`.
+> - **Verify profiles**: `sms.whitelisted_destinations` inside the SMS channel config. Check existing profiles via `GET /v2/verify_profiles/{id}`.
+> - The test scripts (`test-messaging.sh`, `test-voice.sh`, `test-verify.sh`) handle this automatically, but when writing migration code, always set `whitelisted_destinations` explicitly.
+
 > **Rate limits**: Messaging: 1 msg/sec per number (10DLC), voice: varies by connection type. Implement exponential backoff for 429 responses.
 
 ### Step 3.4: Commit Setup Changes

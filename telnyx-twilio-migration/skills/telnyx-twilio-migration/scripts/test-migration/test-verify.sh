@@ -162,6 +162,39 @@ if [ -z "$VERIFY_PROFILE_ID" ]; then
 
   if [ -n "$VERIFY_PROFILE_ID" ]; then
     echo -e "  ${GREEN}PASS${NC}  Using existing verify profile: ${VERIFY_PROFILE_ID}"
+
+    # Verify the existing profile's SMS whitelisted_destinations include the destination country (or "*")
+    TO_COUNTRY="US"
+    if [[ "${TELNYX_TO_NUMBER}" == +353* ]]; then TO_COUNTRY="IE"
+    elif [[ "${TELNYX_TO_NUMBER}" == +44* ]]; then TO_COUNTRY="GB"
+    elif [[ "${TELNYX_TO_NUMBER}" == +1* ]]; then TO_COUNTRY="US"
+    elif [[ "${TELNYX_TO_NUMBER}" == +61* ]]; then TO_COUNTRY="AU"
+    elif [[ "${TELNYX_TO_NUMBER}" == +49* ]]; then TO_COUNTRY="DE"
+    elif [[ "${TELNYX_TO_NUMBER}" == +33* ]]; then TO_COUNTRY="FR"
+    fi
+
+    VP_DETAILS=$(curl -s -g \
+      -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+      "https://api.telnyx.com/v2/verify_profiles/${VERIFY_PROFILE_ID}" 2>/dev/null || echo "")
+    VP_WL_MATCH=$(echo "$VP_DETAILS" | jq -r ".data.sms.whitelisted_destinations // [] | map(select(. == \"${TO_COUNTRY}\" or . == \"*\")) | length" 2>/dev/null)
+    if [ "${VP_WL_MATCH:-0}" = "0" ]; then
+      echo -e "  ${BLUE}INFO${NC}  Profile SMS doesn't whitelist ${TO_COUNTRY} — updating..."
+      CURRENT_VP_WL=$(echo "$VP_DETAILS" | jq -r '.data.sms.whitelisted_destinations // []' 2>/dev/null)
+      UPDATED_VP_WL=$(echo "$CURRENT_VP_WL" | jq --arg c "$TO_COUNTRY" '. + [$c] | unique' 2>/dev/null)
+      VP_UPDATE=$(curl -s -g -X PATCH \
+        -H "Authorization: Bearer ${TELNYX_API_KEY}" \
+        -H "Content-Type: application/json" \
+        -d "{\"sms\": {\"whitelisted_destinations\": ${UPDATED_VP_WL}}}" \
+        "https://api.telnyx.com/v2/verify_profiles/${VERIFY_PROFILE_ID}" 2>/dev/null || echo "")
+      VP_UPDATE_ERR=$(echo "$VP_UPDATE" | jq -r '.errors[0].detail // empty' 2>/dev/null)
+      if [ -n "$VP_UPDATE_ERR" ]; then
+        echo -e "  ${YELLOW}WARN${NC}  Could not update verify profile whitelist: $VP_UPDATE_ERR"
+      else
+        echo -e "  ${GREEN}PASS${NC}  Added ${TO_COUNTRY} to verify profile SMS whitelist"
+      fi
+    else
+      echo -e "  ${GREEN}PASS${NC}  Profile SMS whitelists ${TO_COUNTRY}"
+    fi
   else
     # Auto-create a verify profile with SMS channel + whitelisted destinations
     echo -e "  ${BLUE}INFO${NC}  No verify profile found — creating one..."
