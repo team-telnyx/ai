@@ -19,6 +19,8 @@ You MUST follow these phases in order (0 → 1 → 2 → 3 → 4 → 5 → 6). D
 
 **Interaction model**: Phase 0 collects ALL user input (API key, phone number, cost approval). Phases 1–6 run **fully autonomously** — do NOT ask the user any questions. Make all decisions deterministically using the rules in each phase. The only exception: if a failure persists after 3 fix attempts, present the issue to the user with error details and what you tried.
 
+**Context recovery**: If you lose context (e.g. after compaction), IMMEDIATELY run `bash {baseDir}/scripts/migration-state.sh status <project-root>` and `bash {baseDir}/scripts/migration-state.sh show <project-root>` to recover your current phase and all resource IDs. Then resume from that phase.
+
 ### Migration State Tracking
 
 Track progress in `migration-state.json` via `bash {baseDir}/scripts/migration-state.sh <command> <project-root> [args]`. Commands: `init`, `set-phase <N>`, `set <key> <value>`, `add-product <product>`, `add-file <product> <file>`, `set-commit <phase>`, `status`, `show`. This preserves resource IDs across phases and enables resume after interruption. For a complete product mapping, see `{baseDir}/references/product-mapping.md`.
