@@ -282,7 +282,7 @@
     },
     {
       "name": "telnyx-twilio-migration",
-      "description": "Migrate from Twilio to Telnyx \u2014 6-phase orchestrated workflow covering voice (TwiML \u2192 TeXML), messaging, WebRTC, SIP trunking, number porting, Verify, fax, IoT, and more. Includes automated scanning, linting, validation, and integration test scripts.",
+      "description": "Migrate from Twilio to Telnyx \u2014 6-phase orchestrated workflow covering voice (TwiML \u2192 TeXML + Call Control), messaging, WebRTC, SIP trunking, number porting, Verify, fax, IoT, and more. Includes automated scanning, linting, validation, and integration test scripts.",
       "source": "./telnyx-twilio-migration",
       "skills": [
         "./telnyx-twilio-migration/skills/telnyx-twilio-migration"
