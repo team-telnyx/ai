@@ -342,8 +342,8 @@ When migrating verify tests, the key change is the response field names.
 # def test_verify(mock_client):
 #     mock_client.return_value.verify.v2.services('VA...').verification_checks.create.return_value.status = 'approved'
 
-# Telnyx mock:
-@patch('telnyx.Verification.submit')
+# Telnyx mock (v4 SDK — client.verify.verifications.submit_verification):
+@patch('your_module.client.verify.verifications.submit_verification')  # patch where client is used
 def test_verify_code(mock_submit):
     mock_submit.return_value = type('obj', (object,), {
         'data': type('obj', (object,), {
