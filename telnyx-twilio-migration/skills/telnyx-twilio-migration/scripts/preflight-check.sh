@@ -355,7 +355,7 @@ elif go list -m github.com/telnyx/telnyx-go 2>/dev/null; then
 fi
 
 if [ "$TELNYX_FOUND" = false ]; then
-  check_warn "No Telnyx SDKs detected. Install one: pip install telnyx / npm install telnyx / gem install telnyx"
+  check_warn "No Telnyx SDKs detected. Install one: pip install 'telnyx>=4.0,<5.0' / npm install telnyx@^6 / gem 'telnyx', '~> 5.0'"
 fi
 
 # --- 6. Project-Specific Checks ---

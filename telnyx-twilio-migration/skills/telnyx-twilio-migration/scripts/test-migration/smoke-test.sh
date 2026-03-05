@@ -84,7 +84,7 @@ if command -v python3 &>/dev/null; then
     check_pass "Python: import telnyx succeeded (version: $TELNYX_PY_VER)"
     SDK_FOUND=true
   else
-    check_warn "Python: import telnyx failed — install with: pip install telnyx"
+    check_warn "Python: import telnyx failed — install with: pip install 'telnyx>=4.0,<5.0'"
   fi
 else
   check_info "Python3 not found — skipping Python SDK check"
@@ -101,7 +101,7 @@ if command -v node &>/dev/null; then
     check_pass "Node.js: telnyx found in local node_modules (version: $TELNYX_NODE_VER)"
     SDK_FOUND=true
   else
-    check_warn "Node.js: require('telnyx') failed — install with: npm install telnyx"
+    check_warn "Node.js: require('telnyx') failed — install with: npm install telnyx@^6"
   fi
 else
   check_info "Node.js not found — skipping Node SDK check"
@@ -113,7 +113,7 @@ if command -v ruby &>/dev/null; then
     check_pass "Ruby: require 'telnyx' succeeded"
     SDK_FOUND=true
   else
-    check_info "Ruby: require 'telnyx' failed — install with: gem install telnyx"
+    check_info "Ruby: require 'telnyx' failed — install with: gem 'telnyx', '~> 5.0' in Gemfile"
   fi
 fi
 
