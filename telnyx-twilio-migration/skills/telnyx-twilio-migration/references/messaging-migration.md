@@ -36,8 +36,9 @@ pip install 'telnyx>=4.0,<5.0'
 # Node.js
 npm install telnyx@^6
 
-# Ruby
-gem install telnyx
+# Ruby (in Gemfile)
+gem 'telnyx', '~> 5.0'
+# then: bundle install
 
 # Go
 go get github.com/team-telnyx/telnyx-go
@@ -466,28 +467,28 @@ If the Twilio codebase uses Celery, Sidekiq, or other task queues for messaging,
 #     client.messages.create(to=to, body=body, from_=TWILIO_NUMBER)
 
 # Telnyx (after):
-import telnyx
+import os
+from telnyx import Telnyx
 from celery import shared_task
 
-telnyx.api_key = os.environ['TELNYX_API_KEY']
+client = Telnyx(api_key=os.environ.get('TELNYX_API_KEY'))
 
 @shared_task(bind=True, max_retries=3)
 def send_sms(self, to, text):
     try:
-        result = telnyx.Message.create(
+        result = client.messages.send(
             from_=os.environ['TELNYX_PHONE_NUMBER'],
             to=to,
             text=text,  # 'text' not 'body'
             messaging_profile_id=os.environ['TELNYX_MESSAGING_PROFILE_ID'],
         )
-        return {'id': result.id, 'to': to}
-    except telnyx.error.RateLimitError:
-        # Telnyx 429 — retry with exponential backoff
-        raise self.retry(countdown=2 ** self.request.retries)
-    except telnyx.error.APIError as e:
-        # Log and don't retry on 4xx client errors
-        if e.http_status and 400 <= e.http_status < 500:
-            raise
+        return {'id': result.data.id, 'to': to}
+    except Exception as e:
+        # Retry with exponential backoff on transient errors
+        if hasattr(e, 'status_code') and e.status_code == 429:
+            raise self.retry(countdown=2 ** self.request.retries)
+        if hasattr(e, 'status_code') and 400 <= e.status_code < 500:
+            raise  # Don't retry on 4xx client errors
         raise self.retry(countdown=5)
 ```
 
@@ -532,18 +533,20 @@ When migrating tests from Twilio to Telnyx, update mocks, payloads, and assertio
 # def test_send(mock_client):
 #     mock_client.return_value.messages.create.return_value.sid = 'SM...'
 
-# Telnyx mock:
-@patch('telnyx.Message.create')
-def test_send(mock_create):
-    mock_create.return_value = type('obj', (object,), {
-        'id': '4010000e-1234-5678-abcd-1234567890ab',
-        'to': [{'phone_number': '+15559876543'}],
-        'text': 'Hello',
-        'type': 'SMS',
+# Telnyx mock (v4 SDK — client.messages.send):
+@patch('your_module.client.messages.send')  # patch where client is used
+def test_send(mock_send):
+    mock_send.return_value = type('obj', (object,), {
+        'data': type('obj', (object,), {
+            'id': '4010000e-1234-5678-abcd-1234567890ab',
+            'to': [{'phone_number': '+15559876543'}],
+            'text': 'Hello',
+            'type': 'SMS',
+        })()
     })()
     result = send_message('+15559876543', 'Hello')
-    mock_create.assert_called_once()
-    assert result.id is not None
+    mock_send.assert_called_once()
+    assert result.data.id is not None
 ```
 
 **JavaScript (Jest):**

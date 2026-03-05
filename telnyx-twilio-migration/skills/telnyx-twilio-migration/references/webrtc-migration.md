@@ -461,23 +461,26 @@ app.post('/api/telnyx/credential', async (req, res) => {
 ```python
 # Flask endpoint (Python)
 import os
-import telnyx
+import time
+from telnyx import Telnyx
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
-telnyx.api_key = os.environ['TELNYX_API_KEY']
+client = Telnyx(api_key=os.environ.get('TELNYX_API_KEY'))
 
 @app.route('/api/telnyx/credential', methods=['POST'])
 def create_credential():
     # 1. Create a credential for this session
-    credential = telnyx.TelephonyCredential.create(
+    credential = client.telephony_credentials.create(
         connection_id=os.environ['TELNYX_CONNECTION_ID'],
         name=f"session-{request.user_id}-{int(time.time())}"
     )
 
     # 2. Generate a JWT token for the credential
     #    POST /v2/telephony_credentials/{id}/token
-    token = telnyx.TelephonyCredential.create_token(credential.id)
+    token = client.telephony_credentials.create_telephony_credential_token(
+        credential.data.id
+    )
 
     # 3. Return JWT to client (used with login_token on TelnyxRTC)
     return jsonify({'token': token})

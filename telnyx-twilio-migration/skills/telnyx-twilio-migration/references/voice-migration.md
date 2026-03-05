@@ -646,8 +646,8 @@ When migrating voice tests from Twilio to Telnyx, update mocks and webhook paylo
 # def test_call(mock_client):
 #     mock_client.return_value.calls.create.return_value.sid = 'CA...'
 
-# Telnyx mock:
-@patch('telnyx.Call.create')
+# Telnyx mock (v4 SDK — client.calls.create):
+@patch('your_module.client.calls.create')  # patch where client is used
 def test_call(mock_create):
     mock_create.return_value = type('obj', (object,), {
         'data': type('obj', (object,), {

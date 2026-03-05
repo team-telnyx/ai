@@ -470,7 +470,7 @@ Django requires `@csrf_exempt` since Telnyx webhooks won't include CSRF tokens.
 ```python
 # views.py
 import json
-import telnyx
+from telnyx.webhooks import verify_signature
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -481,11 +481,11 @@ from django.conf import settings
 def telnyx_webhook(request):
     # Verify signature
     try:
-        telnyx.Webhook.construct_event(
-            request.body.decode('utf-8'),  # raw body string
-            request.META.get('HTTP_TELNYX_SIGNATURE_ED25519', ''),
-            request.META.get('HTTP_TELNYX_TIMESTAMP', ''),
-            settings.TELNYX_PUBLIC_KEY
+        verify_signature(
+            payload=request.body.decode('utf-8'),  # raw body string
+            signature=request.META.get('HTTP_TELNYX_SIGNATURE_ED25519', ''),
+            timestamp=request.META.get('HTTP_TELNYX_TIMESTAMP', ''),
+            public_key=settings.TELNYX_PUBLIC_KEY
         )
     except Exception:
         return JsonResponse({'error': 'Invalid signature'}, status=403)
