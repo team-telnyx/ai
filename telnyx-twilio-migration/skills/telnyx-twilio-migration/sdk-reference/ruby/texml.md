@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-texml-ruby — do not edit manually -->
-<!-- Source: telnyx-ruby/skills/telnyx-texml-ruby/SKILL.md -->
-
----
-name: telnyx-texml-ruby
-description: >-
-  Build voice applications using TeXML markup language (TwiML-compatible).
-  Manage applications, calls, conferences, recordings, queues, and streams. This
-  skill provides Ruby SDK examples.
-metadata:
-  author: telnyx
-  product: texml
-  language: ruby
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-texml-ruby -->
 
 # Telnyx Texml - Ruby
 
@@ -38,7 +22,7 @@ All examples below assume `client` is already initialized as shown above.
 
 ## Fetch multiple call resources
 
-Returns multiple call resources for an account.
+Returns multiple call resources for an account. This endpoint is eventually consistent.
 
 `GET /texml/Accounts/{account_sid}/Calls`
 
@@ -48,13 +32,15 @@ response = client.texml.accounts.calls.retrieve_calls("account_sid")
 puts(response)
 ```
 
+Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
+
 ## Initiate an outbound call
 
-Initiate an outbound TeXML call.
+Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
 
 `POST /texml/Accounts/{account_sid}/Calls` — Required: `To`, `From`, `ApplicationSid`
 
-Optional: `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum), `CallerId` (string), `CancelPlaybackOnDetectMessageEnd` (boolean), `CancelPlaybackOnMachineDetection` (boolean), `CustomHeaders` (array[object]), `DetectionMode` (enum), `FallbackUrl` (string), `MachineDetection` (enum), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum), `RecordingTimeout` (integer), `RecordingTrack` (enum), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum), `StatusCallback` (string), `StatusCallbackEvent` (enum), `StatusCallbackMethod` (enum), `SuperviseCallSid` (string), `SupervisingRole` (enum), `Texml` (string), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum), `Url` (string), `UrlMethod` (enum)
+Optional: `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `CancelPlaybackOnDetectMessageEnd` (boolean), `CancelPlaybackOnMachineDetection` (boolean), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular), `FallbackUrl` (string), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (enum: initiated, ringing, answered, completed), `StatusCallbackMethod` (enum: GET, POST), `SuperviseCallSid` (string), `SupervisingRole` (enum: barge, whisper, monitor), `Texml` (string), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim), `Url` (string), `UrlMethod` (enum: GET, POST)
 
 ```ruby
 response = client.texml.accounts.calls.calls(
@@ -67,9 +53,11 @@ response = client.texml.accounts.calls.calls(
 puts(response)
 ```
 
+Returns: `from` (string), `status` (string), `to` (string)
+
 ## Fetch a call
 
-Returns an individual call identified by its CallSid.
+Returns an individual call identified by its CallSid. This endpoint is eventually consistent.
 
 `GET /texml/Accounts/{account_sid}/Calls/{call_sid}`
 
@@ -79,9 +67,11 @@ call = client.texml.accounts.calls.retrieve("call_sid", account_sid: "account_si
 puts(call)
 ```
 
+Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
+
 ## Update call
 
-Update TeXML call.
+Update TeXML call. Please note that the keys present in the payload MUST BE formatted in CamelCase as specified in the example.
 
 `POST /texml/Accounts/{account_sid}/Calls/{call_sid}`
 
@@ -90,6 +80,8 @@ call = client.texml.accounts.calls.update("call_sid", account_sid: "account_sid"
 
 puts(call)
 ```
+
+Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
 
 ## Fetch recordings for a call
 
@@ -106,6 +98,8 @@ response = client.texml.accounts.calls.recordings_json.retrieve_recordings_json(
 puts(response)
 ```
 
+Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
+
 ## Request recording for a call
 
 Starts recording with specified parameters for call idientified by call_sid.
@@ -117,6 +111,8 @@ response = client.texml.accounts.calls.recordings_json.recordings_json("call_sid
 
 puts(response)
 ```
+
+Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (['string', 'null']), `error_code` (['string', 'null']), `price` (['string', 'null']), `price_unit` (['string', 'null']), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
 
 ## Update recording on a call
 
@@ -134,6 +130,8 @@ response = client.texml.accounts.calls.recordings.recording_sid_json(
 puts(response)
 ```
 
+Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (['string', 'null']), `error_code` (['string', 'null']), `price` (['string', 'null']), `price_unit` (['string', 'null']), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
+
 ## Request siprec session for a call
 
 Starts siprec session with specified parameters for call idientified by call_sid.
@@ -145,6 +143,8 @@ response = client.texml.accounts.calls.siprec_json("call_sid", account_sid: "acc
 
 puts(response)
 ```
+
+Returns: `account_sid` (string), `call_sid` (string), `date_created` (string), `date_updated` (string), `error_code` (string), `sid` (string), `start_time` (string), `status` (enum: in-progress, stopped), `track` (enum: both_tracks, inbound_track, outbound_track), `uri` (string)
 
 ## Updates siprec session for a call
 
@@ -162,6 +162,8 @@ response = client.texml.accounts.calls.siprec.siprec_sid_json(
 puts(response)
 ```
 
+Returns: `account_sid` (string), `call_sid` (string), `date_updated` (string), `error_code` (string), `sid` (string), `status` (enum: in-progress, stopped), `uri` (string)
+
 ## Start streaming media from a call.
 
 Starts streaming media from a call to a specific WebSocket address.
@@ -173,6 +175,8 @@ response = client.texml.accounts.calls.streams_json("call_sid", account_sid: "ac
 
 puts(response)
 ```
+
+Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `name` (string), `sid` (string), `status` (enum: in-progress), `uri` (string)
 
 ## Update streaming on a call
 
@@ -190,6 +194,8 @@ response = client.texml.accounts.calls.streams.streaming_sid_json(
 puts(response)
 ```
 
+Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `sid` (string), `status` (enum: stopped), `uri` (string)
+
 ## List conference resources
 
 Lists conference resources.
@@ -201,6 +207,8 @@ response = client.texml.accounts.conferences.retrieve_conferences("account_sid")
 
 puts(response)
 ```
+
+Returns: `conferences` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
 
 ## Fetch a conference resource
 
@@ -214,6 +222,8 @@ conference = client.texml.accounts.conferences.retrieve("conference_sid", accoun
 puts(conference)
 ```
 
+Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
+
 ## Update a conference resource
 
 Updates a conference resource.
@@ -225,6 +235,8 @@ conference = client.texml.accounts.conferences.update("conference_sid", account_
 
 puts(conference)
 ```
+
+Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
 
 ## List conference participants
 
@@ -241,6 +253,8 @@ response = client.texml.accounts.conferences.participants.retrieve_participants(
 puts(response)
 ```
 
+Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `start` (integer), `uri` (string)
+
 ## Dial a new conference participant
 
 Dials a new conference participant
@@ -252,6 +266,8 @@ response = client.texml.accounts.conferences.participants.participants("conferen
 
 puts(response)
 ```
+
+Returns: `account_sid` (string), `call_sid` (string), `coaching` (boolean), `coaching_call_sid` (string), `conference_sid` (uuid), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
 
 ## Get conference participant resource
 
@@ -269,6 +285,8 @@ participant = client.texml.accounts.conferences.participants.retrieve(
 puts(participant)
 ```
 
+Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
+
 ## Update a conference participant
 
 Updates a conference participant
@@ -284,6 +302,8 @@ participant = client.texml.accounts.conferences.participants.update(
 
 puts(participant)
 ```
+
+Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
 
 ## Delete a conference participant
 
@@ -313,6 +333,8 @@ response = client.texml.accounts.conferences.retrieve_recordings("conference_sid
 puts(response)
 ```
 
+Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `recordings` (array[object]), `start` (integer), `uri` (string)
+
 ## Fetch recordings for a conference
 
 Returns recordings for a conference identified by conference_sid.
@@ -324,6 +346,8 @@ response = client.texml.accounts.conferences.retrieve_recordings_json("conferenc
 
 puts(response)
 ```
+
+Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
 
 ## List queue resources
 
@@ -337,6 +361,8 @@ page = client.texml.accounts.queues.list("account_sid")
 puts(page)
 ```
 
+Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `queues` (array[object]), `start` (integer), `uri` (string)
+
 ## Create a new queue
 
 Creates a new queue resource.
@@ -348,6 +374,8 @@ queue = client.texml.accounts.queues.create("account_sid")
 
 puts(queue)
 ```
+
+Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
 
 ## Fetch a queue resource
 
@@ -361,6 +389,8 @@ queue = client.texml.accounts.queues.retrieve("queue_sid", account_sid: "account
 puts(queue)
 ```
 
+Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
+
 ## Update a queue resource
 
 Updates a queue resource.
@@ -372,6 +402,8 @@ queue = client.texml.accounts.queues.update("queue_sid", account_sid: "account_s
 
 puts(queue)
 ```
+
+Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
 
 ## Delete a queue resource
 
@@ -397,6 +429,8 @@ response = client.texml.accounts.retrieve_recordings_json("account_sid")
 puts(response)
 ```
 
+Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
+
 ## Fetch recording resource
 
 Returns recording resource identified by recording id.
@@ -411,6 +445,8 @@ texml_get_call_recording_response_body = client.texml.accounts.recordings.json.r
 
 puts(texml_get_call_recording_response_body)
 ```
+
+Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (['string', 'null']), `error_code` (['string', 'null']), `media_url` (uri), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `status` (enum: in-progress, completed, paused, stopped), `subresources_uris` (object), `uri` (string)
 
 ## Delete recording resource
 
@@ -439,6 +475,8 @@ response = client.texml.accounts.retrieve_transcriptions_json("account_sid")
 puts(response)
 ```
 
+Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `start` (integer), `transcriptions` (array[object]), `uri` (string)
+
 ## Fetch a recording transcription resource
 
 Returns the recording transcription resource identified by its ID.
@@ -453,6 +491,8 @@ response = client.texml.accounts.transcriptions.json.retrieve_recording_transcri
 
 puts(response)
 ```
+
+Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `date_created` (date-time), `date_updated` (date-time), `duration` (['string', 'null']), `recording_sid` (string), `sid` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `uri` (string)
 
 ## Delete a recording transcription
 
@@ -471,7 +511,7 @@ puts(result)
 
 ## Create a TeXML secret
 
-Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML.
+Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML. In your TeXML you will be able to use your secret name, and this name will be replaced by the actual secret value when processing the TeXML on Telnyx side. The secrets are not visible in any logs.
 
 `POST /texml/secrets` — Required: `name`, `value`
 
@@ -480,6 +520,8 @@ response = client.texml.secrets(name: "My Secret Name", value: "My Secret Value"
 
 puts(response)
 ```
+
+Returns: `name` (string), `value` (enum: REDACTED)
 
 ## List all TeXML Applications
 
@@ -493,19 +535,23 @@ page = client.texml_applications.list
 puts(page)
 ```
 
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+
 ## Creates a TeXML Application
 
 Creates a TeXML Application.
 
 `POST /texml_applications` — Required: `friendly_name`, `voice_url`
 
-Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
+Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum: get, post)
 
 ```ruby
 texml_application = client.texml_applications.create(friendly_name: "call-router", voice_url: "https://example.com")
 
 puts(texml_application)
 ```
+
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
 
 ## Retrieve a TeXML Application
 
@@ -519,13 +565,15 @@ texml_application = client.texml_applications.retrieve("1293384261075731499")
 puts(texml_application)
 ```
 
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+
 ## Update a TeXML Application
 
 Updates settings of an existing TeXML Application.
 
 `PATCH /texml_applications/{id}` — Required: `friendly_name`, `voice_url`
 
-Optional: `active` (boolean), `anchorsite_override` (enum), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum)
+Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum: get, post)
 
 ```ruby
 texml_application = client.texml_applications.update(
@@ -536,6 +584,8 @@ texml_application = client.texml_applications.update(
 
 puts(texml_application)
 ```
+
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
 
 ## Deletes a TeXML Application
 
@@ -548,3 +598,5 @@ texml_application = client.texml_applications.delete("1293384261075731499")
 
 puts(texml_application)
 ```
+
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)

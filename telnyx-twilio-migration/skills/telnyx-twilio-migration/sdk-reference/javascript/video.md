@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-video-javascript — do not edit manually -->
-<!-- Source: telnyx-javascript/skills/telnyx-video-javascript/SKILL.md -->
-
----
-name: telnyx-video-javascript
-description: >-
-  Create and manage video rooms for real-time video communication and
-  conferencing. This skill provides JavaScript SDK examples.
-metadata:
-  author: telnyx
-  product: video
-  language: javascript
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-video-javascript -->
 
 # Telnyx Video - JavaScript
 
@@ -46,6 +31,8 @@ for await (const roomComposition of client.roomCompositions.list()) {
 }
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Create a room composition.
 
 Asynchronously create a room composition.
@@ -60,6 +47,8 @@ const roomComposition = await client.roomCompositions.create();
 console.log(roomComposition.data);
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room composition.
 
 `GET /room_compositions/{room_composition_id}`
@@ -71,6 +60,8 @@ const roomComposition = await client.roomCompositions.retrieve(
 
 console.log(roomComposition.data);
 ```
+
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Delete a room composition.
 
@@ -93,6 +84,8 @@ for await (const roomParticipant of client.roomParticipants.list()) {
 }
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a room participant.
 
 `GET /room_participants/{room_participant_id}`
@@ -105,6 +98,8 @@ const roomParticipant = await client.roomParticipants.retrieve(
 console.log(roomParticipant.data);
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of room recordings.
 
 `GET /room_recordings`
@@ -116,6 +111,8 @@ for await (const roomRecordingListResponse of client.roomRecordings.list()) {
 }
 ```
 
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+
 ## Delete several room recordings in a bulk.
 
 `DELETE /room_recordings`
@@ -126,6 +123,8 @@ const response = await client.roomRecordings.deleteBulk();
 console.log(response.data);
 ```
 
+Returns: `room_recordings` (integer)
+
 ## View a room recording.
 
 `GET /room_recordings/{room_recording_id}`
@@ -135,6 +134,8 @@ const roomRecording = await client.roomRecordings.retrieve('0ccc7b54-4df3-4bca-a
 
 console.log(roomRecording.data);
 ```
+
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
 
 ## Delete a room recording.
 
@@ -157,6 +158,8 @@ for await (const roomSession of client.rooms.sessions.list0()) {
 }
 ```
 
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+
 ## View a room session.
 
 `GET /room_sessions/{room_session_id}`
@@ -166,6 +169,8 @@ const session = await client.rooms.sessions.retrieve('0ccc7b54-4df3-4bca-a65a-3d
 
 console.log(session.data);
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
 
 ## End a room session.
 
@@ -179,6 +184,8 @@ const response = await client.rooms.sessions.actions.end('0ccc7b54-4df3-4bca-a65
 console.log(response.data);
 ```
 
+Returns: `result` (string)
+
 ## Kick participants from a room session.
 
 `POST /room_sessions/{room_session_id}/actions/kick`
@@ -190,6 +197,8 @@ const response = await client.rooms.sessions.actions.kick('0ccc7b54-4df3-4bca-a6
 
 console.log(response.data);
 ```
+
+Returns: `result` (string)
 
 ## Mute participants in room session.
 
@@ -203,6 +212,8 @@ const response = await client.rooms.sessions.actions.mute('0ccc7b54-4df3-4bca-a6
 console.log(response.data);
 ```
 
+Returns: `result` (string)
+
 ## Unmute participants in room session.
 
 `POST /room_sessions/{room_session_id}/actions/unmute`
@@ -214,6 +225,8 @@ const response = await client.rooms.sessions.actions.unmute('0ccc7b54-4df3-4bca-
 
 console.log(response.data);
 ```
+
+Returns: `result` (string)
 
 ## View a list of room participants.
 
@@ -228,6 +241,8 @@ for await (const roomParticipant of client.rooms.sessions.retrieveParticipants(
 }
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of rooms.
 
 `GET /rooms`
@@ -238,6 +253,8 @@ for await (const room of client.rooms.list()) {
   console.log(room.id);
 }
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Create a room.
 
@@ -253,6 +270,8 @@ const room = await client.rooms.create();
 console.log(room.data);
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room.
 
 `GET /rooms/{room_id}`
@@ -262,6 +281,8 @@ const room = await client.rooms.retrieve('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0')
 
 console.log(room.data);
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Update a room.
 
@@ -277,9 +298,11 @@ const room = await client.rooms.update('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
 console.log(room.data);
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Delete a room.
 
-Synchronously delete a Room.
+Synchronously delete a Room. Participants from that room will be kicked out, they won't be able to join that room anymore, and you won't be charged anymore for that room.
 
 `DELETE /rooms/{room_id}`
 
@@ -289,7 +312,7 @@ await client.rooms.delete('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
 
 ## Create Client Token to join a room.
 
-Synchronously create an Client Token to join a Room.
+Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/generate_join_client_token`
 
@@ -303,9 +326,11 @@ const response = await client.rooms.actions.generateJoinClientToken(
 console.log(response.data);
 ```
 
+Returns: `refresh_token` (string), `refresh_token_expires_at` (date-time), `token` (string), `token_expires_at` (date-time)
+
 ## Refresh Client Token to join a room.
 
-Synchronously refresh an Client Token to join a Room.
+Synchronously refresh an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/refresh_client_token` — Required: `refresh_token`
 
@@ -323,6 +348,8 @@ const response = await client.rooms.actions.refreshClientToken(
 console.log(response.data);
 ```
 
+Returns: `token` (string), `token_expires_at` (date-time)
+
 ## View a list of room sessions.
 
 `GET /rooms/{room_id}/sessions`
@@ -335,3 +362,5 @@ for await (const roomSession of client.rooms.sessions.list1(
   console.log(roomSession.id);
 }
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)

@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-video-go — do not edit manually -->
-<!-- Source: telnyx-go/skills/telnyx-video-go/SKILL.md -->
-
----
-name: telnyx-video-go
-description: >-
-  Create and manage video rooms for real-time video communication and
-  conferencing. This skill provides Go SDK examples.
-metadata:
-  author: telnyx
-  product: video
-  language: go
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-video-go -->
 
 # Telnyx Video - Go
 
@@ -54,6 +39,8 @@ All examples below assume `client` is already initialized as shown above.
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Create a room composition.
 
 Asynchronously create a room composition.
@@ -70,6 +57,8 @@ Optional: `format` (string), `resolution` (string), `session_id` (uuid), `video_
 	fmt.Printf("%+v\n", roomComposition.Data)
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room composition.
 
 `GET /room_compositions/{room_composition_id}`
@@ -81,6 +70,8 @@ Optional: `format` (string), `resolution` (string), `session_id` (uuid), `video_
 	}
 	fmt.Printf("%+v\n", roomComposition.Data)
 ```
+
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Delete a room composition.
 
@@ -107,6 +98,8 @@ Synchronously delete a room composition.
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a room participant.
 
 `GET /room_participants/{room_participant_id}`
@@ -118,6 +111,8 @@ Synchronously delete a room composition.
 	}
 	fmt.Printf("%+v\n", roomParticipant.Data)
 ```
+
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
 
 ## View a list of room recordings.
 
@@ -131,6 +126,8 @@ Synchronously delete a room composition.
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+
 ## Delete several room recordings in a bulk.
 
 `DELETE /room_recordings`
@@ -143,6 +140,8 @@ Synchronously delete a room composition.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `room_recordings` (integer)
+
 ## View a room recording.
 
 `GET /room_recordings/{room_recording_id}`
@@ -154,6 +153,8 @@ Synchronously delete a room composition.
 	}
 	fmt.Printf("%+v\n", roomRecording.Data)
 ```
+
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
 
 ## Delete a room recording.
 
@@ -180,6 +181,8 @@ Synchronously delete a Room Recording.
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+
 ## View a room session.
 
 `GET /room_sessions/{room_session_id}`
@@ -196,6 +199,8 @@ Synchronously delete a Room Recording.
 	fmt.Printf("%+v\n", session.Data)
 ```
 
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+
 ## End a room session.
 
 Note: this will also kick all participants currently present in the room
@@ -209,6 +214,8 @@ Note: this will also kick all participants currently present in the room
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
+
+Returns: `result` (string)
 
 ## Kick participants from a room session.
 
@@ -230,6 +237,8 @@ Optional: `exclude` (array[string]), `participants` (object)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `result` (string)
+
 ## Mute participants in room session.
 
 `POST /room_sessions/{room_session_id}/actions/mute`
@@ -249,6 +258,8 @@ Optional: `exclude` (array[string]), `participants` (object)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
+
+Returns: `result` (string)
 
 ## Unmute participants in room session.
 
@@ -270,6 +281,8 @@ Optional: `exclude` (array[string]), `participants` (object)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `result` (string)
+
 ## View a list of room participants.
 
 `GET /room_sessions/{room_session_id}/participants`
@@ -286,6 +299,8 @@ Optional: `exclude` (array[string]), `participants` (object)
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of rooms.
 
 `GET /rooms`
@@ -297,6 +312,8 @@ Optional: `exclude` (array[string]), `participants` (object)
 	}
 	fmt.Printf("%+v\n", page)
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Create a room.
 
@@ -314,6 +331,8 @@ Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_na
 	fmt.Printf("%+v\n", room.Data)
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room.
 
 `GET /rooms/{room_id}`
@@ -329,6 +348,8 @@ Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_na
 	}
 	fmt.Printf("%+v\n", room.Data)
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Update a room.
 
@@ -350,9 +371,11 @@ Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_na
 	fmt.Printf("%+v\n", room.Data)
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Delete a room.
 
-Synchronously delete a Room.
+Synchronously delete a Room. Participants from that room will be kicked out, they won't be able to join that room anymore, and you won't be charged anymore for that room.
 
 `DELETE /rooms/{room_id}`
 
@@ -365,7 +388,7 @@ Synchronously delete a Room.
 
 ## Create Client Token to join a room.
 
-Synchronously create an Client Token to join a Room.
+Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/generate_join_client_token`
 
@@ -383,9 +406,11 @@ Optional: `refresh_token_ttl_secs` (integer), `token_ttl_secs` (integer)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `refresh_token` (string), `refresh_token_expires_at` (date-time), `token` (string), `token_expires_at` (date-time)
+
 ## Refresh Client Token to join a room.
 
-Synchronously refresh an Client Token to join a Room.
+Synchronously refresh an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/refresh_client_token` — Required: `refresh_token`
 
@@ -405,6 +430,8 @@ Optional: `token_ttl_secs` (integer)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `token` (string), `token_expires_at` (date-time)
+
 ## View a list of room sessions.
 
 `GET /rooms/{room_id}/sessions`
@@ -420,3 +447,5 @@ Optional: `token_ttl_secs` (integer)
 	}
 	fmt.Printf("%+v\n", page)
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)

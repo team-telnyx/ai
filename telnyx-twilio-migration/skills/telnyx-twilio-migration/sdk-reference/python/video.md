@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-video-python — do not edit manually -->
-<!-- Source: telnyx-python/skills/telnyx-video-python/SKILL.md -->
-
----
-name: telnyx-video-python
-description: >-
-  Create and manage video rooms for real-time video communication and
-  conferencing. This skill provides Python SDK examples.
-metadata:
-  author: telnyx
-  product: video
-  language: python
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-video-python -->
 
 # Telnyx Video - Python
 
@@ -46,6 +31,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Create a room composition.
 
 Asynchronously create a room composition.
@@ -59,6 +46,8 @@ room_composition = client.room_compositions.create()
 print(room_composition.data)
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room composition.
 
 `GET /room_compositions/{room_composition_id}`
@@ -69,6 +58,8 @@ room_composition = client.room_compositions.retrieve(
 )
 print(room_composition.data)
 ```
+
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Delete a room composition.
 
@@ -92,6 +83,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a room participant.
 
 `GET /room_participants/{room_participant_id}`
@@ -103,6 +96,8 @@ room_participant = client.room_participants.retrieve(
 print(room_participant.data)
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of room recordings.
 
 `GET /room_recordings`
@@ -113,6 +108,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+
 ## Delete several room recordings in a bulk.
 
 `DELETE /room_recordings`
@@ -121,6 +118,8 @@ print(page.id)
 response = client.room_recordings.delete_bulk()
 print(response.data)
 ```
+
+Returns: `room_recordings` (integer)
 
 ## View a room recording.
 
@@ -132,6 +131,8 @@ room_recording = client.room_recordings.retrieve(
 )
 print(room_recording.data)
 ```
+
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
 
 ## Delete a room recording.
 
@@ -155,6 +156,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+
 ## View a room session.
 
 `GET /room_sessions/{room_session_id}`
@@ -165,6 +168,8 @@ session = client.rooms.sessions.retrieve(
 )
 print(session.data)
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
 
 ## End a room session.
 
@@ -179,6 +184,8 @@ response = client.rooms.sessions.actions.end(
 print(response.data)
 ```
 
+Returns: `result` (string)
+
 ## Kick participants from a room session.
 
 `POST /room_sessions/{room_session_id}/actions/kick`
@@ -191,6 +198,8 @@ response = client.rooms.sessions.actions.kick(
 )
 print(response.data)
 ```
+
+Returns: `result` (string)
 
 ## Mute participants in room session.
 
@@ -205,6 +214,8 @@ response = client.rooms.sessions.actions.mute(
 print(response.data)
 ```
 
+Returns: `result` (string)
+
 ## Unmute participants in room session.
 
 `POST /room_sessions/{room_session_id}/actions/unmute`
@@ -218,6 +229,8 @@ response = client.rooms.sessions.actions.unmute(
 print(response.data)
 ```
 
+Returns: `result` (string)
+
 ## View a list of room participants.
 
 `GET /room_sessions/{room_session_id}/participants`
@@ -230,6 +243,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of rooms.
 
 `GET /rooms`
@@ -239,6 +254,8 @@ page = client.rooms.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Create a room.
 
@@ -253,6 +270,8 @@ room = client.rooms.create()
 print(room.data)
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room.
 
 `GET /rooms/{room_id}`
@@ -263,6 +282,8 @@ room = client.rooms.retrieve(
 )
 print(room.data)
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Update a room.
 
@@ -279,9 +300,11 @@ room = client.rooms.update(
 print(room.data)
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Delete a room.
 
-Synchronously delete a Room.
+Synchronously delete a Room. Participants from that room will be kicked out, they won't be able to join that room anymore, and you won't be charged anymore for that room.
 
 `DELETE /rooms/{room_id}`
 
@@ -293,7 +316,7 @@ client.rooms.delete(
 
 ## Create Client Token to join a room.
 
-Synchronously create an Client Token to join a Room.
+Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/generate_join_client_token`
 
@@ -306,9 +329,11 @@ response = client.rooms.actions.generate_join_client_token(
 print(response.data)
 ```
 
+Returns: `refresh_token` (string), `refresh_token_expires_at` (date-time), `token` (string), `token_expires_at` (date-time)
+
 ## Refresh Client Token to join a room.
 
-Synchronously refresh an Client Token to join a Room.
+Synchronously refresh an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/refresh_client_token` — Required: `refresh_token`
 
@@ -322,6 +347,8 @@ response = client.rooms.actions.refresh_client_token(
 print(response.data)
 ```
 
+Returns: `token` (string), `token_expires_at` (date-time)
+
 ## View a list of room sessions.
 
 `GET /rooms/{room_id}/sessions`
@@ -333,3 +360,5 @@ page = client.rooms.sessions.list_1(
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)

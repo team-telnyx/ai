@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-video-java — do not edit manually -->
-<!-- Source: telnyx-java/skills/telnyx-video-java/SKILL.md -->
-
----
-name: telnyx-video-java
-description: >-
-  Create and manage video rooms for real-time video communication and
-  conferencing. This skill provides Java SDK examples.
-metadata:
-  author: telnyx
-  product: video
-  language: java
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-video-java -->
 
 # Telnyx Video - Java
 
@@ -45,6 +30,8 @@ import com.telnyx.sdk.models.roomcompositions.RoomCompositionListParams;
 RoomCompositionListPage page = client.roomCompositions().list();
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Create a room composition.
 
 Asynchronously create a room composition.
@@ -60,6 +47,8 @@ import com.telnyx.sdk.models.roomcompositions.RoomCompositionCreateResponse;
 RoomCompositionCreateResponse roomComposition = client.roomCompositions().create();
 ```
 
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room composition.
 
 `GET /room_compositions/{room_composition_id}`
@@ -70,6 +59,8 @@ import com.telnyx.sdk.models.roomcompositions.RoomCompositionRetrieveResponse;
 
 RoomCompositionRetrieveResponse roomComposition = client.roomCompositions().retrieve("5219b3af-87c6-4c08-9b58-5a533d893e21");
 ```
+
+Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Delete a room composition.
 
@@ -94,6 +85,8 @@ import com.telnyx.sdk.models.roomparticipants.RoomParticipantListParams;
 RoomParticipantListPage page = client.roomParticipants().list();
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a room participant.
 
 `GET /room_participants/{room_participant_id}`
@@ -104,6 +97,8 @@ import com.telnyx.sdk.models.roomparticipants.RoomParticipantRetrieveResponse;
 
 RoomParticipantRetrieveResponse roomParticipant = client.roomParticipants().retrieve("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
 
 ## View a list of room recordings.
 
@@ -116,6 +111,8 @@ import com.telnyx.sdk.models.roomrecordings.RoomRecordingListParams;
 RoomRecordingListPage page = client.roomRecordings().list();
 ```
 
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+
 ## Delete several room recordings in a bulk.
 
 `DELETE /room_recordings`
@@ -127,6 +124,8 @@ import com.telnyx.sdk.models.roomrecordings.RoomRecordingDeleteBulkResponse;
 RoomRecordingDeleteBulkResponse response = client.roomRecordings().deleteBulk();
 ```
 
+Returns: `room_recordings` (integer)
+
 ## View a room recording.
 
 `GET /room_recordings/{room_recording_id}`
@@ -137,6 +136,8 @@ import com.telnyx.sdk.models.roomrecordings.RoomRecordingRetrieveResponse;
 
 RoomRecordingRetrieveResponse roomRecording = client.roomRecordings().retrieve("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
 
 ## Delete a room recording.
 
@@ -161,6 +162,8 @@ import com.telnyx.sdk.models.rooms.sessions.SessionList0Params;
 SessionList0Page page = client.rooms().sessions().list0();
 ```
 
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+
 ## View a room session.
 
 `GET /room_sessions/{room_session_id}`
@@ -171,6 +174,8 @@ import com.telnyx.sdk.models.rooms.sessions.SessionRetrieveResponse;
 
 SessionRetrieveResponse session = client.rooms().sessions().retrieve("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
 
 ## End a room session.
 
@@ -184,6 +189,8 @@ import com.telnyx.sdk.models.rooms.sessions.actions.ActionEndResponse;
 
 ActionEndResponse response = client.rooms().sessions().actions().end("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `result` (string)
 
 ## Kick participants from a room session.
 
@@ -203,6 +210,8 @@ ActionKickParams params = ActionKickParams.builder()
 ActionKickResponse response = client.rooms().sessions().actions().kick(params);
 ```
 
+Returns: `result` (string)
+
 ## Mute participants in room session.
 
 `POST /room_sessions/{room_session_id}/actions/mute`
@@ -220,6 +229,8 @@ ActionMuteParams params = ActionMuteParams.builder()
     .build();
 ActionMuteResponse response = client.rooms().sessions().actions().mute(params);
 ```
+
+Returns: `result` (string)
 
 ## Unmute participants in room session.
 
@@ -239,6 +250,8 @@ ActionUnmuteParams params = ActionUnmuteParams.builder()
 ActionUnmuteResponse response = client.rooms().sessions().actions().unmute(params);
 ```
 
+Returns: `result` (string)
+
 ## View a list of room participants.
 
 `GET /room_sessions/{room_session_id}/participants`
@@ -250,6 +263,8 @@ import com.telnyx.sdk.models.rooms.sessions.SessionRetrieveParticipantsParams;
 SessionRetrieveParticipantsPage page = client.rooms().sessions().retrieveParticipants("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
 
+Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+
 ## View a list of rooms.
 
 `GET /rooms`
@@ -260,6 +275,8 @@ import com.telnyx.sdk.models.rooms.RoomListParams;
 
 RoomListPage page = client.rooms().list();
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Create a room.
 
@@ -276,6 +293,8 @@ import com.telnyx.sdk.models.rooms.RoomCreateResponse;
 RoomCreateResponse room = client.rooms().create();
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## View a room.
 
 `GET /rooms/{room_id}`
@@ -286,6 +305,8 @@ import com.telnyx.sdk.models.rooms.RoomRetrieveResponse;
 
 RoomRetrieveResponse room = client.rooms().retrieve("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
 
 ## Update a room.
 
@@ -302,9 +323,11 @@ import com.telnyx.sdk.models.rooms.RoomUpdateResponse;
 RoomUpdateResponse room = client.rooms().update("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
 
+Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+
 ## Delete a room.
 
-Synchronously delete a Room.
+Synchronously delete a Room. Participants from that room will be kicked out, they won't be able to join that room anymore, and you won't be charged anymore for that room.
 
 `DELETE /rooms/{room_id}`
 
@@ -316,7 +339,7 @@ client.rooms().delete("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 
 ## Create Client Token to join a room.
 
-Synchronously create an Client Token to join a Room.
+Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/generate_join_client_token`
 
@@ -329,9 +352,11 @@ import com.telnyx.sdk.models.rooms.actions.ActionGenerateJoinClientTokenResponse
 ActionGenerateJoinClientTokenResponse response = client.rooms().actions().generateJoinClientToken("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
 
+Returns: `refresh_token` (string), `refresh_token_expires_at` (date-time), `token` (string), `token_expires_at` (date-time)
+
 ## Refresh Client Token to join a room.
 
-Synchronously refresh an Client Token to join a Room.
+Synchronously refresh an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`.
 
 `POST /rooms/{room_id}/actions/refresh_client_token` — Required: `refresh_token`
 
@@ -348,6 +373,8 @@ ActionRefreshClientTokenParams params = ActionRefreshClientTokenParams.builder()
 ActionRefreshClientTokenResponse response = client.rooms().actions().refreshClientToken(params);
 ```
 
+Returns: `token` (string), `token_expires_at` (date-time)
+
 ## View a list of room sessions.
 
 `GET /rooms/{room_id}/sessions`
@@ -358,3 +385,5 @@ import com.telnyx.sdk.models.rooms.sessions.SessionList1Params;
 
 SessionList1Page page = client.rooms().sessions().list1("0ccc7b54-4df3-4bca-a65a-3da1ecc777f0");
 ```
+
+Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)

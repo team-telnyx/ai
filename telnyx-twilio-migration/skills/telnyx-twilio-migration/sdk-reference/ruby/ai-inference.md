@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-ai-inference-ruby — do not edit manually -->
-<!-- Source: telnyx-ruby/skills/telnyx-ai-inference-ruby/SKILL.md -->
-
----
-name: telnyx-ai-inference-ruby
-description: >-
-  Access Telnyx LLM inference APIs, embeddings, and AI analytics for call
-  insights and summaries. This skill provides Ruby SDK examples.
-metadata:
-  author: telnyx
-  product: ai-inference
-  language: ruby
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-ai-inference-ruby -->
 
 # Telnyx Ai Inference - Ruby
 
@@ -37,7 +22,7 @@ All examples below assume `client` is already initialized as shown above.
 
 ## Transcribe speech to text
 
-Transcribe speech to text.
+Transcribe speech to text. This endpoint is consistent with the [OpenAI Transcription API](https://platform.openai.com/docs/api-reference/audio/createTranscription) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/audio/transcriptions`
 
@@ -47,13 +32,15 @@ response = client.ai.audio.transcribe(model: :"distil-whisper/distil-large-v2")
 puts(response)
 ```
 
+Returns: `duration` (number), `segments` (array[object]), `text` (string)
+
 ## Create a chat completion
 
-Chat with a language model.
+Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/chat/completions` — Required: `messages`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
 
 ```ruby
 response = client.ai.chat.create_completion(
@@ -65,7 +52,7 @@ puts(response)
 
 ## List conversations
 
-Retrieve a list of all AI conversations configured by the user.
+Retrieve a list of all AI conversations configured by the user. Supports [PostgREST-style query parameters](https://postgrest.org/en/stable/api.html#horizontal-filtering-rows) for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object.
 
 `GET /ai/conversations`
 
@@ -74,6 +61,8 @@ conversations = client.ai.conversations.list
 
 puts(conversations)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
 
 ## Create a conversation
 
@@ -89,6 +78,8 @@ conversation = client.ai.conversations.create
 puts(conversation)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
 ## Get Insight Template Groups
 
 Get all insight groups
@@ -100,6 +91,8 @@ page = client.ai.conversations.insight_groups.retrieve_insight_groups
 
 puts(page)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Create Insight Template Group
 
@@ -115,6 +108,8 @@ insight_template_group_detail = client.ai.conversations.insight_groups.insight_g
 puts(insight_template_group_detail)
 ```
 
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+
 ## Get Insight Template Group
 
 Get insight group by ID
@@ -126,6 +121,8 @@ insight_template_group_detail = client.ai.conversations.insight_groups.retrieve(
 
 puts(insight_template_group_detail)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Update Insight Template Group
 
@@ -140,6 +137,8 @@ insight_template_group_detail = client.ai.conversations.insight_groups.update("1
 
 puts(insight_template_group_detail)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Delete Insight Template Group
 
@@ -195,6 +194,8 @@ page = client.ai.conversations.insights.list
 puts(page)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+
 ## Create Insight Template
 
 Create a new insight
@@ -209,6 +210,8 @@ insight_template_detail = client.ai.conversations.insights.create(instructions: 
 puts(insight_template_detail)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+
 ## Get Insight Template
 
 Get insight by ID
@@ -220,6 +223,8 @@ insight_template_detail = client.ai.conversations.insights.retrieve("182bd5e5-6e
 
 puts(insight_template_detail)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
 
 ## Update Insight Template
 
@@ -234,6 +239,8 @@ insight_template_detail = client.ai.conversations.insights.update("182bd5e5-6e1a
 
 puts(insight_template_detail)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
 
 ## Delete Insight Template
 
@@ -259,6 +266,8 @@ conversation = client.ai.conversations.retrieve("conversation_id")
 puts(conversation)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
 ## Update conversation metadata
 
 Update metadata for a specific conversation.
@@ -272,6 +281,8 @@ conversation = client.ai.conversations.update("conversation_id")
 
 puts(conversation)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
 
 ## Delete a conversation
 
@@ -297,9 +308,11 @@ response = client.ai.conversations.retrieve_conversations_insights("conversation
 puts(response)
 ```
 
+Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
 ## Create Message
 
-Add a new message to the conversation.
+Add a new message to the conversation. Used to insert a new messages to a conversation manually ( without using chat endpoint )
 
 `POST /ai/conversations/{conversation_id}/message` — Required: `role`
 
@@ -323,9 +336,11 @@ messages = client.ai.conversations.messages.list("conversation_id")
 puts(messages)
 ```
 
+Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
+
 ## Get Tasks by Status
 
-Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `success` or `partial_success` based on the query string.
+Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `success` or `partial_success` based on the query string. Defaults to `queued` and `processing`.
 
 `GET /ai/embeddings`
 
@@ -335,9 +350,17 @@ embeddings = client.ai.embeddings.list
 puts(embeddings)
 ```
 
+Returns: `bucket` (string), `created_at` (date-time), `finished_at` (date-time), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (string), `task_name` (string), `user_id` (string)
+
 ## Embed documents
 
-Perform embedding on a Telnyx Storage Bucket using an embedding model.
+Perform embedding on a Telnyx Storage Bucket using an embedding model. The current supported file types are:
+- PDF
+- HTML
+- txt/unstructured text files
+- json
+- csv
+- audio / video (mp3, mp4, mpeg, mpga, m4a, wav, or webm ) - Max of 100mb file size. Any files not matching the above types will be attempted to be embedded as unstructured text.
 
 `POST /ai/embeddings` — Required: `bucket_name`
 
@@ -348,6 +371,8 @@ embedding_response = client.ai.embeddings.create(bucket_name: "bucket_name")
 
 puts(embedding_response)
 ```
+
+Returns: `created_at` (string), `finished_at` (['string', 'null']), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
 
 ## List embedded buckets
 
@@ -361,6 +386,8 @@ buckets = client.ai.embeddings.buckets.list
 puts(buckets)
 ```
 
+Returns: `buckets` (array[string])
+
 ## Get file-level embedding statuses for a bucket
 
 Get all embedded files for a given user bucket, including their processing status.
@@ -372,6 +399,8 @@ bucket = client.ai.embeddings.buckets.retrieve("bucket_name")
 
 puts(bucket)
 ```
+
+Returns: `created_at` (date-time), `error_reason` (string), `filename` (string), `last_embedded_at` (date-time), `status` (string), `updated_at` (date-time)
 
 ## Disable AI for an Embedded Bucket
 
@@ -387,7 +416,7 @@ puts(result)
 
 ## Search for documents
 
-Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query.
+Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query. Currently the only available distance metric is cosine similarity which will return a `distance` between 0 and 1. The lower the distance, the more similar the returned document chunks are to the query.
 
 `POST /ai/embeddings/similarity-search` — Required: `bucket_name`, `query`
 
@@ -399,9 +428,11 @@ response = client.ai.embeddings.similarity_search(bucket_name: "bucket_name", qu
 puts(response)
 ```
 
+Returns: `distance` (number), `document_chunk` (string), `metadata` (object)
+
 ## Embed URL content
 
-Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain.
+Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain. The process crawls and loads content from the main URL and its linked pages into a Telnyx Cloud Storage bucket.
 
 `POST /ai/embeddings/url` — Required: `url`, `bucket_name`
 
@@ -411,9 +442,16 @@ embedding_response = client.ai.embeddings.url(bucket_name: "bucket_name", url: "
 puts(embedding_response)
 ```
 
+Returns: `created_at` (string), `finished_at` (['string', 'null']), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
+
 ## Get an embedding task's status
 
-Check the status of a current embedding task.
+Check the status of a current embedding task. Will be one of the following:
+- `queued` - Task is waiting to be picked up by a worker
+- `processing` - The embedding task is running
+- `success` - Task completed successfully and the bucket is embedded
+- `failure` - Task failed and no files were embedded successfully
+- `partial_success` - Some files were embedded successfully, but at least one failed
 
 `GET /ai/embeddings/{task_id}`
 
@@ -422,6 +460,8 @@ embedding = client.ai.embeddings.retrieve("task_id")
 
 puts(embedding)
 ```
+
+Returns: `created_at` (string), `finished_at` (string), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (uuid), `task_name` (string)
 
 ## List fine tuning jobs
 
@@ -434,6 +474,8 @@ jobs = client.ai.fine_tuning.jobs.list
 
 puts(jobs)
 ```
+
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
 
 ## Create a fine tuning job
 
@@ -449,6 +491,8 @@ fine_tuning_job = client.ai.fine_tuning.jobs.create(model: "model", training_fil
 puts(fine_tuning_job)
 ```
 
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
+
 ## Get a fine tuning job
 
 Retrieve a fine tuning job by `job_id`.
@@ -460,6 +504,8 @@ fine_tuning_job = client.ai.fine_tuning.jobs.retrieve("job_id")
 
 puts(fine_tuning_job)
 ```
+
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
 
 ## Cancel a fine tuning job
 
@@ -473,9 +519,11 @@ fine_tuning_job = client.ai.fine_tuning.jobs.cancel("job_id")
 puts(fine_tuning_job)
 ```
 
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
+
 ## Get available models
 
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
+This endpoint returns a list of Open Source and OpenAI models that are available for use. <br /><br /> **Note**: Model `id`'s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.
 
 `GET /ai/models`
 
@@ -485,13 +533,15 @@ response = client.ai.retrieve_models
 puts(response)
 ```
 
+Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
 ## Create embeddings
 
-Creates an embedding vector representing the input text.
+Creates an embedding vector representing the input text. This endpoint is compatible with the [OpenAI Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) and may be used with the OpenAI JS or Python SDK by setting the base URL to `https://api.telnyx.com/v2/ai/openai`.
 
 `POST /ai/openai/embeddings` — Required: `input`, `model`
 
-Optional: `dimensions` (integer), `encoding_format` (enum), `user` (string)
+Optional: `dimensions` (integer), `encoding_format` (enum: float, base64), `user` (string)
 
 ```ruby
 response = client.ai.openai.embeddings.create_embeddings(
@@ -502,9 +552,11 @@ response = client.ai.openai.embeddings.create_embeddings(
 puts(response)
 ```
 
+Returns: `data` (array[object]), `model` (string), `object` (string), `usage` (object)
+
 ## List embedding models
 
-Returns a list of available embedding models.
+Returns a list of available embedding models. This endpoint is compatible with the OpenAI Models API format.
 
 `GET /ai/openai/embeddings/models`
 
@@ -514,9 +566,16 @@ response = client.ai.openai.embeddings.list_embedding_models
 puts(response)
 ```
 
+Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
 ## Summarize file content
 
-Generate a summary of a file's contents.
+Generate a summary of a file's contents. Supports the following text formats: 
+- PDF, HTML, txt, json, csv
+
+ Supports the following media formats (billed for both the transcription and summary): 
+- flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm
+- Up to 100 MB
 
 `POST /ai/summarize` — Required: `bucket`, `filename`
 
@@ -527,6 +586,8 @@ response = client.ai.summarize(bucket: "bucket", filename: "filename")
 
 puts(response)
 ```
+
+Returns: `summary` (string)
 
 ## Get all Speech to Text batch report requests
 
@@ -539,6 +600,8 @@ speech_to_texts = client.legacy.reporting.batch_detail_records.speech_to_text.li
 
 puts(speech_to_texts)
 ```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
 
 ## Create a new Speech to Text batch report request
 
@@ -555,6 +618,8 @@ speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.cre
 puts(speech_to_text)
 ```
 
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
 ## Get a specific Speech to Text batch report request
 
 Retrieves a specific Speech to Text batch report request by ID
@@ -569,6 +634,8 @@ speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.ret
 puts(speech_to_text)
 ```
 
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
 ## Delete a Speech to Text batch report request
 
 Deletes a specific Speech to Text batch report request by ID
@@ -581,9 +648,11 @@ speech_to_text = client.legacy.reporting.batch_detail_records.speech_to_text.del
 puts(speech_to_text)
 ```
 
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
 ## Get speech to text usage report
 
-Generate and fetch speech to text usage report synchronously.
+Generate and fetch speech to text usage report synchronously. This endpoint will both generate and fetch the speech to text report over a specified time period.
 
 `GET /legacy/reporting/usage_reports/speech_to_text`
 
@@ -593,37 +662,15 @@ response = client.legacy.reporting.usage_reports.retrieve_speech_to_text
 puts(response)
 ```
 
-## Speech to text over websocket
-
-Transcribe audio streams to text over WebSocket.
-
-`GET /speech-to-text/transcription`
-
-```ruby
-result = client.speech_to_text.transcribe(input_format: :mp3, transcription_engine: :Azure)
-
-puts(result)
-```
-
-## Stream text to speech over WebSocket
-
-Open a WebSocket connection to stream text and receive synthesized audio in real time.
-
-`GET /text-to-speech/speech`
-
-```ruby
-result = client.text_to_speech.stream
-
-puts(result)
-```
+Returns: `data` (object)
 
 ## Generate speech from text
 
-Generate synthesized speech audio from text input.
+Generate synthesized speech audio from text input. Returns audio in the requested format (binary audio stream, base64-encoded JSON, or an audio URL for later retrieval). Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header.
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object)
 
 ```ruby
 response = client.text_to_speech.generate
@@ -631,9 +678,11 @@ response = client.text_to_speech.generate
 puts(response)
 ```
 
+Returns: `base64_audio` (string)
+
 ## List available voices
 
-Retrieve a list of available voices from one or all TTS providers.
+Retrieve a list of available voices from one or all TTS providers. When `provider` is specified, returns voices for that provider only. Otherwise, returns voices from all providers.
 
 `GET /text-to-speech/voices`
 
@@ -642,6 +691,8 @@ response = client.text_to_speech.list_voices
 
 puts(response)
 ```
+
+Returns: `voices` (array[object])
 
 ## Get all Wireless Detail Records (WDRs) Reports
 
@@ -654,6 +705,8 @@ detail_records_reports = client.wireless.detail_records_reports.list
 
 puts(detail_records_reports)
 ```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
 
 ## Create a Wireless Detail Records (WDRs) Report
 
@@ -669,6 +722,8 @@ detail_records_report = client.wireless.detail_records_reports.create
 puts(detail_records_report)
 ```
 
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
 ## Get a Wireless Detail Record (WDR) Report
 
 Returns one specific WDR report
@@ -681,6 +736,8 @@ detail_records_report = client.wireless.detail_records_reports.retrieve("6a09cdc
 puts(detail_records_report)
 ```
 
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
 ## Delete a Wireless Detail Record (WDR) Report
 
 Deletes one specific WDR report.
@@ -692,3 +749,5 @@ detail_records_report = client.wireless.detail_records_reports.delete("6a09cdc3-
 
 puts(detail_records_report)
 ```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)

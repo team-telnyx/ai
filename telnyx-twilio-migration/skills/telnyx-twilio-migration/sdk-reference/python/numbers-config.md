@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-numbers-config-python — do not edit manually -->
-<!-- Source: telnyx-python/skills/telnyx-numbers-config-python/SKILL.md -->
-
----
-name: telnyx-numbers-config-python
-description: >-
-  Configure phone number settings including caller ID, call forwarding,
-  messaging enablement, and connection assignments. This skill provides Python
-  SDK examples.
-metadata:
-  author: telnyx
-  product: numbers-config
-  language: python
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-numbers-config-python -->
 
 # Telnyx Numbers Config - Python
 
@@ -51,6 +35,8 @@ messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.create(
 print(messaging_numbers_bulk_update.data)
 ```
 
+Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+
 ## Retrieve bulk update status
 
 `GET /messaging_numbers_bulk_updates/{order_id}`
@@ -62,6 +48,8 @@ messaging_numbers_bulk_update = client.messaging_numbers_bulk_updates.retrieve(
 print(messaging_numbers_bulk_update.data)
 ```
 
+Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+
 ## List mobile phone numbers with messaging settings
 
 `GET /mobile_phone_numbers/messaging`
@@ -71,6 +59,8 @@ page = client.mobile_phone_numbers.messaging.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
 
 ## Retrieve a mobile phone number with messaging settings
 
@@ -83,6 +73,8 @@ messaging = client.mobile_phone_numbers.messaging.retrieve(
 print(messaging.data)
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+
 ## List phone numbers
 
 `GET /phone_numbers`
@@ -92,6 +84,8 @@ page = client.phone_numbers.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `billing_group_id` (['string', 'null']), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `deletion_lock_enabled` (boolean), `emergency_address_id` (['string', 'null']), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (['string', 'null']), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (['string', 'null']), `messaging_profile_name` (['string', 'null']), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Verify ownership of phone numbers
 
@@ -106,6 +100,8 @@ response = client.phone_numbers.actions.verify_ownership(
 print(response.data)
 ```
 
+Returns: `found` (array[object]), `not_found` (array[string]), `record_type` (string)
+
 ## Lists the phone numbers jobs
 
 `GET /phone_numbers/jobs`
@@ -116,9 +112,11 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+
 ## Delete a batch of numbers
 
-Creates a new background job to delete a batch of numbers.
+Creates a new background job to delete a batch of numbers. At most one thousand numbers can be updated per API call.
 
 `POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
 
@@ -129,9 +127,11 @@ response = client.phone_numbers.jobs.delete_batch(
 print(response.data)
 ```
 
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+
 ## Update the emergency settings from a batch of numbers
 
-Creates a background job to update the emergency settings of a collection of phone numbers.
+Creates a background job to update the emergency settings of a collection of phone numbers. At most one thousand numbers can be updated per API call.
 
 `POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
 
@@ -145,9 +145,11 @@ response = client.phone_numbers.jobs.update_emergency_settings_batch(
 print(response.data)
 ```
 
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+
 ## Update a batch of numbers
 
-Creates a new background job to update a batch of numbers.
+Creates a new background job to update a batch of numbers. At most one thousand numbers can be updated per API call. At least one of the updateable fields must be submitted.
 
 `POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
 
@@ -160,6 +162,8 @@ response = client.phone_numbers.jobs.update_batch(
 print(response.data)
 ```
 
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+
 ## Retrieve a phone numbers job
 
 `GET /phone_numbers/jobs/{id}`
@@ -171,6 +175,8 @@ job = client.phone_numbers.jobs.retrieve(
 print(job.data)
 ```
 
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+
 ## List phone numbers with messaging settings
 
 `GET /phone_numbers/messaging`
@@ -180,6 +186,8 @@ page = client.phone_numbers.messaging.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
 
 ## Slim List phone numbers
 
@@ -193,6 +201,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `country_iso_alpha2` (string), `created_at` (string), `customer_reference` (string), `emergency_address_id` (string), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `updated_at` (string)
+
 ## List phone numbers with voice settings
 
 `GET /phone_numbers/voice`
@@ -202,6 +212,8 @@ page = client.phone_numbers.voice.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ## Retrieve a phone number
 
@@ -213,6 +225,8 @@ phone_number = client.phone_numbers.retrieve(
 )
 print(phone_number.data)
 ```
+
+Returns: `billing_group_id` (['string', 'null']), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `deletion_lock_enabled` (boolean), `emergency_address_id` (['string', 'null']), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (['string', 'null']), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (['string', 'null']), `messaging_profile_name` (['string', 'null']), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Update a phone number
 
@@ -227,6 +241,8 @@ phone_number = client.phone_numbers.update(
 print(phone_number.data)
 ```
 
+Returns: `billing_group_id` (['string', 'null']), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `deletion_lock_enabled` (boolean), `emergency_address_id` (['string', 'null']), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (['string', 'null']), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (['string', 'null']), `messaging_profile_name` (['string', 'null']), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+
 ## Delete a phone number
 
 `DELETE /phone_numbers/{id}`
@@ -237,6 +253,8 @@ phone_number = client.phone_numbers.delete(
 )
 print(phone_number.data)
 ```
+
+Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `connection_name` (string), `created_at` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `emergency_address_id` (string), `emergency_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `messaging_profile_id` (string), `messaging_profile_name` (string), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Change the bundle status for a phone number (set to being in a bundle or remove from a bundle)
 
@@ -249,6 +267,8 @@ response = client.phone_numbers.actions.change_bundle_status(
 )
 print(response.data)
 ```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ## Enable emergency for a phone number
 
@@ -263,6 +283,8 @@ response = client.phone_numbers.actions.enable_emergency(
 print(response.data)
 ```
 
+Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+
 ## Retrieve a phone number with messaging settings
 
 `GET /phone_numbers/{id}/messaging`
@@ -273,6 +295,8 @@ messaging = client.phone_numbers.messaging.retrieve(
 )
 print(messaging.data)
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
 
 ## Update the messaging profile and/or messaging product of a phone number
 
@@ -287,6 +311,8 @@ messaging = client.phone_numbers.messaging.update(
 print(messaging.data)
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
@@ -298,11 +324,13 @@ voice = client.phone_numbers.voice.retrieve(
 print(voice.data)
 ```
 
+Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+
 ## Update a phone number with voice settings
 
 `PATCH /phone_numbers/{id}/voice`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `inbound_call_screening` (enum), `media_features` (object), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum)
+Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ```python
 voice = client.phone_numbers.voice.update(
@@ -310,6 +338,8 @@ voice = client.phone_numbers.voice.update(
 )
 print(voice.data)
 ```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ## List Mobile Phone Numbers
 
@@ -320,6 +350,8 @@ page = client.mobile_phone_numbers.list()
 page = page.data[0]
 print(page.id)
 ```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `connection_type` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
 
 ## Retrieve a Mobile Phone Number
 
@@ -332,11 +364,13 @@ mobile_phone_number = client.mobile_phone_numbers.retrieve(
 print(mobile_phone_number.data)
 ```
 
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `connection_type` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+
 ## Update a Mobile Phone Number
 
 `PATCH /v2/mobile_phone_numbers/{id}`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (['string', 'null']), `customer_reference` (['string', 'null']), `inbound` (object), `inbound_call_screening` (enum), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
+Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (['string', 'null']), `customer_reference` (['string', 'null']), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
 
 ```python
 mobile_phone_number = client.mobile_phone_numbers.update(
@@ -344,3 +378,5 @@ mobile_phone_number = client.mobile_phone_numbers.update(
 )
 print(mobile_phone_number.data)
 ```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (['string', 'null']), `connection_name` (['string', 'null']), `connection_type` (['string', 'null']), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (['string', 'null']), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)

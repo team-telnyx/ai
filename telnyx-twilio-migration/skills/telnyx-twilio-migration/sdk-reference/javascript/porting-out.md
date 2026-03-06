@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-porting-out-javascript — do not edit manually -->
-<!-- Source: telnyx-javascript/skills/telnyx-porting-out-javascript/SKILL.md -->
-
----
-name: telnyx-porting-out-javascript
-description: >-
-  Manage port-out requests when numbers are being ported away from Telnyx. List,
-  view, and update port-out status. This skill provides JavaScript SDK examples.
-metadata:
-  author: telnyx
-  product: porting-out
-  language: javascript
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-porting-out-javascript -->
 
 # Telnyx Porting Out - JavaScript
 
@@ -48,6 +33,8 @@ for await (const portoutDetails of client.portouts.list()) {
 }
 ```
 
+Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (['string', 'null']), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+
 ## List all port-out events
 
 Returns a list of all port-out events.
@@ -61,6 +48,8 @@ for await (const eventListResponse of client.portouts.events.list()) {
 }
 ```
 
+Returns: `data` (array[object]), `meta` (object)
+
 ## Show a port-out event
 
 Show a specific port-out event.
@@ -72,6 +61,8 @@ const event = await client.portouts.events.retrieve('182bd5e5-6e1a-4fe4-a799-aa6
 
 console.log(event.data);
 ```
+
+Returns: `data` (object)
 
 ## Republish a port-out event
 
@@ -95,6 +86,8 @@ const response = await client.portouts.listRejectionCodes('329d6658-8f93-405d-86
 console.log(response.data);
 ```
 
+Returns: `code` (integer), `description` (string), `reason_required` (boolean)
+
 ## List port-out related reports
 
 List the reports generated about port-out operations.
@@ -107,6 +100,8 @@ for await (const portoutReport of client.portouts.reports.list()) {
   console.log(portoutReport.id);
 }
 ```
+
+Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
 
 ## Create a port-out related report
 
@@ -123,6 +118,8 @@ const report = await client.portouts.reports.create({
 console.log(report.data);
 ```
 
+Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+
 ## Retrieve a report
 
 Retrieve a specific report generated.
@@ -134,6 +131,8 @@ const report = await client.portouts.reports.retrieve('182bd5e5-6e1a-4fe4-a799-a
 
 console.log(report.data);
 ```
+
+Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
 
 ## Get a portout request
 
@@ -147,6 +146,8 @@ const portout = await client.portouts.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6a
 console.log(portout.data);
 ```
 
+Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (['string', 'null']), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+
 ## List all comments for a portout request
 
 Returns a list of comments for a portout request.
@@ -158,6 +159,8 @@ const comments = await client.portouts.comments.list('182bd5e5-6e1a-4fe4-a799-aa
 
 console.log(comments.data);
 ```
+
+Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
 
 ## Create a comment on a portout request
 
@@ -173,6 +176,8 @@ const comment = await client.portouts.comments.create('182bd5e5-6e1a-4fe4-a799-a
 console.log(comment.data);
 ```
 
+Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+
 ## List supporting documents on a portout request
 
 List every supporting documents for a portout request.
@@ -186,6 +191,8 @@ const supportingDocuments = await client.portouts.supportingDocuments.list(
 
 console.log(supportingDocuments.data);
 ```
+
+Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
 
 ## Create a list of supporting documents on a portout request
 
@@ -203,6 +210,8 @@ const supportingDocument = await client.portouts.supportingDocuments.create(
 console.log(supportingDocument.data);
 ```
 
+Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+
 ## Update Status
 
 Authorize or reject portout request
@@ -219,3 +228,5 @@ const response = await client.portouts.updateStatus('authorized', {
 
 console.log(response.data);
 ```
+
+Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (['string', 'null']), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)

@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-voice-gather-java — do not edit manually -->
-<!-- Source: telnyx-java/skills/telnyx-voice-gather-java/SKILL.md -->
-
----
-name: telnyx-voice-gather-java
-description: >-
-  Collect DTMF input and speech from callers using standard gather or AI-powered
-  gather. Build interactive voice menus and AI voice assistants. This skill
-  provides Java SDK examples.
-metadata:
-  author: telnyx
-  product: voice-gather
-  language: java
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-voice-gather-java -->
 
 # Telnyx Voice Gather - Java
 
@@ -50,9 +34,14 @@ import com.telnyx.sdk.models.calls.actions.ActionAddAiAssistantMessagesResponse;
 ActionAddAiAssistantMessagesResponse response = client.calls().actions().addAiAssistantMessages("call_control_id");
 ```
 
+Returns: `result` (string)
+
 ## Start AI Assistant
 
-Start an AI assistant on the call.
+Start an AI assistant on the call. **Expected Webhooks:**
+
+- `call.conversation.ended`
+- `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
@@ -64,6 +53,8 @@ import com.telnyx.sdk.models.calls.actions.ActionStartAiAssistantResponse;
 
 ActionStartAiAssistantResponse response = client.calls().actions().startAiAssistant("call_control_id");
 ```
+
+Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
@@ -80,9 +71,11 @@ import com.telnyx.sdk.models.calls.actions.ActionStopAiAssistantResponse;
 ActionStopAiAssistantResponse response = client.calls().actions().stopAiAssistant("call_control_id");
 ```
 
+Returns: `result` (string)
+
 ## Gather
 
-Gather DTMF signals to build interactive menus.
+Gather DTMF signals to build interactive menus. You can pass a list of valid digits. The `Answer` command must be issued before the `gather` command.
 
 `POST /calls/{call_control_id}/actions/gather`
 
@@ -95,9 +88,13 @@ import com.telnyx.sdk.models.calls.actions.ActionGatherResponse;
 ActionGatherResponse response = client.calls().actions().gather("call_control_id");
 ```
 
+Returns: `result` (string)
+
 ## Gather stop
 
-Stop current gather.
+Stop current gather. **Expected Webhooks:**
+
+- `call.gather.ended`
 
 `POST /calls/{call_control_id}/actions/gather_stop`
 
@@ -110,9 +107,11 @@ import com.telnyx.sdk.models.calls.actions.ActionStopGatherResponse;
 ActionStopGatherResponse response = client.calls().actions().stopGather("call_control_id");
 ```
 
+Returns: `result` (string)
+
 ## Gather using AI
 
-Gather parameters defined in the request payload using a voice assistant.
+Gather parameters defined in the request payload using a voice assistant. You can pass parameters described as a JSON Schema object and the voice assistant will attempt to gather these informations.
 
 `POST /calls/{call_control_id}/actions/gather_using_ai` — Required: `parameters`
 
@@ -134,9 +133,11 @@ ActionGatherUsingAiParams params = ActionGatherUsingAiParams.builder()
 ActionGatherUsingAiResponse response = client.calls().actions().gatherUsingAi(params);
 ```
 
+Returns: `conversation_id` (uuid), `result` (string)
+
 ## Gather using audio
 
-Play an audio file on the call until the required DTMF signals are gathered to build interactive menus.
+Play an audio file on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_audio_url', which will be played back at the beginning of each prompt. Playback will be interrupted when a DTMF signal is received.
 
 `POST /calls/{call_control_id}/actions/gather_using_audio`
 
@@ -149,13 +150,15 @@ import com.telnyx.sdk.models.calls.actions.ActionGatherUsingAudioResponse;
 ActionGatherUsingAudioResponse response = client.calls().actions().gatherUsingAudio("call_control_id");
 ```
 
+Returns: `result` (string)
+
 ## Gather using speak
 
-Convert text to speech and play it on the call until the required DTMF signals are gathered to build interactive menus.
+Convert text to speech and play it on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_payload', which will be played back at the beginning of each prompt. Speech will be interrupted when a DTMF signal is received.
 
 `POST /calls/{call_control_id}/actions/gather_using_speak` — Required: `voice`, `payload`
 
-Optional: `client_state` (string), `command_id` (string), `inter_digit_timeout_millis` (int32), `invalid_payload` (string), `language` (enum), `maximum_digits` (int32), `maximum_tries` (int32), `minimum_digits` (int32), `payload_type` (enum), `service_level` (enum), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string), `voice_settings` (object)
+Optional: `client_state` (string), `command_id` (string), `inter_digit_timeout_millis` (int32), `invalid_payload` (string), `language` (enum: arb, cmn-CN, cy-GB, da-DK, de-DE, en-AU, en-GB, en-GB-WLS, en-IN, en-US, es-ES, es-MX, es-US, fr-CA, fr-FR, hi-IN, is-IS, it-IT, ja-JP, ko-KR, nb-NO, nl-NL, pl-PL, pt-BR, pt-PT, ro-RO, ru-RU, sv-SE, tr-TR), `maximum_digits` (int32), `maximum_tries` (int32), `minimum_digits` (int32), `payload_type` (enum: text, ssml), `service_level` (enum: basic, premium), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string), `voice_settings` (object)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionGatherUsingSpeakParams;
@@ -168,6 +171,8 @@ ActionGatherUsingSpeakParams params = ActionGatherUsingSpeakParams.builder()
     .build();
 ActionGatherUsingSpeakResponse response = client.calls().actions().gatherUsingSpeak(params);
 ```
+
+Returns: `result` (string)
 
 ---
 
@@ -189,8 +194,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.ai_gather.ended | The type of event being delivered. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
@@ -202,14 +207,14 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 | `data.payload.message_history` | array[object] | The history of the messages exchanged during the AI gather |
 | `data.payload.result` | object | The result of the AI gather, its type depends of the `parameters` provided in the command |
-| `data.payload.status` | enum | Reflects how command ended. |
+| `data.payload.status` | enum: valid, invalid | Reflects how command ended. |
 
 **`CallAIGatherMessageHistoryUpdated`**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.ai_gather.message_history_updated | The type of event being delivered. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
@@ -225,8 +230,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.ai_gather.partial_results | The type of event being delivered. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
@@ -243,8 +248,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.gather.ended | The type of event being delivered. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
@@ -255,4 +260,4 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.from` | string | Number or SIP URI placing the call. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 | `data.payload.digits` | string | The received DTMF digit or symbol. |
-| `data.payload.status` | enum | Reflects how command ended. |
+| `data.payload.status` | enum: valid, invalid, call_hangup, cancelled, cancelled_amd, timeout | Reflects how command ended. |

@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-webrtc-python — do not edit manually -->
-<!-- Source: telnyx-python/skills/telnyx-webrtc-python/SKILL.md -->
-
----
-name: telnyx-webrtc-python
-description: >-
-  Manage WebRTC credentials and mobile push notification settings. Use when
-  building browser-based or mobile softphone applications. This skill provides
-  Python SDK examples.
-metadata:
-  author: telnyx
-  product: webrtc
-  language: python
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-webrtc-python -->
 
 # Telnyx Webrtc - Python
 
@@ -47,6 +31,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
+
 ## Creates a new mobile push credential
 
 `POST /mobile_push_credentials`
@@ -63,6 +49,8 @@ push_credential_response = client.mobile_push_credentials.create(
 print(push_credential_response.data)
 ```
 
+Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
+
 ## Retrieves a mobile push credential
 
 Retrieves mobile push credential based on the given `push_credential_id`
@@ -75,6 +63,8 @@ push_credential_response = client.mobile_push_credentials.retrieve(
 )
 print(push_credential_response.data)
 ```
+
+Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
 
 ## Deletes a mobile push credential
 
@@ -100,6 +90,8 @@ page = page.data[0]
 print(page.id)
 ```
 
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+
 ## Create a credential
 
 Create a credential.
@@ -115,6 +107,8 @@ telephony_credential = client.telephony_credentials.create(
 print(telephony_credential.data)
 ```
 
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+
 ## Get a credential
 
 Get the details of an existing On-demand Credential.
@@ -127,6 +121,8 @@ telephony_credential = client.telephony_credentials.retrieve(
 )
 print(telephony_credential.data)
 ```
+
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -143,6 +139,8 @@ telephony_credential = client.telephony_credentials.update(
 print(telephony_credential.data)
 ```
 
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+
 ## Delete a credential
 
 Delete an existing credential.
@@ -155,3 +153,5 @@ telephony_credential = client.telephony_credentials.delete(
 )
 print(telephony_credential.data)
 ```
+
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)

@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-ai-inference-go — do not edit manually -->
-<!-- Source: telnyx-go/skills/telnyx-ai-inference-go/SKILL.md -->
-
----
-name: telnyx-ai-inference-go
-description: >-
-  Access Telnyx LLM inference APIs, embeddings, and AI analytics for call
-  insights and summaries. This skill provides Go SDK examples.
-metadata:
-  author: telnyx
-  product: ai-inference
-  language: go
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-ai-inference-go -->
 
 # Telnyx Ai Inference - Go
 
@@ -44,7 +29,7 @@ All examples below assume `client` is already initialized as shown above.
 
 ## Transcribe speech to text
 
-Transcribe speech to text.
+Transcribe speech to text. This endpoint is consistent with the [OpenAI Transcription API](https://platform.openai.com/docs/api-reference/audio/createTranscription) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/audio/transcriptions`
 
@@ -58,13 +43,15 @@ Transcribe speech to text.
 	fmt.Printf("%+v\n", response.Text)
 ```
 
+Returns: `duration` (number), `segments` (array[object]), `text` (string)
+
 ## Create a chat completion
 
-Chat with a language model.
+Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/chat/completions` — Required: `messages`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
 
 ```go
 	response, err := client.AI.Chat.NewCompletion(context.TODO(), telnyx.AIChatNewCompletionParams{
@@ -88,7 +75,7 @@ Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean
 
 ## List conversations
 
-Retrieve a list of all AI conversations configured by the user.
+Retrieve a list of all AI conversations configured by the user. Supports [PostgREST-style query parameters](https://postgrest.org/en/stable/api.html#horizontal-filtering-rows) for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object.
 
 `GET /ai/conversations`
 
@@ -99,6 +86,8 @@ Retrieve a list of all AI conversations configured by the user.
 	}
 	fmt.Printf("%+v\n", conversations.Data)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
 
 ## Create a conversation
 
@@ -116,6 +105,8 @@ Optional: `metadata` (object), `name` (string)
 	fmt.Printf("%+v\n", conversation.ID)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
 ## Get Insight Template Groups
 
 Get all insight groups
@@ -129,6 +120,8 @@ Get all insight groups
 	}
 	fmt.Printf("%+v\n", page)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Create Insight Template Group
 
@@ -148,6 +141,8 @@ Optional: `description` (string), `webhook` (string)
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
 
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+
 ## Get Insight Template Group
 
 Get insight group by ID
@@ -161,6 +156,8 @@ Get insight group by ID
 	}
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Update Insight Template Group
 
@@ -181,6 +178,8 @@ Optional: `description` (string), `name` (string), `webhook` (string)
 	}
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
+
+Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
 
 ## Delete Insight Template Group
 
@@ -247,6 +246,8 @@ Get all insights
 	fmt.Printf("%+v\n", page)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+
 ## Create Insight Template
 
 Create a new insight
@@ -266,6 +267,8 @@ Optional: `json_schema` (object), `webhook` (string)
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+
 ## Get Insight Template
 
 Get insight by ID
@@ -279,6 +282,8 @@ Get insight by ID
 	}
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
 
 ## Update Insight Template
 
@@ -299,6 +304,8 @@ Optional: `instructions` (string), `json_schema` (object), `name` (string), `web
 	}
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
 
 ## Delete Insight Template
 
@@ -327,6 +334,8 @@ Retrieve a specific AI conversation by its ID.
 	fmt.Printf("%+v\n", conversation.Data)
 ```
 
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
 ## Update conversation metadata
 
 Update metadata for a specific conversation.
@@ -346,6 +355,8 @@ Optional: `metadata` (object)
 	}
 	fmt.Printf("%+v\n", conversation.Data)
 ```
+
+Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
 
 ## Delete a conversation
 
@@ -374,9 +385,11 @@ Retrieve insights for a specific conversation
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
 ## Create Message
 
-Add a new message to the conversation.
+Add a new message to the conversation. Used to insert a new messages to a conversation manually ( without using chat endpoint )
 
 `POST /ai/conversations/{conversation_id}/message` — Required: `role`
 
@@ -409,9 +422,11 @@ Retrieve messages for a specific conversation, including tool calls made by the 
 	fmt.Printf("%+v\n", messages.Data)
 ```
 
+Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
+
 ## Get Tasks by Status
 
-Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `success` or `partial_success` based on the query string.
+Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `success` or `partial_success` based on the query string. Defaults to `queued` and `processing`.
 
 `GET /ai/embeddings`
 
@@ -423,9 +438,17 @@ Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `s
 	fmt.Printf("%+v\n", embeddings.Data)
 ```
 
+Returns: `bucket` (string), `created_at` (date-time), `finished_at` (date-time), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (string), `task_name` (string), `user_id` (string)
+
 ## Embed documents
 
-Perform embedding on a Telnyx Storage Bucket using an embedding model.
+Perform embedding on a Telnyx Storage Bucket using an embedding model. The current supported file types are:
+- PDF
+- HTML
+- txt/unstructured text files
+- json
+- csv
+- audio / video (mp3, mp4, mpeg, mpga, m4a, wav, or webm ) - Max of 100mb file size. Any files not matching the above types will be attempted to be embedded as unstructured text.
 
 `POST /ai/embeddings` — Required: `bucket_name`
 
@@ -441,6 +464,8 @@ Optional: `document_chunk_overlap_size` (integer), `document_chunk_size` (intege
 	fmt.Printf("%+v\n", embeddingResponse.Data)
 ```
 
+Returns: `created_at` (string), `finished_at` (['string', 'null']), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
+
 ## List embedded buckets
 
 Get all embedding buckets for a user.
@@ -455,6 +480,8 @@ Get all embedding buckets for a user.
 	fmt.Printf("%+v\n", buckets.Data)
 ```
 
+Returns: `buckets` (array[string])
+
 ## Get file-level embedding statuses for a bucket
 
 Get all embedded files for a given user bucket, including their processing status.
@@ -468,6 +495,8 @@ Get all embedded files for a given user bucket, including their processing statu
 	}
 	fmt.Printf("%+v\n", bucket.Data)
 ```
+
+Returns: `created_at` (date-time), `error_reason` (string), `filename` (string), `last_embedded_at` (date-time), `status` (string), `updated_at` (date-time)
 
 ## Disable AI for an Embedded Bucket
 
@@ -484,7 +513,7 @@ Deletes an entire bucket's embeddings and disables the bucket for AI-use, return
 
 ## Search for documents
 
-Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query.
+Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query. Currently the only available distance metric is cosine similarity which will return a `distance` between 0 and 1. The lower the distance, the more similar the returned document chunks are to the query.
 
 `POST /ai/embeddings/similarity-search` — Required: `bucket_name`, `query`
 
@@ -501,9 +530,11 @@ Optional: `num_of_docs` (integer)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `distance` (number), `document_chunk` (string), `metadata` (object)
+
 ## Embed URL content
 
-Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain.
+Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain. The process crawls and loads content from the main URL and its linked pages into a Telnyx Cloud Storage bucket.
 
 `POST /ai/embeddings/url` — Required: `url`, `bucket_name`
 
@@ -518,9 +549,16 @@ Embed website content from a specified URL, including child pages up to 5 levels
 	fmt.Printf("%+v\n", embeddingResponse.Data)
 ```
 
+Returns: `created_at` (string), `finished_at` (['string', 'null']), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
+
 ## Get an embedding task's status
 
-Check the status of a current embedding task.
+Check the status of a current embedding task. Will be one of the following:
+- `queued` - Task is waiting to be picked up by a worker
+- `processing` - The embedding task is running
+- `success` - Task completed successfully and the bucket is embedded
+- `failure` - Task failed and no files were embedded successfully
+- `partial_success` - Some files were embedded successfully, but at least one failed
 
 `GET /ai/embeddings/{task_id}`
 
@@ -531,6 +569,8 @@ Check the status of a current embedding task.
 	}
 	fmt.Printf("%+v\n", embedding.Data)
 ```
+
+Returns: `created_at` (string), `finished_at` (string), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (uuid), `task_name` (string)
 
 ## List fine tuning jobs
 
@@ -545,6 +585,8 @@ Retrieve a list of all fine tuning jobs created by the user.
 	}
 	fmt.Printf("%+v\n", jobs.Data)
 ```
+
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
 
 ## Create a fine tuning job
 
@@ -565,6 +607,8 @@ Optional: `hyperparameters` (object), `suffix` (string)
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
+
 ## Get a fine tuning job
 
 Retrieve a fine tuning job by `job_id`.
@@ -578,6 +622,8 @@ Retrieve a fine tuning job by `job_id`.
 	}
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
+
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
 
 ## Cancel a fine tuning job
 
@@ -593,9 +639,11 @@ Cancel a fine tuning job.
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
+Returns: `created_at` (integer), `finished_at` (['integer', 'null']), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (['integer', 'null']), `training_file` (string)
+
 ## Get available models
 
-This endpoint returns a list of Open Source and OpenAI models that are available for use.
+This endpoint returns a list of Open Source and OpenAI models that are available for use. <br /><br /> **Note**: Model `id`'s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.
 
 `GET /ai/models`
 
@@ -607,13 +655,15 @@ This endpoint returns a list of Open Source and OpenAI models that are available
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
 ## Create embeddings
 
-Creates an embedding vector representing the input text.
+Creates an embedding vector representing the input text. This endpoint is compatible with the [OpenAI Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) and may be used with the OpenAI JS or Python SDK by setting the base URL to `https://api.telnyx.com/v2/ai/openai`.
 
 `POST /ai/openai/embeddings` — Required: `input`, `model`
 
-Optional: `dimensions` (integer), `encoding_format` (enum), `user` (string)
+Optional: `dimensions` (integer), `encoding_format` (enum: float, base64), `user` (string)
 
 ```go
 	response, err := client.AI.OpenAI.Embeddings.NewEmbeddings(context.TODO(), telnyx.AIOpenAIEmbeddingNewEmbeddingsParams{
@@ -628,9 +678,11 @@ Optional: `dimensions` (integer), `encoding_format` (enum), `user` (string)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `data` (array[object]), `model` (string), `object` (string), `usage` (object)
+
 ## List embedding models
 
-Returns a list of available embedding models.
+Returns a list of available embedding models. This endpoint is compatible with the OpenAI Models API format.
 
 `GET /ai/openai/embeddings/models`
 
@@ -642,9 +694,16 @@ Returns a list of available embedding models.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
 ## Summarize file content
 
-Generate a summary of a file's contents.
+Generate a summary of a file's contents. Supports the following text formats: 
+- PDF, HTML, txt, json, csv
+
+ Supports the following media formats (billed for both the transcription and summary): 
+- flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm
+- Up to 100 MB
 
 `POST /ai/summarize` — Required: `bucket`, `filename`
 
@@ -661,6 +720,8 @@ Optional: `system_prompt` (string)
 	fmt.Printf("%+v\n", response.Data)
 ```
 
+Returns: `summary` (string)
+
 ## Get all Speech to Text batch report requests
 
 Retrieves all Speech to Text batch report requests for the authenticated user
@@ -674,6 +735,8 @@ Retrieves all Speech to Text batch report requests for the authenticated user
 	}
 	fmt.Printf("%+v\n", speechToTexts.Data)
 ```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
 
 ## Create a new Speech to Text batch report request
 
@@ -692,6 +755,8 @@ Creates a new Speech to Text batch report request with the specified filters
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
 
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
 ## Get a specific Speech to Text batch report request
 
 Retrieves a specific Speech to Text batch report request by ID
@@ -705,6 +770,8 @@ Retrieves a specific Speech to Text batch report request by ID
 	}
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
 
 ## Delete a Speech to Text batch report request
 
@@ -720,9 +787,11 @@ Deletes a specific Speech to Text batch report request by ID
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
 
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
 ## Get speech to text usage report
 
-Generate and fetch speech to text usage report synchronously.
+Generate and fetch speech to text usage report synchronously. This endpoint will both generate and fetch the speech to text report over a specified time period.
 
 `GET /legacy/reporting/usage_reports/speech_to_text`
 
@@ -734,42 +803,15 @@ Generate and fetch speech to text usage report synchronously.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-## Speech to text over websocket
-
-Transcribe audio streams to text over WebSocket.
-
-`GET /speech-to-text/transcription`
-
-```go
-	err := client.SpeechToText.Transcribe(context.TODO(), telnyx.SpeechToTextTranscribeParams{
-		InputFormat:         telnyx.SpeechToTextTranscribeParamsInputFormatMP3,
-		TranscriptionEngine: telnyx.SpeechToTextTranscribeParamsTranscriptionEngineAzure,
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
-## Stream text to speech over WebSocket
-
-Open a WebSocket connection to stream text and receive synthesized audio in real time.
-
-`GET /text-to-speech/speech`
-
-```go
-	err := client.TextToSpeech.Stream(context.TODO(), telnyx.TextToSpeechStreamParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-```
+Returns: `data` (object)
 
 ## Generate speech from text
 
-Generate synthesized speech audio from text input.
+Generate synthesized speech audio from text input. Returns audio in the requested format (binary audio stream, base64-encoded JSON, or an audio URL for later retrieval). Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header.
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum), `provider` (enum), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum), `voice` (string), `voice_settings` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object)
 
 ```go
 	response, err := client.TextToSpeech.Generate(context.TODO(), telnyx.TextToSpeechGenerateParams{})
@@ -779,9 +821,11 @@ Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenla
 	fmt.Printf("%+v\n", response.Base64Audio)
 ```
 
+Returns: `base64_audio` (string)
+
 ## List available voices
 
-Retrieve a list of available voices from one or all TTS providers.
+Retrieve a list of available voices from one or all TTS providers. When `provider` is specified, returns voices for that provider only. Otherwise, returns voices from all providers.
 
 `GET /text-to-speech/voices`
 
@@ -792,6 +836,8 @@ Retrieve a list of available voices from one or all TTS providers.
 	}
 	fmt.Printf("%+v\n", response.Voices)
 ```
+
+Returns: `voices` (array[object])
 
 ## Get all Wireless Detail Records (WDRs) Reports
 
@@ -806,6 +852,8 @@ Returns the WDR Reports that match the given parameters.
 	}
 	fmt.Printf("%+v\n", detailRecordsReports.Data)
 ```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
 
 ## Create a Wireless Detail Records (WDRs) Report
 
@@ -823,6 +871,8 @@ Optional: `end_time` (string), `start_time` (string)
 	fmt.Printf("%+v\n", detailRecordsReport.Data)
 ```
 
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
 ## Get a Wireless Detail Record (WDR) Report
 
 Returns one specific WDR report
@@ -837,6 +887,8 @@ Returns one specific WDR report
 	fmt.Printf("%+v\n", detailRecordsReport.Data)
 ```
 
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
 ## Delete a Wireless Detail Record (WDR) Report
 
 Deletes one specific WDR report.
@@ -850,3 +902,5 @@ Deletes one specific WDR report.
 	}
 	fmt.Printf("%+v\n", detailRecordsReport.Data)
 ```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
