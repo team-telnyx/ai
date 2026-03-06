@@ -500,6 +500,18 @@ Fill in: summary metrics, changes by product, validation results, environment ch
 - [ ] If hybrid: maintain both API keys, monitor both platforms, revisit kept products
 - [ ] Cancel Twilio account after validation period (skip if hybrid)
 
+### Step 6.2: Run Post-Migration Diagnostic
+
+```bash
+bash {baseDir}/scripts/post-test-diagnostic.sh <project-root>
+```
+
+This generates `SKILL-DIAGNOSTIC.json` in the project root — a structured report capturing residual Twilio references, directory names, lint/validate results, and Telnyx adoption metrics. Present the summary to the user and commit the diagnostic file.
+
+```bash
+git add SKILL-DIAGNOSTIC.json && git commit -m "docs: add migration diagnostic report"
+```
+
 **Phase 6 exit**: `bash {baseDir}/scripts/migration-state.sh set-phase <project-root> 6 && bash {baseDir}/scripts/migration-state.sh set-commit <project-root> 6`
 
 ---
@@ -512,6 +524,7 @@ All scripts are in `{baseDir}/scripts/`. Run them — do not substitute your own
 **Phase wrappers**: `run-discovery.sh <root>` (Phase 1), `run-validation.sh <root>` (Phase 5)
 **Scanners (free)**: `preflight-check.sh [--quick]`, `scan-twilio-usage.sh <root>`, `scan-twilio-deep.py <root>`
 **Validators (free)**: `validate-migration.sh <root> [--product X] [--json] [--exclude-dir D] [--scan-json F] [--state-file <path>]`, `validate-texml.sh <file>`, `lint-telnyx-correctness.sh <root> [--product X] [--json]`
+**Diagnostic**: `post-test-diagnostic.sh <root> [--agent-output <file>]` — generates `SKILL-DIAGNOSTIC.json` with residual Twilio refs, lint/validate results, and agent behavior signals
 **Tests (free)**: `test-migration/smoke-test.sh`, `test-migration/webhook-receiver.py`, `test-migration/test-webhooks-local.py`
 **Tests (paid, --confirm)**: `test-migration/test-voice.sh` (~$0.01), `test-migration/test-messaging.sh` (~$0.004), `test-migration/test-verify.sh` (~$0.05), `test-migration/test-lookup.sh` (~$0.01), `test-migration/test-fax.sh` (~$0.07)
 **Tests (free, --confirm)**: `test-migration/test-sip.sh` (SIP trunking setup), `test-migration/test-webrtc.sh` (WebRTC credentials/tokens)

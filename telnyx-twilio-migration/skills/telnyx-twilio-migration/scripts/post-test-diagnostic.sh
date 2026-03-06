@@ -264,31 +264,73 @@ echo ""
 echo -e "${BOLD}8. Agent behavior signals${NC}"
 
 DEFERRED_ITEMS="" COMPACTION_COUNT=0 MANUAL_STEPS=""
+
+# Auto-detect Claude Code JSONL transcript if no agent output specified
+if [ -z "$AGENT_OUTPUT" ]; then
+  CLAUDE_PROJECT_DIR="$HOME/.claude/projects"
+  if [ -d "$CLAUDE_PROJECT_DIR" ]; then
+    # Find the most recent JSONL transcript
+    LATEST_JSONL=$(find "$CLAUDE_PROJECT_DIR" -name "*.jsonl" -type f -newer "$PROJECT_ROOT" 2>/dev/null | head -1 || true)
+    if [ -z "$LATEST_JSONL" ]; then
+      LATEST_JSONL=$(find "$CLAUDE_PROJECT_DIR" -name "*.jsonl" -type f 2>/dev/null | xargs ls -t 2>/dev/null | head -1 || true)
+    fi
+    if [ -n "$LATEST_JSONL" ]; then
+      echo "  Auto-detected Claude Code transcript: $(basename "$LATEST_JSONL")"
+      AGENT_OUTPUT="$LATEST_JSONL"
+    fi
+  fi
+fi
+
 if [ -n "$AGENT_OUTPUT" ] && [ -f "$AGENT_OUTPUT" ]; then
-  echo "  Analyzing agent output: $AGENT_OUTPUT"
+  echo "  Analyzing: $(basename "$AGENT_OUTPUT")"
 
-  # Count compaction events
-  COMPACTION_COUNT=$(grep -c -i "compacting\|conversation was compressed\|context.*compact" "$AGENT_OUTPUT" 2>/dev/null || echo "0")
-  echo "  Compaction events: $COMPACTION_COUNT"
-
-  # Find deferred/skipped items
-  DEFERRED_ITEMS=$(grep -i "manual.*step\|remaining.*step\|defer\|skip\|TODO.*manual\|left as.*exercise\|out of scope" "$AGENT_OUTPUT" 2>/dev/null | head -20 || true)
-  DEFERRED_COUNT=$(echo "$DEFERRED_ITEMS" | sed '/^$/d' | wc -l | tr -d ' ')
-  if [ "$DEFERRED_COUNT" -gt 0 ]; then
-    echo -e "  ${YELLOW}WARN${NC}  Agent deferred $DEFERRED_COUNT item(s) — check if these should have been migrated"
+  # Handle JSONL (Claude Code transcripts) — extract text content
+  AGENT_TEXT=""
+  if echo "$AGENT_OUTPUT" | grep -q '\.jsonl$'; then
+    AGENT_TEXT=$(python3 -c "
+import json, sys
+for line in open('$AGENT_OUTPUT'):
+    try:
+        msg = json.loads(line)
+        # Extract assistant message text
+        if msg.get('type') == 'assistant':
+            for block in msg.get('message', {}).get('content', []):
+                if isinstance(block, dict) and block.get('type') == 'text':
+                    print(block['text'])
+                elif isinstance(block, str):
+                    print(block)
+    except: pass
+" 2>/dev/null || echo "")
   else
-    echo -e "  ${GREEN}PASS${NC}  No deferred items detected"
+    AGENT_TEXT=$(cat "$AGENT_OUTPUT" 2>/dev/null || echo "")
   fi
 
-  # Find errors/failures
-  ERROR_LINES=$(grep -i "error\|fail\|exception\|could not\|unable to" "$AGENT_OUTPUT" 2>/dev/null | grep -v "test.*pass\|PASS\|success" | head -10 || true)
-  ERROR_COUNT=$(echo "$ERROR_LINES" | sed '/^$/d' | wc -l | tr -d ' ')
-  if [ "$ERROR_COUNT" -gt 0 ]; then
-    echo -e "  ${YELLOW}WARN${NC}  $ERROR_COUNT potential error(s) in agent output"
+  if [ -n "$AGENT_TEXT" ]; then
+    # Count compaction events
+    COMPACTION_COUNT=$(echo "$AGENT_TEXT" | grep -c -i "compacting\|conversation was compressed\|context.*compact\|context recovery" 2>/dev/null || echo "0")
+    echo "  Compaction events: $COMPACTION_COUNT"
+
+    # Find deferred/skipped items
+    DEFERRED_ITEMS=$(echo "$AGENT_TEXT" | grep -i "manual.*step\|remaining.*step\|defer\|skip\|TODO.*manual\|left as.*exercise\|out of scope" 2>/dev/null | head -20 || true)
+    DEFERRED_COUNT=$(echo "$DEFERRED_ITEMS" | sed '/^$/d' | wc -l | tr -d ' ')
+    if [ "$DEFERRED_COUNT" -gt 0 ]; then
+      echo -e "  ${YELLOW}WARN${NC}  Agent deferred $DEFERRED_COUNT item(s) — check if these should have been migrated"
+    else
+      echo -e "  ${GREEN}PASS${NC}  No deferred items detected"
+    fi
+
+    # Find errors/failures
+    ERROR_LINES=$(echo "$AGENT_TEXT" | grep -i "error\|fail\|exception\|could not\|unable to" 2>/dev/null | grep -v "test.*pass\|PASS\|success\|SKILL-DIAGNOSTIC\|exit code" | head -10 || true)
+    ERROR_COUNT=$(echo "$ERROR_LINES" | sed '/^$/d' | wc -l | tr -d ' ')
+    if [ "$ERROR_COUNT" -gt 0 ]; then
+      echo -e "  ${YELLOW}WARN${NC}  $ERROR_COUNT potential error(s) in agent output"
+    fi
+  else
+    echo "  (could not extract text from agent output)"
   fi
 else
-  echo "  No agent output provided (use --agent-output <file> for deeper analysis)"
-  echo "  Tip: copy-paste your Claude Code session output to a file"
+  echo "  No agent output found"
+  echo "  Tip: run again after the Claude Code session ends — the transcript will be auto-detected"
 fi
 
 # --- 9. Git diff summary (if git repo) ---
