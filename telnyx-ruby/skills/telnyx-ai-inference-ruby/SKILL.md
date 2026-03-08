@@ -676,18 +676,6 @@ puts(response)
 
 Returns: `data` (object)
 
-## Speech to text over WebSocket
-
-Open a WebSocket connection to stream audio and receive transcriptions in real-time. Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header. Supported engines: `Azure`, `Deepgram`, `Google`, `Telnyx`.
-
-`GET /speech-to-text/transcription`
-
-```ruby
-result = client.speech_to_text.transcribe(input_format: :mp3, transcription_engine: :Azure)
-
-puts(result)
-```
-
 ## Generate speech from text
 
 Generate synthesized speech audio from text input. Returns audio in the requested format (binary audio stream, base64-encoded JSON, or an audio URL for later retrieval). Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header.

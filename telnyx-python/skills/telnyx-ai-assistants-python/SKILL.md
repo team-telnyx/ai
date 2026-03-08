@@ -83,6 +83,17 @@ print(assistants_list.data)
 
 Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
+## Get All Tags
+
+`GET /ai/assistants/tags`
+
+```python
+tags = client.ai.assistants.tags.list()
+print(tags.tags)
+```
+
+Returns: `tags` (array[string])
+
 ## List assistant tests with pagination
 
 Retrieves a paginated list of assistant tests with optional filtering capabilities
@@ -490,6 +501,34 @@ client.ai.assistants.scheduled_events.delete(
     assistant_id="assistant_id",
 )
 ```
+
+## Add Assistant Tag
+
+`POST /ai/assistants/{assistant_id}/tags` — Required: `tag`
+
+```python
+response = client.ai.assistants.tags.add(
+    assistant_id="assistant_id",
+    tag="tag",
+)
+print(response.tags)
+```
+
+Returns: `tags` (array[string])
+
+## Remove Assistant Tag
+
+`DELETE /ai/assistants/{assistant_id}/tags/{tag}`
+
+```python
+tag = client.ai.assistants.tags.remove(
+    tag="tag",
+    assistant_id="assistant_id",
+)
+print(tag.tags)
+```
+
+Returns: `tags` (array[string])
 
 ## Get assistant texml
 

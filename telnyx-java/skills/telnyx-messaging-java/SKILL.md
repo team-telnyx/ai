@@ -117,7 +117,7 @@ MessageSendParams params = MessageSendParams.builder()
 MessageSendResponse response = client.messages().send(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a message using an alphanumeric sender ID
 
@@ -140,7 +140,7 @@ MessageSendWithAlphanumericSenderParams params = MessageSendWithAlphanumericSend
 MessageSendWithAlphanumericSenderResponse response = client.messages().sendWithAlphanumericSender(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Retrieve group MMS messages
 
@@ -155,7 +155,7 @@ import com.telnyx.sdk.models.messages.MessageRetrieveGroupMessagesResponse;
 MessageRetrieveGroupMessagesResponse response = client.messages().retrieveGroupMessages("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a group MMS message
 
@@ -175,7 +175,7 @@ MessageSendGroupMmsParams params = MessageSendGroupMmsParams.builder()
 MessageSendGroupMmsResponse response = client.messages().sendGroupMms(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a long code message
 
@@ -194,7 +194,7 @@ MessageSendLongCodeParams params = MessageSendLongCodeParams.builder()
 MessageSendLongCodeResponse response = client.messages().sendLongCode(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a message using number pool
 
@@ -213,7 +213,7 @@ MessageSendNumberPoolParams params = MessageSendNumberPoolParams.builder()
 MessageSendNumberPoolResponse response = client.messages().sendNumberPool(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Schedule a message
 
@@ -234,7 +234,7 @@ MessageScheduleParams params = MessageScheduleParams.builder()
 MessageScheduleResponse response = client.messages().schedule(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a short code message
 
@@ -253,7 +253,7 @@ MessageSendShortCodeParams params = MessageSendShortCodeParams.builder()
 MessageSendShortCodeResponse response = client.messages().sendShortCode(params);
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a Whatsapp message
 
@@ -274,7 +274,7 @@ MessageSendWhatsappParams params = MessageSendWhatsappParams.builder()
 MessageSendWhatsappResponse response = client.messages().sendWhatsapp(params);
 ```
 
-Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string)
+Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string), `wait_seconds` (float)
 
 ## Retrieve a message
 
@@ -573,6 +573,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.valid_until` | date-time | Message must be out of the queue by this time or else it will be discarded and marked as 'sending_failed'. |
 | `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses. |
 | `data.payload.smart_encoding_applied` | boolean | Indicates whether smart encoding was applied to this message. |
+| `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
 | `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
 | `meta.delivered_to` | url | The webhook URL the event was delivered to. |
 

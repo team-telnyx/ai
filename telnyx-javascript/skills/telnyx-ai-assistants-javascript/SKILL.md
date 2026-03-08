@@ -85,6 +85,18 @@ console.log(assistantsList.data);
 
 Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
+## Get All Tags
+
+`GET /ai/assistants/tags`
+
+```javascript
+const tags = await client.ai.assistants.tags.list();
+
+console.log(tags.tags);
+```
+
+Returns: `tags` (array[string])
+
 ## List assistant tests with pagination
 
 Retrieves a paginated list of assistant tests with optional filtering capabilities
@@ -465,6 +477,30 @@ If the event is pending, this will cancel the event. Otherwise, this will simply
 ```javascript
 await client.ai.assistants.scheduledEvents.delete('event_id', { assistant_id: 'assistant_id' });
 ```
+
+## Add Assistant Tag
+
+`POST /ai/assistants/{assistant_id}/tags` — Required: `tag`
+
+```javascript
+const response = await client.ai.assistants.tags.add('assistant_id', { tag: 'tag' });
+
+console.log(response.tags);
+```
+
+Returns: `tags` (array[string])
+
+## Remove Assistant Tag
+
+`DELETE /ai/assistants/{assistant_id}/tags/{tag}`
+
+```javascript
+const tag = await client.ai.assistants.tags.remove('tag', { assistant_id: 'assistant_id' });
+
+console.log(tag.tags);
+```
+
+Returns: `tags` (array[string])
 
 ## Get assistant texml
 

@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-messaging-profiles-java — do not edit manually -->
-<!-- Source: telnyx-java/skills/telnyx-messaging-profiles-java/SKILL.md -->
-
----
-name: telnyx-messaging-profiles-java
-description: >-
-  Create and manage messaging profiles with number pools, sticky sender, and
-  geomatch features. Configure short codes for high-volume messaging. This skill
-  provides Java SDK examples.
-metadata:
-  author: telnyx
-  product: messaging-profiles
-  language: java
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-messaging-profiles-java -->
 
 # Telnyx Messaging Profiles - Java
 
@@ -46,11 +30,13 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListParams;
 MessagingProfileListPage page = client.messagingProfiles().list();
 ```
 
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+
 ## Create a messaging profile
 
 `POST /messaging_profiles` — Required: `name`, `whitelisted_destinations`
 
-Optional: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `number_pool_settings` (['object', 'null']), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `url_shortener_settings` (['object', 'null']), `webhook_api_version` (enum), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `number_pool_settings` (['object', 'null']), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `url_shortener_settings` (['object', 'null']), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messagingprofiles.MessagingProfileCreateParams;
@@ -63,6 +49,8 @@ MessagingProfileCreateParams params = MessagingProfileCreateParams.builder()
 MessagingProfileCreateResponse messagingProfile = client.messagingProfiles().create(params);
 ```
 
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+
 ## Retrieve a messaging profile
 
 `GET /messaging_profiles/{id}`
@@ -74,11 +62,13 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileRetrieveResponse;
 MessagingProfileRetrieveResponse messagingProfile = client.messagingProfiles().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+
 ## Update a messaging profile
 
 `PATCH /messaging_profiles/{id}`
 
-Optional: `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `record_type` (enum), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+Optional: `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `record_type` (enum: messaging_profile), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
 
 ```java
 import com.telnyx.sdk.models.messagingprofiles.MessagingProfileUpdateParams;
@@ -86,6 +76,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileUpdateResponse;
 
 MessagingProfileUpdateResponse messagingProfile = client.messagingProfiles().update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
 
 ## Delete a messaging profile
 
@@ -98,6 +90,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileDeleteResponse;
 MessagingProfileDeleteResponse messagingProfile = client.messagingProfiles().delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+
 ## List phone numbers associated with a messaging profile
 
 `GET /messaging_profiles/{id}/phone_numbers`
@@ -108,6 +102,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListPhoneNumbersP
 
 MessagingProfileListPhoneNumbersPage page = client.messagingProfiles().listPhoneNumbers("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
 
 ## List short codes associated with a messaging profile
 
@@ -120,6 +116,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListShortCodesPar
 MessagingProfileListShortCodesPage page = client.messagingProfiles().listShortCodes("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (['string', 'null']), `record_type` (enum: short_code), `short_code` (string), `tags` (['array']), `updated_at` (date-time)
+
 ## List short codes
 
 `GET /short_codes`
@@ -130,6 +128,8 @@ import com.telnyx.sdk.models.shortcodes.ShortCodeListParams;
 
 ShortCodeListPage page = client.shortCodes().list();
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (['string', 'null']), `record_type` (enum: short_code), `short_code` (string), `tags` (['array']), `updated_at` (date-time)
 
 ## Retrieve a short code
 
@@ -142,9 +142,11 @@ import com.telnyx.sdk.models.shortcodes.ShortCodeRetrieveResponse;
 ShortCodeRetrieveResponse shortCode = client.shortCodes().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (['string', 'null']), `record_type` (enum: short_code), `short_code` (string), `tags` (['array']), `updated_at` (date-time)
+
 ## Update short code
 
-Update the settings for a specific short code.
+Update the settings for a specific short code. To unbind a short code from a profile, set the `messaging_profile_id` to `null` or an empty string. To add or update tags, include the tags field as an array of strings.
 
 `PATCH /short_codes/{id}` — Required: `messaging_profile_id`
 
@@ -160,3 +162,5 @@ ShortCodeUpdateParams params = ShortCodeUpdateParams.builder()
     .build();
 ShortCodeUpdateResponse shortCode = client.shortCodes().update(params);
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (['string', 'null']), `record_type` (enum: short_code), `short_code` (string), `tags` (['array']), `updated_at` (date-time)

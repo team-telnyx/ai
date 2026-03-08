@@ -778,7 +778,7 @@ public struct TxConfig
 This structure is intended to used for Telnyx SDK configurations.
 
 ### Methods
-### `init(sipUser:password:pushDeviceToken:ringtone:ringBackTone:pushEnvironment:logLevel:customLogger:reconnectClient:debug:forceRelayCandidate:enableQualityMetrics:sendWebRTCStatsViaSocket:reconnectTimeOut:useTrickleIce:)`
+### `init(sipUser:password:pushDeviceToken:ringtone:ringBackTone:pushEnvironment:logLevel:customLogger:reconnectClient:debug:forceRelayCandidate:enableQualityMetrics:sendWebRTCStatsViaSocket:reconnectTimeOut:useTrickleIce:enableCallReports:callReportInterval:callReportLogLevel:callReportMaxLogEntries:)`
 
 ```swift
 public init(sipUser: String, password: String,
@@ -794,7 +794,11 @@ public init(sipUser: String, password: String,
             enableQualityMetrics: Bool = false,
             sendWebRTCStatsViaSocket: Bool = false,
             reconnectTimeOut: Double = DEFAULT_TIMEOUT,
-            useTrickleIce: Bool = false
+            useTrickleIce: Bool = false,
+            enableCallReports: Bool = true,
+            callReportInterval: TimeInterval = 5.0,
+            callReportLogLevel: String = "debug",
+            callReportMaxLogEntries: Int = 1000
 )
 ```
 
@@ -815,6 +819,10 @@ Constructor for the Telnyx SDK configuration using SIP credentials.
   - sendWebRTCStatsViaSocket: (Optional) Whether to send WebRTC statistics via socket to Telnyx servers. Default is false.
   - reconnectTimeOut: (Optional) Maximum time in seconds the SDK will attempt to reconnect a call after network disruption. Default is 60 seconds.
   - useTrickleIce: (Optional) Controls whether the SDK should use trickle ICE for WebRTC signaling. Default is false.
+  - enableCallReports: (Optional) Enable automatic call quality reporting to voice-sdk-proxy. Default is true.
+  - callReportInterval: (Optional) Interval in seconds for collecting call statistics. Default is 5.0.
+  - callReportLogLevel: (Optional) Minimum log level to capture for call reports. Default is "debug".
+  - callReportMaxLogEntries: (Optional) Maximum number of log entries to buffer per call. Default is 1000.
 
 **Parameters**
 
@@ -835,8 +843,12 @@ Constructor for the Telnyx SDK configuration using SIP credentials.
 | sendWebRTCStatsViaSocket | (Optional) Whether to send WebRTC statistics via socket to Telnyx servers. Default is false. |
 | reconnectTimeOut | (Optional) Maximum time in seconds the SDK will attempt to reconnect a call after network disruption. Default is 60 seconds. |
 | useTrickleIce | (Optional) Controls whether the SDK should use trickle ICE for WebRTC signaling. Default is false. |
+| enableCallReports | (Optional) Enable automatic call quality reporting to voice-sdk-proxy. Default is true. |
+| callReportInterval | (Optional) Interval in seconds for collecting call statistics. Default is 5.0. |
+| callReportLogLevel | (Optional) Minimum log level to capture for call reports. Default is “debug”. |
+| callReportMaxLogEntries | (Optional) Maximum number of log entries to buffer per call. Default is 1000. |
 
-### `init(token:pushDeviceToken:ringtone:ringBackTone:pushEnvironment:logLevel:customLogger:reconnectClient:debug:forceRelayCandidate:enableQualityMetrics:sendWebRTCStatsViaSocket:reconnectTimeOut:useTrickleIce:)`
+### `init(token:pushDeviceToken:ringtone:ringBackTone:pushEnvironment:logLevel:customLogger:reconnectClient:debug:forceRelayCandidate:enableQualityMetrics:sendWebRTCStatsViaSocket:reconnectTimeOut:useTrickleIce:enableCallReports:callReportInterval:callReportLogLevel:callReportMaxLogEntries:)`
 
 ```swift
 public init(token: String,
@@ -852,7 +864,11 @@ public init(token: String,
             enableQualityMetrics: Bool = false,
             sendWebRTCStatsViaSocket: Bool = false,
             reconnectTimeOut: Double = DEFAULT_TIMEOUT,
-            useTrickleIce: Bool = false
+            useTrickleIce: Bool = false,
+            enableCallReports: Bool = true,
+            callReportInterval: TimeInterval = 5.0,
+            callReportLogLevel: String = "debug",
+            callReportMaxLogEntries: Int = 1000
 )
 ```
 
@@ -872,6 +888,10 @@ Constructor for the Telnyx SDK configuration using JWT token authentication.
   - sendWebRTCStatsViaSocket: (Optional) Whether to send WebRTC statistics via socket to Telnyx servers. Default is false.
   - reconnectTimeOut: (Optional) Maximum time in seconds the SDK will attempt to reconnect a call after network disruption. Default is 60 seconds.
   - useTrickleIce: (Optional) Controls whether the SDK should use trickle ICE for WebRTC signaling. Default is false.
+  - enableCallReports: (Optional) Enable automatic call quality reporting to voice-sdk-proxy. Default is true.
+  - callReportInterval: (Optional) Interval in seconds for collecting call statistics. Default is 5.0.
+  - callReportLogLevel: (Optional) Minimum log level to capture for call reports. Default is "debug".
+  - callReportMaxLogEntries: (Optional) Maximum number of log entries to buffer per call. Default is 1000.
 
 **Parameters**
 
@@ -891,6 +911,10 @@ Constructor for the Telnyx SDK configuration using JWT token authentication.
 | sendWebRTCStatsViaSocket | (Optional) Whether to send WebRTC statistics via socket to Telnyx servers. Default is false. |
 | reconnectTimeOut | (Optional) Maximum time in seconds the SDK will attempt to reconnect a call after network disruption. Default is 60 seconds. |
 | useTrickleIce | (Optional) Controls whether the SDK should use trickle ICE for WebRTC signaling. Default is false. |
+| enableCallReports | (Optional) Enable automatic call quality reporting to voice-sdk-proxy. Default is true. |
+| callReportInterval | (Optional) Interval in seconds for collecting call statistics. Default is 5.0. |
+| callReportLogLevel | (Optional) Minimum log level to capture for call reports. Default is “debug”. |
+| callReportMaxLogEntries | (Optional) Maximum number of log entries to buffer per call. Default is 1000. |
 
 ### `validateParams()`
 

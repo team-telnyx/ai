@@ -817,22 +817,6 @@ Generate and fetch speech to text usage report synchronously. This endpoint will
 
 Returns: `data` (object)
 
-## Speech to text over WebSocket
-
-Open a WebSocket connection to stream audio and receive transcriptions in real-time. Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header. Supported engines: `Azure`, `Deepgram`, `Google`, `Telnyx`.
-
-`GET /speech-to-text/transcription`
-
-```go
-	err := client.SpeechToText.Transcribe(context.TODO(), telnyx.SpeechToTextTranscribeParams{
-		InputFormat:         telnyx.SpeechToTextTranscribeParamsInputFormatMP3,
-		TranscriptionEngine: telnyx.SpeechToTextTranscribeParamsTranscriptionEngineAzure,
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-```
-
 ## Generate speech from text
 
 Generate synthesized speech audio from text input. Returns audio in the requested format (binary audio stream, base64-encoded JSON, or an audio URL for later retrieval). Authentication is provided via the standard `Authorization: Bearer <API_KEY>` header.

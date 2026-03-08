@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-numbers-services-ruby — do not edit manually -->
-<!-- Source: telnyx-ruby/skills/telnyx-numbers-services-ruby/SKILL.md -->
-
----
-name: telnyx-numbers-services-ruby
-description: >-
-  Configure voicemail, voice channels, and emergency (E911) services for your
-  phone numbers. This skill provides Ruby SDK examples.
-metadata:
-  author: telnyx
-  product: numbers-services
-  language: ruby
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-numbers-services-ruby -->
 
 # Telnyx Numbers Services - Ruby
 
@@ -37,7 +22,7 @@ All examples below assume `client` is already initialized as shown above.
 
 ## List your voice channels for non-US zones
 
-Returns the non-US voice channels for your account.
+Returns the non-US voice channels for your account. voice channels allow you to use Channel Billing for calls to your Telnyx phone numbers. Please check the <a href="https://support.telnyx.com/en/articles/8428806-global-channel-billing">Telnyx Support Articles</a> section for full information and examples of how to utilize Channel Billing.
 
 `GET /channel_zones`
 
@@ -47,9 +32,11 @@ page = client.channel_zones.list
 puts(page)
 ```
 
+Returns: `channels` (int64), `countries` (array[string]), `created_at` (string), `id` (string), `name` (string), `record_type` (enum: channel_zone), `updated_at` (string)
+
 ## Update voice channels for non-US Zones
 
-Update the number of Voice Channels for the Non-US Zones.
+Update the number of Voice Channels for the Non-US Zones. This allows your account to handle multiple simultaneous inbound calls to Non-US numbers. Use this endpoint to increase or decrease your capacity based on expected call volume.
 
 `PUT /channel_zones/{channel_zone_id}` — Required: `channels`
 
@@ -58,6 +45,8 @@ channel_zone = client.channel_zones.update("channel_zone_id", channels: 0)
 
 puts(channel_zone)
 ```
+
+Returns: `channels` (int64), `countries` (array[string]), `created_at` (string), `id` (string), `name` (string), `record_type` (enum: channel_zone), `updated_at` (string)
 
 ## List dynamic emergency addresses
 
@@ -71,13 +60,15 @@ page = client.dynamic_emergency_addresses.list
 puts(page)
 ```
 
+Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+
 ## Create a dynamic emergency address.
 
 Creates a dynamic emergency address.
 
 `POST /dynamic_emergency_addresses` — Required: `house_number`, `street_name`, `locality`, `administrative_area`, `postal_code`, `country_code`
 
-Optional: `created_at` (string), `extended_address` (string), `house_suffix` (string), `id` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+Optional: `created_at` (string), `extended_address` (string), `house_suffix` (string), `id` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
 
 ```ruby
 dynamic_emergency_address = client.dynamic_emergency_addresses.create(
@@ -92,6 +83,8 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.create(
 puts(dynamic_emergency_address)
 ```
 
+Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+
 ## Get a dynamic emergency address
 
 Returns the dynamic emergency address based on the ID provided
@@ -103,6 +96,8 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.retrieve("182bd5e
 
 puts(dynamic_emergency_address)
 ```
+
+Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
 
 ## Delete a dynamic emergency address
 
@@ -116,6 +111,8 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.delete("182bd5e5-
 puts(dynamic_emergency_address)
 ```
 
+Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+
 ## List dynamic emergency endpoints
 
 Returns the dynamic emergency endpoints according to filters
@@ -128,13 +125,15 @@ page = client.dynamic_emergency_endpoints.list
 puts(page)
 ```
 
+Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+
 ## Create a dynamic emergency endpoint.
 
 Creates a dynamic emergency endpoints.
 
 `POST /dynamic_emergency_endpoints` — Required: `dynamic_emergency_address_id`, `callback_number`, `caller_name`
 
-Optional: `created_at` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum), `updated_at` (string)
+Optional: `created_at` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
 
 ```ruby
 dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.create(
@@ -145,6 +144,8 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.create(
 
 puts(dynamic_emergency_endpoint)
 ```
+
+Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
 
 ## Get a dynamic emergency endpoint
 
@@ -158,6 +159,8 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.retrieve("182bd5
 puts(dynamic_emergency_endpoint)
 ```
 
+Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+
 ## Delete a dynamic emergency endpoint
 
 Deletes the dynamic emergency endpoint based on the ID provided
@@ -170,9 +173,11 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.delete("182bd5e5
 puts(dynamic_emergency_endpoint)
 ```
 
+Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+
 ## List your voice channels for US Zone
 
-Returns the US Zone voice channels for your account.
+Returns the US Zone voice channels for your account. voice channels allows you to use Channel Billing for calls to your Telnyx phone numbers. Please check the <a href="https://support.telnyx.com/en/articles/8428806-global-channel-billing">Telnyx Support Articles</a> section for full information and examples of how to utilize Channel Billing.
 
 `GET /inbound_channels`
 
@@ -182,9 +187,11 @@ inbound_channels = client.inbound_channels.list
 puts(inbound_channels)
 ```
 
+Returns: `channels` (integer), `record_type` (string)
+
 ## Update voice channels for US Zone
 
-Update the number of Voice Channels for the US Zone.
+Update the number of Voice Channels for the US Zone. This allows your account to handle multiple simultaneous inbound calls to US numbers. Use this endpoint to increase or decrease your capacity based on expected call volume.
 
 `PATCH /inbound_channels` — Required: `channels`
 
@@ -193,6 +200,8 @@ inbound_channel = client.inbound_channels.update(channels: 7)
 
 puts(inbound_channel)
 ```
+
+Returns: `channels` (integer), `record_type` (string)
 
 ## List All Numbers using Channel Billing
 
@@ -206,6 +215,8 @@ response = client.list.retrieve_all
 puts(response)
 ```
 
+Returns: `number_of_channels` (integer), `numbers` (array[object]), `zone_id` (string), `zone_name` (string)
+
 ## List Numbers using Channel Billing for a specific Zone
 
 Retrieve a list of phone numbers using Channel Billing for a specific Zone.
@@ -218,6 +229,8 @@ response = client.list.retrieve_by_zone("channel_zone_id")
 puts(response)
 ```
 
+Returns: `number_of_channels` (integer), `numbers` (array[object]), `zone_id` (string), `zone_name` (string)
+
 ## Get voicemail
 
 Returns the voicemail settings for a phone number
@@ -229,6 +242,8 @@ voicemail = client.phone_numbers.voicemail.retrieve("123455678900")
 
 puts(voicemail)
 ```
+
+Returns: `enabled` (boolean), `pin` (string)
 
 ## Create voicemail
 
@@ -244,6 +259,8 @@ voicemail = client.phone_numbers.voicemail.create("123455678900")
 puts(voicemail)
 ```
 
+Returns: `enabled` (boolean), `pin` (string)
+
 ## Update voicemail
 
 Update voicemail settings for a phone number
@@ -257,3 +274,5 @@ voicemail = client.phone_numbers.voicemail.update("123455678900")
 
 puts(voicemail)
 ```
+
+Returns: `enabled` (boolean), `pin` (string)

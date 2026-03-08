@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-fax-java — do not edit manually -->
-<!-- Source: telnyx-java/skills/telnyx-fax-java/SKILL.md -->
-
----
-name: telnyx-fax-java
-description: >-
-  Send and receive faxes programmatically. Manage fax applications and media.
-  This skill provides Java SDK examples.
-metadata:
-  author: telnyx
-  product: fax
-  language: java
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-fax-java -->
 
 # Telnyx Fax - Java
 
@@ -36,7 +21,7 @@ All examples below assume `client` is already initialized as shown above.
 
 ## List all Fax Applications
 
-This endpoint returns a list of your Fax Applications inside the 'data' attribute of the response.
+This endpoint returns a list of your Fax Applications inside the 'data' attribute of the response. You can adjust which applications are listed by using filters. Fax Applications are used to configure how you send and receive faxes using the Programmable Fax API with Telnyx.
 
 `GET /fax_applications`
 
@@ -47,13 +32,15 @@ import com.telnyx.sdk.models.faxapplications.FaxApplicationListParams;
 FaxApplicationListPage page = client.faxApplications().list();
 ```
 
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+
 ## Creates a Fax Application
 
-Creates a new Fax Application based on the parameters sent in the request.
+Creates a new Fax Application based on the parameters sent in the request. The application name and webhook URL are required. Once created, you can assign phone numbers to your application using the `/phone_numbers` endpoint.
 
 `POST /fax_applications` — Required: `application_name`, `webhook_event_url`
 
-Optional: `active` (boolean), `anchorsite_override` (enum), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
 import com.telnyx.sdk.models.faxapplications.FaxApplicationCreateParams;
@@ -65,6 +52,8 @@ FaxApplicationCreateParams params = FaxApplicationCreateParams.builder()
     .build();
 FaxApplicationCreateResponse faxApplication = client.faxApplications().create(params);
 ```
+
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ## Retrieve a Fax Application
 
@@ -79,13 +68,15 @@ import com.telnyx.sdk.models.faxapplications.FaxApplicationRetrieveResponse;
 FaxApplicationRetrieveResponse faxApplication = client.faxApplications().retrieve("1293384261075731499");
 ```
 
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+
 ## Update a Fax Application
 
 Updates settings of an existing Fax Application based on the parameters of the request.
 
 `PATCH /fax_applications/{id}` — Required: `application_name`, `webhook_event_url`
 
-Optional: `active` (boolean), `anchorsite_override` (enum), `fax_email_recipient` (['string', 'null']), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `fax_email_recipient` (['string', 'null']), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ```java
 import com.telnyx.sdk.models.faxapplications.FaxApplicationUpdateParams;
@@ -99,9 +90,11 @@ FaxApplicationUpdateParams params = FaxApplicationUpdateParams.builder()
 FaxApplicationUpdateResponse faxApplication = client.faxApplications().update(params);
 ```
 
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
+
 ## Deletes a Fax Application
 
-Permanently deletes a Fax Application.
+Permanently deletes a Fax Application. Deletion may be prevented if the application is in use by phone numbers.
 
 `DELETE /fax_applications/{id}`
 
@@ -111,6 +104,8 @@ import com.telnyx.sdk.models.faxapplications.FaxApplicationDeleteResponse;
 
 FaxApplicationDeleteResponse faxApplication = client.faxApplications().delete("1293384261075731499");
 ```
+
+Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (['integer', 'null'])
 
 ## View a list of faxes
 
@@ -123,13 +118,15 @@ import com.telnyx.sdk.models.faxes.FaxListParams;
 FaxListPage page = client.faxes().list();
 ```
 
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+
 ## Send a fax
 
-Send a fax.
+Send a fax. Files have size limits and page count limit validations. If a file is bigger than 50MB or has more than 350 pages it will fail with `file_size_limit_exceeded` and `page_count_limit_exceeded` respectively.
 
 `POST /faxes` — Required: `connection_id`, `from`, `to`
 
-Optional: `black_threshold` (integer), `client_state` (string), `from_display_name` (string), `media_name` (string), `media_url` (string), `monochrome` (boolean), `preview_format` (enum), `quality` (enum), `store_media` (boolean), `store_preview` (boolean), `t38_enabled` (boolean), `webhook_url` (string)
+Optional: `black_threshold` (integer), `client_state` (string), `from_display_name` (string), `media_name` (string), `media_url` (string), `monochrome` (boolean), `preview_format` (enum: pdf, tiff), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `store_media` (boolean), `store_preview` (boolean), `t38_enabled` (boolean), `webhook_url` (string)
 
 ```java
 import com.telnyx.sdk.models.faxes.FaxCreateParams;
@@ -143,6 +140,8 @@ FaxCreateParams params = FaxCreateParams.builder()
 FaxCreateResponse fax = client.faxes().create(params);
 ```
 
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+
 ## View a fax
 
 `GET /faxes/{id}`
@@ -153,6 +152,8 @@ import com.telnyx.sdk.models.faxes.FaxRetrieveResponse;
 
 FaxRetrieveResponse fax = client.faxes().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Delete a fax
 
@@ -177,6 +178,8 @@ import com.telnyx.sdk.models.faxes.actions.ActionCancelResponse;
 ActionCancelResponse response = client.faxes().actions().cancel("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `result` (string)
+
 ## Refresh a fax
 
 Refreshes the inbound fax's media_url when it has expired
@@ -189,6 +192,8 @@ import com.telnyx.sdk.models.faxes.actions.ActionRefreshResponse;
 
 ActionRefreshResponse response = client.faxes().actions().refresh("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `result` (string)
 
 ---
 
@@ -211,13 +216,13 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: fax.delivered | The type of event being delivered. |
 | `data.payload.call_duration_secs` | integer | The duration of the call in seconds. |
 | `data.payload.connection_id` | string | The ID of the connection used to send the fax. |
-| `data.payload.direction` | enum | The direction of the fax. |
+| `data.payload.direction` | enum: inbound, outbound | The direction of the fax. |
 | `data.payload.fax_id` | uuid | Identifies the fax. |
 | `data.payload.original_media_url` | string | The original URL to the PDF used for the fax's media. |
 | `data.payload.media_name` | string | The media_name used for the fax's media. |
@@ -225,7 +230,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
 | `data.payload.page_count` | integer | Number of transferred pages |
-| `data.payload.status` | enum | The status of the fax. |
+| `data.payload.status` | enum: delivered | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
@@ -234,20 +239,20 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: fax.failed | The type of event being delivered. |
 | `data.payload.connection_id` | string | The ID of the connection used to send the fax. |
-| `data.payload.direction` | enum | The direction of the fax. |
+| `data.payload.direction` | enum: inbound, outbound | The direction of the fax. |
 | `data.payload.fax_id` | uuid | Identifies the fax. |
 | `data.payload.original_media_url` | string | The original URL to the PDF used for the fax's media. |
 | `data.payload.media_name` | string | The media_name used for the fax's media. |
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.failure_reason` | enum | Cause of the sending failure |
-| `data.payload.status` | enum | The status of the fax. |
+| `data.payload.failure_reason` | enum: rejected | Cause of the sending failure |
+| `data.payload.status` | enum: failed | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
@@ -256,19 +261,19 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: fax.media.processed | The type of event being delivered. |
 | `data.payload.connection_id` | string | The ID of the connection used to send the fax. |
-| `data.payload.direction` | enum | The direction of the fax. |
+| `data.payload.direction` | enum: inbound, outbound | The direction of the fax. |
 | `data.payload.fax_id` | uuid | Identifies the fax. |
 | `data.payload.original_media_url` | string | The original URL to the PDF used for the fax's media. |
 | `data.payload.media_name` | string | The media_name used for the fax's media. |
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.status` | enum | The status of the fax. |
+| `data.payload.status` | enum: media.processed | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
@@ -277,19 +282,19 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: fax.queued | The type of event being delivered. |
 | `data.payload.connection_id` | string | The ID of the connection used to send the fax. |
-| `data.payload.direction` | enum | The direction of the fax. |
+| `data.payload.direction` | enum: inbound, outbound | The direction of the fax. |
 | `data.payload.fax_id` | uuid | Identifies the fax. |
 | `data.payload.original_media_url` | string | The original URL to the PDF used for the fax's media. |
 | `data.payload.media_name` | string | The media_name used for the fax's media. |
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.status` | enum | The status of the fax. |
+| `data.payload.status` | enum: queued | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
@@ -298,19 +303,19 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: fax.sending.started | The type of event being delivered. |
 | `data.payload.connection_id` | string | The ID of the connection used to send the fax. |
-| `data.payload.direction` | enum | The direction of the fax. |
+| `data.payload.direction` | enum: inbound, outbound | The direction of the fax. |
 | `data.payload.fax_id` | uuid | Identifies the fax. |
 | `data.payload.original_media_url` | string | The original URL to the PDF used for the fax's media. |
 | `data.payload.media_name` | string | The media_name used for the fax's media. |
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.status` | enum | The status of the fax. |
+| `data.payload.status` | enum: sending | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |

@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-ai-assistants-javascript — do not edit manually -->
-<!-- Source: telnyx-javascript/skills/telnyx-ai-assistants-javascript/SKILL.md -->
-
----
-name: telnyx-ai-assistants-javascript
-description: >-
-  Create and manage AI voice assistants with custom personalities, knowledge
-  bases, and tool integrations. This skill provides JavaScript SDK examples.
-metadata:
-  author: telnyx
-  product: ai-assistants
-  language: javascript
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-ai-assistants-javascript -->
 
 # Telnyx Ai Assistants - JavaScript
 
@@ -47,6 +32,8 @@ const assistantsList = await client.ai.assistants.list();
 console.log(assistantsList.data);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Create an assistant
 
 Create a new AI Assistant.
@@ -65,9 +52,11 @@ const assistant = await client.ai.assistants.create({
 console.log(assistant.id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Import assistants from external provider
 
-Import assistants from external providers.
+Import assistants from external providers. Any assistant that has already been imported will be overwritten with its latest version from the importing provider.
 
 `POST /ai/assistants/import` — Required: `provider`, `api_key_ref`
 
@@ -82,6 +71,20 @@ const assistantsList = await client.ai.assistants.imports({
 console.log(assistantsList.data);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
+## Get All Tags
+
+`GET /ai/assistants/tags`
+
+```javascript
+const tags = await client.ai.assistants.tags.list();
+
+console.log(tags.tags);
+```
+
+Returns: `tags` (array[string])
+
 ## List assistant tests with pagination
 
 Retrieves a paginated list of assistant tests with optional filtering capabilities
@@ -94,6 +97,8 @@ for await (const assistantTest of client.ai.assistants.tests.list()) {
   console.log(assistantTest.test_id);
 }
 ```
+
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
 
 ## Create a new assistant test
 
@@ -118,6 +123,8 @@ const assistantTest = await client.ai.assistants.tests.create({
 console.log(assistantTest.test_id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
+
 ## Get all test suite names
 
 Retrieves a list of all distinct test suite names available to the current user
@@ -129,6 +136,8 @@ const testSuites = await client.ai.assistants.tests.testSuites.list();
 
 console.log(testSuites.data);
 ```
+
+Returns: `data` (array[string])
 
 ## Get test suite run history
 
@@ -142,6 +151,8 @@ for await (const testRunResponse of client.ai.assistants.tests.testSuites.runs.l
   console.log(testRunResponse.run_id);
 }
 ```
+
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
 
 ## Trigger test suite execution
 
@@ -169,19 +180,23 @@ const assistantTest = await client.ai.assistants.tests.retrieve('test_id');
 console.log(assistantTest.test_id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
+
 ## Update an assistant test
 
 Updates an existing assistant test configuration with new settings
 
 `PUT /ai/assistants/tests/{test_id}`
 
-Optional: `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (enum), `test_suite` (string)
+Optional: `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (enum: phone_call, web_call, sms_chat, web_chat), `test_suite` (string)
 
 ```javascript
 const assistantTest = await client.ai.assistants.tests.update('test_id');
 
 console.log(assistantTest.test_id);
 ```
+
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
 
 ## Delete an assistant test
 
@@ -206,6 +221,8 @@ for await (const testRunResponse of client.ai.assistants.tests.runs.list('test_i
 }
 ```
 
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
+
 ## Trigger a manual test run
 
 Initiates immediate execution of a specific assistant test
@@ -219,6 +236,8 @@ const testRunResponse = await client.ai.assistants.tests.runs.trigger('test_id')
 
 console.log(testRunResponse.run_id);
 ```
+
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
 
 ## Get specific test run details
 
@@ -234,6 +253,8 @@ const testRunResponse = await client.ai.assistants.tests.runs.retrieve('run_id',
 console.log(testRunResponse.run_id);
 ```
 
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
+
 ## Get an assistant
 
 Retrieve an AI Assistant configuration by `assistant_id`.
@@ -245,6 +266,8 @@ const assistant = await client.ai.assistants.retrieve('assistant_id');
 
 console.log(assistant.id);
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## Update an assistant
 
@@ -258,6 +281,8 @@ const assistant = await client.ai.assistants.update('assistant_id');
 console.log(assistant.id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Delete an assistant
 
 Delete an AI Assistant by `assistant_id`.
@@ -270,9 +295,12 @@ const assistant = await client.ai.assistants.delete('assistant_id');
 console.log(assistant.id);
 ```
 
+Returns: `deleted` (boolean), `id` (string), `object` (string)
+
 ## Get Canary Deploy
 
-Endpoint to get a canary deploy configuration for an assistant.
+Endpoint to get a canary deploy configuration for an assistant. Retrieves the current canary deploy configuration with all version IDs and their
+traffic percentages for the specified assistant.
 
 `GET /ai/assistants/{assistant_id}/canary-deploys`
 
@@ -282,9 +310,12 @@ const canaryDeployResponse = await client.ai.assistants.canaryDeploys.retrieve('
 console.log(canaryDeployResponse.assistant_id);
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Create Canary Deploy
 
-Endpoint to create a canary deploy configuration for an assistant.
+Endpoint to create a canary deploy configuration for an assistant. Creates a new canary deploy configuration with multiple version IDs and their traffic
+percentages for A/B testing or gradual rollouts of assistant versions.
 
 `POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
 
@@ -296,9 +327,11 @@ const canaryDeployResponse = await client.ai.assistants.canaryDeploys.create('as
 console.log(canaryDeployResponse.assistant_id);
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Update Canary Deploy
 
-Endpoint to update a canary deploy configuration for an assistant.
+Endpoint to update a canary deploy configuration for an assistant. Updates the existing canary deploy configuration with new version IDs and percentages. All old versions and percentages are replaces by new ones from this request.
 
 `PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
 
@@ -310,9 +343,11 @@ const canaryDeployResponse = await client.ai.assistants.canaryDeploys.update('as
 console.log(canaryDeployResponse.assistant_id);
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Delete Canary Deploy
 
-Endpoint to delete a canary deploy configuration for an assistant.
+Endpoint to delete a canary deploy configuration for an assistant. Removes all canary deploy configurations for the specified assistant.
 
 `DELETE /ai/assistants/{assistant_id}/canary-deploys`
 
@@ -322,7 +357,7 @@ await client.ai.assistants.canaryDeploys.delete('assistant_id');
 
 ## Assistant Chat (BETA)
 
-This endpoint allows a client to send a chat message to a specific AI Assistant.
+This endpoint allows a client to send a chat message to a specific AI Assistant. The assistant processes the message and returns a relevant reply based on the current conversation context.
 
 `POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
 
@@ -337,9 +372,13 @@ const response = await client.ai.assistants.chat('assistant_id', {
 console.log(response.content);
 ```
 
+Returns: `content` (string)
+
 ## Assistant Sms Chat
 
-Send an SMS message for an assistant.
+Send an SMS message for an assistant. This endpoint: 
+1. Validates the assistant exists and has messaging profile configured 
+2.
 
 `POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
 
@@ -350,6 +389,8 @@ const response = await client.ai.assistants.sendSMS('assistant_id', { from: 'fro
 
 console.log(response.conversation_id);
 ```
+
+Returns: `conversation_id` (string)
 
 ## Clone Assistant
 
@@ -362,6 +403,8 @@ const assistant = await client.ai.assistants.clone('assistant_id');
 
 console.log(assistant.id);
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## List scheduled events
 
@@ -377,6 +420,8 @@ for await (const scheduledEventListResponse of client.ai.assistants.scheduledEve
   console.log(scheduledEventListResponse);
 }
 ```
+
+Returns: `data` (array[object]), `meta` (object)
 
 ## Create a scheduled event
 
@@ -413,13 +458,37 @@ console.log(scheduledEventResponse);
 
 ## Delete a scheduled event
 
-If the event is pending, this will cancel the event.
+If the event is pending, this will cancel the event. Otherwise, this will simply remove the record of the event.
 
 `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
 
 ```javascript
 await client.ai.assistants.scheduledEvents.delete('event_id', { assistant_id: 'assistant_id' });
 ```
+
+## Add Assistant Tag
+
+`POST /ai/assistants/{assistant_id}/tags` — Required: `tag`
+
+```javascript
+const response = await client.ai.assistants.tags.add('assistant_id', { tag: 'tag' });
+
+console.log(response.tags);
+```
+
+Returns: `tags` (array[string])
+
+## Remove Assistant Tag
+
+`DELETE /ai/assistants/{assistant_id}/tags/{tag}`
+
+```javascript
+const tag = await client.ai.assistants.tags.remove('tag', { assistant_id: 'assistant_id' });
+
+console.log(tag.tags);
+```
+
+Returns: `tags` (array[string])
 
 ## Get assistant texml
 
@@ -447,6 +516,8 @@ const response = await client.ai.assistants.tools.test('tool_id', { assistant_id
 console.log(response.data);
 ```
 
+Returns: `content_type` (string), `request` (object), `response` (string), `status_code` (integer), `success` (boolean)
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -458,6 +529,8 @@ const assistantsList = await client.ai.assistants.versions.list('assistant_id');
 
 console.log(assistantsList.data);
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## Get a specific assistant version
 
@@ -473,9 +546,11 @@ const assistant = await client.ai.assistants.versions.retrieve('version_id', {
 console.log(assistant.id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Update a specific assistant version
 
-Updates the configuration of a specific assistant version.
+Updates the configuration of a specific assistant version. Can not update main version
 
 `POST /ai/assistants/{assistant_id}/versions/{version_id}`
 
@@ -489,9 +564,11 @@ const assistant = await client.ai.assistants.versions.update('version_id', {
 console.log(assistant.id);
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Delete a specific assistant version
 
-Permanently removes a specific version of an assistant.
+Permanently removes a specific version of an assistant. Can not delete main version
 
 `DELETE /ai/assistants/{assistant_id}/versions/{version_id}`
 
@@ -501,7 +578,7 @@ await client.ai.assistants.versions.delete('version_id', { assistant_id: 'assist
 
 ## Promote an assistant version to main
 
-Promotes a specific version to be the main/current version of the assistant.
+Promotes a specific version to be the main/current version of the assistant. This will delete any existing canary deploy configuration and send all live production traffic to this version.
 
 `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote`
 
@@ -512,6 +589,8 @@ const assistant = await client.ai.assistants.versions.promote('version_id', {
 
 console.log(assistant.id);
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## List MCP Servers
 
@@ -544,6 +623,8 @@ const mcpServer = await client.ai.mcpServers.create({
 console.log(mcpServer.id);
 ```
 
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
+
 ## Get MCP Server
 
 Retrieve details for a specific MCP server.
@@ -555,6 +636,8 @@ const mcpServer = await client.ai.mcpServers.retrieve('mcp_server_id');
 
 console.log(mcpServer.id);
 ```
+
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
 
 ## Update MCP Server
 
@@ -569,6 +652,8 @@ const mcpServer = await client.ai.mcpServers.update('mcp_server_id');
 
 console.log(mcpServer.id);
 ```
+
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
 
 ## Delete MCP Server
 

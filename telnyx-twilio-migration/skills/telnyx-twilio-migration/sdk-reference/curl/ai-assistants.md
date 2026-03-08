@@ -1,19 +1,4 @@
-<!-- Auto-generated from telnyx-ai-assistants-curl — do not edit manually -->
-<!-- Source: telnyx-curl/skills/telnyx-ai-assistants-curl/SKILL.md -->
-
----
-name: telnyx-ai-assistants-curl
-description: >-
-  Create and manage AI voice assistants with custom personalities, knowledge
-  bases, and tool integrations. This skill provides REST API (curl) examples.
-metadata:
-  author: telnyx
-  product: ai-assistants
-  language: curl
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-ai-assistants-curl -->
 
 # Telnyx Ai Assistants - curl
 
@@ -41,6 +26,8 @@ Retrieve a list of all AI Assistants configured by the user.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Create an assistant
 
 Create a new AI Assistant.
@@ -62,9 +49,11 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Import assistants from external provider
 
-Import assistants from external providers.
+Import assistants from external providers. Any assistant that has already been imported will be overwritten with its latest version from the importing provider.
 
 `POST /ai/assistants/import` — Required: `provider`, `api_key_ref`
 
@@ -82,6 +71,18 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/import"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
+## Get All Tags
+
+`GET /ai/assistants/tags`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tags"
+```
+
+Returns: `tags` (array[string])
+
 ## List assistant tests with pagination
 
 Retrieves a paginated list of assistant tests with optional filtering capabilities
@@ -91,6 +92,8 @@ Retrieves a paginated list of assistant tests with optional filtering capabiliti
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests"
 ```
+
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
 
 ## Create a new assistant test
 
@@ -124,6 +127,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/tests"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
+
 ## Get all test suite names
 
 Retrieves a list of all distinct test suite names available to the current user
@@ -134,6 +139,8 @@ Retrieves a list of all distinct test suite names available to the current user
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/test-suites"
 ```
 
+Returns: `data` (array[string])
+
 ## Get test suite run history
 
 Retrieves paginated history of test runs for a specific test suite with filtering options
@@ -143,6 +150,8 @@ Retrieves paginated history of test runs for a specific test suite with filterin
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/test-suites/{suite_name}/runs"
 ```
+
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
 
 ## Trigger test suite execution
 
@@ -173,13 +182,15 @@ Retrieves detailed information about a specific assistant test
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
+
 ## Update an assistant test
 
 Updates an existing assistant test configuration with new settings
 
 `PUT /ai/assistants/tests/{test_id}`
 
-Optional: `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (enum), `test_suite` (string)
+Optional: `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (enum: phone_call, web_call, sms_chat, web_chat), `test_suite` (string)
 
 ```bash
 curl \
@@ -188,6 +199,8 @@ curl \
   -H "Content-Type: application/json" \
   "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}"
 ```
+
+Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
 
 ## Delete an assistant test
 
@@ -212,6 +225,8 @@ Retrieves paginated execution history for a specific assistant test with filteri
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs"
 ```
 
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
+
 ## Trigger a manual test run
 
 Initiates immediate execution of a specific assistant test
@@ -231,6 +246,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs"
 ```
 
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
+
 ## Get specific test run details
 
 Retrieves detailed information about a specific test run execution
@@ -241,6 +258,8 @@ Retrieves detailed information about a specific test run execution
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs/{run_id}"
 ```
 
+Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
+
 ## Get an assistant
 
 Retrieve an AI Assistant configuration by `assistant_id`.
@@ -250,6 +269,8 @@ Retrieve an AI Assistant configuration by `assistant_id`.
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## Update an assistant
 
@@ -265,6 +286,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Delete an assistant
 
 Delete an AI Assistant by `assistant_id`.
@@ -278,9 +301,12 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
 ```
 
+Returns: `deleted` (boolean), `id` (string), `object` (string)
+
 ## Get Canary Deploy
 
-Endpoint to get a canary deploy configuration for an assistant.
+Endpoint to get a canary deploy configuration for an assistant. Retrieves the current canary deploy configuration with all version IDs and their
+traffic percentages for the specified assistant.
 
 `GET /ai/assistants/{assistant_id}/canary-deploys`
 
@@ -288,9 +314,12 @@ Endpoint to get a canary deploy configuration for an assistant.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Create Canary Deploy
 
-Endpoint to create a canary deploy configuration for an assistant.
+Endpoint to create a canary deploy configuration for an assistant. Creates a new canary deploy configuration with multiple version IDs and their traffic
+percentages for A/B testing or gradual rollouts of assistant versions.
 
 `POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
 
@@ -307,9 +336,11 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Update Canary Deploy
 
-Endpoint to update a canary deploy configuration for an assistant.
+Endpoint to update a canary deploy configuration for an assistant. Updates the existing canary deploy configuration with new version IDs and percentages. All old versions and percentages are replaces by new ones from this request.
 
 `PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
 
@@ -326,9 +357,11 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
 ```
 
+Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
+
 ## Delete Canary Deploy
 
-Endpoint to delete a canary deploy configuration for an assistant.
+Endpoint to delete a canary deploy configuration for an assistant. Removes all canary deploy configurations for the specified assistant.
 
 `DELETE /ai/assistants/{assistant_id}/canary-deploys`
 
@@ -341,7 +374,7 @@ curl \
 
 ## Assistant Chat (BETA)
 
-This endpoint allows a client to send a chat message to a specific AI Assistant.
+This endpoint allows a client to send a chat message to a specific AI Assistant. The assistant processes the message and returns a relevant reply based on the current conversation context.
 
 `POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
 
@@ -360,9 +393,13 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/chat"
 ```
 
+Returns: `content` (string)
+
 ## Assistant Sms Chat
 
-Send an SMS message for an assistant.
+Send an SMS message for an assistant. This endpoint: 
+1. Validates the assistant exists and has messaging profile configured 
+2.
 
 `POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
 
@@ -380,6 +417,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/chat/sms"
 ```
 
+Returns: `conversation_id` (string)
+
 ## Clone Assistant
 
 Clone an existing assistant, excluding telephony and messaging settings.
@@ -394,6 +433,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/clone"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## List scheduled events
 
 Get scheduled events for an assistant with pagination and filtering
@@ -403,6 +444,8 @@ Get scheduled events for an assistant with pagination and filtering
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events"
 ```
+
+Returns: `data` (array[object]), `meta` (object)
 
 ## Create a scheduled event
 
@@ -438,7 +481,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/as
 
 ## Delete a scheduled event
 
-If the event is pending, this will cancel the event.
+If the event is pending, this will cancel the event. Otherwise, this will simply remove the record of the event.
 
 `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
 
@@ -448,6 +491,36 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events/{event_id}"
 ```
+
+## Add Assistant Tag
+
+`POST /ai/assistants/{assistant_id}/tags` — Required: `tag`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "tag": "string"
+}' \
+  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tags"
+```
+
+Returns: `tags` (array[string])
+
+## Remove Assistant Tag
+
+`DELETE /ai/assistants/{assistant_id}/tags/{tag}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tags/{tag}"
+```
+
+Returns: `tags` (array[string])
 
 ## Get assistant texml
 
@@ -475,6 +548,8 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tools/{tool_id}/test"
 ```
 
+Returns: `content_type` (string), `request` (object), `response` (string), `status_code` (integer), `success` (boolean)
+
 ## Get all versions of an assistant
 
 Retrieves all versions of a specific assistant with complete configuration and metadata
@@ -484,6 +559,8 @@ Retrieves all versions of a specific assistant with complete configuration and m
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions"
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## Get a specific assistant version
 
@@ -495,9 +572,11 @@ Retrieves a specific version of an assistant by assistant_id and version_id
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Update a specific assistant version
 
-Updates the configuration of a specific assistant version.
+Updates the configuration of a specific assistant version. Can not update main version
 
 `POST /ai/assistants/{assistant_id}/versions/{version_id}`
 
@@ -511,9 +590,11 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}"
 ```
 
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+
 ## Delete a specific assistant version
 
-Permanently removes a specific version of an assistant.
+Permanently removes a specific version of an assistant. Can not delete main version
 
 `DELETE /ai/assistants/{assistant_id}/versions/{version_id}`
 
@@ -526,7 +607,7 @@ curl \
 
 ## Promote an assistant version to main
 
-Promotes a specific version to be the main/current version of the assistant.
+Promotes a specific version to be the main/current version of the assistant. This will delete any existing canary deploy configuration and send all live production traffic to this version.
 
 `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote`
 
@@ -537,6 +618,8 @@ curl \
   -H "Content-Type: application/json" \
   "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}/promote"
 ```
+
+Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
 
 ## List MCP Servers
 
@@ -569,6 +652,8 @@ curl \
   "https://api.telnyx.com/v2/ai/mcp_servers"
 ```
 
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
+
 ## Get MCP Server
 
 Retrieve details for a specific MCP server.
@@ -578,6 +663,8 @@ Retrieve details for a specific MCP server.
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mcp_servers/{mcp_server_id}"
 ```
+
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
 
 ## Update MCP Server
 
@@ -594,6 +681,8 @@ curl \
   -H "Content-Type: application/json" \
   "https://api.telnyx.com/v2/ai/mcp_servers/{mcp_server_id}"
 ```
+
+Returns: `allowed_tools` (['array', 'null']), `api_key_ref` (['string', 'null']), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
 
 ## Delete MCP Server
 

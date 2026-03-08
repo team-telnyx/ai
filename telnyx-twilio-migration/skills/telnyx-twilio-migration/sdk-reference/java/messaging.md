@@ -1,20 +1,4 @@
-<!-- Auto-generated from telnyx-messaging-java — do not edit manually -->
-<!-- Source: telnyx-java/skills/telnyx-messaging-java/SKILL.md -->
-
----
-name: telnyx-messaging-java
-description: >-
-  Send and receive SMS/MMS messages, manage messaging-enabled phone numbers, and
-  handle opt-outs. Use when building messaging applications, implementing 2FA,
-  or sending notifications. This skill provides Java SDK examples.
-metadata:
-  author: telnyx
-  product: messaging
-  language: java
-  generated_by: telnyx-ext-skills-generator
----
-
-<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+<!-- SDK reference: telnyx-messaging-java -->
 
 # Telnyx Messaging - Java
 
@@ -48,6 +32,8 @@ import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdListParam
 AlphanumericSenderIdListPage page = client.alphanumericSenderIds().list();
 ```
 
+Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
+
 ## Create an alphanumeric sender ID
 
 Create a new alphanumeric sender ID associated with a messaging profile.
@@ -67,6 +53,8 @@ AlphanumericSenderIdCreateParams params = AlphanumericSenderIdCreateParams.build
 AlphanumericSenderIdCreateResponse alphanumericSenderId = client.alphanumericSenderIds().create(params);
 ```
 
+Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
+
 ## Retrieve an alphanumeric sender ID
 
 Retrieve a specific alphanumeric sender ID.
@@ -79,6 +67,8 @@ import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdRetrieveR
 
 AlphanumericSenderIdRetrieveResponse alphanumericSenderId = client.alphanumericSenderIds().retrieve("id");
 ```
+
+Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
 
 ## Delete an alphanumeric sender ID
 
@@ -93,13 +83,16 @@ import com.telnyx.sdk.models.alphanumericsenderids.AlphanumericSenderIdDeleteRes
 AlphanumericSenderIdDeleteResponse alphanumericSenderId = client.alphanumericSenderIds().delete("id");
 ```
 
+Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
+
 ## Send a message
 
-Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
+Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool. This endpoint allows you to send a message with any messaging resource. Current messaging resources include: long-code, short-code, number-pool, and
+alphanumeric-sender-id.
 
 `POST /messages` — Required: `to`
 
-Optional: `auto_detect` (boolean), `encoding` (enum), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendParams;
@@ -111,9 +104,11 @@ MessageSendParams params = MessageSendParams.builder()
 MessageSendResponse response = client.messages().send(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Send a message using an alphanumeric sender ID
 
-Send an SMS message using an alphanumeric sender ID.
+Send an SMS message using an alphanumeric sender ID. This is SMS only.
 
 `POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
 
@@ -132,6 +127,8 @@ MessageSendWithAlphanumericSenderParams params = MessageSendWithAlphanumericSend
 MessageSendWithAlphanumericSenderResponse response = client.messages().sendWithAlphanumericSender(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Retrieve group MMS messages
 
 Retrieve all messages in a group MMS conversation by the group message ID.
@@ -144,6 +141,8 @@ import com.telnyx.sdk.models.messages.MessageRetrieveGroupMessagesResponse;
 
 MessageRetrieveGroupMessagesResponse response = client.messages().retrieveGroupMessages("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Send a group MMS message
 
@@ -163,11 +162,13 @@ MessageSendGroupMmsParams params = MessageSendGroupMmsParams.builder()
 MessageSendGroupMmsResponse response = client.messages().sendGroupMms(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Send a long code message
 
 `POST /messages/long_code` — Required: `from`, `to`
 
-Optional: `auto_detect` (boolean), `encoding` (enum), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendLongCodeParams;
@@ -180,11 +181,13 @@ MessageSendLongCodeParams params = MessageSendLongCodeParams.builder()
 MessageSendLongCodeResponse response = client.messages().sendLongCode(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Send a message using number pool
 
 `POST /messages/number_pool` — Required: `to`, `messaging_profile_id`
 
-Optional: `auto_detect` (boolean), `encoding` (enum), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendNumberPoolParams;
@@ -197,13 +200,16 @@ MessageSendNumberPoolParams params = MessageSendNumberPoolParams.builder()
 MessageSendNumberPoolResponse response = client.messages().sendNumberPool(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Schedule a message
 
-Schedule a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool.
+Schedule a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool. This endpoint allows you to schedule a message with any messaging resource. Current messaging resources include: long-code, short-code, number-pool, and
+alphanumeric-sender-id.
 
 `POST /messages/schedule` — Required: `to`
 
-Optional: `auto_detect` (boolean), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `auto_detect` (boolean), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageScheduleParams;
@@ -215,11 +221,13 @@ MessageScheduleParams params = MessageScheduleParams.builder()
 MessageScheduleResponse response = client.messages().schedule(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Send a short code message
 
 `POST /messages/short_code` — Required: `from`, `to`
 
-Optional: `auto_detect` (boolean), `encoding` (enum), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendShortCodeParams;
@@ -232,11 +240,13 @@ MessageSendShortCodeParams params = MessageSendShortCodeParams.builder()
 MessageSendShortCodeResponse response = client.messages().sendShortCode(params);
 ```
 
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+
 ## Send a Whatsapp message
 
 `POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
 
-Optional: `type` (enum), `webhook_url` (url)
+Optional: `type` (enum: WHATSAPP), `webhook_url` (url)
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendWhatsappParams;
@@ -251,9 +261,11 @@ MessageSendWhatsappParams params = MessageSendWhatsappParams.builder()
 MessageSendWhatsappResponse response = client.messages().sendWhatsapp(params);
 ```
 
+Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string), `wait_seconds` (float)
+
 ## Retrieve a message
 
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation.
+Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation. If you require messages older than this, please generate an [MDR report.](https://developers.telnyx.com/api-reference/mdr-usage-reports/create-mdr-usage-report)
 
 `GET /messages/{id}`
 
@@ -264,9 +276,11 @@ import com.telnyx.sdk.models.messages.MessageRetrieveResponse;
 MessageRetrieveResponse message = client.messages().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `data` (object)
+
 ## Cancel a scheduled message
 
-Cancel a scheduled message that has not yet been sent.
+Cancel a scheduled message that has not yet been sent. Only messages with `status=scheduled` and `send_at` more than a minute from now can be cancelled.
 
 `DELETE /messages/{id}`
 
@@ -276,6 +290,8 @@ import com.telnyx.sdk.models.messages.MessageCancelScheduledResponse;
 
 MessageCancelScheduledResponse response = client.messages().cancelScheduled("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (['object', 'null']), `cost_breakdown` (['object', 'null']), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (['string', 'null']), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (['string', 'null']), `tcr_campaign_registered` (['string', 'null']), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## List messaging hosted numbers
 
@@ -290,6 +306,8 @@ import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberListPar
 MessagingHostedNumberListPage page = client.messagingHostedNumbers().list();
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+
 ## Retrieve a messaging hosted number
 
 Retrieve a specific messaging hosted number by its ID or phone number.
@@ -302,6 +320,8 @@ import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberRetriev
 
 MessagingHostedNumberRetrieveResponse messagingHostedNumber = client.messagingHostedNumbers().retrieve("id");
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
 
 ## Update a messaging hosted number
 
@@ -318,6 +338,8 @@ import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberUpdateR
 MessagingHostedNumberUpdateResponse messagingHostedNumber = client.messagingHostedNumbers().update("id");
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (['string', 'null']), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+
 ## List opt-outs
 
 Retrieve a list of opt-out blocks.
@@ -330,6 +352,8 @@ import com.telnyx.sdk.models.messagingoptouts.MessagingOptoutListParams;
 
 MessagingOptoutListPage page = client.messagingOptouts().list();
 ```
+
+Returns: `created_at` (date-time), `from` (string), `keyword` (['string', 'null']), `messaging_profile_id` (['string', 'null']), `to` (string)
 
 ## List high-level messaging profile metrics
 
@@ -344,6 +368,8 @@ import com.telnyx.sdk.models.messagingprofilemetrics.MessagingProfileMetricListR
 MessagingProfileMetricListResponse messagingProfileMetrics = client.messagingProfileMetrics().list();
 ```
 
+Returns: `data` (array[object]), `meta` (object)
+
 ## Regenerate messaging profile secret
 
 Regenerate the v1 secret for a messaging profile.
@@ -356,6 +382,8 @@ import com.telnyx.sdk.models.messagingprofiles.actions.ActionRegenerateSecretRes
 
 ActionRegenerateSecretResponse response = client.messagingProfiles().actions().regenerateSecret("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `ai_assistant_id` (['string', 'null']), `alpha_sender` (['string', 'null']), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (['object', 'null']), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (['string', 'null']), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (['object', 'null']), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
 
 ## List alphanumeric sender IDs for a messaging profile
 
@@ -370,6 +398,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileListAlphanumericS
 MessagingProfileListAlphanumericSenderIdsPage page = client.messagingProfiles().listAlphanumericSenderIds("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
+
 ## Get detailed messaging profile metrics
 
 Get detailed metrics for a specific messaging profile, broken down by time interval.
@@ -383,6 +413,8 @@ import com.telnyx.sdk.models.messagingprofiles.MessagingProfileRetrieveMetricsRe
 MessagingProfileRetrieveMetricsResponse response = client.messagingProfiles().retrieveMetrics("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
+Returns: `data` (object)
+
 ## List Auto-Response Settings
 
 `GET /messaging_profiles/{profile_id}/autoresp_configs`
@@ -393,6 +425,8 @@ import com.telnyx.sdk.models.messagingprofiles.autorespconfigs.AutorespConfigLis
 
 AutorespConfigListResponse autorespConfigs = client.messagingProfiles().autorespConfigs().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
 
 ## Create auto-response setting
 
@@ -417,6 +451,8 @@ AutorespConfigCreateParams params = AutorespConfigCreateParams.builder()
 AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().create(params);
 ```
 
+Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
+
 ## Get Auto-Response Setting
 
 `GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
@@ -431,6 +467,8 @@ AutorespConfigRetrieveParams params = AutorespConfigRetrieveParams.builder()
     .build();
 AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().retrieve(params);
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
 
 ## Update Auto-Response Setting
 
@@ -455,6 +493,8 @@ AutorespConfigUpdateParams params = AutorespConfigUpdateParams.builder()
     .build();
 AutoRespConfigResponse autoRespConfigResponse = client.messagingProfiles().autorespConfigs().update(params);
 ```
+
+Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
 
 ## Delete Auto-Response Setting
 
@@ -489,14 +529,14 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
-| `data.payload.record_type` | enum | Identifies the type of the resource. |
-| `data.payload.direction` | enum | The direction of the message. |
+| `data.payload.record_type` | enum: message | Identifies the type of the resource. |
+| `data.payload.direction` | enum: outbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum | The type of message. |
+| `data.payload.type` | enum: SMS, MMS | The type of message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | uuid | The id of the organization the messaging profile belongs to. |
 | `data.payload.to` | array[object] |  |
@@ -520,6 +560,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.valid_until` | date-time | Message must be out of the queue by this time or else it will be discarded and marked as 'sending_failed'. |
 | `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses. |
 | `data.payload.smart_encoding_applied` | boolean | Indicates whether smart encoding was applied to this message. |
+| `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
 | `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
 | `meta.delivered_to` | url | The webhook URL the event was delivered to. |
 
@@ -527,14 +568,14 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum | Identifies the type of the resource. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
-| `data.event_type` | enum | The type of event being delivered. |
+| `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
-| `data.payload.record_type` | enum | Identifies the type of the resource. |
-| `data.payload.direction` | enum | The direction of the message. |
+| `data.payload.record_type` | enum: message | Identifies the type of the resource. |
+| `data.payload.direction` | enum: inbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum | The type of message. |
+| `data.payload.type` | enum: SMS, MMS | The type of message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.to` | array[object] |  |
