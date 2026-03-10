@@ -12,13 +12,14 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 /plugin marketplace add team-telnyx/telnyx-skills
 ```
 
-**Step 2.** Install a plugin — pick your language, or the WebRTC client-side plugin:
+**Step 2.** Install a plugin — pick a plugin from table below:
 
 ```bash
-/plugin install telnyx-python@telnyx-skills
+/plugin install <PLUGIN>@telnyx-skills
 ```
+Replace `<PLUGIN>` with the plugin from the table below.
 
-Replace `telnyx-python` with the plugin for your stack:
+e.g `plugin install telnyx-python@telnyx-skills` or `plugin install telnyx-twilio-migration@telnyx-skills`
 
 <!-- BEGIN GENERATED PLUGIN_TABLE -->
 | Plugin | Language |
