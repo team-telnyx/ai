@@ -17,9 +17,7 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 ```bash
 /plugin install <PLUGIN>@telnyx-skills
 ```
-Replace `<PLUGIN>` with the plugin from the table below.
-
-e.g `plugin install telnyx-python@telnyx-skills` or `plugin install telnyx-twilio-migration@telnyx-skills`
+Replace `<PLUGIN>` with the plugin from the table below e.g `/plugin install telnyx-python@telnyx-skills` or `/plugin install telnyx-twilio-migration@telnyx-skills`
 
 <!-- BEGIN GENERATED PLUGIN_TABLE -->
 | Plugin | Language |
