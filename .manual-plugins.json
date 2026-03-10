@@ -3,6 +3,7 @@
   "plugins": [
     {
       "name": "telnyx-webrtc-client",
+      "version": "1.0.0",
       "description": "Telnyx WebRTC client SDK skills \u2014 build VoIP calling apps on web, iOS, Android, Flutter, and React Native. Covers authentication, call controls, push notifications, call quality metrics, and AI Agent integration.",
       "source": "./telnyx-webrtc-client",
       "skills": [
@@ -16,6 +17,7 @@
     },
     {
       "name": "telnyx-twilio-migration",
+      "version": "1.0.0",
       "description": "Migrate from Twilio to Telnyx \u2014 6-phase orchestrated workflow covering voice (TwiML \u2192 TeXML + Call Control), messaging, WebRTC, SIP trunking, number porting, Verify, fax, IoT, and more. Includes automated scanning, linting, validation, and integration test scripts.",
       "source": "./telnyx-twilio-migration",
       "skills": [
@@ -24,6 +26,7 @@
     },
     {
       "name": "telnyx-cli",
+      "version": "1.0.0",
       "description": "Telnyx CLI — manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
       "source": "./telnyx-cli",
       "skills": [
