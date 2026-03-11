@@ -1,0 +1,11 @@
+{
+  "description": "10DLC Registration Skill Configuration",
+  "registration": {
+    "brand_type": "SOLE_PROPRIETOR",
+    "vertical": "COMMUNICATION",
+    "use_cases": ["2FA", "CUSTOMER_CARE", "ACCOUNT_NOTIFICATION", "DELIVERY_NOTIFICATION"]
+  },
+  "cli": {
+    "timeout_seconds": 120
+  }
+}

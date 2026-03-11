@@ -27,10 +27,22 @@
     {
       "name": "telnyx-cli",
       "version": "1.0.0",
-      "description": "Telnyx CLI — manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
+      "description": "Telnyx CLI \u2014 manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
       "source": "./telnyx-cli",
       "skills": [
         "./telnyx-cli/skills/telnyx-cli"
+      ]
+    },
+    {
+      "name": "telnyx-aifde",
+      "version": "1.0.0",
+      "description": "Hand-crafted, FFL-validated agent skills from the AI FDE team. Covers Verify API, Number Lookup, SMS Campaigns, and 10DLC Registration with wrapper scripts, input validation, and error handling.",
+      "source": "./telnyx-aifde",
+      "skills": [
+        "./telnyx-aifde/skills/telnyx-verify",
+        "./telnyx-aifde/skills/telnyx-number-lookup",
+        "./telnyx-aifde/skills/telnyx-sms-campaign",
+        "./telnyx-aifde/skills/telnyx-10dlc-registration"
       ]
     }
   ]
