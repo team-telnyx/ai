@@ -2,7 +2,7 @@
 
 Official skills for AI coding agents to integrate Telnyx APIs using the native SDKs.
 
-These skills follow the [Agent Skills specification](https://agentskills.io/specification) and can be installed in AI coding assistants like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Cursor, Windsurf, and other compatible agents.
+These skills follow the [Agent Skills specification](https://agentskills.io/specification) and can be installed in AI coding assistants like Claude Code, Cursor, Windsurf, and other compatible agents.
 
 > [!NOTE]
 > This repository is under active development. Skills are being expanded, updated to reflect current SDK patterns, and reviewed to reduce incorrect or hallucinated API usage by coding agents.
@@ -11,7 +11,7 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 
 ### Any Agent
 
-Install skills in any compatible agent (Claude Code, Cursor, Copilot, Codex, Windsurf, Roo Code, and 12+ more):
+Install skills in any compatible agent that supports the `skills` installer, including Claude Code, Cursor, Copilot, Codex, Windsurf, Roo Code, and other compatible tools:
 
 ```bash
 npx skills add team-telnyx/telnyx-skills
@@ -32,18 +32,14 @@ If your agent does not support `npx skills`, copy the skill folder directly from
    - `telnyx-javascript/skills/telnyx-voice-javascript/`
 2. Copy the whole skill folder, including `SKILL.md` and `references/` if present, into your tool's skills directory.
 
-Manual install locations:
+If your tool does not support `npx skills`, copy the skill folder into that tool's configured skills directory. If your tool does not support folder-based skills, paste the contents of `SKILL.md` into the tool's instructions or rules file and keep the linked references available alongside it.
 
-| Agent | Project path | Personal path |
-|-------|--------------|---------------|
-| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
-| Cursor | `.agents/skills/` | `~/.cursor/skills/` |
-| Codex | `.agents/skills/` | `~/.codex/skills/` |
-| GitHub Copilot | `.github/skills/` | `~/.copilot/skills/` |
-| OpenClaw | `skills/` | `~/.openclaw/skills/` |
-| Windsurf | `.windsurf/skills/` | `~/.codeium/windsurf/skills/` |
+Verified manual install locations from current tool docs:
 
-If your tool does not support folder-based skills, paste the contents of `SKILL.md` into the tool's instructions or rules file and keep the linked references available alongside it.
+- GitHub Copilot: `.github/skills/` or `~/.copilot/skills/`
+- Windsurf: `.windsurf/skills/` or `~/.codeium/windsurf/skills/`
+
+Other agents vary by tool and version. Use the tool's own skills documentation for the exact manual path.
 
 For Git-based/manual workflows, you can also copy or symlink specific skills:
 
@@ -57,7 +53,7 @@ ln -s ../.agents/skills .claude/skills
 ln -s ../.agents/skills .opencode/skills
 ```
 
-Use this approach when you want one checked-in or shared skills directory across multiple local agent setups.
+Use this approach when you want one checked-in or shared skills directory across multiple local agent setups, after confirming the destination path your tools expect.
 
 > [!IMPORTANT]
 > Install only the skills your project actually needs. Loading too many skills at once dilutes context and makes it easier for an agent to mix unrelated API patterns.

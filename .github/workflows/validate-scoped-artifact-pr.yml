@@ -7,7 +7,7 @@ on:
 
 jobs:
   validate-scoped-artifact-pr:
-    if: startsWith(github.head_ref, 'auto/update-skills-v2-pilot-')
+    if: startsWith(github.head_ref, 'auto/update-skills-v2-pilot-') || github.head_ref == 'publish-v2-pilot-artifacts'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
