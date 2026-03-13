@@ -9,7 +9,7 @@ These skills follow the [Agent Skills specification](https://agentskills.io/spec
 
 ## Quick Start
 
-Install skills in any compatible agent that supports the `skills` installer, including Claude Code, Cursor, Copilot, Codex, Windsurf, Roo Code, and other compatible tools:
+Install Telnyx Agent Skills by selecting the skills you need from the wizard. Skills are installed to your chosen agent's directory:
 
 ```bash
 npx skills add team-telnyx/telnyx-skills
