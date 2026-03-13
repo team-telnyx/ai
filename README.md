@@ -4,15 +4,15 @@ Official skills for AI coding agents to integrate Telnyx APIs using the native S
 
 These skills follow the [Agent Skills specification](https://agentskills.io/specification) and can be installed in AI coding assistants like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Cursor, Windsurf, and other compatible agents.
 
-[Install with npx](#quick-start) | [Claude Code](#claude-code) | [Available Skills](#available-skills) | [Platform Distribution](docs/platform-distribution.md)
-
-> **Note**
->
+> [!NOTE]
 > This repository is under active development. Skills are being expanded, updated to reflect current SDK patterns, and reviewed to reduce incorrect or hallucinated API usage by coding agents.
+
+> [!IMPORTANT]
+> Install only the skills your project actually needs. Loading too many skills at once dilutes context and makes it easier for an agent to mix unrelated API patterns.
 
 ## Quick Start
 
-### Any Agent (Recommended)
+### Any Agent
 
 Install skills in any compatible agent (Claude Code, Cursor, Copilot, Codex, Windsurf, Roo Code, and 12+ more):
 
@@ -21,6 +21,32 @@ npx skills add team-telnyx/telnyx-skills
 ```
 
 This opens an interactive picker to select the skills you need. Only selected skills are loaded into context.
+
+To update installed skills:
+
+```bash
+npx skills update
+```
+
+If your agent does not support `npx skills`, copy the skill folder directly from this repo:
+
+1. Find the skill you need, for example:
+   - `telnyx-python/skills/telnyx-messaging-python/`
+   - `telnyx-javascript/skills/telnyx-voice-javascript/`
+2. Copy the whole skill folder, including `SKILL.md` and `references/` if present, into your tool's skills directory.
+
+Manual install locations:
+
+| Agent | Project path | Personal path |
+|-------|--------------|---------------|
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Cursor | `.agents/skills/` | `~/.cursor/skills/` |
+| Codex | `.agents/skills/` | `~/.codex/skills/` |
+| GitHub Copilot | `.github/skills/` | `~/.copilot/skills/` |
+| OpenClaw | `skills/` | `~/.openclaw/skills/` |
+| Windsurf | `.windsurf/skills/` | `~/.codeium/windsurf/skills/` |
+
+If your tool does not support folder-based skills, paste the contents of `SKILL.md` into the tool's instructions or rules file and keep the linked references available alongside it.
 
 ### Claude Code
 
@@ -36,43 +62,6 @@ This opens an interactive picker to select the skills you need. Only selected sk
 /plugin install <PLUGIN>@telnyx-skills
 ```
 Replace `<PLUGIN>` with the plugin from the table below e.g `/plugin install telnyx-python@telnyx-skills` or `/plugin install telnyx-twilio-migration@telnyx-skills`
-
-## Other Agents
-
-### Install with npx
-
-```bash
-npx skills add team-telnyx/telnyx-skills
-```
-
-This is the safest default for compatible agents because the installer handles target-specific placement for you.
-
-To update installed skills:
-
-```bash
-npx skills update
-```
-
-### Manual install
-
-If your agent does not support `npx skills`, copy the skill folder directly from this repo.
-
-1. Find the skill you need, for example:
-   - `telnyx-python/skills/telnyx-messaging-python/`
-   - `telnyx-javascript/skills/telnyx-voice-javascript/`
-2. Copy the whole skill folder, including `SKILL.md` and `references/` if present, into your tool's skills directory.
-3. If your tool does not support folder-based skills, paste the contents of `SKILL.md` into the tool's instructions/rules file and keep the linked references available alongside it.
-
-Recommended manual install locations:
-
-| Agent | Project path | Personal path |
-|-------|--------------|---------------|
-| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
-| Cursor | `.agents/skills/` | `~/.cursor/skills/` |
-| Codex | `.agents/skills/` | `~/.codex/skills/` |
-| GitHub Copilot | `.github/skills/` | `~/.copilot/skills/` |
-| OpenClaw | `skills/` | `~/.openclaw/skills/` |
-| Windsurf | `.windsurf/skills/` | `~/.codeium/windsurf/skills/` |
 
 <!-- BEGIN GENERATED PLUGIN_TABLE -->
 | Plugin | Language |
