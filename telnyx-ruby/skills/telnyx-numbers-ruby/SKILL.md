@@ -3,6 +3,7 @@ name: telnyx-numbers-ruby
 description: >-
   Search, order, and manage phone numbers by location, features, and coverage.
 metadata:
+  internal: true
   author: telnyx
   product: numbers
   language: ruby

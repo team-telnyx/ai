@@ -15,6 +15,7 @@
       "description": "Official Telnyx REST API (curl) skills \u2014 messaging, voice, numbers, IoT, AI, and more. Language-agnostic HTTP examples for any language or framework.",
       "source": "./telnyx-curl",
       "skills": [
+        "./skills/telnyx-curl",
         "./skills/telnyx-10dlc-curl",
         "./skills/telnyx-account-access-curl",
         "./skills/telnyx-account-curl",
@@ -59,6 +60,7 @@
       "description": "Official Telnyx Go SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Go.",
       "source": "./telnyx-go",
       "skills": [
+        "./skills/telnyx-go",
         "./skills/telnyx-10dlc-go",
         "./skills/telnyx-account-access-go",
         "./skills/telnyx-account-go",
@@ -103,6 +105,7 @@
       "description": "Official Telnyx Java SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Java.",
       "source": "./telnyx-java",
       "skills": [
+        "./skills/telnyx-java",
         "./skills/telnyx-10dlc-java",
         "./skills/telnyx-account-access-java",
         "./skills/telnyx-account-java",
@@ -147,6 +150,7 @@
       "description": "Official Telnyx Node.js/JavaScript SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in JavaScript.",
       "source": "./telnyx-javascript",
       "skills": [
+        "./skills/telnyx-javascript",
         "./skills/telnyx-10dlc-javascript",
         "./skills/telnyx-account-access-javascript",
         "./skills/telnyx-account-javascript",
@@ -191,6 +195,7 @@
       "description": "Official Telnyx Python SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Python.",
       "source": "./telnyx-python",
       "skills": [
+        "./skills/telnyx-python",
         "./skills/telnyx-10dlc-python",
         "./skills/telnyx-account-access-python",
         "./skills/telnyx-account-management-python",
@@ -235,6 +240,7 @@
       "description": "Official Telnyx Ruby SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Ruby.",
       "source": "./telnyx-ruby",
       "skills": [
+        "./skills/telnyx-ruby",
         "./skills/telnyx-10dlc-ruby",
         "./skills/telnyx-account-access-ruby",
         "./skills/telnyx-account-management-ruby",
@@ -279,6 +285,7 @@
       "description": "Telnyx WebRTC client SDK skills \u2014 build VoIP calling apps on web, iOS, Android, Flutter, and React Native. Covers authentication, call controls, push notifications, call quality metrics, and AI Agent integration.",
       "source": "./telnyx-webrtc-client",
       "skills": [
+        "./skills/telnyx-webrtc-client",
         "./telnyx-webrtc-client/skills/telnyx-webrtc-client-js",
         "./telnyx-webrtc-client/skills/telnyx-webrtc-client-ios",
         "./telnyx-webrtc-client/skills/telnyx-webrtc-client-android",

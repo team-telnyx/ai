@@ -4,6 +4,7 @@ description: >-
   Configure account addresses, authentication providers, IP access controls,
   billing groups, and integration secrets. This skill provides Go SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: account-access
   language: go

@@ -4,6 +4,7 @@ description: >-
   Configure notification channels and settings for account alerts and events.
   This skill provides Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: account-notifications
   language: python

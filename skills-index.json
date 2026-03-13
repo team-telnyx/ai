@@ -88,6 +88,15 @@
       "format": "agent-skill-v1"
     },
     {
+      "id": "telnyx-curl",
+      "plugin": "telnyx-curl",
+      "product": "telnyx",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
       "id": "telnyx-fax-curl",
       "plugin": "telnyx-curl",
       "product": "fax",
@@ -427,6 +436,15 @@
       "product": "fax",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-fax-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-go",
+      "plugin": "telnyx-go",
+      "product": "telnyx",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-go/SKILL.md",
       "references": [],
       "format": "agent-skill-v1"
     },
@@ -774,6 +792,15 @@
       "format": "agent-skill-v1"
     },
     {
+      "id": "telnyx-java",
+      "plugin": "telnyx-java",
+      "product": "telnyx",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
       "id": "telnyx-messaging-hosted-java",
       "plugin": "telnyx-java",
       "product": "messaging-hosted",
@@ -1104,6 +1131,15 @@
       "product": "iot",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-iot-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "telnyx",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-javascript/SKILL.md",
       "references": [],
       "format": "agent-skill-v1"
     },
@@ -1554,6 +1590,15 @@
       "format": "agent-skill-v1"
     },
     {
+      "id": "telnyx-python",
+      "plugin": "telnyx-python",
+      "product": "telnyx",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
       "id": "telnyx-seti-python",
       "plugin": "telnyx-python",
       "product": "seti",
@@ -1888,6 +1933,15 @@
       "format": "agent-skill-v1"
     },
     {
+      "id": "telnyx-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "telnyx",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
       "id": "telnyx-seti-ruby",
       "plugin": "telnyx-ruby",
       "product": "seti",
@@ -2030,6 +2084,15 @@
       "product": "webrtc",
       "language": null,
       "path": "./telnyx-webrtc-client/skills/push-notification-tester/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc-client",
+      "language": "multi",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client/SKILL.md",
       "references": [],
       "format": "agent-skill-v1"
     },

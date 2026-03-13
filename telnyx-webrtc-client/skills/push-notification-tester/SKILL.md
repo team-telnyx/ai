@@ -5,6 +5,7 @@ description: >-
   Use when debugging push notification delivery, validating certificate/credential setup,
   or testing that a device receives VoIP pushes correctly.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
 ---

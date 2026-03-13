@@ -4,6 +4,7 @@ description: >-
   Implement OAuth 2.0 authentication flows for Telnyx API access. This skill
   provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: oauth
   language: ruby

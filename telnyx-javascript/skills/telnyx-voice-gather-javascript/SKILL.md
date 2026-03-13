@@ -5,6 +5,7 @@ description: >-
   gather. Build interactive voice menus and AI voice assistants. This skill
   provides JavaScript SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: voice-gather
   language: javascript

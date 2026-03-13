@@ -5,6 +5,7 @@ description: >-
   sub-resources for AI-driven telecom operations. This skill provides REST API
   (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: missions
   language: curl

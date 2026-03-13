@@ -5,6 +5,7 @@ description: >-
   LOA documents, and track porting status. This skill provides Python SDK
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: porting-in
   language: python

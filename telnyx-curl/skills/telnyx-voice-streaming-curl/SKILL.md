@@ -5,6 +5,7 @@ description: >-
   transcribe speech live. Use for real-time analytics and AI integrations. This
   skill provides REST API (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: voice-streaming
   language: curl

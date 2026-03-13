@@ -4,6 +4,7 @@ description: >-
   Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
   skill provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: seti
   language: ruby

@@ -5,6 +5,7 @@ description: >-
   High-level reactive API with automatic lifecycle management, CallKit/ConnectionService
   integration, and push notifications. Use for mobile VoIP apps with minimal setup.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: typescript

@@ -5,6 +5,7 @@ description: >-
   view, and update port-out status. This skill provides REST API (curl)
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: porting-out
   language: curl

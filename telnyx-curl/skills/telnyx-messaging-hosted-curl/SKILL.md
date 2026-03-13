@@ -5,6 +5,7 @@ description: >-
   migrating numbers or enabling rich messaging features. This skill provides
   REST API (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: messaging-hosted
   language: curl

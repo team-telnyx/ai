@@ -5,6 +5,7 @@ description: >-
   Covers authentication, voice calls, events, debugging, call quality
   metrics, and AI Agent integration. Use for web-based real-time communication.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: javascript

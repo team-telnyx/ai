@@ -4,6 +4,7 @@ description: >-
   Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
   skill provides Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: seti
   language: python

@@ -3,6 +3,7 @@ name: telnyx-numbers-java
 description: >-
   Search, order, and manage phone numbers by location, features, and coverage.
 metadata:
+  internal: true
   author: telnyx
   product: numbers
   language: java

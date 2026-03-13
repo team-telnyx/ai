@@ -4,6 +4,7 @@ description: >-
   Manage call recordings, media storage, Dialogflow integration, and external
   connections for SIP trunking. This skill provides Java SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: sip-integrations
   language: java

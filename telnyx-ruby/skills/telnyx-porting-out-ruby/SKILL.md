@@ -4,6 +4,7 @@ description: >-
   Manage port-out requests when numbers are being ported away from Telnyx. List,
   view, and update port-out status. This skill provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: porting-out
   language: ruby

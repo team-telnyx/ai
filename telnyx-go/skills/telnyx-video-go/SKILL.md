@@ -4,6 +4,7 @@ description: >-
   Create and manage video rooms for real-time video communication and
   conferencing. This skill provides Go SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: video
   language: go

@@ -5,6 +5,7 @@ description: >-
   sub-resources for AI-driven telecom operations. This skill provides Python SDK
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: missions
   language: python

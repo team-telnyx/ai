@@ -4,6 +4,7 @@ description: >-
   Configure private networks, WireGuard VPN gateways, internet gateways, and
   virtual cross connects. This skill provides Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: networking
   language: python

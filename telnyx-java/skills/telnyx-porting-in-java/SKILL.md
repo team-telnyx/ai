@@ -5,6 +5,7 @@ description: >-
   LOA documents, and track porting status. This skill provides Java SDK
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: porting-in
   language: java

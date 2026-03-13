@@ -5,6 +5,7 @@ description: >-
   suppression, client state, and supervisor controls. This skill provides Ruby
   SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: voice-advanced
   language: ruby

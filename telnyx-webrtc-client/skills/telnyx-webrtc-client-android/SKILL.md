@@ -5,6 +5,7 @@ description: >-
   making/receiving calls, push notifications (FCM), call quality metrics, and AI Agent
   integration. Use when implementing real-time voice communication on Android.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: kotlin

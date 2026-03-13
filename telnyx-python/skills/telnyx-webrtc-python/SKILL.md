@@ -5,6 +5,7 @@ description: >-
   building browser-based or mobile softphone applications. This skill provides
   Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: python

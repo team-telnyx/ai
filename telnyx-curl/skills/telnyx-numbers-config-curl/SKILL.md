@@ -5,6 +5,7 @@ description: >-
   messaging enablement, and connection assignments. This skill provides REST API
   (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: numbers-config
   language: curl

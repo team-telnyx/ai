@@ -4,6 +4,7 @@ description: >-
   Programmatic call control: make/receive calls, transfer, bridge, gather DTMF,
   stream audio. Real-time call events via webhooks.
 metadata:
+  internal: true
   author: telnyx
   product: voice
   language: curl

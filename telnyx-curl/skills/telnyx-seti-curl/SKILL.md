@@ -4,6 +4,7 @@ description: >-
   Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
   skill provides REST API (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: seti
   language: curl

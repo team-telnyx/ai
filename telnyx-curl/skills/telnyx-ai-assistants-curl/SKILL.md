@@ -4,6 +4,7 @@ description: >-
   AI voice assistants with custom instructions, knowledge bases, and tool
   integrations.
 metadata:
+  internal: true
   author: telnyx
   product: ai-assistants
   language: curl

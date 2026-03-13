@@ -5,6 +5,7 @@ description: >-
   building call centers or conferencing applications. This skill provides Go SDK
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: voice-conferencing
   language: go

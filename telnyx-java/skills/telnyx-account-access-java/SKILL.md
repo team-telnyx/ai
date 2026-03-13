@@ -5,6 +5,7 @@ description: >-
   billing groups, and integration secrets. This skill provides Java SDK
   examples.
 metadata:
+  internal: true
   author: telnyx
   product: account-access
   language: java

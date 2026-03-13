@@ -5,6 +5,7 @@ description: >-
   Covers authentication, making/receiving calls, push notifications (FCM + APNS),
   call quality metrics, and AI Agent integration. Works on Android, iOS, and Web.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: dart

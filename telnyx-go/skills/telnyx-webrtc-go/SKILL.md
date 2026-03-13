@@ -5,6 +5,7 @@ description: >-
   building browser-based or mobile softphone applications. This skill provides
   Go SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: webrtc
   language: go

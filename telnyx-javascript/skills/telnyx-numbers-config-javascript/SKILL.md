@@ -5,6 +5,7 @@ description: >-
   messaging enablement, and connection assignments. This skill provides
   JavaScript SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: numbers-config
   language: javascript

@@ -4,6 +4,7 @@ description: >-
   10DLC brand and campaign registration for US A2P messaging compliance. Assign
   phone numbers to campaigns.
 metadata:
+  internal: true
   author: telnyx
   product: 10dlc
   language: curl

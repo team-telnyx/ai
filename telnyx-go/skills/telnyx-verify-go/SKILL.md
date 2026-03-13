@@ -5,6 +5,7 @@ description: >-
   via SMS/voice OTP. Use for phone verification and data enrichment. This skill
   provides Go SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: verify
   language: go

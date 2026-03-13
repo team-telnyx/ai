@@ -4,6 +4,7 @@ description: >-
   Send and receive faxes programmatically. Manage fax applications and media.
   This skill provides Java SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: fax
   language: java

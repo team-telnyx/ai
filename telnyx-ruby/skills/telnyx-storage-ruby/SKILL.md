@@ -4,6 +4,7 @@ description: >-
   Manage cloud storage buckets and objects using the S3-compatible Telnyx
   Storage API. This skill provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: storage
   language: ruby

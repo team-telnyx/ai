@@ -5,6 +5,7 @@ description: >-
   connecting PBX systems or managing SIP infrastructure. This skill provides
   REST API (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: sip
   language: curl

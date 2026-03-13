@@ -4,6 +4,7 @@ description: >-
   Manage account balance, payments, invoices, webhooks, and view audit logs and
   detail records. This skill provides Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: account
   language: python

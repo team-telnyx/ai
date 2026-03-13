@@ -5,6 +5,7 @@ description: >-
   gather. Build interactive voice menus and AI voice assistants. This skill
   provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: voice-gather
   language: ruby

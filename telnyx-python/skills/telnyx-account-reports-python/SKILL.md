@@ -4,6 +4,7 @@ description: >-
   Generate and retrieve usage reports for billing, analytics, and
   reconciliation. This skill provides Python SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: account-reports
   language: python

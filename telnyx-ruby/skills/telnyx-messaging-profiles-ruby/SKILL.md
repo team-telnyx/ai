@@ -5,6 +5,7 @@ description: >-
   geomatch features. Configure short codes for high-volume messaging. This skill
   provides Ruby SDK examples.
 metadata:
+  internal: true
   author: telnyx
   product: messaging-profiles
   language: ruby

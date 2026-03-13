@@ -5,6 +5,7 @@ description: >-
   Manage applications, calls, conferences, recordings, queues, and streams. This
   skill provides REST API (curl) examples.
 metadata:
+  internal: true
   author: telnyx
   product: texml
   language: curl
