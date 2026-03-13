@@ -1,0 +1,2082 @@
+{
+  "name": "telnyx-skills-index",
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "telnyx-cli",
+      "plugin": "telnyx-cli",
+      "product": "cli",
+      "language": null,
+      "path": "./telnyx-cli/skills/telnyx-cli/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-curl",
+      "plugin": "telnyx-curl",
+      "product": "10dlc",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-10dlc-curl/SKILL.md",
+      "references": [
+        "./telnyx-curl/skills/telnyx-10dlc-curl/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-curl",
+      "plugin": "telnyx-curl",
+      "product": "account-access",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-account-access-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-curl",
+      "plugin": "telnyx-curl",
+      "product": "account",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-account-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-curl",
+      "plugin": "telnyx-curl",
+      "product": "account-management",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-account-management-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-curl",
+      "plugin": "telnyx-curl",
+      "product": "account-notifications",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-account-notifications-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-curl",
+      "plugin": "telnyx-curl",
+      "product": "account-reports",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-account-reports-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-curl",
+      "plugin": "telnyx-curl",
+      "product": "ai-assistants",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-ai-assistants-curl/SKILL.md",
+      "references": [
+        "./telnyx-curl/skills/telnyx-ai-assistants-curl/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-curl",
+      "plugin": "telnyx-curl",
+      "product": "ai-inference",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-ai-inference-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-curl",
+      "plugin": "telnyx-curl",
+      "product": "fax",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-fax-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-curl",
+      "plugin": "telnyx-curl",
+      "product": "iot",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-iot-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-curl",
+      "plugin": "telnyx-curl",
+      "product": "messaging",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-messaging-curl/SKILL.md",
+      "references": [
+        "./telnyx-curl/skills/telnyx-messaging-curl/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-curl",
+      "plugin": "telnyx-curl",
+      "product": "messaging-hosted",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-messaging-hosted-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-curl",
+      "plugin": "telnyx-curl",
+      "product": "messaging-profiles",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-messaging-profiles-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-curl",
+      "plugin": "telnyx-curl",
+      "product": "missions",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-missions-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-curl",
+      "plugin": "telnyx-curl",
+      "product": "networking",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-networking-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-curl",
+      "plugin": "telnyx-curl",
+      "product": "numbers-compliance",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-numbers-compliance-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-curl",
+      "plugin": "telnyx-curl",
+      "product": "numbers-config",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-numbers-config-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-curl",
+      "plugin": "telnyx-curl",
+      "product": "numbers",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-numbers-curl/SKILL.md",
+      "references": [
+        "./telnyx-curl/skills/telnyx-numbers-curl/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-curl",
+      "plugin": "telnyx-curl",
+      "product": "numbers-services",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-numbers-services-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-curl",
+      "plugin": "telnyx-curl",
+      "product": "oauth",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-oauth-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-curl",
+      "plugin": "telnyx-curl",
+      "product": "porting-in",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-porting-in-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-curl",
+      "plugin": "telnyx-curl",
+      "product": "porting-out",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-porting-out-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-curl",
+      "plugin": "telnyx-curl",
+      "product": "seti",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-seti-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-curl",
+      "plugin": "telnyx-curl",
+      "product": "sip",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-sip-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-curl",
+      "plugin": "telnyx-curl",
+      "product": "sip-integrations",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-sip-integrations-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-curl",
+      "plugin": "telnyx-curl",
+      "product": "storage",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-storage-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-curl",
+      "plugin": "telnyx-curl",
+      "product": "texml",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-texml-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-curl",
+      "plugin": "telnyx-curl",
+      "product": "verify",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-verify-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-curl",
+      "plugin": "telnyx-curl",
+      "product": "video",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-video-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice-advanced",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-advanced-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice-conferencing",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-conferencing-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-curl/SKILL.md",
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-curl/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice-gather",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-gather-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice-media",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-media-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-curl",
+      "plugin": "telnyx-curl",
+      "product": "voice-streaming",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-voice-streaming-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-curl",
+      "plugin": "telnyx-curl",
+      "product": "webrtc",
+      "language": "curl",
+      "path": "./telnyx-curl/skills/telnyx-webrtc-curl/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-go",
+      "plugin": "telnyx-go",
+      "product": "10dlc",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-10dlc-go/SKILL.md",
+      "references": [
+        "./telnyx-go/skills/telnyx-10dlc-go/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-go",
+      "plugin": "telnyx-go",
+      "product": "account-access",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-account-access-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-go",
+      "plugin": "telnyx-go",
+      "product": "account",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-account-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-go",
+      "plugin": "telnyx-go",
+      "product": "account-management",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-account-management-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-go",
+      "plugin": "telnyx-go",
+      "product": "account-notifications",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-account-notifications-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-go",
+      "plugin": "telnyx-go",
+      "product": "account-reports",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-account-reports-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-go",
+      "plugin": "telnyx-go",
+      "product": "ai-assistants",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-ai-assistants-go/SKILL.md",
+      "references": [
+        "./telnyx-go/skills/telnyx-ai-assistants-go/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-go",
+      "plugin": "telnyx-go",
+      "product": "ai-inference",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-ai-inference-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-go",
+      "plugin": "telnyx-go",
+      "product": "fax",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-fax-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-go",
+      "plugin": "telnyx-go",
+      "product": "iot",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-iot-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-go",
+      "plugin": "telnyx-go",
+      "product": "messaging",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-messaging-go/SKILL.md",
+      "references": [
+        "./telnyx-go/skills/telnyx-messaging-go/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-go",
+      "plugin": "telnyx-go",
+      "product": "messaging-hosted",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-messaging-hosted-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-go",
+      "plugin": "telnyx-go",
+      "product": "messaging-profiles",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-messaging-profiles-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-go",
+      "plugin": "telnyx-go",
+      "product": "missions",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-missions-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-go",
+      "plugin": "telnyx-go",
+      "product": "networking",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-networking-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-go",
+      "plugin": "telnyx-go",
+      "product": "numbers-compliance",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-numbers-compliance-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-go",
+      "plugin": "telnyx-go",
+      "product": "numbers-config",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-numbers-config-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-go",
+      "plugin": "telnyx-go",
+      "product": "numbers",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-numbers-go/SKILL.md",
+      "references": [
+        "./telnyx-go/skills/telnyx-numbers-go/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-go",
+      "plugin": "telnyx-go",
+      "product": "numbers-services",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-numbers-services-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-go",
+      "plugin": "telnyx-go",
+      "product": "oauth",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-oauth-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-go",
+      "plugin": "telnyx-go",
+      "product": "porting-in",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-porting-in-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-go",
+      "plugin": "telnyx-go",
+      "product": "porting-out",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-porting-out-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-go",
+      "plugin": "telnyx-go",
+      "product": "seti",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-seti-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-go",
+      "plugin": "telnyx-go",
+      "product": "sip",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-sip-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-go",
+      "plugin": "telnyx-go",
+      "product": "sip-integrations",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-sip-integrations-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-go",
+      "plugin": "telnyx-go",
+      "product": "storage",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-storage-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-go",
+      "plugin": "telnyx-go",
+      "product": "texml",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-texml-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-go",
+      "plugin": "telnyx-go",
+      "product": "verify",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-verify-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-go",
+      "plugin": "telnyx-go",
+      "product": "video",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-video-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-go",
+      "plugin": "telnyx-go",
+      "product": "voice-advanced",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-advanced-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-go",
+      "plugin": "telnyx-go",
+      "product": "voice-conferencing",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-conferencing-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-go",
+      "plugin": "telnyx-go",
+      "product": "voice-gather",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-gather-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-go",
+      "plugin": "telnyx-go",
+      "product": "voice",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-go/SKILL.md",
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-go/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-go",
+      "plugin": "telnyx-go",
+      "product": "voice-media",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-media-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-go",
+      "plugin": "telnyx-go",
+      "product": "voice-streaming",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-voice-streaming-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-go",
+      "plugin": "telnyx-go",
+      "product": "webrtc",
+      "language": "go",
+      "path": "./telnyx-go/skills/telnyx-webrtc-go/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-java",
+      "plugin": "telnyx-java",
+      "product": "10dlc",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-10dlc-java/SKILL.md",
+      "references": [
+        "./telnyx-java/skills/telnyx-10dlc-java/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-java",
+      "plugin": "telnyx-java",
+      "product": "account-access",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-account-access-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-java",
+      "plugin": "telnyx-java",
+      "product": "account",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-account-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-java",
+      "plugin": "telnyx-java",
+      "product": "account-management",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-account-management-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-java",
+      "plugin": "telnyx-java",
+      "product": "account-notifications",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-account-notifications-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-java",
+      "plugin": "telnyx-java",
+      "product": "account-reports",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-account-reports-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-java",
+      "plugin": "telnyx-java",
+      "product": "ai-assistants",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-ai-assistants-java/SKILL.md",
+      "references": [
+        "./telnyx-java/skills/telnyx-ai-assistants-java/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-java",
+      "plugin": "telnyx-java",
+      "product": "ai-inference",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-ai-inference-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-java",
+      "plugin": "telnyx-java",
+      "product": "fax",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-fax-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-java",
+      "plugin": "telnyx-java",
+      "product": "iot",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-iot-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-java",
+      "plugin": "telnyx-java",
+      "product": "messaging-hosted",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-messaging-hosted-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-java",
+      "plugin": "telnyx-java",
+      "product": "messaging",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-messaging-java/SKILL.md",
+      "references": [
+        "./telnyx-java/skills/telnyx-messaging-java/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-java",
+      "plugin": "telnyx-java",
+      "product": "messaging-profiles",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-messaging-profiles-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-java",
+      "plugin": "telnyx-java",
+      "product": "missions",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-missions-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-java",
+      "plugin": "telnyx-java",
+      "product": "networking",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-networking-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-java",
+      "plugin": "telnyx-java",
+      "product": "numbers-compliance",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-numbers-compliance-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-java",
+      "plugin": "telnyx-java",
+      "product": "numbers-config",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-numbers-config-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-java",
+      "plugin": "telnyx-java",
+      "product": "numbers",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-numbers-java/SKILL.md",
+      "references": [
+        "./telnyx-java/skills/telnyx-numbers-java/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-java",
+      "plugin": "telnyx-java",
+      "product": "numbers-services",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-numbers-services-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-java",
+      "plugin": "telnyx-java",
+      "product": "oauth",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-oauth-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-java",
+      "plugin": "telnyx-java",
+      "product": "porting-in",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-porting-in-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-java",
+      "plugin": "telnyx-java",
+      "product": "porting-out",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-porting-out-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-java",
+      "plugin": "telnyx-java",
+      "product": "seti",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-seti-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-java",
+      "plugin": "telnyx-java",
+      "product": "sip-integrations",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-sip-integrations-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-java",
+      "plugin": "telnyx-java",
+      "product": "sip",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-sip-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-java",
+      "plugin": "telnyx-java",
+      "product": "storage",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-storage-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-java",
+      "plugin": "telnyx-java",
+      "product": "texml",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-texml-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-java",
+      "plugin": "telnyx-java",
+      "product": "verify",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-verify-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-java",
+      "plugin": "telnyx-java",
+      "product": "video",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-video-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-java",
+      "plugin": "telnyx-java",
+      "product": "voice-advanced",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-advanced-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-java",
+      "plugin": "telnyx-java",
+      "product": "voice-conferencing",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-conferencing-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-java",
+      "plugin": "telnyx-java",
+      "product": "voice-gather",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-gather-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-java",
+      "plugin": "telnyx-java",
+      "product": "voice",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-java/SKILL.md",
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-java/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-java",
+      "plugin": "telnyx-java",
+      "product": "voice-media",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-media-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-java",
+      "plugin": "telnyx-java",
+      "product": "voice-streaming",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-voice-streaming-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-java",
+      "plugin": "telnyx-java",
+      "product": "webrtc",
+      "language": "java",
+      "path": "./telnyx-java/skills/telnyx-webrtc-java/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "10dlc",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-10dlc-javascript/SKILL.md",
+      "references": [
+        "./telnyx-javascript/skills/telnyx-10dlc-javascript/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "account-access",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-account-access-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "account",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-account-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "account-management",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-account-management-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "account-notifications",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-account-notifications-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "account-reports",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-account-reports-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "ai-assistants",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-ai-assistants-javascript/SKILL.md",
+      "references": [
+        "./telnyx-javascript/skills/telnyx-ai-assistants-javascript/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "ai-inference",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-ai-inference-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "fax",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-fax-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "iot",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-iot-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "messaging-hosted",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-messaging-hosted-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "messaging",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-messaging-javascript/SKILL.md",
+      "references": [
+        "./telnyx-javascript/skills/telnyx-messaging-javascript/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "messaging-profiles",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-messaging-profiles-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "missions",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-missions-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "networking",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-networking-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "numbers-compliance",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-numbers-compliance-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "numbers-config",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-numbers-config-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "numbers",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-numbers-javascript/SKILL.md",
+      "references": [
+        "./telnyx-javascript/skills/telnyx-numbers-javascript/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "numbers-services",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-numbers-services-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "oauth",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-oauth-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "porting-in",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-porting-in-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "porting-out",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-porting-out-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "seti",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-seti-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "sip-integrations",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-sip-integrations-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "sip",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-sip-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "storage",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-storage-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "texml",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-texml-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "verify",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-verify-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "video",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-video-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice-advanced",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-advanced-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice-conferencing",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-conferencing-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice-gather",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-gather-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-javascript/SKILL.md",
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-javascript/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice-media",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-media-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "voice-streaming",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-voice-streaming-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-javascript",
+      "plugin": "telnyx-javascript",
+      "product": "webrtc",
+      "language": "javascript",
+      "path": "./telnyx-javascript/skills/telnyx-webrtc-javascript/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-python",
+      "plugin": "telnyx-python",
+      "product": "10dlc",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-10dlc-python/SKILL.md",
+      "references": [
+        "./telnyx-python/skills/telnyx-10dlc-python/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-python",
+      "plugin": "telnyx-python",
+      "product": "account-access",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-account-access-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-python",
+      "plugin": "telnyx-python",
+      "product": "account-management",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-account-management-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-python",
+      "plugin": "telnyx-python",
+      "product": "account-notifications",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-account-notifications-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-python",
+      "plugin": "telnyx-python",
+      "product": "account",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-account-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-python",
+      "plugin": "telnyx-python",
+      "product": "account-reports",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-account-reports-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-python",
+      "plugin": "telnyx-python",
+      "product": "ai-assistants",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-ai-assistants-python/SKILL.md",
+      "references": [
+        "./telnyx-python/skills/telnyx-ai-assistants-python/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-python",
+      "plugin": "telnyx-python",
+      "product": "ai-inference",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-ai-inference-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-python",
+      "plugin": "telnyx-python",
+      "product": "fax",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-fax-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-python",
+      "plugin": "telnyx-python",
+      "product": "iot",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-iot-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-python",
+      "plugin": "telnyx-python",
+      "product": "messaging-hosted",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-messaging-hosted-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-python",
+      "plugin": "telnyx-python",
+      "product": "messaging-profiles",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-messaging-profiles-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-python",
+      "plugin": "telnyx-python",
+      "product": "messaging",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-messaging-python/SKILL.md",
+      "references": [
+        "./telnyx-python/skills/telnyx-messaging-python/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-python",
+      "plugin": "telnyx-python",
+      "product": "missions",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-missions-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-python",
+      "plugin": "telnyx-python",
+      "product": "networking",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-networking-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-python",
+      "plugin": "telnyx-python",
+      "product": "numbers-compliance",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-numbers-compliance-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-python",
+      "plugin": "telnyx-python",
+      "product": "numbers-config",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-numbers-config-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-python",
+      "plugin": "telnyx-python",
+      "product": "numbers",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-numbers-python/SKILL.md",
+      "references": [
+        "./telnyx-python/skills/telnyx-numbers-python/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-python",
+      "plugin": "telnyx-python",
+      "product": "numbers-services",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-numbers-services-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-python",
+      "plugin": "telnyx-python",
+      "product": "oauth",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-oauth-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-python",
+      "plugin": "telnyx-python",
+      "product": "porting-in",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-porting-in-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-python",
+      "plugin": "telnyx-python",
+      "product": "porting-out",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-porting-out-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-python",
+      "plugin": "telnyx-python",
+      "product": "seti",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-seti-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-python",
+      "plugin": "telnyx-python",
+      "product": "sip-integrations",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-sip-integrations-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-python",
+      "plugin": "telnyx-python",
+      "product": "sip",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-sip-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-python",
+      "plugin": "telnyx-python",
+      "product": "storage",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-storage-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-python",
+      "plugin": "telnyx-python",
+      "product": "texml",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-texml-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-python",
+      "plugin": "telnyx-python",
+      "product": "verify",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-verify-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-python",
+      "plugin": "telnyx-python",
+      "product": "video",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-video-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-python",
+      "plugin": "telnyx-python",
+      "product": "voice-advanced",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-advanced-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-python",
+      "plugin": "telnyx-python",
+      "product": "voice-conferencing",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-conferencing-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-python",
+      "plugin": "telnyx-python",
+      "product": "voice-gather",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-gather-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-python",
+      "plugin": "telnyx-python",
+      "product": "voice-media",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-media-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-python",
+      "plugin": "telnyx-python",
+      "product": "voice",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-python/SKILL.md",
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-python/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-python",
+      "plugin": "telnyx-python",
+      "product": "voice-streaming",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-voice-streaming-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-python",
+      "plugin": "telnyx-python",
+      "product": "webrtc",
+      "language": "python",
+      "path": "./telnyx-python/skills/telnyx-webrtc-python/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-10dlc-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "10dlc",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-10dlc-ruby/SKILL.md",
+      "references": [
+        "./telnyx-ruby/skills/telnyx-10dlc-ruby/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-access-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "account-access",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-account-access-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-management-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "account-management",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-account-management-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-notifications-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "account-notifications",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-account-notifications-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-reports-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "account-reports",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-account-reports-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-account-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "account",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-account-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-assistants-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "ai-assistants",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-ai-assistants-ruby/SKILL.md",
+      "references": [
+        "./telnyx-ruby/skills/telnyx-ai-assistants-ruby/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-ai-inference-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "ai-inference",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-ai-inference-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-fax-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "fax",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-fax-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-iot-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "iot",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-iot-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-hosted-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "messaging-hosted",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-messaging-hosted-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-profiles-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "messaging-profiles",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-messaging-profiles-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-messaging-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "messaging",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-messaging-ruby/SKILL.md",
+      "references": [
+        "./telnyx-ruby/skills/telnyx-messaging-ruby/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-missions-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "missions",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-missions-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-networking-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "networking",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-networking-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-compliance-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "numbers-compliance",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-numbers-compliance-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-config-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "numbers-config",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-numbers-config-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "numbers",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-numbers-ruby/SKILL.md",
+      "references": [
+        "./telnyx-ruby/skills/telnyx-numbers-ruby/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-numbers-services-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "numbers-services",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-numbers-services-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-oauth-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "oauth",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-oauth-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-in-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "porting-in",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-porting-in-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-porting-out-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "porting-out",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-porting-out-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-seti-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "seti",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-seti-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-integrations-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "sip-integrations",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-sip-integrations-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-sip-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "sip",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-sip-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-storage-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "storage",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-storage-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-texml-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "texml",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-texml-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-verify-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "verify",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-verify-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-video-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "video",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-video-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-advanced-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice-advanced",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-advanced-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-conferencing-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice-conferencing",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-conferencing-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-gather-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice-gather",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-gather-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-media-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice-media",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-media-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-ruby/SKILL.md",
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-ruby/references/api-details.md"
+      ],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-voice-streaming-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "voice-streaming",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-voice-streaming-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-ruby",
+      "plugin": "telnyx-ruby",
+      "product": "webrtc",
+      "language": "ruby",
+      "path": "./telnyx-ruby/skills/telnyx-webrtc-ruby/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-twilio-migration",
+      "plugin": "telnyx-twilio-migration",
+      "product": "migration",
+      "language": null,
+      "path": "./telnyx-twilio-migration/skills/telnyx-twilio-migration/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "push-notification-tester",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": null,
+      "path": "./telnyx-webrtc-client/skills/push-notification-tester/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client-android",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": "kotlin",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-android/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client-flutter",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": "dart",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-flutter/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client-ios",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": "swift",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-ios/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client-js",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": "javascript",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-js/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "telnyx-webrtc-client-react-native",
+      "plugin": "telnyx-webrtc-client",
+      "product": "webrtc",
+      "language": "typescript",
+      "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-react-native/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+name: Validate Scoped Artifact PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-scoped-artifact-pr:
+    if: startsWith(github.head_ref, 'auto/update-skills-v2-pilot-') || github.head_ref == 'publish-v2-pilot-artifacts'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install validation dependencies
+        run: pip install pyyaml
+
+      - name: Validate scoped pilot safety boundary
+        run: |
+          python3 scripts/validate_scoped_artifact_pr.py \
+            --base-ref "${{ github.event.pull_request.base.sha }}"

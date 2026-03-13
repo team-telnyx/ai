@@ -1,19 +1,19 @@
 ---
 name: telnyx-10dlc-javascript
 description: >-
-  Register brands and campaigns for 10DLC (10-digit long code) A2P messaging
-  compliance in the US. Manage campaign assignments to phone numbers. This skill
-  provides JavaScript SDK examples.
+  10DLC brand and campaign registration for US A2P messaging compliance. Assign
+  phone numbers to campaigns.
 metadata:
   author: telnyx
   product: 10dlc
   language: javascript
   generated_by: telnyx-ext-skills-generator
+  profile: northstar-v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
-# Telnyx 10Dlc - JavaScript
+# Telnyx 10DLC - JavaScript
 
 ## Installation
 
@@ -40,12 +40,17 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const telnyxBrand = await client.messaging10dlc.brand.create({
+    country: 'US',
+    displayName: 'ABC Mobile',
+    email: 'support@example.com',
+    entityType: 'PRIVATE_PROFIT',
+    vertical: 'TECHNOLOGY',
+  });
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
   } else if (err instanceof Telnyx.APIError) {
@@ -65,34 +70,45 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
-## List Brands
+## Operational Caveats
 
-This endpoint is used to list all brands associated with your organization.
+- 10DLC is sequential: create the brand first, then submit the campaign, then attach messaging infrastructure such as the messaging profile.
+- Registration calls are not enough by themselves. Messaging cannot use the campaign until the assignment step completes successfully.
+- Treat registration status fields as part of the control flow. Do not assume the campaign is send-ready until the returned status fields confirm it.
 
-`GET /10dlc/brand`
+## Reference Use Rules
 
-```javascript
-// Automatically fetches more pages as needed.
-for await (const brandListResponse of client.messaging10dlc.brand.list()) {
-  console.log(brandListResponse.identityStatus);
-}
-```
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
+- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
 
-## Create Brand
+## Core Tasks
 
-This endpoint is used to create a new brand. A brand is an entity created by The Campaign Registry (TCR) that represents an organization or a company. It is this entity that TCR created campaigns will be associated with.
+### Create a brand
 
-`POST /10dlc/brand` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
+Brand registration is the entrypoint for any US A2P 10DLC campaign flow.
 
-Optional: `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
+`client.messaging10dlc.brand.create()` — `POST /10dlc/brand`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `entityType` | object | Yes | Entity type behind the brand. |
+| `displayName` | string | Yes | Display name, marketing name, or DBA name of the brand. |
+| `country` | string | Yes | ISO2 2 characters country code. |
+| `email` | string | Yes | Valid email address of brand support contact. |
+| `vertical` | object | Yes | Vertical or industry segment of the brand. |
+| `companyName` | string | No | (Required for Non-profit/private/public) Legal company name. |
+| `firstName` | string | No | First name of business contact. |
+| `lastName` | string | No | Last name of business contact. |
+| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const telnyxBrand = await client.messaging10dlc.brand.create({
   country: 'US',
   displayName: 'ABC Mobile',
-  email: 'email',
+  email: 'support@example.com',
   entityType: 'PRIVATE_PROFIT',
   vertical: 'TECHNOLOGY',
 });
@@ -100,594 +116,77 @@ const telnyxBrand = await client.messaging10dlc.brand.create({
 console.log(telnyxBrand.identityStatus);
 ```
 
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID. This endpoint can be used after creating or revetting
-a brand. Possible values for `.category[].id`:
-
-* `TAX_ID` - Data mismatch related to tax id and its associated properties.
-
-`GET /10dlc/brand/feedback/{brandId}`
-
-```javascript
-const response = await client.messaging10dlc.brand.getFeedback('brandId');
-
-console.log(response.brandId);
-```
-
-Returns: `brandId` (string), `category` (array[object])
-
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```javascript
-const response = await client.messaging10dlc.brand.getSMSOtpByReference('OTP4B2001');
-
-console.log(response.brandId);
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Get Brand
-
-Retrieve a brand by `brandId`.
-
-`GET /10dlc/brand/{brandId}`
-
-```javascript
-const brand = await client.messaging10dlc.brand.retrieve('brandId');
-
-console.log(brand);
-```
-
-## Update Brand
-
-Update a brand's attributes by `brandId`.
-
-`PUT /10dlc/brand/{brandId}` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
-
-Optional: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-```javascript
-const telnyxBrand = await client.messaging10dlc.brand.update('brandId', {
-  country: 'US',
-  displayName: 'ABC Mobile',
-  email: 'email',
-  entityType: 'PRIVATE_PROFIT',
-  vertical: 'TECHNOLOGY',
-});
-
-console.log(telnyxBrand.identityStatus);
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Delete Brand
-
-Delete Brand. This endpoint is used to delete a brand. Note the brand cannot be deleted if it contains one or more active campaigns, the campaigns need to be inactive and at least 3 months old due to billing purposes.
-
-`DELETE /10dlc/brand/{brandId}`
-
-```javascript
-await client.messaging10dlc.brand.delete('brandId');
-```
-
-## Resend brand 2FA email
-
-`POST /10dlc/brand/{brandId}/2faEmail`
-
-```javascript
-await client.messaging10dlc.brand.resend2faEmail('brandId');
-```
-
-## List External Vettings
-
-Get list of valid external vetting record for a given brand
-
-`GET /10dlc/brand/{brandId}/externalVetting`
-
-```javascript
-const externalVettings = await client.messaging10dlc.brand.externalVetting.list('brandId');
-
-console.log(externalVettings);
-```
-
-## Order Brand External Vetting
-
-Order new external vetting for a brand
-
-`POST /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingClass`
-
-```javascript
-const response = await client.messaging10dlc.brand.externalVetting.order('brandId', {
-  evpId: 'evpId',
-  vettingClass: 'vettingClass',
-});
-
-console.log(response.createDate);
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Import External Vetting Record
-
-This operation can be used to import an external vetting record from a TCR-approved
-vetting provider. If the vetting provider confirms validity of the record, it will be
-saved with the brand and will be considered for future campaign qualification.
-
-`PUT /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingId`
-
-Optional: `vettingToken` (string)
-
-```javascript
-const response = await client.messaging10dlc.brand.externalVetting.imports('brandId', {
-  evpId: 'evpId',
-  vettingId: 'vettingId',
-});
-
-console.log(response.createDate);
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Revet Brand
-
-This operation allows you to revet the brand. However, revetting is allowed once after the successful brand registration and thereafter limited to once every 3 months.
-
-`PUT /10dlc/brand/{brandId}/revet`
-
-```javascript
-const telnyxBrand = await client.messaging10dlc.brand.revet('brandId');
-
-console.log(telnyxBrand.identityStatus);
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand SMS OTP Status by Brand ID
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification using the Brand ID. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process by looking it up with the brand ID. The response includes delivery status, verification dates, and detailed delivery information.
-
-`GET /10dlc/brand/{brandId}/smsOtp`
-
-```javascript
-const response = await client.messaging10dlc.brand.retrieveSMSOtpStatus(
-  '4b20019b-043a-78f8-0657-b3be3f4b4002',
-);
-
-console.log(response.brandId);
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Trigger Brand SMS OTP
-
-Trigger or re-trigger an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`POST /10dlc/brand/{brandId}/smsOtp` — Required: `pinSms`, `successSms`
-
-```javascript
-const response = await client.messaging10dlc.brand.triggerSMSOtp(
-  '4b20019b-043a-78f8-0657-b3be3f4b4002',
-  { pinSms: 'Your PIN is @OTP_PIN@', successSms: 'Verification successful!' },
-);
-
-console.log(response.brandId);
-```
-
-Returns: `brandId` (string), `referenceId` (string)
-
-## Verify Brand SMS OTP
-
-Verify the SMS OTP (One-Time Password) for Sole Proprietor brand verification. **Verification Flow:**
-
-1. User receives OTP via SMS after triggering
-2.
-
-`PUT /10dlc/brand/{brandId}/smsOtp` — Required: `otpPin`
-
-```javascript
-await client.messaging10dlc.brand.verifySMSOtp('4b20019b-043a-78f8-0657-b3be3f4b4002', {
-  otpPin: '123456',
-});
-```
-
-## List Campaigns
-
-Retrieve a list of campaigns associated with a supplied `brandId`.
-
-`GET /10dlc/campaign`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const campaignListResponse of client.messaging10dlc.campaign.list({
-  brandId: 'brandId',
-})) {
-  console.log(campaignListResponse.ageGated);
-}
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Accept Shared Campaign
-
-Manually accept a campaign shared with Telnyx
-
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
-
-```javascript
-const response = await client.messaging10dlc.campaign.acceptSharing('C26F1KLZN');
-
-console.log(response);
-```
-
-## Get Campaign Cost
-
-`GET /10dlc/campaign/usecase/cost`
-
-```javascript
-const response = await client.messaging10dlc.campaign.usecase.getCost({ usecase: 'usecase' });
-
-console.log(response.campaignUsecase);
-```
-
-Returns: `campaignUsecase` (string), `description` (string), `monthlyCost` (string), `upFrontCost` (string)
-
-## Get campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/campaign/{campaignId}`
-
-```javascript
-const telnyxCampaignCsp = await client.messaging10dlc.campaign.retrieve('campaignId');
-
-console.log(telnyxCampaignCsp.brandId);
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update campaign
-
-Update a campaign's properties by `campaignId`. **Please note:** only sample messages are editable.
-
-`PUT /10dlc/campaign/{campaignId}`
-
-Optional: `autoRenewal` (boolean), `helpMessage` (string), `messageFlow` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```javascript
-const telnyxCampaignCsp = await client.messaging10dlc.campaign.update('campaignId');
-
-console.log(telnyxCampaignCsp.brandId);
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Deactivate campaign
-
-Terminate a campaign. Note that once deactivated, a campaign cannot be restored.
-
-`DELETE /10dlc/campaign/{campaignId}`
-
-```javascript
-const response = await client.messaging10dlc.campaign.deactivate('campaignId');
-
-console.log(response.time);
-```
-
-Returns: `message` (string), `record_type` (string), `time` (number)
-
-## Submit campaign appeal for manual review
-
-Submits an appeal for rejected native campaigns in TELNYX_FAILED or MNO_REJECTED status. The appeal is recorded for manual compliance team review and the campaign status is reset to TCR_ACCEPTED. Note: Appeal forwarding is handled manually to allow proper review before incurring upstream charges.
-
-`POST /10dlc/campaign/{campaignId}/appeal` — Required: `appeal_reason`
-
-```javascript
-const response = await client.messaging10dlc.campaign.submitAppeal(
-  '5eb13888-32b7-4cab-95e6-d834dde21d64',
-  {
-    appeal_reason:
-      'The website has been updated to include the required privacy policy and terms of service.',
-  },
-);
-
-console.log(response.appealed_at);
-```
-
-Returns: `appealed_at` (date-time)
-
-## Get Campaign Mno Metadata
-
-Get the campaign metadata for each MNO it was submitted to.
-
-`GET /10dlc/campaign/{campaignId}/mnoMetadata`
-
-```javascript
-const response = await client.messaging10dlc.campaign.getMnoMetadata('campaignId');
-
-console.log(response['10999']);
-```
-
-Returns: `10999` (object)
-
-## Get campaign operation status
-
-Retrieve campaign's operation status at MNO level.
-
-`GET /10dlc/campaign/{campaignId}/operationStatus`
-
-```javascript
-const response = await client.messaging10dlc.campaign.getOperationStatus('campaignId');
-
-console.log(response);
-```
-
-## Get OSR campaign attributes
-
-`GET /10dlc/campaign/{campaignId}/osr/attributes`
-
-```javascript
-const response = await client.messaging10dlc.campaign.osr.getAttributes('campaignId');
-
-console.log(response);
-```
-
-## Get Sharing Status
-
-`GET /10dlc/campaign/{campaignId}/sharing`
-
-```javascript
-const response = await client.messaging10dlc.campaign.getSharingStatus('campaignId');
-
-console.log(response.sharedByMe);
-```
-
-Returns: `sharedByMe` (object), `sharedWithMe` (object)
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign to is qualified for the desired use case of that campaign. **Please note:** After campaign creation, you'll only be able to edit the campaign's sample messages.
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyxBrand.brandId`
+- `telnyxBrand.identityStatus`
+- `telnyxBrand.status`
+- `telnyxBrand.displayName`
+- `telnyxBrand.state`
+- `telnyxBrand.altBusinessId`
+
+### Submit a campaign
+
+Campaign submission is the compliance-critical step that determines whether traffic can be provisioned.
+
+`client.messaging10dlc.campaignBuilder.submit()` — `POST /10dlc/campaignBuilder`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes | Alphanumeric identifier of the brand associated with this ca... |
+| `description` | string | Yes | Summary description of this campaign. |
+| `usecase` | string | Yes | Campaign usecase. |
+| `ageGated` | boolean | No | Age gated message content in campaign. |
+| `autoRenewal` | boolean | No | Campaign subscription auto-renewal option. |
+| `directLending` | boolean | No | Direct lending or loan arrangement |
+| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const telnyxCampaignCsp = await client.messaging10dlc.campaignBuilder.submit({
-  brandId: 'brandId',
-  description: 'description',
-  usecase: 'usecase',
+  brandId: 'BXXXXXX',
+  description: 'Two-factor authentication messages',
+  usecase: '2FA',
+    sampleMessages: ["Your verification code is {{code}}"],
 });
 
 console.log(telnyxCampaignCsp.brandId);
 ```
 
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyxCampaignCsp.campaignId`
+- `telnyxCampaignCsp.brandId`
+- `telnyxCampaignCsp.campaignStatus`
+- `telnyxCampaignCsp.submissionStatus`
+- `telnyxCampaignCsp.failureReasons`
+- `telnyxCampaignCsp.status`
 
-## Qualify By Usecase
+### Assign a messaging profile to a campaign
 
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+Messaging profile assignment is the practical handoff from registration to send-ready messaging infrastructure.
 
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+`client.messaging10dlc.phoneNumberAssignmentByProfile.assign()` — `POST /10dlc/phoneNumberAssignmentByProfile`
 
-```javascript
-const response = await client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase('usecase', {
-  brandId: 'brandId',
-});
-
-console.log(response.annualFee);
-```
-
-Returns: `annualFee` (number), `maxSubUsecases` (integer), `minSubUsecases` (integer), `mnoMetadata` (object), `monthlyFee` (number), `quarterlyFee` (number), `usecase` (string)
-
-## List shared partner campaigns
-
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
-
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted. In other words, shared but pending campaigns are currently omitted
-from the response from this endpoint.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const partnerCampaignListSharedByMeResponse of client.messaging10dlc.partnerCampaigns.listSharedByMe()) {
-  console.log(partnerCampaignListSharedByMeResponse.brandId);
-}
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Sharing Status
-
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
-
-```javascript
-const response = await client.messaging10dlc.partnerCampaigns.retrieveSharingStatus('campaignId');
-
-console.log(response);
-```
-
-## List Shared Campaigns
-
-Retrieve all partner campaigns you have shared to Telnyx in a paginated fashion. This endpoint is currently limited to only returning shared campaigns that Telnyx has accepted. In other words, shared but pending campaigns are currently omitted from the response from this endpoint.
-
-`GET /10dlc/partner_campaigns`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const telnyxDownstreamCampaign of client.messaging10dlc.partnerCampaigns.list()) {
-  console.log(telnyxDownstreamCampaign.tcrBrandId);
-}
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Single Shared Campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/partner_campaigns/{campaignId}`
-
-```javascript
-const telnyxDownstreamCampaign = await client.messaging10dlc.partnerCampaigns.retrieve(
-  'campaignId',
-);
-
-console.log(telnyxDownstreamCampaign.tcrBrandId);
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update Single Shared Campaign
-
-Update campaign details by `campaignId`. **Please note:** Only webhook urls are editable.
-
-`PATCH /10dlc/partner_campaigns/{campaignId}`
-
-Optional: `webhookFailoverURL` (string), `webhookURL` (string)
-
-```javascript
-const telnyxDownstreamCampaign = await client.messaging10dlc.partnerCampaigns.update('campaignId');
-
-console.log(telnyxDownstreamCampaign.tcrBrandId);
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign. **Please note:** if you want to assign phone numbers to a campaign that you did not create with Telnyx 10DLC services, this endpoint allows that provided that you've shared the campaign with Telnyx. In this case, only provide the parameter, `tcrCampaignId`, and not `campaignId`.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messagingProfileId` | string (UUID) | Yes | The ID of the messaging profile that you want to link to the... |
+| `campaignId` | string (UUID) | Yes | The ID of the campaign you want to link to the specified mes... |
+| `tcrCampaignId` | string (UUID) | No | The TCR ID of the shared campaign you want to link to the sp... |
 
 ```javascript
 const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.assign({
   messagingProfileId: '4001767e-ce0f-4cae-9d5f-0d5e636e7809',
+    campaignId: 'CXXX001',
 });
 
 console.log(response.messagingProfileId);
 ```
 
-Returns: `campaignId` (string), `messagingProfileId` (string), `taskId` (string), `tcrCampaignId` (string)
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```javascript
-const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.retrieveStatus(
-  'taskId',
-);
-
-console.log(response.status);
-```
-
-Returns: `createdAt` (date-time), `status` (string), `taskId` (string), `updatedAt` (date-time)
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```javascript
-const response = await client.messaging10dlc.phoneNumberAssignmentByProfile.listPhoneNumberStatus(
-  'taskId',
-);
-
-console.log(response.records);
-```
-
-Returns: `records` (array[object])
-
-## List phone number campaigns
-
-`GET /10dlc/phone_number_campaigns`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const phoneNumberCampaign of client.messaging10dlc.phoneNumberCampaigns.list()) {
-  console.log(phoneNumberCampaign.campaignId);
-}
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Create New Phone Number Campaign
-
-`POST /10dlc/phone_number_campaigns` — Required: `phoneNumber`, `campaignId`
-
-```javascript
-const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.create({
-  campaignId: '4b300178-131c-d902-d54e-72d90ba1620j',
-  phoneNumber: '+18005550199',
-});
-
-console.log(phoneNumberCampaign.campaignId);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Get Single Phone Number Campaign
-
-Retrieve an individual phone number/campaign assignment by `phoneNumber`.
-
-`GET /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```javascript
-const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.retrieve(
-  'phoneNumber',
-);
-
-console.log(phoneNumberCampaign.campaignId);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Create New Phone Number Campaign
-
-`PUT /10dlc/phone_number_campaigns/{phoneNumber}` — Required: `phoneNumber`, `campaignId`
-
-```javascript
-const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.update('phoneNumber', {
-  campaignId: '4b300178-131c-d902-d54e-72d90ba1620j',
-  phoneNumber: '+18005550199',
-});
-
-console.log(phoneNumberCampaign.campaignId);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Delete Phone Number Campaign
-
-This endpoint allows you to remove a campaign assignment from the supplied `phoneNumber`.
-
-`DELETE /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```javascript
-const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.delete('phoneNumber');
-
-console.log(phoneNumberCampaign.campaignId);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
+Primary response fields:
+- `response.messagingProfileId`
+- `response.campaignId`
+- `response.taskId`
+- `response.tcrCampaignId`
 
 ---
-
-## Webhooks
 
 ### Webhook Verification
 
@@ -711,16 +210,11 @@ app.post('/webhooks', express.raw({ type: 'application/json' }), async (req, res
 });
 ```
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+## Webhooks
 
-| Event | Description |
-|-------|-------------|
-| `campaignStatusUpdate` | Campaign Status Update |
+These webhook payload fields are inline because they are part of the primary integration path.
 
-### Webhook payload fields
-
-**`campaignStatusUpdate`**
+### Campaign Status Update
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -732,3 +226,205 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `type` | enum: TELNYX_EVENT, REGISTRATION, MNO_REVIEW, TELNYX_REVIEW, NUMBER_POOL_PROVISIONED, NUMBER_POOL_DEPROVISIONED, TCR_EVENT, VERIFIED |  |
 | `description` | string | Description of the event. |
 | `status` | enum: ACCEPTED, REJECTED, DORMANT, success, failed | The status of the campaign. |
+
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Get Brand
+
+Inspect the current state of an existing brand registration.
+
+`client.messaging10dlc.brand.retrieve()` — `GET /10dlc/brand/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes |  |
+
+```javascript
+const brand = await client.messaging10dlc.brand.retrieve('BXXX001');
+
+console.log(brand);
+```
+
+Primary response fields:
+- `brand.status`
+- `brand.state`
+- `brand.altBusinessId`
+- `brand.altBusinessIdType`
+- `brand.assignedCampaignsCount`
+- `brand.brandId`
+
+### Qualify By Usecase
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase()` — `GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `usecase` | string | Yes |  |
+| `brandId` | string (UUID) | Yes |  |
+
+```javascript
+const response = await client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase('usecase', {
+  brandId: 'BXXX001',
+});
+
+console.log(response.annualFee);
+```
+
+Primary response fields:
+- `response.annualFee`
+- `response.maxSubUsecases`
+- `response.minSubUsecases`
+- `response.mnoMetadata`
+- `response.monthlyFee`
+- `response.quarterlyFee`
+
+### Create New Phone Number Campaign
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.messaging10dlc.phoneNumberCampaigns.create()` — `POST /10dlc/phone_number_campaigns`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumber` | string (E.164) | Yes | The phone number you want to link to a specified campaign. |
+| `campaignId` | string (UUID) | Yes | The ID of the campaign you want to link to the specified pho... |
+
+```javascript
+const phoneNumberCampaign = await client.messaging10dlc.phoneNumberCampaigns.create({
+  campaignId: '4b300178-131c-d902-d54e-72d90ba1620j',
+  phoneNumber: '+18005550199',
+});
+
+console.log(phoneNumberCampaign.campaignId);
+```
+
+Primary response fields:
+- `phoneNumberCampaign.assignmentStatus`
+- `phoneNumberCampaign.brandId`
+- `phoneNumberCampaign.campaignId`
+- `phoneNumberCampaign.createdAt`
+- `phoneNumberCampaign.failureReasons`
+- `phoneNumberCampaign.phoneNumber`
+
+### Get campaign
+
+Inspect the current state of an existing campaign registration.
+
+`client.messaging10dlc.campaign.retrieve()` — `GET /10dlc/campaign/{campaignId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `campaignId` | string (UUID) | Yes |  |
+
+```javascript
+const telnyxCampaignCsp = await client.messaging10dlc.campaign.retrieve('CXXX001');
+
+console.log(telnyxCampaignCsp.brandId);
+```
+
+Primary response fields:
+- `telnyxCampaignCsp.status`
+- `telnyxCampaignCsp.ageGated`
+- `telnyxCampaignCsp.autoRenewal`
+- `telnyxCampaignCsp.billedDate`
+- `telnyxCampaignCsp.brandDisplayName`
+- `telnyxCampaignCsp.brandId`
+
+### List Brands
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.messaging10dlc.brand.list()` — `GET /10dlc/brand`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
+| `page` | integer | No |  |
+| `recordsPerPage` | integer | No | number of records per page. |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const brandListResponse of client.messaging10dlc.brand.list()) {
+  console.log(brandListResponse.identityStatus);
+}
+```
+
+Primary response fields:
+- `brandListResponse.page`
+- `brandListResponse.records`
+- `brandListResponse.totalRecords`
+
+### Get Brand Feedback By Id
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging10dlc.brand.getFeedback()` — `GET /10dlc/brand/feedback/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes |  |
+
+```javascript
+const response = await client.messaging10dlc.brand.getFeedback('BXXX001');
+
+console.log(response.brandId);
+```
+
+Primary response fields:
+- `response.brandId`
+- `response.category`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Get Brand SMS OTP Status | `client.messaging10dlc.brand.getSMSOtpByReference()` | `GET /10dlc/brand/smsOtp/{referenceId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `referenceId` |
+| Update Brand | `client.messaging10dlc.brand.update()` | `PUT /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `entityType`, `displayName`, `country`, `email`, +2 more |
+| Delete Brand | `client.messaging10dlc.brand.delete()` | `DELETE /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `brandId` |
+| Resend brand 2FA email | `client.messaging10dlc.brand.resend2faEmail()` | `POST /10dlc/brand/{brandId}/2faEmail` | Create or provision an additional resource when the core tasks do not cover this flow. | `brandId` |
+| List External Vettings | `client.messaging10dlc.brand.externalVetting.list()` | `GET /10dlc/brand/{brandId}/externalVetting` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
+| Order Brand External Vetting | `client.messaging10dlc.brand.externalVetting.order()` | `POST /10dlc/brand/{brandId}/externalVetting` | Create or provision an additional resource when the core tasks do not cover this flow. | `evpId`, `vettingClass`, `brandId` |
+| Import External Vetting Record | `client.messaging10dlc.brand.externalVetting.imports()` | `PUT /10dlc/brand/{brandId}/externalVetting` | Modify an existing resource without recreating it. | `evpId`, `vettingId`, `brandId` |
+| Revet Brand | `client.messaging10dlc.brand.revet()` | `PUT /10dlc/brand/{brandId}/revet` | Modify an existing resource without recreating it. | `brandId` |
+| Get Brand SMS OTP Status by Brand ID | `client.messaging10dlc.brand.retrieveSMSOtpStatus()` | `GET /10dlc/brand/{brandId}/smsOtp` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
+| Trigger Brand SMS OTP | `client.messaging10dlc.brand.triggerSMSOtp()` | `POST /10dlc/brand/{brandId}/smsOtp` | Create or provision an additional resource when the core tasks do not cover this flow. | `pinSms`, `successSms`, `brandId` |
+| Verify Brand SMS OTP | `client.messaging10dlc.brand.verifySMSOtp()` | `PUT /10dlc/brand/{brandId}/smsOtp` | Modify an existing resource without recreating it. | `otpPin`, `brandId` |
+| List Campaigns | `client.messaging10dlc.campaign.list()` | `GET /10dlc/campaign` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Accept Shared Campaign | `client.messaging10dlc.campaign.acceptSharing()` | `POST /10dlc/campaign/acceptSharing/{campaignId}` | Create or provision an additional resource when the core tasks do not cover this flow. | `campaignId` |
+| Get Campaign Cost | `client.messaging10dlc.campaign.usecase.getCost()` | `GET /10dlc/campaign/usecase/cost` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Update campaign | `client.messaging10dlc.campaign.update()` | `PUT /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
+| Deactivate campaign | `client.messaging10dlc.campaign.deactivate()` | `DELETE /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
+| Submit campaign appeal for manual review | `client.messaging10dlc.campaign.submitAppeal()` | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appealReason`, `campaignId` |
+| Get Campaign Mno Metadata | `client.messaging10dlc.campaign.getMnoMetadata()` | `GET /10dlc/campaign/{campaignId}/mnoMetadata` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get campaign operation status | `client.messaging10dlc.campaign.getOperationStatus()` | `GET /10dlc/campaign/{campaignId}/operationStatus` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get OSR campaign attributes | `client.messaging10dlc.campaign.osr.getAttributes()` | `GET /10dlc/campaign/{campaignId}/osr/attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get Sharing Status | `client.messaging10dlc.campaign.getSharingStatus()` | `GET /10dlc/campaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| List shared partner campaigns | `client.messaging10dlc.partnerCampaigns.listSharedByMe()` | `GET /10dlc/partnerCampaign/sharedByMe` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Sharing Status | `client.messaging10dlc.partnerCampaigns.retrieveSharingStatus()` | `GET /10dlc/partnerCampaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| List Shared Campaigns | `client.messaging10dlc.partnerCampaigns.list()` | `GET /10dlc/partner_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Shared Campaign | `client.messaging10dlc.partnerCampaigns.retrieve()` | `GET /10dlc/partner_campaigns/{campaignId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Update Single Shared Campaign | `client.messaging10dlc.partnerCampaigns.update()` | `PATCH /10dlc/partner_campaigns/{campaignId}` | Modify an existing resource without recreating it. | `campaignId` |
+| Get Assignment Task Status | `client.messaging10dlc.phoneNumberAssignmentByProfile.retrieveStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
+| Get Phone Number Status | `client.messaging10dlc.phoneNumberAssignmentByProfile.listPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
+| List phone number campaigns | `client.messaging10dlc.phoneNumberCampaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
+| Create New Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Delete Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).

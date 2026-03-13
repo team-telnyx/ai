@@ -2,9 +2,59 @@
 
 Official skills for AI coding agents to integrate Telnyx APIs using the native SDKs.
 
-These skills follow the [Agent Skills specification](https://agentskills.io/specification) and can be installed in AI coding assistants like [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Cursor, Windsurf, and other compatible agents.
+These skills follow the [Agent Skills specification](https://agentskills.io/specification) and can be installed in AI coding assistants like Claude Code, Cursor, Windsurf, and other compatible agents.
 
-## Quick Start (Claude Code)
+> [!NOTE]
+> This repository is under active development. Skills are being expanded, updated to reflect current SDK patterns, and reviewed to reduce incorrect or hallucinated API usage by coding agents.
+
+## Quick Start
+
+### Any Agent
+
+Install skills in any compatible agent that supports the `skills` installer, including Claude Code, Cursor, Copilot, Codex, Windsurf, Roo Code, and other compatible tools:
+
+```bash
+npx skills add team-telnyx/telnyx-skills
+```
+
+This opens an interactive picker to select the skills you need. Only selected skills are loaded into context.
+
+To update installed skills:
+
+```bash
+npx skills update
+```
+
+If your agent does not support `npx skills`, copy the skill folder directly from this repo:
+
+1. Find the skill you need, for example:
+   - `telnyx-python/skills/telnyx-messaging-python/`
+   - `telnyx-javascript/skills/telnyx-voice-javascript/`
+2. Copy the whole skill folder, including `SKILL.md` and `references/` if present, into your tool's skills directory.
+
+If your tool does not support `npx skills`, copy the skill folder into that tool's configured skills directory. If your tool does not support folder-based skills, paste the contents of `SKILL.md` into the tool's instructions or rules file and keep the linked references available alongside it.
+
+Verified manual install locations from current tool docs:
+
+- GitHub Copilot: `.github/skills/` or `~/.copilot/skills/`
+- Windsurf: `.windsurf/skills/` or `~/.codeium/windsurf/skills/`
+
+Other agents vary by tool and version. Use the tool's own skills documentation for the exact manual path.
+
+For Git-based/manual workflows, you can also clone this repo and copy a specific skill folder:
+
+```bash
+# Example: copy one skill into the directory your tool documents for skills
+git clone https://github.com/team-telnyx/telnyx-skills.git
+cp -r telnyx-skills/telnyx-python/skills/telnyx-messaging-python /path/to/your-tool-skills-dir/
+```
+
+Use this approach only after confirming the destination path your tool expects from that tool's own documentation.
+
+> [!IMPORTANT]
+> Install only the skills your project actually needs. Loading too many skills at once dilutes context and makes it easier for an agent to mix unrelated API patterns.
+
+### Claude Code
 
 **Step 1.** Add the Telnyx skills marketplace (one-time setup):
 
@@ -192,32 +242,21 @@ Includes parameter-by-parameter mapping tables, multi-language code examples (Py
 
 > **Note:** After migrating, install a language plugin (e.g. `telnyx-python`) for deeper SDK examples, and `telnyx-webrtc-client` if building a calling app.
 
-## Installation for Other Agents
-
-### Cursor
-
-1. Open **Cursor Settings > Rules > Project Rules**
-2. Create a rule file (e.g., `.cursor/rules/telnyx.mdc`)
-3. Paste the contents of the `SKILL.md` for the product and language you need
-
-You can find skill files in this repo under `telnyx-{language}/skills/telnyx-{product}-{language}/SKILL.md`, or fetch them directly:
-
-```
-https://raw.githubusercontent.com/team-telnyx/telnyx-skills/main/telnyx-python/skills/telnyx-messaging-python/SKILL.md
-```
-
-### Windsurf
-
-1. Create a `.windsurfrules` file in your project root
-2. Paste the contents of the desired `SKILL.md` file(s) into it
-
-### Other Agents
-
-For any agent that supports the [Agent Skills specification](https://agentskills.io/specification), point it to the skill directory or `SKILL.md` file. For agents without native skill support, copy the contents of the relevant `SKILL.md` into your agent's system prompt or rules file.
-
 ## Skill Structure
 
 Each skill contains a single `SKILL.md` file with YAML frontmatter, SDK installation instructions, client setup, code examples for every API operation, and webhook event reference tables where applicable. All code examples are generated from the official Telnyx OpenAPI specifications.
+
+The canonical artifact format is:
+
+- `SKILL.md`
+- `references/api-details.md` when overflow API detail is needed
+
+Machine-readable discovery currently lives in:
+
+- [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
+- [skills-index.json](skills-index.json)
+
+Skill generation and publishing logic live in the separate `telnyx-ext-skills-generator` repository. For platform-specific usage guidance, see [Platform Distribution](docs/platform-distribution.md).
 
 ## Documentation
 
@@ -230,6 +269,12 @@ Each skill contains a single `SKILL.md` file with YAML frontmatter, SDK installa
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **Note:** Code examples are auto-generated from Telnyx OpenAPI specs. To fix a code example, please open an issue describing the problem rather than editing the code directly.
+
+For generated skill changes:
+
+- use the generator repository as the source of truth
+- keep scoped V2 pilot PRs within the documented safety boundary
+- do not remove or overwrite unrelated existing skills
 
 ## Support
 

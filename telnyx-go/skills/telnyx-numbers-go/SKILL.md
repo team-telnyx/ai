@@ -1,14 +1,13 @@
 ---
 name: telnyx-numbers-go
 description: >-
-  Search for available phone numbers by location and features, check coverage,
-  and place orders. Use when acquiring new phone numbers. This skill provides Go
-  SDK examples.
+  Search, order, and manage phone numbers by location, features, and coverage.
 metadata:
   author: telnyx
   product: numbers
   language: go
   generated_by: telnyx-ext-skills-generator
+  profile: northstar-v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -48,7 +47,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+availablePhoneNumbers, err := client.AvailablePhoneNumbers.List(context.Background(), telnyx.AvailablePhoneNumberListParams{})
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -56,7 +55,6 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -76,844 +74,397 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
-## List Advanced Orders
+## Reference Use Rules
 
-`GET /advanced_orders`
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
+
+- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+
+## Core Tasks
+
+### Search available phone numbers
+
+Number search is the entrypoint for provisioning. Agents need the search method, key query filters, and the fields returned for candidate numbers.
+
+`client.AvailablePhoneNumbers.List()` — `GET /available_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	advancedOrders, err := client.AdvancedOrders.List(context.TODO())
+	availablePhoneNumbers, err := client.AvailablePhoneNumbers.List(context.Background(), telnyx.AvailablePhoneNumberListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", availablePhoneNumbers.Data)
+```
+
+Response wrapper:
+- items: `availablePhoneNumbers.data`
+- pagination: `availablePhoneNumbers.meta`
+
+Primary item fields:
+- `PhoneNumber`
+- `RecordType`
+- `Quickship`
+- `Reservable`
+- `BestEffort`
+- `CostInformation`
+
+### Create a number order
+
+Number ordering is the production provisioning step after number selection.
+
+`client.NumberOrders.New()` — `POST /number_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[object] | Yes |  |
+| `ConnectionId` | string (UUID) | No | Identifies the connection associated with this phone number. |
+| `MessagingProfileId` | string (UUID) | No | Identifies the messaging profile associated with the phone n... |
+| `BillingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```go
+	numberOrder, err := client.NumberOrders.New(context.Background(), telnyx.NumberOrderNewParams{
+		PhoneNumbers: []telnyx.NumberOrderNewParamsPhoneNumber{{PhoneNumber: "+18005550101"}},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", numberOrder.Data)
+```
+
+Primary response fields:
+- `numberOrder.Data.ID`
+- `numberOrder.Data.Status`
+- `numberOrder.Data.PhoneNumbersCount`
+- `numberOrder.Data.RequirementsMet`
+- `numberOrder.Data.MessagingProfileID`
+- `numberOrder.Data.ConnectionID`
+
+### Check number order status
+
+Order status determines whether provisioning completed or additional requirements are still blocking fulfillment.
+
+`client.NumberOrders.Get()` — `GET /number_orders/{number_order_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `NumberOrderId` | string (UUID) | Yes | The number order ID. |
+
+```go
+	numberOrder, err := client.NumberOrders.Get(context.Background(), "number_order_id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", numberOrder.Data)
+```
+
+Primary response fields:
+- `numberOrder.Data.ID`
+- `numberOrder.Data.Status`
+- `numberOrder.Data.RequirementsMet`
+- `numberOrder.Data.PhoneNumbersCount`
+- `numberOrder.Data.PhoneNumbers`
+- `numberOrder.Data.ConnectionID`
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Create a number reservation
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.NumberReservations.New()` — `POST /number_reservations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[object] | Yes |  |
+| `Status` | enum (pending, success, failure) | No | The status of the entire reservation. |
+| `Id` | string (UUID) | No |  |
+| `RecordType` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+
+```go
+	numberReservation, err := client.NumberReservations.New(context.Background(), telnyx.NumberReservationNewParams{
+		PhoneNumbers: []telnyx.NumberReservationNewParamsPhoneNumber{{PhoneNumber: "+18005550101"}},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", numberReservation.Data)
+```
+
+Primary response fields:
+- `numberReservation.Data.ID`
+- `numberReservation.Data.Status`
+- `numberReservation.Data.CreatedAt`
+- `numberReservation.Data.UpdatedAt`
+- `numberReservation.Data.CustomerReference`
+- `numberReservation.Data.Errors`
+
+### Retrieve a number reservation
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.NumberReservations.Get()` — `GET /number_reservations/{number_reservation_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `NumberReservationId` | string (UUID) | Yes | The number reservation ID. |
+
+```go
+	numberReservation, err := client.NumberReservations.Get(context.Background(), "number_reservation_id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", numberReservation.Data)
+```
+
+Primary response fields:
+- `numberReservation.Data.ID`
+- `numberReservation.Data.Status`
+- `numberReservation.Data.CreatedAt`
+- `numberReservation.Data.UpdatedAt`
+- `numberReservation.Data.CustomerReference`
+- `numberReservation.Data.Errors`
+
+### List Advanced Orders
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.AdvancedOrders.List()` — `GET /advanced_orders`
+
+```go
+	advancedOrders, err := client.AdvancedOrders.List(context.Background())
+	if err != nil {
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", advancedOrders.Data)
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Response wrapper:
+- items: `advancedOrders.data`
 
-## Create Advanced Order
+Primary item fields:
+- `ID`
+- `Status`
+- `AreaCode`
+- `Comments`
+- `CountryCode`
+- `CustomerReference`
 
-`POST /advanced_orders`
+### Create Advanced Order
 
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum: local, mobile, toll_free, shared_cost, national, landline), `quantity` (integer), `requirement_group_id` (uuid)
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.AdvancedOrders.New()` — `POST /advanced_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
+| `RequirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
+| `CountryCode` | string (ISO 3166-1 alpha-2) | No |  |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	advancedOrder, err := client.AdvancedOrders.New(context.TODO(), telnyx.AdvancedOrderNewParams{
+	advancedOrder, err := client.AdvancedOrders.New(context.Background(), telnyx.AdvancedOrderNewParams{
 		AdvancedOrder: telnyx.AdvancedOrderParam{},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", advancedOrder.ID)
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `advancedOrder.ID`
+- `advancedOrder.Status`
+- `advancedOrder.AreaCode`
+- `advancedOrder.Comments`
+- `advancedOrder.CountryCode`
+- `advancedOrder.CustomerReference`
 
-## Update Advanced Order
+### Update Advanced Order
 
-`PATCH /advanced_orders/{advanced-order-id}/requirement_group`
+Modify an existing resource without recreating it.
 
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum: local, mobile, toll_free, shared_cost, national, landline), `quantity` (integer), `requirement_group_id` (uuid)
+`client.AdvancedOrders.UpdateRequirementGroup()` — `PATCH /advanced_orders/{advanced-order-id}/requirement_group`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Advanced-order-id` | string (UUID) | Yes |  |
+| `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
+| `RequirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
+| `CountryCode` | string (ISO 3166-1 alpha-2) | No |  |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.AdvancedOrders.UpdateRequirementGroup(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AdvancedOrderUpdateRequirementGroupParams{
 			AdvancedOrder: telnyx.AdvancedOrderParam{},
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.ID)
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `response.ID`
+- `response.Status`
+- `response.AreaCode`
+- `response.Comments`
+- `response.CountryCode`
+- `response.CustomerReference`
 
-## Get Advanced Order
+### Get Advanced Order
 
-`GET /advanced_orders/{order_id}`
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.AdvancedOrders.Get()` — `GET /advanced_orders/{order_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `OrderId` | string (UUID) | Yes |  |
 
 ```go
-	advancedOrder, err := client.AdvancedOrders.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	advancedOrder, err := client.AdvancedOrders.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", advancedOrder.ID)
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `advancedOrder.ID`
+- `advancedOrder.Status`
+- `advancedOrder.AreaCode`
+- `advancedOrder.Comments`
+- `advancedOrder.CountryCode`
+- `advancedOrder.CustomerReference`
 
-## List available phone number blocks
+### List available phone number blocks
 
-`GET /available_phone_number_blocks`
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.AvailablePhoneNumberBlocks.List()` — `GET /available_phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	availablePhoneNumberBlocks, err := client.AvailablePhoneNumberBlocks.List(context.TODO(), telnyx.AvailablePhoneNumberBlockListParams{})
+	availablePhoneNumberBlocks, err := client.AvailablePhoneNumberBlocks.List(context.Background(), telnyx.AvailablePhoneNumberBlockListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", availablePhoneNumberBlocks.Data)
 ```
 
-Returns: `cost_information` (object), `features` (array[object]), `phone_number` (string), `range` (integer), `record_type` (enum: available_phone_number_block), `region_information` (array[object])
+Response wrapper:
+- items: `availablePhoneNumberBlocks.data`
+- pagination: `availablePhoneNumberBlocks.meta`
 
-## List available phone numbers
+Primary item fields:
+- `PhoneNumber`
+- `CostInformation`
+- `Features`
+- `Range`
+- `RecordType`
+- `RegionInformation`
 
-`GET /available_phone_numbers`
+### Retrieve all comments
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.Comments.List()` — `GET /comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	availablePhoneNumbers, err := client.AvailablePhoneNumbers.List(context.TODO(), telnyx.AvailablePhoneNumberListParams{})
+	comments, err := client.Comments.List(context.Background(), telnyx.CommentListParams{})
 	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", availablePhoneNumbers.Data)
-```
-
-Returns: `best_effort` (boolean), `cost_information` (object), `features` (array[object]), `phone_number` (string), `quickship` (boolean), `record_type` (enum: available_phone_number), `region_information` (array[object]), `reservable` (boolean), `vanity_format` (string)
-
-## Retrieve all comments
-
-`GET /comments`
-
-```go
-	comments, err := client.Comments.List(context.TODO(), telnyx.CommentListParams{})
-	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", comments.Data)
 ```
 
-Returns: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum: sub_number_order, requirement_group), `commenter` (string), `commenter_type` (enum: admin, user), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
-
-## Create a comment
-
-`POST /comments`
-
-Optional: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum: sub_number_order, requirement_group), `commenter` (string), `commenter_type` (enum: admin, user), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
-
-```go
-	comment, err := client.Comments.New(context.TODO(), telnyx.CommentNewParams{
-		Comment: telnyx.CommentParam{},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", comment.Data)
-```
-
-Returns: `data` (object)
-
-## Retrieve a comment
-
-`GET /comments/{id}`
-
-```go
-	comment, err := client.Comments.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", comment.Data)
-```
-
-Returns: `data` (object)
-
-## Mark a comment as read
-
-`PATCH /comments/{id}/read`
-
-```go
-	response, err := client.Comments.MarkAsRead(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `data` (object)
-
-## Get country coverage
-
-`GET /country_coverage`
-
-```go
-	countryCoverage, err := client.CountryCoverage.Get(context.TODO())
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", countryCoverage.Data)
-```
-
-Returns: `data` (object)
-
-## Get coverage for a specific country
-
-`GET /country_coverage/countries/{country_code}`
-
-```go
-	response, err := client.CountryCoverage.GetCountry(context.TODO(), "US")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `code` (string), `features` (array[string]), `international_sms` (boolean), `inventory_coverage` (boolean), `local` (object), `mobile` (object), `national` (object), `numbers` (boolean), `p2p` (boolean), `phone_number_type` (array[string]), `quickship` (boolean), `region` (string | null), `reservable` (boolean), `shared_cost` (object), `toll_free` (object)
-
-## List customer service records
-
-List customer service records.
-
-`GET /customer_service_records`
-
-```go
-	page, err := client.CustomerServiceRecords.List(context.TODO(), telnyx.CustomerServiceRecordListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## Create a customer service record
-
-Create a new customer service record for the provided phone number.
-
-`POST /customer_service_records`
-
-```go
-	customerServiceRecord, err := client.CustomerServiceRecords.New(context.TODO(), telnyx.CustomerServiceRecordNewParams{
-		PhoneNumber: "+13035553000",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", customerServiceRecord.Data)
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## Verify CSR phone number coverage
-
-Verify the coverage for a list of phone numbers.
-
-`POST /customer_service_records/phone_number_coverages`
-
-```go
-	response, err := client.CustomerServiceRecords.VerifyPhoneNumberCoverage(context.TODO(), telnyx.CustomerServiceRecordVerifyPhoneNumberCoverageParams{
-		PhoneNumbers: []string{"+13035553000"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `additional_data_required` (array[string]), `has_csr_coverage` (boolean), `phone_number` (string), `reason` (string), `record_type` (string)
-
-## Get a customer service record
-
-Get a specific customer service record.
-
-`GET /customer_service_records/{customer_service_record_id}`
-
-```go
-	customerServiceRecord, err := client.CustomerServiceRecords.Get(context.TODO(), "customer_service_record_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", customerServiceRecord.Data)
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## List inexplicit number orders
-
-Get a paginated list of inexplicit number orders.
-
-`GET /inexplicit_number_orders`
-
-```go
-	page, err := client.InexplicitNumberOrders.List(context.TODO(), telnyx.InexplicitNumberOrderListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Create an inexplicit number order
-
-Create an inexplicit number order to programmatically purchase phone numbers without specifying exact numbers.
-
-`POST /inexplicit_number_orders` — Required: `ordering_groups`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string)
-
-```go
-	inexplicitNumberOrder, err := client.InexplicitNumberOrders.New(context.TODO(), telnyx.InexplicitNumberOrderNewParams{
-		OrderingGroups: []telnyx.InexplicitNumberOrderNewParamsOrderingGroup{{
-			CountRequested:  "count_requested",
-			CountryISO:      "US",
-			PhoneNumberType: "phone_number_type",
-		}},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", inexplicitNumberOrder.Data)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Retrieve an inexplicit number order
-
-Get an existing inexplicit number order by ID.
-
-`GET /inexplicit_number_orders/{id}`
-
-```go
-	inexplicitNumberOrder, err := client.InexplicitNumberOrders.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", inexplicitNumberOrder.Data)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Create an inventory coverage request
-
-Creates an inventory coverage request. If locality, npa or national_destination_code is used in groupBy, and no region or locality filters are used, the whole paginated set is returned.
-
-`GET /inventory_coverage`
-
-```go
-	inventoryCoverages, err := client.InventoryCoverage.List(context.TODO(), telnyx.InventoryCoverageListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", inventoryCoverages.Data)
-```
-
-Returns: `administrative_area` (string), `advance_requirements` (boolean), `count` (integer), `coverage_type` (enum: number, block), `group` (string), `group_type` (string), `number_range` (integer), `number_type` (enum: did, toll-free), `phone_number_type` (enum: local, toll_free, national, landline, shared_cost, mobile), `record_type` (string)
-
-## List mobile network operators
-
-Telnyx has a set of GSM mobile operators partners that are available through our mobile network roaming. This resource is entirely managed by Telnyx and may change over time. That means that this resource won't allow any write operations for it.
-
-`GET /mobile_network_operators`
-
-```go
-	page, err := client.MobileNetworkOperators.List(context.TODO(), telnyx.MobileNetworkOperatorListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `country_code` (string), `id` (uuid), `mcc` (string), `mnc` (string), `name` (string), `network_preferences_enabled` (boolean), `record_type` (string), `tadig` (string)
-
-## List network coverage locations
-
-List all locations and the interfaces that region supports
-
-`GET /network_coverage`
-
-```go
-	page, err := client.NetworkCoverage.List(context.TODO(), telnyx.NetworkCoverageListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `available_services` (array[object]), `location` (object), `record_type` (string)
-
-## List number block orders
-
-Get a paginated list of number block orders.
-
-`GET /number_block_orders`
-
-```go
-	page, err := client.NumberBlockOrders.List(context.TODO(), telnyx.NumberBlockOrderListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Create a number block order
-
-Creates a phone number block order.
-
-`POST /number_block_orders` — Required: `starting_number`, `range`
-
-Optional: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-```go
-	numberBlockOrder, err := client.NumberBlockOrders.New(context.TODO(), telnyx.NumberBlockOrderNewParams{
-		Range:          10,
-		StartingNumber: "+19705555000",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberBlockOrder.Data)
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a number block order
-
-Get an existing phone number block order.
-
-`GET /number_block_orders/{number_block_order_id}`
-
-```go
-	numberBlockOrder, err := client.NumberBlockOrders.Get(context.TODO(), "number_block_order_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberBlockOrder.Data)
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a list of phone numbers associated to orders
-
-Get a list of phone numbers associated to orders.
-
-`GET /number_order_phone_numbers`
-
-```go
-	numberOrderPhoneNumbers, err := client.NumberOrderPhoneNumbers.List(context.TODO(), telnyx.NumberOrderPhoneNumberListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberOrderPhoneNumbers.Data)
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## Retrieve a single phone number within a number order.
-
-Get an existing phone number in number order.
-
-`GET /number_order_phone_numbers/{number_order_phone_number_id}`
-
-```go
-	numberOrderPhoneNumber, err := client.NumberOrderPhoneNumbers.Get(context.TODO(), "number_order_phone_number_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberOrderPhoneNumber.Data)
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## Update requirements for a single phone number within a number order.
-
-Updates requirements for a single phone number within a number order.
-
-`PATCH /number_order_phone_numbers/{number_order_phone_number_id}`
-
-Optional: `regulatory_requirements` (array[object])
-
-```go
-	response, err := client.NumberOrderPhoneNumbers.UpdateRequirements(
-		context.TODO(),
-		"number_order_phone_number_id",
-		telnyx.NumberOrderPhoneNumberUpdateRequirementsParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## List number orders
-
-Get a paginated list of number orders.
-
-`GET /number_orders`
-
-```go
-	page, err := client.NumberOrders.List(context.TODO(), telnyx.NumberOrderListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Create a number order
-
-Creates a phone number order.
-
-`POST /number_orders`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string), `phone_numbers` (array[object])
-
-```go
-	numberOrder, err := client.NumberOrders.New(context.TODO(), telnyx.NumberOrderNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberOrder.Data)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Retrieve a number order
-
-Get an existing phone number order.
-
-`GET /number_orders/{number_order_id}`
-
-```go
-	numberOrder, err := client.NumberOrders.Get(context.TODO(), "number_order_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberOrder.Data)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Update a number order
-
-Updates a phone number order.
-
-`PATCH /number_orders/{number_order_id}`
-
-Optional: `customer_reference` (string), `regulatory_requirements` (array[object])
-
-```go
-	numberOrder, err := client.NumberOrders.Update(
-		context.TODO(),
-		"number_order_id",
-		telnyx.NumberOrderUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberOrder.Data)
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## List number reservations
-
-Gets a paginated list of phone number reservations.
-
-`GET /number_reservations`
-
-```go
-	page, err := client.NumberReservations.List(context.TODO(), telnyx.NumberReservationListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Create a number reservation
-
-Creates a Phone Number Reservation for multiple numbers.
-
-`POST /number_reservations`
-
-Optional: `created_at` (date-time), `customer_reference` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-```go
-	numberReservation, err := client.NumberReservations.New(context.TODO(), telnyx.NumberReservationNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberReservation.Data)
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a number reservation
-
-Gets a single phone number reservation.
-
-`GET /number_reservations/{number_reservation_id}`
-
-```go
-	numberReservation, err := client.NumberReservations.Get(context.TODO(), "number_reservation_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberReservation.Data)
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Extend a number reservation
-
-Extends reservation expiry time on all phone numbers.
-
-`POST /number_reservations/{number_reservation_id}/actions/extend`
-
-```go
-	response, err := client.NumberReservations.Actions.Extend(context.TODO(), "number_reservation_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve the features for a list of numbers
-
-`POST /numbers_features` — Required: `phone_numbers`
-
-```go
-	numbersFeature, err := client.NumbersFeatures.New(context.TODO(), telnyx.NumbersFeatureNewParams{
-		PhoneNumbers: []string{"string"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numbersFeature.Data)
-```
-
-Returns: `features` (array[string]), `phone_number` (string)
-
-## Lists the phone number blocks jobs
-
-`GET /phone_number_blocks/jobs`
-
-```go
-	page, err := client.PhoneNumberBlocks.Jobs.List(context.TODO(), telnyx.PhoneNumberBlockJobListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block. We will only consider the phone number block as deleted after all phone numbers associated with it are removed, so multiple executions of this job may be necessary in case some of the phone numbers present errors during the deletion process.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
-
-```go
-	response, err := client.PhoneNumberBlocks.Jobs.DeletePhoneNumberBlock(context.TODO(), telnyx.PhoneNumberBlockJobDeletePhoneNumberBlockParams{
-		PhoneNumberBlockID: "f3946371-7199-4261-9c3d-81a0d7935146",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## Retrieves a phone number blocks job
-
-`GET /phone_number_blocks/jobs/{id}`
-
-```go
-	job, err := client.PhoneNumberBlocks.Jobs.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", job.Data)
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## List sub number orders
-
-Get a paginated list of sub number orders.
-
-`GET /sub_number_orders`
-
-```go
-	subNumberOrders, err := client.SubNumberOrders.List(context.TODO(), telnyx.SubNumberOrderListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", subNumberOrders.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Retrieve a sub number order
-
-Get an existing sub number order.
-
-`GET /sub_number_orders/{sub_number_order_id}`
-
-```go
-	subNumberOrder, err := client.SubNumberOrders.Get(
-		context.TODO(),
-		"sub_number_order_id",
-		telnyx.SubNumberOrderGetParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", subNumberOrder.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Update a sub number order's requirements
-
-Updates a sub number order.
-
-`PATCH /sub_number_orders/{sub_number_order_id}`
-
-Optional: `regulatory_requirements` (array[object])
-
-```go
-	subNumberOrder, err := client.SubNumberOrders.Update(
-		context.TODO(),
-		"sub_number_order_id",
-		telnyx.SubNumberOrderUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", subNumberOrder.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Cancel a sub number order
-
-Allows you to cancel a sub number order in 'pending' status.
-
-`PATCH /sub_number_orders/{sub_number_order_id}/cancel`
-
-```go
-	response, err := client.SubNumberOrders.Cancel(context.TODO(), "sub_number_order_id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Create a sub number orders report
-
-Create a CSV report for sub number orders. The report will be generated asynchronously and can be downloaded once complete.
-
-`POST /sub_number_orders_report`
-
-Optional: `country_code` (string), `created_at_gt` (date-time), `created_at_lt` (date-time), `customer_reference` (string), `order_request_id` (uuid), `status` (enum: pending, success, failure)
-
-```go
-	subNumberOrdersReport, err := client.SubNumberOrdersReport.New(context.TODO(), telnyx.SubNumberOrdersReportNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", subNumberOrdersReport.Data)
-```
-
-Returns: `created_at` (date-time), `filters` (object), `id` (uuid), `order_type` (string), `status` (enum: pending, success, failed, expired), `updated_at` (date-time), `user_id` (uuid)
-
-## Retrieve a sub number orders report
-
-Get the status and details of a sub number orders report.
-
-`GET /sub_number_orders_report/{report_id}`
-
-```go
-	subNumberOrdersReport, err := client.SubNumberOrdersReport.Get(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c293")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", subNumberOrdersReport.Data)
-```
-
-Returns: `created_at` (date-time), `filters` (object), `id` (uuid), `order_type` (string), `status` (enum: pending, success, failed, expired), `updated_at` (date-time), `user_id` (uuid)
-
-## Download a sub number orders report
-
-Download the CSV file for a completed sub number orders report. The report status must be 'success' before the file can be downloaded.
-
-`GET /sub_number_orders_report/{report_id}/download`
-
-```go
-	response, err := client.SubNumberOrdersReport.Download(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c293")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response)
-```
+Response wrapper:
+- items: `comments.data`
+- pagination: `comments.meta`
+
+Primary item fields:
+- `ID`
+- `Body`
+- `CreatedAt`
+- `UpdatedAt`
+- `CommentRecordID`
+- `CommentRecordType`
 
 ---
 
-## Webhooks
+## Additional Operations
 
-### Webhook Verification
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
 
-Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
-and `telnyx-timestamp` headers. Always verify signatures in production:
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Create a comment | `client.Comments.New()` | `POST /comments` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a comment | `client.Comments.Get()` | `GET /comments/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Mark a comment as read | `client.Comments.MarkAsRead()` | `PATCH /comments/{id}/read` | Modify an existing resource without recreating it. | `Id` |
+| Get country coverage | `client.CountryCoverage.Get()` | `GET /country_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get coverage for a specific country | `client.CountryCoverage.GetCountry()` | `GET /country_coverage/countries/{country_code}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `CountryCode` |
+| List customer service records | `client.CustomerServiceRecords.List()` | `GET /customer_service_records` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a customer service record | `client.CustomerServiceRecords.New()` | `POST /customer_service_records` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Verify CSR phone number coverage | `client.CustomerServiceRecords.VerifyPhoneNumberCoverage()` | `POST /customer_service_records/phone_number_coverages` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Get a customer service record | `client.CustomerServiceRecords.Get()` | `GET /customer_service_records/{customer_service_record_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `CustomerServiceRecordId` |
+| List inexplicit number orders | `client.InexplicitNumberOrders.List()` | `GET /inexplicit_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create an inexplicit number order | `client.InexplicitNumberOrders.New()` | `POST /inexplicit_number_orders` | Create or provision an additional resource when the core tasks do not cover this flow. | `OrderingGroups` |
+| Retrieve an inexplicit number order | `client.InexplicitNumberOrders.Get()` | `GET /inexplicit_number_orders/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Create an inventory coverage request | `client.InventoryCoverage.List()` | `GET /inventory_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List mobile network operators | `client.MobileNetworkOperators.List()` | `GET /mobile_network_operators` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List network coverage locations | `client.NetworkCoverage.List()` | `GET /network_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List number block orders | `client.NumberBlockOrders.List()` | `GET /number_block_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a number block order | `client.NumberBlockOrders.New()` | `POST /number_block_orders` | Create or provision an additional resource when the core tasks do not cover this flow. | `StartingNumber`, `Range` |
+| Retrieve a number block order | `client.NumberBlockOrders.Get()` | `GET /number_block_orders/{number_block_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `NumberBlockOrderId` |
+| Retrieve a list of phone numbers associated to orders | `client.NumberOrderPhoneNumbers.List()` | `GET /number_order_phone_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Retrieve a single phone number within a number order. | `client.NumberOrderPhoneNumbers.Get()` | `GET /number_order_phone_numbers/{number_order_phone_number_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `NumberOrderPhoneNumberId` |
+| Update requirements for a single phone number within a number order. | `client.NumberOrderPhoneNumbers.UpdateRequirements()` | `PATCH /number_order_phone_numbers/{number_order_phone_number_id}` | Modify an existing resource without recreating it. | `NumberOrderPhoneNumberId` |
+| List number orders | `client.NumberOrders.List()` | `GET /number_orders` | Create or inspect provisioning orders for number purchases. | None |
+| Update a number order | `client.NumberOrders.Update()` | `PATCH /number_orders/{number_order_id}` | Modify an existing resource without recreating it. | `NumberOrderId` |
+| List number reservations | `client.NumberReservations.List()` | `GET /number_reservations` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Extend a number reservation | `client.NumberReservations.Actions.Extend()` | `POST /number_reservations/{number_reservation_id}/actions/extend` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `NumberReservationId` |
+| Retrieve the features for a list of numbers | `client.NumbersFeatures.New()` | `POST /numbers_features` | Create or provision an additional resource when the core tasks do not cover this flow. | `PhoneNumbers` |
+| Lists the phone number blocks jobs | `client.PhoneNumberBlocks.Jobs.List()` | `GET /phone_number_blocks/jobs` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Deletes all numbers associated with a phone number block | `client.PhoneNumberBlocks.Jobs.DeletePhoneNumberBlock()` | `POST /phone_number_blocks/jobs/delete_phone_number_block` | Create or provision an additional resource when the core tasks do not cover this flow. | `PhoneNumberBlockId` |
+| Retrieves a phone number blocks job | `client.PhoneNumberBlocks.Jobs.Get()` | `GET /phone_number_blocks/jobs/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| List sub number orders | `client.SubNumberOrders.List()` | `GET /sub_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Retrieve a sub number order | `client.SubNumberOrders.Get()` | `GET /sub_number_orders/{sub_number_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `SubNumberOrderId` |
+| Update a sub number order's requirements | `client.SubNumberOrders.Update()` | `PATCH /sub_number_orders/{sub_number_order_id}` | Modify an existing resource without recreating it. | `SubNumberOrderId` |
+| Cancel a sub number order | `client.SubNumberOrders.Cancel()` | `PATCH /sub_number_orders/{sub_number_order_id}/cancel` | Modify an existing resource without recreating it. | `SubNumberOrderId` |
+| Create a sub number orders report | `client.SubNumberOrdersReport.New()` | `POST /sub_number_orders_report` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a sub number orders report | `client.SubNumberOrdersReport.Get()` | `GET /sub_number_orders_report/{report_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `ReportId` |
+| Download a sub number orders report | `client.SubNumberOrdersReport.Download()` | `GET /sub_number_orders_report/{report_id}/download` | Fetch the current state before updating, deleting, or making control-flow decisions. | `ReportId` |
 
-```go
-// In your webhook handler:
-func handleWebhook(w http.ResponseWriter, r *http.Request) {
-  body, _ := io.ReadAll(r.Body)
-  event, err := client.Webhooks.Unwrap(body, r.Header)
-  if err != nil {
-    http.Error(w, "Invalid signature", http.StatusBadRequest)
-    return
-  }
-  // Signature valid — event is the parsed webhook payload
-  fmt.Println("Received event:", event.Data.EventType)
-  w.WriteHeader(http.StatusOK)
-}
-```
+### Other Webhook Events
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `numberOrderStatusUpdate` | `number.order.status.update` | Number Order Status Update |
 
-| Event | Description |
-|-------|-------------|
-| `numberOrderStatusUpdate` | Number Order Status Update |
+---
 
-### Webhook payload fields
-
-**`numberOrderStatusUpdate`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.event_type` | string | The type of event being sent |
-| `data.id` | uuid | Unique identifier for the event |
-| `data.occurred_at` | date-time | ISO 8601 timestamp of when the event occurred |
-| `data.payload.id` | uuid |  |
-| `data.payload.record_type` | string |  |
-| `data.payload.phone_numbers_count` | integer | The count of phone numbers in the number order. |
-| `data.payload.connection_id` | string | Identifies the connection associated with this phone number. |
-| `data.payload.messaging_profile_id` | string | Identifies the messaging profile associated with the phone number. |
-| `data.payload.billing_group_id` | string | Identifies the messaging profile associated with the phone number. |
-| `data.payload.phone_numbers` | array[object] |  |
-| `data.payload.sub_number_orders_ids` | array[string] |  |
-| `data.payload.status` | enum: pending, success, failure | The status of the order. |
-| `data.payload.customer_reference` | string | A customer reference string for customer look ups. |
-| `data.payload.created_at` | date-time | An ISO 8901 datetime string denoting when the number order was created. |
-| `data.payload.updated_at` | date-time | An ISO 8901 datetime string for when the number order was updated. |
-| `data.payload.requirements_met` | boolean | True if all requirements are met for every phone number, false otherwise. |
-| `data.record_type` | string | Type of record |
-| `meta.attempt` | integer | Webhook delivery attempt number |
-| `meta.delivered_to` | uri | URL where the webhook was delivered |
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).

@@ -1,18 +1,19 @@
 ---
 name: telnyx-ai-assistants-curl
 description: >-
-  Create and manage AI voice assistants with custom personalities, knowledge
-  bases, and tool integrations. This skill provides REST API (curl) examples.
+  AI voice assistants with custom instructions, knowledge bases, and tool
+  integrations.
 metadata:
   author: telnyx
   product: ai-assistants
   language: curl
   generated_by: telnyx-ext-skills-generator
+  profile: northstar-v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
-# Telnyx Ai Assistants - curl
+# Telnyx AI Assistants - curl
 
 ## Installation
 
@@ -34,23 +35,16 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```bash
-# Check HTTP status code in response
-response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+curl \
+  -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
-
-http_code=$(echo "$response" | tail -1)
-body=$(echo "$response" | sed '$d')
-
-case $http_code in
-  2*) echo "Success: $body" ;;
-  422) echo "Validation error — check required fields and formats" ;;
-  429) echo "Rate limited — retry after delay"; sleep 1 ;;
-  401) echo "Authentication failed — check TELNYX_API_KEY" ;;
-  *)   echo "Error $http_code: $body" ;;
-esac
+  -d '{
+  "name": "my-resource",
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "instructions": "You are a helpful assistant."
+}' \
+  "https://api.telnyx.com/v2/ai/assistants"
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -62,25 +56,30 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
-## List assistants
+## Reference Use Rules
 
-Retrieve a list of all AI Assistants configured by the user.
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-`GET /ai/assistants`
+- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
 
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants"
-```
+## Core Tasks
 
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+### Create an assistant
 
-## Create an assistant
+Assistant creation is the entrypoint for any AI assistant integration. Agents need the exact creation method and the top-level fields returned by the SDK.
 
-Create a new AI Assistant.
+`POST /ai/assistants`
 
-`POST /ai/assistants` — Required: `name`, `model`, `instructions`
-
-Optional: `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `insight_settings` (object), `llm_api_key_ref` (string), `messaging_settings` (object), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes |  |
+| `model` | string | Yes | ID of the model to use. |
+| `instructions` | string | Yes | System instructions for the assistant. |
+| `tools` | array[object] | No | The tools that the assistant can use. |
+| `description` | string | No |  |
+| `greeting` | string | No | Text that the assistant will use to start the conversation. |
+| ... | | | +11 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -88,22 +87,33 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "string",
-  "model": "string",
-  "instructions": "string"
+  "name": "my-resource",
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "instructions": "You are a helpful assistant."
 }' \
   "https://api.telnyx.com/v2/ai/assistants"
 ```
 
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+Primary response fields:
+- `.data.id`
+- `.data.name`
+- `.data.model`
+- `.data.instructions`
+- `.data.created_at`
+- `.data.description`
 
-## Import assistants from external provider
+### Chat with an assistant
 
-Import assistants from external providers. Any assistant that has already been imported will be overwritten with its latest version from the importing provider.
+Chat is the primary runtime path. Agents need the exact assistant method and the response content field.
 
-`POST /ai/assistants/import` — Required: `provider`, `api_key_ref`
+`POST /ai/assistants/{assistant_id}/chat`
 
-Optional: `import_ids` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `content` | string | Yes | The message content sent by the client to the assistant |
+| `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
+| `assistant_id` | string (UUID) | Yes |  |
+| `name` | string | No | The optional display name of the user sending the message |
 
 ```bash
 curl \
@@ -111,43 +121,31 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "provider": "elevenlabs",
-  "api_key_ref": "string"
+  "content": "Tell me a joke about cats",
+  "conversation_id": "42b20469-1215-4a9a-8964-c36f66b406f4"
 }' \
-  "https://api.telnyx.com/v2/ai/assistants/import"
+  "https://api.telnyx.com/v2/ai/assistants/550e8400-e29b-41d4-a716-446655440000/chat"
 ```
 
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
+Primary response fields:
+- `.data.content`
 
-## Get All Tags
+### Create an assistant test
 
-`GET /ai/assistants/tags`
+Test creation is the main validation path for production assistant behavior before deployment.
 
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tags"
-```
+`POST /ai/assistants/tests`
 
-Returns: `tags` (array[string])
-
-## List assistant tests with pagination
-
-Retrieves a paginated list of assistant tests with optional filtering capabilities
-
-`GET /ai/assistants/tests`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests"
-```
-
-Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
-
-## Create a new assistant test
-
-Creates a comprehensive test configuration for evaluating AI assistant performance
-
-`POST /ai/assistants/tests` — Required: `name`, `destination`, `instructions`, `rubric`
-
-Optional: `description` (string), `max_duration_seconds` (integer), `telnyx_conversation_channel` (object), `test_suite` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | A descriptive name for the assistant test. |
+| `destination` | string | Yes | The target destination for the test conversation. |
+| `instructions` | string | Yes | Detailed instructions that define the test scenario and what... |
+| `rubric` | array[object] | Yes | Evaluation criteria used to assess the assistant's performan... |
+| `description` | string | No | Optional detailed description of what this test evaluates an... |
+| `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
+| `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -156,7 +154,6 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "name": "Customer Support Bot Test",
-  "telnyx_conversation_channel": "web_chat",
   "destination": "+15551234567",
   "instructions": "Act as a frustrated customer who received a damaged product. Ask for a refund and escalate if not satisfied with the initial response.",
   "rubric": [
@@ -173,11 +170,177 @@ curl \
   "https://api.telnyx.com/v2/ai/assistants/tests"
 ```
 
-Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
+Primary response fields:
+- `.data.test_id`
+- `.data.name`
+- `.data.destination`
+- `.data.created_at`
+- `.data.instructions`
+- `.data.description`
 
-## Get all test suite names
+---
 
-Retrieves a list of all distinct test suite names available to the current user
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Get an assistant
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`GET /ai/assistants/{assistant_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `assistant_id` | string (UUID) | Yes |  |
+| `call_control_id` | string (UUID) | No |  |
+| `fetch_dynamic_variables_from_webhook` | boolean | No |  |
+| `from` | string (E.164) | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Primary response fields:
+- `.data.id`
+- `.data.name`
+- `.data.created_at`
+- `.data.description`
+- `.data.dynamic_variables`
+- `.data.dynamic_variables_webhook_url`
+
+### Update an assistant
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`POST /ai/assistants/{assistant_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `assistant_id` | string (UUID) | Yes |  |
+| `name` | string | No |  |
+| `model` | string | No | ID of the model to use. |
+| `instructions` | string | No | System instructions for the assistant. |
+| ... | | | +15 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/ai/assistants/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Primary response fields:
+- `.data.id`
+- `.data.name`
+- `.data.created_at`
+- `.data.description`
+- `.data.dynamic_variables`
+- `.data.dynamic_variables_webhook_url`
+
+### List assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`GET /ai/assistants`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants"
+```
+
+Response wrapper:
+- items: `.data`
+
+Primary item fields:
+- `id`
+- `name`
+- `created_at`
+- `description`
+- `dynamic_variables`
+- `dynamic_variables_webhook_url`
+
+### Import assistants from external provider
+
+Import existing assistants from an external provider instead of creating from scratch.
+
+`POST /ai/assistants/import`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
+| `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
+| `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "provider": "elevenlabs",
+  "api_key_ref": "my-openai-key"
+}' \
+  "https://api.telnyx.com/v2/ai/assistants/import"
+```
+
+Response wrapper:
+- items: `.data`
+
+Primary item fields:
+- `id`
+- `name`
+- `created_at`
+- `description`
+- `dynamic_variables`
+- `dynamic_variables_webhook_url`
+
+### Get All Tags
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`GET /ai/assistants/tags`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tags"
+```
+
+Primary response fields:
+- `.data.tags`
+
+### List assistant tests with pagination
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`GET /ai/assistants/tests`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `test_suite` | string | No | Filter tests by test suite name |
+| `telnyx_conversation_channel` | string | No | Filter tests by communication channel (e.g., 'web_chat', 'sm... |
+| `destination` | string | No | Filter tests by destination (phone number, webhook URL, etc.... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests"
+```
+
+Response wrapper:
+- items: `.data`
+- pagination: `.meta`
+
+Primary item fields:
+- `name`
+- `created_at`
+- `description`
+- `destination`
+- `instructions`
+- `max_duration_seconds`
+
+### Get all test suite names
+
+Inspect available resources or choose an existing resource before mutating it.
 
 `GET /ai/assistants/tests/test-suites`
 
@@ -185,560 +348,83 @@ Retrieves a list of all distinct test suite names available to the current user
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/test-suites"
 ```
 
-Returns: `data` (array[string])
+Response wrapper:
+- items: `.data`
 
-## Get test suite run history
+Primary item fields:
+- `data`
 
-Retrieves paginated history of test runs for a specific test suite with filtering options
+### Get test suite run history
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
 
 `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `suite_name` | string | Yes |  |
+| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
+| `status` | string | No | Filter runs by execution status (pending, running, completed... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/test-suites/{suite_name}/runs"
 ```
 
-Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
-
-## Trigger test suite execution
-
-Executes all tests within a specific test suite as a batch operation
-
-`POST /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-Optional: `destination_version_id` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "destination_version_id": "123e4567-e89b-12d3-a456-426614174000"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/tests/test-suites/{suite_name}/runs"
-```
-
-## Get assistant test by ID
-
-Retrieves detailed information about a specific assistant test
-
-`GET /ai/assistants/tests/{test_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
-
-## Update an assistant test
-
-Updates an existing assistant test configuration with new settings
-
-`PUT /ai/assistants/tests/{test_id}`
-
-Optional: `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (enum: phone_call, web_call, sms_chat, web_chat), `test_suite` (string)
-
-```bash
-curl \
-  -X PUT \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `destination` (string), `instructions` (string), `max_duration_seconds` (integer), `name` (string), `rubric` (array[object]), `telnyx_conversation_channel` (object), `test_id` (uuid), `test_suite` (string)
-
-## Delete an assistant test
-
-Permanently removes an assistant test and all associated data
-
-`DELETE /ai/assistants/tests/{test_id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}"
-```
-
-## Get test run history for a specific test
-
-Retrieves paginated execution history for a specific assistant test with filtering options
-
-`GET /ai/assistants/tests/{test_id}/runs`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs"
-```
-
-Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
-
-## Trigger a manual test run
-
-Initiates immediate execution of a specific assistant test
-
-`POST /ai/assistants/tests/{test_id}/runs`
-
-Optional: `destination_version_id` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "destination_version_id": "123e4567-e89b-12d3-a456-426614174000"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs"
-```
-
-Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
-
-## Get specific test run details
-
-Retrieves detailed information about a specific test run execution
-
-`GET /ai/assistants/tests/{test_id}/runs/{run_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/{test_id}/runs/{run_id}"
-```
-
-Returns: `completed_at` (date-time), `conversation_id` (string), `conversation_insights_id` (string), `created_at` (date-time), `detail_status` (array[object]), `logs` (string), `run_id` (uuid), `status` (enum: pending, starting, running, passed, failed, error), `test_id` (uuid), `test_suite_run_id` (uuid), `triggered_by` (string), `updated_at` (date-time)
-
-## Get an assistant
-
-Retrieve an AI Assistant configuration by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## Update an assistant
-
-Update an AI Assistant's attributes.
-
-`POST /ai/assistants/{assistant_id}`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## Delete an assistant
-
-Delete an AI Assistant by `assistant_id`.
-
-`DELETE /ai/assistants/{assistant_id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}"
-```
-
-Returns: `deleted` (boolean), `id` (string), `object` (string)
-
-## Get Canary Deploy
-
-Endpoint to get a canary deploy configuration for an assistant. Retrieves the current canary deploy configuration with all version IDs and their
-traffic percentages for the specified assistant.
-
-`GET /ai/assistants/{assistant_id}/canary-deploys`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
-```
-
-Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
-
-## Create Canary Deploy
-
-Endpoint to create a canary deploy configuration for an assistant. Creates a new canary deploy configuration with multiple version IDs and their traffic
-percentages for A/B testing or gradual rollouts of assistant versions.
-
-`POST /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "versions": [
-    "string"
-  ]
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
-```
-
-Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
-
-## Update Canary Deploy
-
-Endpoint to update a canary deploy configuration for an assistant. Updates the existing canary deploy configuration with new version IDs and percentages. All old versions and percentages are replaces by new ones from this request.
-
-`PUT /ai/assistants/{assistant_id}/canary-deploys` — Required: `versions`
-
-```bash
-curl \
-  -X PUT \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "versions": [
-    "string"
-  ]
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
-```
-
-Returns: `assistant_id` (string), `created_at` (date-time), `updated_at` (date-time), `versions` (array[object])
-
-## Delete Canary Deploy
-
-Endpoint to delete a canary deploy configuration for an assistant. Removes all canary deploy configurations for the specified assistant.
-
-`DELETE /ai/assistants/{assistant_id}/canary-deploys`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/canary-deploys"
-```
-
-## Assistant Chat (BETA)
-
-This endpoint allows a client to send a chat message to a specific AI Assistant. The assistant processes the message and returns a relevant reply based on the current conversation context.
-
-`POST /ai/assistants/{assistant_id}/chat` — Required: `content`, `conversation_id`
-
-Optional: `name` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "content": "Tell me a joke about cats",
-  "name": "Charlie",
-  "conversation_id": "42b20469-1215-4a9a-8964-c36f66b406f4"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/chat"
-```
-
-Returns: `content` (string)
-
-## Assistant Sms Chat
-
-Send an SMS message for an assistant. This endpoint: 
-1. Validates the assistant exists and has messaging profile configured 
-2.
-
-`POST /ai/assistants/{assistant_id}/chat/sms` — Required: `from`, `to`
-
-Optional: `conversation_metadata` (object), `should_create_conversation` (boolean), `text` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "from": "string",
-  "to": "string"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/chat/sms"
-```
-
-Returns: `conversation_id` (string)
-
-## Clone Assistant
-
-Clone an existing assistant, excluding telephony and messaging settings.
-
-`POST /ai/assistants/{assistant_id}/clone`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/clone"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## List scheduled events
-
-Get scheduled events for an assistant with pagination and filtering
-
-`GET /ai/assistants/{assistant_id}/scheduled_events`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events"
-```
-
-Returns: `data` (array[object]), `meta` (object)
-
-## Create a scheduled event
-
-Create a scheduled event for an assistant
-
-`POST /ai/assistants/{assistant_id}/scheduled_events` — Required: `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`
-
-Optional: `conversation_metadata` (object), `dynamic_variables` (object), `text` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "telnyx_conversation_channel": "phone_call",
-  "telnyx_end_user_target": "string",
-  "telnyx_agent_target": "string",
-  "scheduled_at_fixed_datetime": "2025-04-15T13:07:28.764Z"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events"
-```
-
-## Get a scheduled event
-
-Retrieve a scheduled event by event ID
-
-`GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events/{event_id}"
-```
-
-## Delete a scheduled event
-
-If the event is pending, this will cancel the event. Otherwise, this will simply remove the record of the event.
-
-`DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/scheduled_events/{event_id}"
-```
-
-## Add Assistant Tag
-
-`POST /ai/assistants/{assistant_id}/tags` — Required: `tag`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "tag": "string"
-}' \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tags"
-```
-
-Returns: `tags` (array[string])
-
-## Remove Assistant Tag
-
-`DELETE /ai/assistants/{assistant_id}/tags/{tag}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tags/{tag}"
-```
-
-Returns: `tags` (array[string])
-
-## Get assistant texml
-
-Get an assistant texml by `assistant_id`.
-
-`GET /ai/assistants/{assistant_id}/texml`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/texml"
-```
-
-## Test Assistant Tool
-
-Test a webhook tool for an assistant
-
-`POST /ai/assistants/{assistant_id}/tools/{tool_id}/test`
-
-Optional: `arguments` (object), `dynamic_variables` (object)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/tools/{tool_id}/test"
-```
-
-Returns: `content_type` (string), `request` (object), `response` (string), `status_code` (integer), `success` (boolean)
-
-## Get all versions of an assistant
-
-Retrieves all versions of a specific assistant with complete configuration and metadata
-
-`GET /ai/assistants/{assistant_id}/versions`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## Get a specific assistant version
-
-Retrieves a specific version of an assistant by assistant_id and version_id
-
-`GET /ai/assistants/{assistant_id}/versions/{version_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## Update a specific assistant version
-
-Updates the configuration of a specific assistant version. Can not update main version
-
-`POST /ai/assistants/{assistant_id}/versions/{version_id}`
-
-Optional: `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## Delete a specific assistant version
-
-Permanently removes a specific version of an assistant. Can not delete main version
-
-`DELETE /ai/assistants/{assistant_id}/versions/{version_id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}"
-```
-
-## Promote an assistant version to main
-
-Promotes a specific version to be the main/current version of the assistant. This will delete any existing canary deploy configuration and send all live production traffic to this version.
-
-`POST /ai/assistants/{assistant_id}/versions/{version_id}/promote`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/versions/{version_id}/promote"
-```
-
-Returns: `created_at` (date-time), `description` (string), `dynamic_variables` (object), `dynamic_variables_webhook_url` (string), `enabled_features` (array[object]), `greeting` (string), `id` (string), `import_metadata` (object), `insight_settings` (object), `instructions` (string), `llm_api_key_ref` (string), `messaging_settings` (object), `model` (string), `name` (string), `privacy_settings` (object), `telephony_settings` (object), `tools` (array[object]), `transcription` (object), `voice_settings` (object), `widget_settings` (object)
-
-## List MCP Servers
-
-Retrieve a list of MCP servers.
-
-`GET /ai/mcp_servers`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mcp_servers"
-```
-
-## Create MCP Server
-
-Create a new MCP server.
-
-`POST /ai/mcp_servers` — Required: `name`, `type`, `url`
-
-Optional: `allowed_tools` (array | null), `api_key_ref` (string | null)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "name": "string",
-  "type": "string",
-  "url": "string"
-}' \
-  "https://api.telnyx.com/v2/ai/mcp_servers"
-```
-
-Returns: `allowed_tools` (array | null), `api_key_ref` (string | null), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
-
-## Get MCP Server
-
-Retrieve details for a specific MCP server.
-
-`GET /ai/mcp_servers/{mcp_server_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mcp_servers/{mcp_server_id}"
-```
-
-Returns: `allowed_tools` (array | null), `api_key_ref` (string | null), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
-
-## Update MCP Server
-
-Update an existing MCP server.
-
-`PUT /ai/mcp_servers/{mcp_server_id}`
-
-Optional: `allowed_tools` (array | null), `api_key_ref` (string | null), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
-
-```bash
-curl \
-  -X PUT \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/mcp_servers/{mcp_server_id}"
-```
-
-Returns: `allowed_tools` (array | null), `api_key_ref` (string | null), `created_at` (date-time), `id` (string), `name` (string), `type` (string), `url` (string)
-
-## Delete MCP Server
-
-Delete a specific MCP server.
-
-`DELETE /ai/mcp_servers/{mcp_server_id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/ai/mcp_servers/{mcp_server_id}"
-```
+Response wrapper:
+- items: `.data`
+- pagination: `.meta`
+
+Primary item fields:
+- `status`
+- `created_at`
+- `updated_at`
+- `completed_at`
+- `conversation_id`
+- `conversation_insights_id`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Trigger test suite execution | HTTP only | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
+| Get assistant test by ID | HTTP only | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Update an assistant test | HTTP only | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
+| Delete an assistant test | HTTP only | `DELETE /ai/assistants/tests/{test_id}` | Remove, detach, or clean up an existing resource. | `test_id` |
+| Get test run history for a specific test | HTTP only | `GET /ai/assistants/tests/{test_id}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Trigger a manual test run | HTTP only | `POST /ai/assistants/tests/{test_id}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `test_id` |
+| Get specific test run details | HTTP only | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id`, `run_id` |
+| Delete an assistant | HTTP only | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Get Canary Deploy | HTTP only | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create Canary Deploy | HTTP only | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `versions`, `assistant_id` |
+| Update Canary Deploy | HTTP only | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `versions`, `assistant_id` |
+| Delete Canary Deploy | HTTP only | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Assistant Sms Chat | HTTP only | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Clone Assistant | HTTP only | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| List scheduled events | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create a scheduled event | HTTP only | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
+| Get a scheduled event | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |
+| Delete a scheduled event | HTTP only | `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `event_id` |
+| Add Assistant Tag | HTTP only | `POST /ai/assistants/{assistant_id}/tags` | Create or provision an additional resource when the core tasks do not cover this flow. | `tag`, `assistant_id` |
+| Remove Assistant Tag | HTTP only | `DELETE /ai/assistants/{assistant_id}/tags/{tag}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `tag` |
+| Get assistant texml | HTTP only | `GET /ai/assistants/{assistant_id}/texml` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Test Assistant Tool | HTTP only | `POST /ai/assistants/{assistant_id}/tools/{tool_id}/test` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `tool_id` |
+| Get all versions of an assistant | HTTP only | `GET /ai/assistants/{assistant_id}/versions` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Get a specific assistant version | HTTP only | `GET /ai/assistants/{assistant_id}/versions/{version_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `version_id` |
+| Update a specific assistant version | HTTP only | `POST /ai/assistants/{assistant_id}/versions/{version_id}` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id`, `version_id` |
+| Delete a specific assistant version | HTTP only | `DELETE /ai/assistants/{assistant_id}/versions/{version_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `version_id` |
+| Promote an assistant version to main | HTTP only | `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `version_id` |
+| List MCP Servers | HTTP only | `GET /ai/mcp_servers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create MCP Server | HTTP only | `POST /ai/mcp_servers` | Create or provision an additional resource when the core tasks do not cover this flow. | `name`, `type`, `url` |
+| Get MCP Server | HTTP only | `GET /ai/mcp_servers/{mcp_server_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `mcp_server_id` |
+| Update MCP Server | HTTP only | `PUT /ai/mcp_servers/{mcp_server_id}` | Modify an existing resource without recreating it. | `mcp_server_id` |
+| Delete MCP Server | HTTP only | `DELETE /ai/mcp_servers/{mcp_server_id}` | Remove, detach, or clean up an existing resource. | `mcp_server_id` |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).

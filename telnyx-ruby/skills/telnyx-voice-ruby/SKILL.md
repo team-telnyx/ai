@@ -1,14 +1,14 @@
 ---
 name: telnyx-voice-ruby
 description: >-
-  Make and receive calls, transfer, bridge, and manage call lifecycle with Call
-  Control. Includes application management and call events. This skill provides
-  Ruby SDK examples.
+  Programmatic call control: make/receive calls, transfer, bridge, gather DTMF,
+  stream audio. Real-time call events via webhooks.
 metadata:
   author: telnyx
   product: voice
   language: ruby
   generated_by: telnyx-ext-skills-generator
+  profile: northstar-v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -39,19 +39,12 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```ruby
-begin
-  result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
-rescue Telnyx::Errors::APIConnectionError
-  puts "Network error — check connectivity and retry"
-rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
-  sleep(1) # Check Retry-After header for actual delay
-rescue Telnyx::Errors::APIStatusError => e
-  puts "API error #{e.status}: #{e.message}"
-  if e.status == 422
-    puts "Validation error — check required fields and formats"
-  end
-end
+response = client.calls.dial(
+  connection_id: "7267xxxxxxxxxxxxxx",
+  from: "+18005550101",
+  to: "+18005550100"
+)
+puts(response)
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -63,94 +56,37 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `.auto_paging_each` for automatic iteration: `page.auto_paging_each { |item| puts item.id }`.
 
-## List call control applications
+## Operational Caveats
 
-Return a list of call control applications.
+- Call Control is event-driven. After `dial()` or an inbound webhook, issue follow-up commands from webhook handlers using the `call_control_id` in the event payload.
+- Outbound and inbound flows are different: outbound calls start with `dial()`, while inbound calls must be answered from the incoming webhook before other commands run.
+- A publicly reachable webhook endpoint is required for real call control. Without it, calls may connect but your application cannot drive the live call state.
 
-`GET /call_control_applications`
+## Reference Use Rules
 
-```ruby
-page = client.call_control_applications.list
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-puts(page)
-```
+- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
+## Core Tasks
 
-## Create a call control application
+### Dial an outbound call
 
-Create a call control application.
+Primary voice entrypoint. Agents need the async call-control identifiers returned here.
 
-`POST /call_control_applications` — Required: `application_name`, `webhook_event_url`
+`client.calls.dial()` — `POST /calls`
 
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `redact_dtmf_debug_logging` (boolean), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_timeout_secs` (integer | null)
-
-```ruby
-call_control_application = client.call_control_applications.create(
-  application_name: "call-router",
-  webhook_event_url: "https://example.com"
-)
-
-puts(call_control_application)
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Retrieve a call control application
-
-Retrieves the details of an existing call control application.
-
-`GET /call_control_applications/{id}`
-
-```ruby
-call_control_application = client.call_control_applications.retrieve("1293384261075731499")
-
-puts(call_control_application)
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Update a call control application
-
-Updates settings of an existing call control application.
-
-`PATCH /call_control_applications/{id}` — Required: `application_name`, `webhook_event_url`
-
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_timeout_secs` (integer | null)
-
-```ruby
-call_control_application = client.call_control_applications.update(
-  "1293384261075731499",
-  application_name: "call-router",
-  webhook_event_url: "https://example.com"
-)
-
-puts(call_control_application)
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Delete a call control application
-
-Deletes a call control application.
-
-`DELETE /call_control_applications/{id}`
-
-```ruby
-call_control_application = client.call_control_applications.delete("1293384261075731499")
-
-puts(call_control_application)
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Dial
-
-Dial a number or SIP URI from a given connection. A successful response will include a `call_leg_id` which can be used to correlate the command with subsequent webhooks.
-
-`POST /calls` — Required: `connection_id`, `to`, `from`
-
-Optional: `answering_machine_detection` (enum: premium, detect, detect_beep, detect_words, greeting_end, disabled), `answering_machine_detection_config` (object), `audio_url` (string), `billing_group_id` (uuid), `bridge_intent` (boolean), `bridge_on_answer` (boolean), `client_state` (string), `command_id` (string), `conference_config` (object), `custom_headers` (array[object]), `dialogflow_config` (object), `enable_dialogflow` (boolean), `from_display_name` (string), `link_to` (string), `media_encryption` (enum: disabled, SRTP, DTLS), `media_name` (string), `park_after_unbridge` (string), `preferred_codecs` (string), `prevent_double_bridge` (boolean), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `send_silence_when_idle` (boolean), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object]), `sip_region` (enum: US, Europe, Canada, Australia, Middle East), `sip_transport_protocol` (enum: UDP, TCP, TLS), `sound_modifications` (object), `stream_auth_token` (string), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_sampling_rate` (enum: 8000, 16000, 22050, 24000, 48000), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_establish_before_call_originate` (boolean), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string), `supervise_call_control_id` (string), `supervisor_role` (enum: barge, whisper, monitor), `time_limit_secs` (int32), `timeout_secs` (int32), `transcription` (boolean), `transcription_config` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
+| `from` | string (E.164) | Yes | The `from` number to be used as the caller id presented to t... |
+| `connection_id` | string (UUID) | Yes | The ID of the Call Control App (formerly ID of the connectio... |
+| `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| ... | | | +48 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.dial(
@@ -162,151 +98,52 @@ response = client.calls.dial(
 puts(response)
 ```
 
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `end_time` (string), `is_alive` (boolean), `record_type` (enum: call), `recording_id` (uuid), `start_time` (string)
+Primary response fields:
+- `response.data.call_control_id`
+- `response.data.call_leg_id`
+- `response.data.call_session_id`
+- `response.data.is_alive`
+- `response.data.recording_id`
+- `response.data.call_duration`
 
-## Retrieve a call status
+### Answer an inbound call
 
-Returns the status of a call (data is available 10 minutes after call ended).
+Primary inbound call-control command.
 
-`GET /calls/{call_control_id}`
+`client.calls.actions.answer()` — `POST /calls/{call_control_id}/actions/answer`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
-response = client.calls.retrieve_status("call_control_id")
+response = client.calls.actions.answer("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
 
 puts(response)
 ```
 
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `end_time` (string), `is_alive` (boolean), `record_type` (enum: call), `start_time` (string)
+Primary response fields:
+- `response.data.result`
+- `response.data.recording_id`
 
-## Answer call
+### Transfer a live call
 
-Answer an incoming call. You must issue this command before executing subsequent commands on an incoming call. **Expected Webhooks:**
+Common post-answer control path with downstream webhook implications.
 
-- `call.answered`
-- `streaming.started`, `streaming.stopped` or `streaming.failed` if `stream_url` was set
+`client.calls.actions.transfer()` — `POST /calls/{call_control_id}/actions/transfer`
 
-When the `record` parameter is set to `record-from-answer`, the response will include a `recording_id` field.
-
-`POST /calls/{call_control_id}/actions/answer`
-
-Optional: `billing_group_id` (uuid), `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `preferred_codecs` (enum: G722,PCMU,PCMA,G729,OPUS,VP8,H264), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `send_silence_when_idle` (boolean), `sip_headers` (array[object]), `sound_modifications` (object), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string), `transcription` (boolean), `transcription_config` (object), `webhook_retries_policies` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET), `webhook_urls` (object), `webhook_urls_method` (enum: POST, GET)
-
-```ruby
-response = client.calls.actions.answer("call_control_id")
-
-puts(response)
-```
-
-Returns: `recording_id` (uuid), `result` (string)
-
-## Bridge calls
-
-Bridge two call control calls. **Expected Webhooks:**
-
-- `call.bridged` for Leg A
-- `call.bridged` for Leg B
-
-`POST /calls/{call_control_id}/actions/bridge` — Required: `call_control_id`
-
-Optional: `client_state` (string), `command_id` (string), `hold_after_unbridge` (boolean), `mute_dtmf` (enum: none, both, self, opposite), `park_after_unbridge` (string), `play_ringtone` (boolean), `prevent_double_bridge` (boolean), `queue` (string), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `ringtone` (enum: at, au, be, bg, br, ch, cl, cn, cz, de, dk, ee, es, fi, fr, gr, hu, il, in, it, jp, lt, mx, my, nl, no, nz, ph, pl, pt, ru, se, sg, th, tw, uk, us-old, us, ve, za), `video_room_context` (string), `video_room_id` (uuid)
-
-```ruby
-response = client.calls.actions.bridge(
-  "call_control_id",
-  call_control_id_to_bridge_with: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg"
-)
-
-puts(response)
-```
-
-Returns: `result` (string)
-
-## Hangup call
-
-Hang up the call. **Expected Webhooks:**
-
-- `call.hangup`
-- `call.recording.saved`
-
-`POST /calls/{call_control_id}/actions/hangup`
-
-Optional: `client_state` (string), `command_id` (string), `custom_headers` (array[object])
-
-```ruby
-response = client.calls.actions.hangup("call_control_id")
-
-puts(response)
-```
-
-Returns: `result` (string)
-
-## SIP Refer a call
-
-Initiate a SIP Refer on a Call Control call. You can initiate a SIP Refer at any point in the duration of a call. **Expected Webhooks:**
-
-- `call.refer.started`
-- `call.refer.completed`
-- `call.refer.failed`
-
-`POST /calls/{call_control_id}/actions/refer` — Required: `sip_address`
-
-Optional: `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object])
-
-```ruby
-response = client.calls.actions.refer("call_control_id", sip_address: "sip:username@sip.non-telnyx-address.com")
-
-puts(response)
-```
-
-Returns: `result` (string)
-
-## Reject a call
-
-Reject an incoming call. **Expected Webhooks:**
-
-- `call.hangup`
-
-`POST /calls/{call_control_id}/actions/reject` — Required: `cause`
-
-Optional: `client_state` (string), `command_id` (string)
-
-```ruby
-response = client.calls.actions.reject("call_control_id", cause: :USER_BUSY)
-
-puts(response)
-```
-
-Returns: `result` (string)
-
-## Send SIP info
-
-Sends SIP info from this leg. **Expected Webhooks:**
-
-- `call.sip_info.received` (to be received on the target call leg)
-
-`POST /calls/{call_control_id}/actions/send_sip_info` — Required: `content_type`, `body`
-
-Optional: `client_state` (string), `command_id` (string)
-
-```ruby
-response = client.calls.actions.send_sip_info(
-  "call_control_id",
-  body: "{\"key\": \"value\", \"numValue\": 100}",
-  content_type: "application/json"
-)
-
-puts(response)
-```
-
-Returns: `result` (string)
-
-## Transfer call
-
-Transfer a call to a new destination. If the transfer is unsuccessful, a `call.hangup` webhook for the other call (Leg B) will be sent indicating that the transfer could not be completed. The original call will remain active and may be issued additional commands, potentially transferring the call to an alternate destination.
-
-`POST /calls/{call_control_id}/actions/transfer` — Required: `to`
-
-Optional: `answering_machine_detection` (enum: premium, detect, detect_beep, detect_words, greeting_end, disabled), `answering_machine_detection_config` (object), `audio_url` (string), `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `early_media` (boolean), `from` (string), `from_display_name` (string), `media_encryption` (enum: disabled, SRTP, DTLS), `media_name` (string), `mute_dtmf` (enum: none, both, self, opposite), `park_after_unbridge` (string), `preferred_codecs` (string), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object]), `sip_region` (enum: US, Europe, Canada, Australia, Middle East), `sip_transport_protocol` (enum: UDP, TCP, TLS), `sound_modifications` (object), `target_leg_client_state` (string), `time_limit_secs` (int32), `timeout_secs` (int32), `webhook_retries_policies` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET), `webhook_urls` (object), `webhook_urls_method` (enum: POST, GET)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| ... | | | +33 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.actions.transfer("call_control_id", to: "+18005550100")
@@ -314,25 +151,10 @@ response = client.calls.actions.transfer("call_control_id", to: "+18005550100")
 puts(response)
 ```
 
-Returns: `result` (string)
-
-## List all active calls for given connection
-
-Lists all active calls for given connection. Acceptable connections are either SIP connections with webhook_url or xml_request_url, call control or texml. Returned results are cursor paginated.
-
-`GET /connections/{connection_id}/active_calls`
-
-```ruby
-page = client.connections.list_active_calls("1293384261075731461")
-
-puts(page)
-```
-
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `record_type` (enum: call)
+Primary response fields:
+- `response.data.result`
 
 ---
-
-## Webhooks
 
 ### Webhook Verification
 
@@ -358,19 +180,11 @@ post "/webhooks" do
 end
 ```
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+## Webhooks
 
-| Event | Description |
-|-------|-------------|
-| `callAnswered` | Call Answered |
-| `callBridged` | Call Bridged |
-| `callHangup` | Call Hangup |
-| `callInitiated` | Call Initiated |
+These webhook payload fields are inline because they are part of the primary integration path.
 
-### Webhook payload fields
-
-**`callAnswered`**
+### Call Answered
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -381,33 +195,9 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
 | `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
 | `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.custom_headers` | array[object] | Custom headers set on answer command |
-| `data.payload.sip_headers` | array[object] | User-to-User and Diversion headers from sip invite. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.start_time` | date-time | ISO 8601 datetime of when the call started. |
-| `data.payload.state` | enum: answered | State received from a command. |
-| `data.payload.tags` | array[string] | Array of tags associated to number. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook ev... |
 
-**`callBridged`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.bridged | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-
-**`callHangup`**
+### Call Hangup
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -418,21 +208,9 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
 | `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
 | `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.custom_headers` | array[object] | Custom headers set on answer command |
-| `data.payload.sip_headers` | array[object] | User-to-User and Diversion headers from sip invite. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.start_time` | date-time | ISO 8601 datetime of when the call started. |
-| `data.payload.state` | enum: hangup | State received from a command. |
-| `data.payload.tags` | array[string] | Array of tags associated to number. |
-| `data.payload.hangup_cause` | enum: call_rejected, normal_clearing, originator_cancel, timeout, time_limit, user_busy, not_found, no_answer, unspecified | The reason the call was ended (`call_rejected`, `normal_clearing`, `originator_cancel`, `timeout`, `time_limit`, `use... |
-| `data.payload.hangup_source` | enum: caller, callee, unknown | The party who ended the call (`callee`, `caller`, `unknown`). |
-| `data.payload.sip_hangup_cause` | string | The reason the call was ended (SIP response code). |
-| `data.payload.call_quality_stats` | object | null | Call quality statistics aggregated from the CHANNEL_HANGUP_COMPLETE event. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook ev... |
 
-**`callInitiated`**
+### Call Initiated
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -444,18 +222,191 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
 | `data.payload.connection_codecs` | string | The list of comma-separated codecs enabled for the connection. |
 | `data.payload.offered_codecs` | string | The list of comma-separated codecs offered by caller. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.custom_headers` | array[object] | Custom headers from sip invite |
-| `data.payload.sip_headers` | array[object] | User-to-User and Diversion headers from sip invite. |
-| `data.payload.shaken_stir_attestation` | string | SHAKEN/STIR attestation level. |
-| `data.payload.shaken_stir_validated` | boolean | Whether attestation was successfully validated or not. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.caller_id_name` | string | Caller id. |
-| `data.payload.call_screening_result` | string | Call screening result. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.direction` | enum: incoming, outgoing | Whether the call is `incoming` or `outgoing`. |
-| `data.payload.state` | enum: parked, bridging | State received from a command. |
-| `data.payload.start_time` | date-time | ISO 8601 datetime of when the call started. |
-| `data.payload.tags` | array[string] | Array of tags associated to number. |
+
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Hangup call
+
+End a live call from your webhook-driven control flow.
+
+`client.calls.actions.hangup()` — `POST /calls/{call_control_id}/actions/hangup`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `custom_headers` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+
+```ruby
+response = client.calls.actions.hangup("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
+
+puts(response)
+```
+
+Primary response fields:
+- `response.data.result`
+
+### Bridge calls
+
+Trigger a follow-up action in an existing workflow rather than creating a new top-level resource.
+
+`client.calls.actions.bridge()` — `POST /calls/{call_control_id}/actions/bridge`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `video_room_id` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
+| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+response = client.calls.actions.bridge(
+  "call_control_id",
+  call_control_id_to_bridge_with: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg"
+)
+
+puts(response)
+```
+
+Primary response fields:
+- `response.data.result`
+
+### Reject a call
+
+Trigger a follow-up action in an existing workflow rather than creating a new top-level resource.
+
+`client.calls.actions.reject()` — `POST /calls/{call_control_id}/actions/reject`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+
+```ruby
+response = client.calls.actions.reject("call_control_id", cause: :USER_BUSY)
+
+puts(response)
+```
+
+Primary response fields:
+- `response.data.result`
+
+### Retrieve a call status
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.calls.retrieve_status()` — `GET /calls/{call_control_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+
+```ruby
+response = client.calls.retrieve_status("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
+
+puts(response)
+```
+
+Primary response fields:
+- `response.data.call_control_id`
+- `response.data.call_duration`
+- `response.data.call_leg_id`
+- `response.data.call_session_id`
+- `response.data.client_state`
+- `response.data.end_time`
+
+### List all active calls for given connection
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.connections.list_active_calls()` — `GET /connections/{connection_id}/active_calls`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Telnyx connection id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```ruby
+page = client.connections.list_active_calls("1293384261075731461")
+
+puts(page)
+```
+
+Response wrapper:
+- items: `page.data`
+- pagination: `page.meta`
+
+Primary item fields:
+- `call_control_id`
+- `call_duration`
+- `call_leg_id`
+- `call_session_id`
+- `client_state`
+- `record_type`
+
+### List call control applications
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.call_control_applications.list()` — `GET /call_control_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, connection_name, active) | No | Specifies the sort order for results. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```ruby
+page = client.call_control_applications.list
+
+puts(page)
+```
+
+Response wrapper:
+- items: `page.data`
+- pagination: `page.meta`
+
+Primary item fields:
+- `id`
+- `created_at`
+- `updated_at`
+- `active`
+- `anchorsite_override`
+- `application_name`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Create a call control application | `client.call_control_applications.create()` | `POST /call_control_applications` | Create or provision an additional resource when the core tasks do not cover this flow. | `application_name`, `webhook_event_url` |
+| Retrieve a call control application | `client.call_control_applications.retrieve()` | `GET /call_control_applications/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| Update a call control application | `client.call_control_applications.update()` | `PATCH /call_control_applications/{id}` | Modify an existing resource without recreating it. | `application_name`, `webhook_event_url`, `id` |
+| Delete a call control application | `client.call_control_applications.delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
+| SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
+| Send SIP info | `client.calls.actions.send_sip_info()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
+
+### Other Webhook Events
+
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `callBridged` | `call.bridged` | Call Bridged |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).
