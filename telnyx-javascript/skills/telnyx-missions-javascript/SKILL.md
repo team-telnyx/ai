@@ -1,9 +1,8 @@
 ---
 name: telnyx-missions-javascript
 description: >-
-  Create and manage Telnyx Missions — automated workflows, tasks, and
-  sub-resources for AI-driven telecom operations. This skill provides JavaScript
-  SDK examples.
+  Telnyx Missions: automated workflows, tasks, and sub-resources for AI-driven
+  operations.
 metadata:
   author: telnyx
   product: missions
@@ -14,6 +13,24 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Missions - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. No special setup required — just a Telnyx API key
+
+### Steps
+
+1. **Create mission**: `client.missions.create({name: ..., description: ...})`
+2. **Add tasks**: `client.missionTasks.create({missionId: ..., ...: ...})`
+3. **Monitor progress**: `client.missions.retrieve({id: ...})`
+
+### Common mistakes
+
+- Missions orchestrate multi-step AI workflows — each task runs independently
+
+**Related skills**: telnyx-ai-assistants-javascript, telnyx-ai-inference-javascript
 
 ## Installation
 
@@ -40,7 +57,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.missions.create(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -65,11 +82,18 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List missions
 
 List all missions for the organization
 
-`GET /ai/missions`
+`client.ai.missions.list()` — `GET /ai/missions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -78,29 +102,41 @@ for await (const missionData of client.ai.missions.list()) {
 }
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Create mission
 
 Create a new mission definition
 
-`POST /ai/missions` — Required: `name`
+`client.ai.missions.create()` — `POST /ai/missions`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes |  |
+| `executionMode` | enum (external, managed) | No |  |
+| `description` | string | No |  |
+| `model` | string | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
-const mission = await client.ai.missions.create({ name: 'name' });
+const mission = await client.ai.missions.create({ name: 'my-resource' });
 
 console.log(mission.data);
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## List recent events
 
 List recent events across all missions
 
-`GET /ai/missions/events`
+`client.ai.missions.listEvents()` — `GET /ai/missions/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -109,13 +145,19 @@ for await (const eventData of client.ai.missions.listEvents()) {
 }
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## List recent runs
 
 List recent runs across all missions
 
-`GET /ai/missions/runs`
+`client.ai.missions.runs.listRuns()` — `GET /ai/missions/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -124,13 +166,17 @@ for await (const missionRunData of client.ai.missions.runs.listRuns()) {
 }
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get mission
 
 Get a mission by ID (includes tools, knowledge_bases, mcp_servers)
 
-`GET /ai/missions/{mission_id}`
+`client.ai.missions.retrieve()` — `GET /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const mission = await client.ai.missions.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -138,15 +184,21 @@ const mission = await client.ai.missions.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9
 console.log(mission.data);
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update mission
 
 Update a mission definition
 
-`PUT /ai/missions/{mission_id}`
+`client.ai.missions.updateMission()` — `PUT /ai/missions/{mission_id}`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `executionMode` | enum (external, managed) | No |  |
+| `name` | string | No |  |
+| `description` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.ai.missions.updateMission('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -154,13 +206,17 @@ const response = await client.ai.missions.updateMission('182bd5e5-6e1a-4fe4-a799
 console.log(response.data);
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete mission
 
 Delete a mission
 
-`DELETE /ai/missions/{mission_id}`
+`client.ai.missions.deleteMission()` — `DELETE /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 await client.ai.missions.deleteMission('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -170,7 +226,11 @@ await client.ai.missions.deleteMission('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 
 Clone an existing mission
 
-`POST /ai/missions/{mission_id}/clone`
+`client.ai.missions.cloneMission()` — `POST /ai/missions/{mission_id}/clone`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.cloneMission('mission_id');
@@ -182,7 +242,11 @@ console.log(response);
 
 List all knowledge bases for a mission
 
-`GET /ai/missions/{mission_id}/knowledge-bases`
+`client.ai.missions.knowledgeBases.listKnowledgeBases()` — `GET /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.knowledgeBases.listKnowledgeBases('mission_id');
@@ -194,7 +258,11 @@ console.log(response);
 
 Create a new knowledge base for a mission
 
-`POST /ai/missions/{mission_id}/knowledge-bases`
+`client.ai.missions.knowledgeBases.createKnowledgeBase()` — `POST /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.knowledgeBases.createKnowledgeBase('mission_id');
@@ -206,11 +274,16 @@ console.log(response);
 
 Get a specific knowledge base by ID
 
-`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai.missions.knowledgeBases.getKnowledgeBase()` — `GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.knowledgeBases.getKnowledgeBase('knowledge_base_id', {
-  mission_id: 'mission_id',
+  mission_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
 console.log(response);
@@ -220,11 +293,16 @@ console.log(response);
 
 Update a knowledge base definition
 
-`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai.missions.knowledgeBases.updateKnowledgeBase()` — `PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.knowledgeBases.updateKnowledgeBase('knowledge_base_id', {
-  mission_id: 'mission_id',
+  mission_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
 console.log(response);
@@ -234,11 +312,16 @@ console.log(response);
 
 Delete a knowledge base from a mission
 
-`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai.missions.knowledgeBases.deleteKnowledgeBase()` — `DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```javascript
 await client.ai.missions.knowledgeBases.deleteKnowledgeBase('knowledge_base_id', {
-  mission_id: 'mission_id',
+  mission_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 ```
 
@@ -246,7 +329,11 @@ await client.ai.missions.knowledgeBases.deleteKnowledgeBase('knowledge_base_id',
 
 List all MCP servers for a mission
 
-`GET /ai/missions/{mission_id}/mcp-servers`
+`client.ai.missions.mcpServers.listMcpServers()` — `GET /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.mcpServers.listMcpServers('mission_id');
@@ -258,7 +345,11 @@ console.log(response);
 
 Create a new MCP server for a mission
 
-`POST /ai/missions/{mission_id}/mcp-servers`
+`client.ai.missions.mcpServers.createMcpServer()` — `POST /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.mcpServers.createMcpServer('mission_id');
@@ -270,11 +361,16 @@ console.log(response);
 
 Get a specific MCP server by ID
 
-`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai.missions.mcpServers.getMcpServer()` — `GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.mcpServers.getMcpServer('mcp_server_id', {
-  mission_id: 'mission_id',
+  mission_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
 console.log(response);
@@ -284,11 +380,16 @@ console.log(response);
 
 Update an MCP server definition
 
-`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai.missions.mcpServers.updateMcpServer()` — `PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.mcpServers.updateMcpServer('mcp_server_id', {
-  mission_id: 'mission_id',
+  mission_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
 console.log(response);
@@ -298,17 +399,29 @@ console.log(response);
 
 Delete an MCP server from a mission
 
-`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai.missions.mcpServers.deleteMcpServer()` — `DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```javascript
-await client.ai.missions.mcpServers.deleteMcpServer('mcp_server_id', { mission_id: 'mission_id' });
+await client.ai.missions.mcpServers.deleteMcpServer('mcp_server_id', { mission_id: '550e8400-e29b-41d4-a716-446655440000' });
 ```
 
 ## List runs for mission
 
 List all runs for a specific mission
 
-`GET /ai/missions/{mission_id}/runs`
+`client.ai.missions.runs.list()` — `GET /ai/missions/{mission_id}/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `status` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -319,15 +432,19 @@ for await (const missionRunData of client.ai.missions.runs.list(
 }
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Start a run
 
 Start a new run for a mission
 
-`POST /ai/missions/{mission_id}/runs`
+`client.ai.missions.runs.create()` — `POST /ai/missions/{mission_id}/runs`
 
-Optional: `input` (object), `metadata` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `input` | object | No |  |
+| `metadata` | object | No |  |
 
 ```javascript
 const run = await client.ai.missions.runs.create('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -335,13 +452,18 @@ const run = await client.ai.missions.runs.create('182bd5e5-6e1a-4fe4-a799-aa6d9a
 console.log(run.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get run details
 
 Get details of a specific run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}`
+`client.ai.missions.runs.retrieve()` — `GET /ai/missions/{mission_id}/runs/{run_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const run = await client.ai.missions.runs.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -351,15 +473,22 @@ const run = await client.ai.missions.runs.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d
 console.log(run.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Update run
 
 Update run status and/or result
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}`
+`client.ai.missions.runs.update()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}`
 
-Optional: `error` (string), `metadata` (object), `result_payload` (object), `result_summary` (string), `status` (enum: pending, running, paused, succeeded, failed, cancelled)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `status` | enum (pending, running, paused, succeeded, failed, ...) | No |  |
+| `resultSummary` | string | No |  |
+| `resultPayload` | object | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const run = await client.ai.missions.runs.update('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -369,13 +498,18 @@ const run = await client.ai.missions.runs.update('182bd5e5-6e1a-4fe4-a799-aa6d9a
 console.log(run.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Cancel run
 
 Cancel a running or paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+`client.ai.missions.runs.cancelRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.cancelRun('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -385,13 +519,22 @@ const response = await client.ai.missions.runs.cancelRun('182bd5e5-6e1a-4fe4-a79
 console.log(response.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List events
 
 List events for a run (paginated)
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events`
+`client.ai.missions.runs.events.list()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `type` | string | No |  |
+| `stepId` | string (UUID) | No |  |
+| `agentId` | string (UUID) | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -403,33 +546,48 @@ for await (const eventData of client.ai.missions.runs.events.list(
 }
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Log event
 
 Log an event for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/events` — Required: `type`, `summary`
+`client.ai.missions.runs.events.log()` — `POST /ai/missions/{mission_id}/runs/{run_id}/events`
 
-Optional: `agent_id` (string), `idempotency_key` (string), `payload` (object), `step_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | enum (status_change, step_started, step_completed, step_failed, tool_call, ...) | Yes |  |
+| `summary` | string | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | No |  |
+| `agentId` | string (UUID) | No |  |
+| `payload` | object | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.ai.missions.runs.events.log('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
   mission_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-  summary: 'summary',
+  summary: 'Brief task summary',
   type: 'status_change',
 });
 
 console.log(response.data);
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Get event details
 
 Get details of a specific event
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+`client.ai.missions.runs.events.getEventDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `eventId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.events.getEventDetails('event_id', {
@@ -440,13 +598,18 @@ const response = await client.ai.missions.runs.events.getEventDetails('event_id'
 console.log(response.data);
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Pause run
 
 Pause a running run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+`client.ai.missions.runs.pauseRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.pauseRun('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -456,13 +619,18 @@ const response = await client.ai.missions.runs.pauseRun('182bd5e5-6e1a-4fe4-a799
 console.log(response.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get plan
 
 Get the plan (all steps) for a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+`client.ai.missions.runs.plan.retrieve()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const plan = await client.ai.missions.runs.plan.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -472,13 +640,19 @@ const plan = await client.ai.missions.runs.plan.retrieve('182bd5e5-6e1a-4fe4-a79
 console.log(plan.data);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Create initial plan
 
 Create the initial plan for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan` — Required: `steps`
+`client.ai.missions.runs.plan.create()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `steps` | array[object] | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const plan = await client.ai.missions.runs.plan.create('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -487,7 +661,7 @@ const plan = await client.ai.missions.runs.plan.create('182bd5e5-6e1a-4fe4-a799-
     {
       description: 'description',
       sequence: 0,
-      step_id: 'step_id',
+      step_id: '550e8400-e29b-41d4-a716-446655440000',
     },
   ],
 });
@@ -495,13 +669,19 @@ const plan = await client.ai.missions.runs.plan.create('182bd5e5-6e1a-4fe4-a799-
 console.log(plan.data);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Add step(s) to plan
 
 Add one or more steps to an existing plan
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps` — Required: `steps`
+`client.ai.missions.runs.plan.addStepsToPlan()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `steps` | array[object] | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.plan.addStepsToPlan(
@@ -512,7 +692,7 @@ const response = await client.ai.missions.runs.plan.addStepsToPlan(
       {
         description: 'description',
         sequence: 0,
-        step_id: 'step_id',
+        step_id: '550e8400-e29b-41d4-a716-446655440000',
       },
     ],
   },
@@ -521,13 +701,19 @@ const response = await client.ai.missions.runs.plan.addStepsToPlan(
 console.log(response.data);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Get step details
 
 Get details of a specific plan step
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.ai.missions.runs.plan.getStepDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.plan.getStepDetails('step_id', {
@@ -538,15 +724,21 @@ const response = await client.ai.missions.runs.plan.getStepDetails('step_id', {
 console.log(response.data);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Update step status
 
 Update the status of a plan step
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.ai.missions.runs.plan.updateStep()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
 
-Optional: `metadata` (object), `status` (enum: pending, in_progress, completed, skipped, failed)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | Yes |  |
+| `status` | enum (pending, in_progress, completed, skipped, failed) | No |  |
+| `metadata` | object | No |  |
 
 ```javascript
 const response = await client.ai.missions.runs.plan.updateStep('step_id', {
@@ -557,13 +749,18 @@ const response = await client.ai.missions.runs.plan.updateStep('step_id', {
 console.log(response.data);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Resume run
 
 Resume a paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+`client.ai.missions.runs.resumeRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.resumeRun('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', {
@@ -573,13 +770,18 @@ const response = await client.ai.missions.runs.resumeRun('182bd5e5-6e1a-4fe4-a79
 console.log(response.data);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List linked Telnyx agents
 
 List all Telnyx agents linked to a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+`client.ai.missions.runs.telnyxAgents.list()` — `GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const telnyxAgents = await client.ai.missions.runs.telnyxAgents.list(
@@ -590,30 +792,42 @@ const telnyxAgents = await client.ai.missions.runs.telnyxAgents.list(
 console.log(telnyxAgents.data);
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Link Telnyx agent to run
 
 Link a Telnyx AI agent (voice/messaging) to a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents` — Required: `telnyx_agent_id`
+`client.ai.missions.runs.telnyxAgents.link()` — `POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `telnyxAgentId` | string (UUID) | Yes | The Telnyx AI agent ID to link |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.runs.telnyxAgents.link(
   '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e',
-  { mission_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', telnyx_agent_id: 'telnyx_agent_id' },
+  { mission_id: '182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e', telnyx_agent_id: '550e8400-e29b-41d4-a716-446655440000' },
 );
 
 console.log(response.data);
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Unlink Telnyx agent
 
 Unlink a Telnyx agent from a run
 
-`DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+`client.ai.missions.runs.telnyxAgents.unlink()` — `DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `telnyxAgentId` | string (UUID) | Yes |  |
 
 ```javascript
 await client.ai.missions.runs.telnyxAgents.unlink('telnyx_agent_id', {
@@ -626,7 +840,11 @@ await client.ai.missions.runs.telnyxAgents.unlink('telnyx_agent_id', {
 
 List all tools for a mission
 
-`GET /ai/missions/{mission_id}/tools`
+`client.ai.missions.tools.listTools()` — `GET /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.tools.listTools('mission_id');
@@ -638,7 +856,11 @@ console.log(response);
 
 Create a new tool for a mission
 
-`POST /ai/missions/{mission_id}/tools`
+`client.ai.missions.tools.createTool()` — `POST /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.ai.missions.tools.createTool('mission_id');
@@ -650,10 +872,15 @@ console.log(response);
 
 Get a specific tool by ID
 
-`GET /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai.missions.tools.getTool()` — `GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```javascript
-const response = await client.ai.missions.tools.getTool('tool_id', { mission_id: 'mission_id' });
+const response = await client.ai.missions.tools.getTool('tool_id', { mission_id: '550e8400-e29b-41d4-a716-446655440000' });
 
 console.log(response);
 ```
@@ -662,10 +889,15 @@ console.log(response);
 
 Update a tool definition
 
-`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai.missions.tools.updateTool()` — `PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```javascript
-const response = await client.ai.missions.tools.updateTool('tool_id', { mission_id: 'mission_id' });
+const response = await client.ai.missions.tools.updateTool('tool_id', { mission_id: '550e8400-e29b-41d4-a716-446655440000' });
 
 console.log(response);
 ```
@@ -674,8 +906,17 @@ console.log(response);
 
 Delete a tool from a mission
 
-`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai.missions.tools.deleteTool()` — `DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```javascript
-await client.ai.missions.tools.deleteTool('tool_id', { mission_id: 'mission_id' });
+await client.ai.missions.tools.deleteTool('tool_id', { mission_id: '550e8400-e29b-41d4-a716-446655440000' });
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

@@ -1,8 +1,7 @@
 ---
 name: telnyx-account-management-go
 description: >-
-  Manage sub-accounts for reseller and enterprise scenarios. This skill provides
-  Go SDK examples.
+  Sub-account management for reseller and enterprise scenarios.
 metadata:
   author: telnyx
   product: account-management
@@ -13,6 +12,23 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Account Management - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. Managed account features must be enabled on your account
+
+### Steps
+
+1. **Create sub-account**: `client.ManagedAccounts.Create(ctx, params)`
+2. **List sub-accounts**: `client.ManagedAccounts.List(ctx, params)`
+
+### Common mistakes
+
+- Sub-accounts are fully isolated — they have their own API keys, numbers, and billing
+
+**Related skills**: telnyx-account-go
 
 ## Installation
 
@@ -47,7 +63,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.ManagedAccounts.List(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -74,218 +90,274 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Lists accounts managed by the current user.
 
 Lists the accounts managed by the current user. Users need to be explictly approved by Telnyx in order to become manager accounts.
 
-`GET /managed_accounts`
+`client.ManagedAccounts.List()` — `GET /managed_accounts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Sort` | enum (created_at, email) | No | Specifies the sort order for results. |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	page, err := client.ManagedAccounts.List(context.TODO(), telnyx.ManagedAccountListParams{})
+	page, err := client.ManagedAccounts.List(context.Background(), telnyx.ManagedAccountListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `api_user` (string), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a new managed account.
 
 Create a new managed account owned by the authenticated user. You need to be explictly approved by Telnyx in order to become a manager account.
 
-`POST /managed_accounts` — Required: `business_name`
+`client.ManagedAccounts.New()` — `POST /managed_accounts`
 
-Optional: `email` (string), `managed_account_allow_custom_pricing` (boolean), `password` (string), `rollup_billing` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BusinessName` | string | Yes | The name of the business for which the new managed account i... |
+| `Email` | string | No | The email address for the managed account. |
+| `Password` | string | No | Password for the managed account. |
+| `ManagedAccountAllowCustomPricing` | boolean | No | Boolean value that indicates if the managed account is able ... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	managedAccount, err := client.ManagedAccounts.New(context.TODO(), telnyx.ManagedAccountNewParams{
+	managedAccount, err := client.ManagedAccounts.New(context.Background(), telnyx.ManagedAccountNewParams{
 		BusinessName: "Larry's Cat Food Inc",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", managedAccount.Data)
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Display information about allocatable global outbound channels for the current user.
 
 Display information about allocatable global outbound channels for the current user. Only usable by account managers.
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+`client.ManagedAccounts.GetAllocatableGlobalOutboundChannels()` — `GET /managed_accounts/allocatable_global_outbound_channels`
 
 ```go
-	response, err := client.ManagedAccounts.GetAllocatableGlobalOutboundChannels(context.TODO())
+	response, err := client.ManagedAccounts.GetAllocatableGlobalOutboundChannels(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `allocatable_global_outbound_channels` (integer), `managed_account_allow_custom_pricing` (boolean), `record_type` (string), `total_global_channels_allocated` (integer)
+Key response fields: `response.data.allocatable_global_outbound_channels, response.data.managed_account_allow_custom_pricing, response.data.record_type`
 
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
 
-`GET /managed_accounts/{id}`
+`client.ManagedAccounts.Get()` — `GET /managed_accounts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Managed Account User ID |
 
 ```go
-	managedAccount, err := client.ManagedAccounts.Get(context.TODO(), "id")
+	managedAccount, err := client.ManagedAccounts.Get(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", managedAccount.Data)
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update a managed account
 
 Update a single managed account.
 
-`PATCH /managed_accounts/{id}`
+`client.ManagedAccounts.Update()` — `PATCH /managed_accounts/{id}`
 
-Optional: `managed_account_allow_custom_pricing` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Managed Account User ID |
+| `ManagedAccountAllowCustomPricing` | boolean | No | Boolean value that indicates if the managed account is able ... |
 
 ```go
 	managedAccount, err := client.ManagedAccounts.Update(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.ManagedAccountUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", managedAccount.Data)
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Disables a managed account
 
 Disables a managed account, forbidding it to use Telnyx services, including sending or receiving phone calls and SMS messages. Ongoing phone calls will not be affected. The managed account and its sub-users will no longer be able to log in via the mission control portal.
 
-`POST /managed_accounts/{id}/actions/disable`
+`client.ManagedAccounts.Actions.Disable()` — `POST /managed_accounts/{id}/actions/disable`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Managed Account User ID |
 
 ```go
-	response, err := client.ManagedAccounts.Actions.Disable(context.TODO(), "id")
+	response, err := client.ManagedAccounts.Actions.Disable(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Enables a managed account
 
 Enables a managed account and its sub-users to use Telnyx services.
 
-`POST /managed_accounts/{id}/actions/enable`
+`client.ManagedAccounts.Actions.Enable()` — `POST /managed_accounts/{id}/actions/enable`
 
-Optional: `reenable_all_connections` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Managed Account User ID |
+| `ReenableAllConnections` | boolean | No | When true, all connections owned by this managed account wil... |
 
 ```go
 	response, err := client.ManagedAccounts.Actions.Enable(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.ManagedAccountActionEnableParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update the amount of allocatable global outbound channels allocated to a specific managed account.
 
-`PATCH /managed_accounts/{id}/update_global_channel_limit`
+`client.ManagedAccounts.UpdateGlobalChannelLimit()` — `PATCH /managed_accounts/{id}/update_global_channel_limit`
 
-Optional: `channel_limit` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Managed Account User ID |
+| `ChannelLimit` | integer | No | Integer value that indicates the number of allocatable globa... |
 
 ```go
 	response, err := client.ManagedAccounts.UpdateGlobalChannelLimit(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.ManagedAccountUpdateGlobalChannelLimitParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `channel_limit` (integer), `email` (string), `id` (string), `manager_account_id` (string), `record_type` (string)
+Key response fields: `response.data.id, response.data.channel_limit, response.data.email`
 
 ## List organization users
 
 Returns a list of the users in your organization.
 
-`GET /organizations/users`
+`client.Organizations.Users.List()` — `GET /organizations/users`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter[userStatus]` | enum (enabled, disabled, blocked) | No | Filter by user status |
+| `Page[number]` | integer | No | The page number to load |
+| `Page[size]` | integer | No | The size of the page |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	page, err := client.Organizations.Users.List(context.TODO(), telnyx.OrganizationUserListParams{})
+	page, err := client.Organizations.Users.List(context.Background(), telnyx.OrganizationUserListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Get organization users groups report
 
 Returns a report of all users in your organization with their group memberships. This endpoint returns all users without pagination and always includes group information. The report can be retrieved in JSON or CSV format by sending specific content-type headers.
 
-`GET /organizations/users/users_groups_report`
+`client.Organizations.Users.GetGroupsReport()` — `GET /organizations/users/users_groups_report`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Accept` | enum (application/json, text/csv) | No | Specify the response format. |
 
 ```go
-	response, err := client.Organizations.Users.GetGroupsReport(context.TODO(), telnyx.OrganizationUserGetGroupsReportParams{})
+	response, err := client.Organizations.Users.GetGroupsReport(context.Background(), telnyx.OrganizationUserGetGroupsReportParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Get organization user
 
 Returns a user in your organization.
 
-`GET /organizations/users/{id}`
+`client.Organizations.Users.Get()` — `GET /organizations/users/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Organization User ID |
+| `IncludeGroups` | boolean | No | When set to true, includes the groups array for each user in... |
 
 ```go
 	user, err := client.Organizations.Users.Get(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.OrganizationUserGetParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", user.Data)
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Delete organization user
 
 Deletes a user in your organization.
 
-`POST /organizations/users/{id}/actions/remove`
+`client.Organizations.Users.Actions.Remove()` — `POST /organizations/users/{id}/actions/remove`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Organization User ID |
 
 ```go
-	action, err := client.Organizations.Users.Actions.Remove(context.TODO(), "id")
+	action, err := client.Organizations.Users.Actions.Remove(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", action.Data)
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

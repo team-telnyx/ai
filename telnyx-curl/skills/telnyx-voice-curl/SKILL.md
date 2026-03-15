@@ -8,12 +8,45 @@ metadata:
   product: voice
   language: curl
   generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Voice - curl
+
+## Core Workflow
+
+### Prerequisites
+
+1. Buy a phone number with voice capability (see telnyx-numbers-curl)
+2. Create a Voice API Application (connection) with webhook URLs
+3. Assign the phone number to the Voice API Application
+4. Ensure webhook endpoint is publicly accessible before making/receiving calls
+
+### Steps
+
+1. **Buy number**
+2. **Create connection**
+3. **Assign number**
+4. **Make outbound call**
+5. **Handle webhooks**
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Full programmatic control, real-time event-driven logic, custom IVR | Call Control API (this skill) |
+| Declarative XML call flows, migrating from Twilio/TwiML | TeXML (see telnyx-texml-curl) |
+| LLM-powered conversational voice agents, minimal code | AI Assistants (see telnyx-ai-assistants-curl) |
+
+### Common mistakes
+
+- VOICE IS EVENT-DRIVEN: dial/create returns immediately. All subsequent actions (answer, play, gather, transfer, hangup) MUST be triggered by webhook events. You need a running webhook server that dispatches on data.event_type (e.g., 'call.initiated', 'call.answered', 'call.hangup') and issues call control commands using the call_control_id from the webhook payload
+- OUTBOUND vs INBOUND: For outbound calls, dial → wait for 'call.answered' webhook → issue commands. For inbound calls, receive 'call.initiated' webhook → answer() → issue commands. NEVER call answer() on outbound calls
+- NEVER make calls without a publicly accessible webhook URL — call events will be lost and calls uncontrollable
+- NEVER skip assigning the number to a Voice API Application — inbound calls will be rejected
+
+**Related skills**: telnyx-voice-media-curl, telnyx-voice-gather-curl, telnyx-voice-streaming-curl, telnyx-texml-curl, telnyx-ai-assistants-curl
 
 ## Installation
 
@@ -35,16 +68,23 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```bash
-curl \
-  -X POST \
+# Check HTTP status code in response
+response=$(curl -s -w "\n%{http_code}" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "to": "+13125550001",
-  "from": "+18005550101",
-  "connection_id": "550e8400-e29b-41d4-a716-446655440000"
-}' \
-  "https://api.telnyx.com/v2/calls"
+  -d '{"key": "value"}')
+
+http_code=$(echo "$response" | tail -1)
+body=$(echo "$response" | sed '$d')
+
+case $http_code in
+  2*) echo "Success: $body" ;;
+  422) echo "Validation error — check required fields and formats" ;;
+  429) echo "Rate limited — retry after delay"; sleep 1 ;;
+  401) echo "Authentication failed — check TELNYX_API_KEY" ;;
+  *)   echo "Error $http_code: $body" ;;
+esac
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -56,25 +96,11 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
-## Operational Caveats
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
 
-- Call Control is event-driven. After `dial()` or an inbound webhook, issue follow-up commands from webhook handlers using the `call_control_id` in the event payload.
-- Outbound and inbound flows are different: outbound calls start with `dial()`, while inbound calls must be answered from the incoming webhook before other commands run.
-- A publicly reachable webhook endpoint is required for real call control. Without it, calls may connect but your application cannot drive the live call state.
+## Dial
 
-## Reference Use Rules
-
-Do not invent Telnyx parameters, enums, response fields, or webhook fields.
-
-- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
-- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
-
-## Core Tasks
-
-### Dial an outbound call
-
-Primary voice entrypoint. Agents need the async call-control identifiers returned here.
+Dial a number or SIP URI from a given connection. A successful response will include a `call_leg_id` which can be used to correlate the command with subsequent webhooks.
 
 `POST /calls`
 
@@ -101,17 +127,16 @@ curl \
   "https://api.telnyx.com/v2/calls"
 ```
 
-Primary response fields:
-- `.data.call_control_id`
-- `.data.call_leg_id`
-- `.data.call_session_id`
-- `.data.is_alive`
-- `.data.recording_id`
-- `.data.call_duration`
+Key response fields: `.data.call_control_id, .data.call_duration, .data.call_leg_id`
 
-### Answer an inbound call
+## Answer call
 
-Primary inbound call-control command.
+Answer an incoming call. You must issue this command before executing subsequent commands on an incoming call. **Expected Webhooks:**
+
+- `call.answered`
+- `streaming.started`, `streaming.stopped` or `streaming.failed` if `stream_url` was set
+
+When the `record` parameter is set to `record-from-answer`, the response will include a `recording_id` field.
 
 `POST /calls/{call_control_id}/actions/answer`
 
@@ -131,13 +156,11 @@ curl \
   "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/answer"
 ```
 
-Primary response fields:
-- `.data.result`
-- `.data.recording_id`
+Key response fields: `.data.recording_id, .data.result`
 
-### Transfer a live call
+## Transfer call
 
-Common post-answer control path with downstream webhook implications.
+Transfer a call to a new destination. If the transfer is unsuccessful, a `call.hangup` webhook for the other call (Leg B) will be sent indicating that the transfer could not be completed. The original call will remain active and may be issued additional commands, potentially transferring the call to an alternate destination.
 
 `POST /calls/{call_control_id}/actions/transfer`
 
@@ -161,82 +184,14 @@ curl \
   "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/transfer"
 ```
 
-Primary response fields:
-- `.data.result`
+Key response fields: `.data.result`
 
----
+## Hangup call
 
-### Webhook Verification
+Hang up the call. **Expected Webhooks:**
 
-Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
-and `telnyx-timestamp` headers. Always verify signatures in production:
-
-```bash
-# Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).
-# Headers sent with each webhook:
-#   telnyx-signature-ed25519: base64-encoded Ed25519 signature
-#   telnyx-timestamp: Unix timestamp (reject if >5 minutes old for replay protection)
-#
-# Get your public key from: Telnyx Portal > Account Settings > Keys & Credentials
-# Use the Telnyx SDK in your language for verification (client.webhooks.unwrap).
-# Your endpoint MUST return 2xx within 2 seconds or Telnyx will retry (up to 3 attempts).
-# Configure a failover URL in Telnyx Portal for additional reliability.
-```
-
-## Webhooks
-
-These webhook payload fields are inline because they are part of the primary integration path.
-
-### Call Answered
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.answered | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook ev... |
-
-### Call Hangup
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.hangup | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook ev... |
-
-### Call Initiated
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.initiated | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.connection_codecs` | string | The list of comma-separated codecs enabled for the connection. |
-| `data.payload.offered_codecs` | string | The list of comma-separated codecs offered by caller. |
-
-If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
-
----
-
-## Important Supporting Operations
-
-Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
-
-### Hangup call
-
-End a live call from your webhook-driven control flow.
+- `call.hangup`
+- `call.recording.saved`
 
 `POST /calls/{call_control_id}/actions/hangup`
 
@@ -255,12 +210,14 @@ curl \
   "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/hangup"
 ```
 
-Primary response fields:
-- `.data.result`
+Key response fields: `.data.result`
 
-### Bridge calls
+## Bridge calls
 
-Trigger a follow-up action in an existing workflow rather than creating a new top-level resource.
+Bridge two call control calls. **Expected Webhooks:**
+
+- `call.bridged` for Leg A
+- `call.bridged` for Leg B
 
 `POST /calls/{call_control_id}/actions/bridge`
 
@@ -284,12 +241,13 @@ curl \
   "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/bridge"
 ```
 
-Primary response fields:
-- `.data.result`
+Key response fields: `.data.result`
 
-### Reject a call
+## Reject a call
 
-Trigger a follow-up action in an existing workflow rather than creating a new top-level resource.
+Reject an incoming call. **Expected Webhooks:**
+
+- `call.hangup`
 
 `POST /calls/{call_control_id}/actions/reject`
 
@@ -311,12 +269,11 @@ curl \
   "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/reject"
 ```
 
-Primary response fields:
-- `.data.result`
+Key response fields: `.data.result`
 
-### Retrieve a call status
+## Retrieve a call status
 
-Fetch the current state before updating, deleting, or making control-flow decisions.
+Returns the status of a call (data is available 10 minutes after call ended).
 
 `GET /calls/{call_control_id}`
 
@@ -328,17 +285,11 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ"
 ```
 
-Primary response fields:
-- `.data.call_control_id`
-- `.data.call_duration`
-- `.data.call_leg_id`
-- `.data.call_session_id`
-- `.data.client_state`
-- `.data.end_time`
+Key response fields: `.data.call_control_id, .data.call_duration, .data.call_leg_id`
 
-### List all active calls for given connection
+## List all active calls for given connection
 
-Fetch the current state before updating, deleting, or making control-flow decisions.
+Lists all active calls for given connection. Acceptable connections are either SIP connections with webhook_url or xml_request_url, call control or texml. Returned results are cursor paginated.
 
 `GET /connections/{connection_id}/active_calls`
 
@@ -351,21 +302,11 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/connections/1293384261075731461/active_calls"
 ```
 
-Response wrapper:
-- items: `.data`
-- pagination: `.meta`
+Key response fields: `.data.call_control_id, .data.call_duration, .data.call_leg_id`
 
-Primary item fields:
-- `call_control_id`
-- `call_duration`
-- `call_leg_id`
-- `call_session_id`
-- `client_state`
-- `record_type`
+## List call control applications
 
-### List call control applications
-
-Inspect available resources or choose an existing resource before mutating it.
+Return a list of call control applications.
 
 `GET /call_control_applications`
 
@@ -379,40 +320,197 @@ Inspect available resources or choose an existing resource before mutating it.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/call_control_applications?sort=connection_name"
 ```
 
-Response wrapper:
-- items: `.data`
-- pagination: `.meta`
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
-Primary item fields:
-- `id`
-- `created_at`
-- `updated_at`
-- `active`
-- `anchorsite_override`
-- `application_name`
+## Create a call control application
+
+Create a call control application.
+
+`POST /call_control_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `application_name` | string | Yes | A user-assigned name to help manage the application. |
+| `webhook_event_url` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmf_type` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| `webhook_api_version` | enum (1, 2) | No | Determines which webhook format will be used, Telnyx API v1 ... |
+| ... | | | +9 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "application_name": "call-router",
+  "webhook_event_url": "https://example.com"
+}' \
+  "https://api.telnyx.com/v2/call_control_applications"
+```
+
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
+
+## Retrieve a call control application
+
+Retrieves the details of an existing call control application.
+
+`GET /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/call_control_applications/1293384261075731499"
+```
+
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
+
+## Update a call control application
+
+Updates settings of an existing call control application.
+
+`PATCH /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `application_name` | string | Yes | A user-assigned name to help manage the application. |
+| `webhook_event_url` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags assigned to the Call Control Application. |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmf_type` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| ... | | | +10 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl \
+  -X PATCH \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "application_name": "call-router",
+  "webhook_event_url": "https://example.com"
+}' \
+  "https://api.telnyx.com/v2/call_control_applications/1293384261075731499"
+```
+
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
+
+## Delete a call control application
+
+Deletes a call control application.
+
+`DELETE /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/call_control_applications/1293384261075731499"
+```
+
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
+
+## SIP Refer a call
+
+Initiate a SIP Refer on a Call Control call. You can initiate a SIP Refer at any point in the duration of a call. **Expected Webhooks:**
+
+- `call.refer.started`
+- `call.refer.completed`
+- `call.refer.failed`
+
+`POST /calls/{call_control_id}/actions/refer`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sip_address` | string | Yes | The SIP URI to which the call will be referred to. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid execution of duplicate commands. |
+| `custom_headers` | array[object] | No | Custom headers to be added to the SIP INVITE. |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "sip_address": "sip:username@sip.non-telnyx-address.com"
+}' \
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/refer"
+```
+
+Key response fields: `.data.result`
+
+## Send SIP info
+
+Sends SIP info from this leg. **Expected Webhooks:**
+
+- `call.sip_info.received` (to be received on the target call leg)
+
+`POST /calls/{call_control_id}/actions/send_sip_info`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `content_type` | string | Yes | Content type of the INFO body. |
+| `body` | string | Yes | Content of the SIP INFO |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "content_type": "application/json",
+  "body": "{\"key\": \"value\", \"numValue\": 100}"
+}' \
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/send_sip_info"
+```
+
+Key response fields: `.data.result`
 
 ---
 
-## Additional Operations
+## Webhooks
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+### Webhook Verification
 
-| Operation | SDK method | Endpoint | Use when | Required params |
-|-----------|------------|----------|----------|-----------------|
-| Create a call control application | HTTP only | `POST /call_control_applications` | Create or provision an additional resource when the core tasks do not cover this flow. | `application_name`, `webhook_event_url` |
-| Retrieve a call control application | HTTP only | `GET /call_control_applications/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
-| Update a call control application | HTTP only | `PATCH /call_control_applications/{id}` | Modify an existing resource without recreating it. | `application_name`, `webhook_event_url`, `id` |
-| Delete a call control application | HTTP only | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
-| SIP Refer a call | HTTP only | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
-| Send SIP info | HTTP only | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
+Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
+and `telnyx-timestamp` headers. Always verify signatures in production:
 
-### Other Webhook Events
+```bash
+# Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).
+# Headers sent with each webhook:
+#   telnyx-signature-ed25519: base64-encoded Ed25519 signature
+#   telnyx-timestamp: Unix timestamp (reject if >5 minutes old for replay protection)
+#
+# Get your public key from: Telnyx Portal > Account Settings > Keys & Credentials
+# Use the Telnyx SDK in your language for verification (client.webhooks.unwrap).
+# Your endpoint MUST return 2xx within 2 seconds or Telnyx will retry (up to 3 attempts).
+# Configure a failover URL in Telnyx Portal for additional reliability.
+```
+
+The following webhook events are sent to your configured webhook URL.
+All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
 
 | Event | `data.event_type` | Description |
 |-------|-------------------|-------------|
+| `callAnswered` | `call.answered` | Call Answered |
 | `callBridged` | `call.bridged` | Call Bridged |
+| `callHangup` | `call.hangup` | Call Hangup |
+| `callInitiated` | `call.initiated` | Call Initiated |
+
+Webhook payload field definitions are in [references/api-details.md](references/api-details.md).
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

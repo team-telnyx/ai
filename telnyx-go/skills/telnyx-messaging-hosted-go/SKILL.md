@@ -1,9 +1,8 @@
 ---
 name: telnyx-messaging-hosted-go
 description: >-
-  Set up hosted SMS numbers, toll-free verification, and RCS messaging. Use when
-  migrating numbers or enabling rich messaging features. This skill provides Go
-  SDK examples.
+  Hosted SMS numbers, toll-free verification, and RCS messaging. Use when
+  migrating numbers or enabling rich messaging.
 metadata:
   author: telnyx
   product: messaging-hosted
@@ -14,6 +13,26 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Messaging Hosted - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. Host phone numbers on Telnyx by completing the hosted number order process
+2. For toll-free: submit toll-free verification request
+
+### Steps
+
+1. **Create hosted number order**: `client.HostedNumberOrders.Create(ctx, params)`
+2. **Upload LOA**: `Provide Letter of Authorization for the numbers`
+3. **Monitor status**: `client.HostedNumberOrders.Retrieve(ctx, params)`
+
+### Common mistakes
+
+- Hosted numbers remain with the original carrier — Telnyx routes messaging only
+- Toll-free verification is required before sending A2P traffic on toll-free numbers
+
+**Related skills**: telnyx-messaging-go, telnyx-messaging-profiles-go
 
 ## Installation
 
@@ -48,7 +67,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.HostedNumberOrders.Create(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -76,282 +95,361 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Send an RCS message
 
-`POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
+`client.Messages.Rcs.Send()` — `POST /messages/rcs`
 
-Optional: `mms_fallback` (object), `sms_fallback` (object), `type` (enum: RCS), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AgentId` | string (UUID) | Yes | RCS Agent ID |
+| `To` | string (E.164) | Yes | Phone number in +E.164 format |
+| `MessagingProfileId` | string (UUID) | Yes | A valid messaging profile ID |
+| `AgentMessage` | object | Yes |  |
+| `Type` | enum (RCS) | No | Message type - must be set to "RCS" |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `SmsFallback` | object | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	response, err := client.Messages.Rcs.Send(context.TODO(), telnyx.MessageRcSendParams{
+	response, err := client.Messages.Rcs.Send(context.Background(), telnyx.MessageRcSendParams{
 		AgentID:            "Agent007",
 		AgentMessage:       telnyx.RcsAgentMessageParam{},
-		MessagingProfileID: "messaging_profile_id",
+		MessagingProfileID: "550e8400-e29b-41d4-a716-446655440000",
 		To:                 "+13125551234",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string), `wait_seconds` (float)
+Key response fields: `response.data.id, response.data.to, response.data.from`
 
 ## Generate RCS deeplink
 
 Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
 
-`GET /messages/rcs/deeplinks/{agent_id}`
+`client.Messages.Rcs.GenerateDeeplink()` — `GET /messages/rcs/deeplinks/{agent_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AgentId` | string (UUID) | Yes | RCS agent ID |
+| `PhoneNumber` | string (E.164) | No | Phone number in E164 format (URL encoded) |
+| `Body` | string | No | Pre-filled message body (URL encoded) |
 
 ```go
 	response, err := client.Messages.Rcs.GenerateDeeplink(
-		context.TODO(),
+		context.Background(),
 		"agent_id",
 		telnyx.MessageRcGenerateDeeplinkParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `url` (string)
+Key response fields: `response.data.url`
 
 ## List all RCS agents
 
-`GET /messaging/rcs/agents`
+`client.Messaging.Rcs.Agents.List()` — `GET /messaging/rcs/agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.Messaging.Rcs.Agents.List(context.TODO(), telnyx.MessagingRcAgentListParams{})
+	page, err := client.Messaging.Rcs.Agents.List(context.Background(), telnyx.MessagingRcAgentListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Retrieve an RCS agent
 
-`GET /messaging/rcs/agents/{id}`
+`client.Messaging.Rcs.Agents.Get()` — `GET /messaging/rcs/agents/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | RCS agent ID |
 
 ```go
-	rcsAgentResponse, err := client.Messaging.Rcs.Agents.Get(context.TODO(), "id")
+	rcsAgentResponse, err := client.Messaging.Rcs.Agents.Get(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", rcsAgentResponse.Data)
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Modify an RCS agent
 
-`PATCH /messaging/rcs/agents/{id}`
+`client.Messaging.Rcs.Agents.Update()` — `PATCH /messaging/rcs/agents/{id}`
 
-Optional: `profile_id` (uuid), `webhook_failover_url` (url), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | RCS agent ID |
+| `WebhookUrl` | string (URL) | No | URL to receive RCS events |
+| `WebhookFailoverUrl` | string (URL) | No | Failover URL to receive RCS events |
+| `ProfileId` | string (UUID) | No | Messaging profile ID associated with the RCS Agent |
 
 ```go
 	rcsAgentResponse, err := client.Messaging.Rcs.Agents.Update(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.MessagingRcAgentUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", rcsAgentResponse.Data)
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Check RCS capabilities (batch)
 
-`POST /messaging/rcs/bulk_capabilities` — Required: `agent_id`, `phone_numbers`
+`client.Messaging.Rcs.ListBulkCapabilities()` — `POST /messaging/rcs/bulk_capabilities`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AgentId` | string (UUID) | Yes | RCS Agent ID |
+| `PhoneNumbers` | array[string] | Yes | List of phone numbers to check |
 
 ```go
-	response, err := client.Messaging.Rcs.ListBulkCapabilities(context.TODO(), telnyx.MessagingRcListBulkCapabilitiesParams{
+	response, err := client.Messaging.Rcs.ListBulkCapabilities(context.Background(), telnyx.MessagingRcListBulkCapabilitiesParams{
 		AgentID:      "TestAgent",
 		PhoneNumbers: []string{"+13125551234"},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
+Key response fields: `response.data.phone_number, response.data.agent_id, response.data.agent_name`
 
 ## Check RCS capabilities
 
-`GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
+`client.Messaging.Rcs.GetCapabilities()` — `GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AgentId` | string (UUID) | Yes | RCS agent ID |
+| `PhoneNumber` | string (E.164) | Yes | Phone number in E164 format |
 
 ```go
 	response, err := client.Messaging.Rcs.GetCapabilities(
-		context.TODO(),
+		context.Background(),
 		"phone_number",
 		telnyx.MessagingRcGetCapabilitiesParams{
-			AgentID: "agent_id",
+			AgentID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
+Key response fields: `response.data.phone_number, response.data.agent_id, response.data.agent_name`
 
 ## Add RCS test number
 
 Adds a test phone number to an RCS agent for testing purposes.
 
-`PUT /messaging/rcs/test_number_invite/{id}/{phone_number}`
+`client.Messaging.Rcs.InviteTestNumber()` — `PUT /messaging/rcs/test_number_invite/{id}/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | RCS agent ID |
+| `PhoneNumber` | string (E.164) | Yes | Phone number in E164 format to invite for testing |
 
 ```go
 	response, err := client.Messaging.Rcs.InviteTestNumber(
-		context.TODO(),
+		context.Background(),
 		"phone_number",
 		telnyx.MessagingRcInviteTestNumberParams{
-			ID: "id",
+			ID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `agent_id` (string), `phone_number` (string), `record_type` (enum: rcs.test_number_invite), `status` (string)
+Key response fields: `response.data.status, response.data.phone_number, response.data.agent_id`
 
 ## List messaging hosted number orders
 
-`GET /messaging_hosted_number_orders`
+`client.MessagingHostedNumberOrders.List()` — `GET /messaging_hosted_number_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.MessagingHostedNumberOrders.List(context.TODO(), telnyx.MessagingHostedNumberOrderListParams{})
+	page, err := client.MessagingHostedNumberOrders.List(context.Background(), telnyx.MessagingHostedNumberOrderListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Create a messaging hosted number order
 
-`POST /messaging_hosted_number_orders`
+`client.MessagingHostedNumberOrders.New()` — `POST /messaging_hosted_number_orders`
 
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MessagingProfileId` | string (UUID) | No | Automatically associate the number with this messaging profi... |
+| `PhoneNumbers` | array[string] | No | Phone numbers to be used for hosted messaging. |
 
 ```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.New(context.TODO(), telnyx.MessagingHostedNumberOrderNewParams{})
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.New(context.Background(), telnyx.MessagingHostedNumberOrderNewParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Check hosted messaging eligibility
 
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+`client.MessagingHostedNumberOrders.CheckEligibility()` — `POST /messaging_hosted_number_orders/eligibility_numbers_check`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[string] | Yes | List of phone numbers to check eligibility |
 
 ```go
-	response, err := client.MessagingHostedNumberOrders.CheckEligibility(context.TODO(), telnyx.MessagingHostedNumberOrderCheckEligibilityParams{
+	response, err := client.MessagingHostedNumberOrders.CheckEligibility(context.Background(), telnyx.MessagingHostedNumberOrderCheckEligibilityParams{
 		PhoneNumbers: []string{"string"},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.PhoneNumbers)
 ```
 
-Returns: `phone_numbers` (array[object])
+Key response fields: `response.data.phone_numbers`
 
 ## Retrieve a messaging hosted number order
 
-`GET /messaging_hosted_number_orders/{id}`
+`client.MessagingHostedNumberOrders.Get()` — `GET /messaging_hosted_number_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Get(context.TODO(), "id")
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Get(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Delete a messaging hosted number order
 
 Delete a messaging hosted number order and all associated phone numbers.
 
-`DELETE /messaging_hosted_number_orders/{id}`
+`client.MessagingHostedNumberOrders.Delete()` — `DELETE /messaging_hosted_number_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the messaging hosted number order to delete. |
 
 ```go
-	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Delete(context.TODO(), "id")
+	messagingHostedNumberOrder, err := client.MessagingHostedNumberOrders.Delete(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messagingHostedNumberOrder.Data)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Upload hosted number document
 
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+`client.MessagingHostedNumberOrders.Actions.UploadFile()` — `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```go
 	response, err := client.MessagingHostedNumberOrders.Actions.UploadFile(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.MessagingHostedNumberOrderActionUploadFileParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Validate hosted number codes
 
 Validate the verification codes sent to the numbers of the hosted order. The verification codes must be created in the verification codes endpoint.
 
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+`client.MessagingHostedNumberOrders.ValidateCodes()` — `POST /messaging_hosted_number_orders/{id}/validation_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerificationCodes` | array[object] | Yes |  |
+| `Id` | string (UUID) | Yes | Order ID related to the validation codes. |
 
 ```go
 	response, err := client.MessagingHostedNumberOrders.ValidateCodes(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.MessagingHostedNumberOrderValidateCodesParams{
 			VerificationCodes: []telnyx.MessagingHostedNumberOrderValidateCodesParamsVerificationCode{{
 				Code:        "code",
-				PhoneNumber: "phone_number",
+				PhoneNumber: "+13125550001",
 			}},
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `order_id` (uuid), `phone_numbers` (array[object])
+Key response fields: `response.data.order_id, response.data.phone_numbers`
 
 ## Create hosted number verification codes
 
 Create verification codes to validate numbers of the hosted order. The verification codes will be sent to the numbers of the hosted order.
 
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+`client.MessagingHostedNumberOrders.NewVerificationCodes()` — `POST /messaging_hosted_number_orders/{id}/verification_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[string] | Yes |  |
+| `VerificationMethod` | enum (sms, call) | Yes |  |
+| `Id` | string (UUID) | Yes | Order ID to have a verification code created. |
 
 ```go
 	response, err := client.MessagingHostedNumberOrders.NewVerificationCodes(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.MessagingHostedNumberOrderNewVerificationCodesParams{
 			PhoneNumbers:       []string{"string"},
@@ -359,58 +457,92 @@ Create verification codes to validate numbers of the hosted order. The verificat
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `error` (string), `phone_number` (string), `type` (enum: sms, call), `verification_code_id` (uuid)
+Key response fields: `response.data.phone_number, response.data.type, response.data.error`
 
 ## Delete a messaging hosted number
 
-`DELETE /messaging_hosted_numbers/{id}`
+`client.MessagingHostedNumbers.Delete()` — `DELETE /messaging_hosted_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Delete(context.TODO(), "id")
+	messagingHostedNumber, err := client.MessagingHostedNumbers.Delete(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messagingHostedNumber.Data)
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## List Verification Requests
 
 Get a list of previously-submitted tollfree verification requests
 
-`GET /messaging_tollfree/verification/requests`
+`client.MessagingTollfree.Verification.Requests.List()` — `GET /messaging_tollfree/verification/requests`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Status` | enum (Verified, Rejected, Waiting For Vendor, Waiting For Customer, Waiting For Telnyx, ...) | No | Tollfree verification status |
+| `DateStart` | string (date-time) | No |  |
+| `DateEnd` | string (date-time) | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	page, err := client.MessagingTollfree.Verification.Requests.List(context.TODO(), telnyx.MessagingTollfreeVerificationRequestListParams{
+	page, err := client.MessagingTollfree.Verification.Requests.List(context.Background(), telnyx.MessagingTollfreeVerificationRequestListParams{
 		Page:     1,
 		PageSize: 1,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `records` (array[object]), `total_records` (integer)
+Key response fields: `response.data.records, response.data.total_records`
 
 ## Submit Verification Request
 
 Submit a new tollfree verification request
 
-`POST /messaging_tollfree/verification/requests` — Required: `businessName`, `corporateWebsite`, `businessAddr1`, `businessCity`, `businessState`, `businessZip`, `businessContactFirstName`, `businessContactLastName`, `businessContactEmail`, `businessContactPhone`, `messageVolume`, `phoneNumbers`, `useCase`, `useCaseSummary`, `productionMessageContent`, `optInWorkflow`, `optInWorkflowImageURLs`, `additionalInformation`
+`client.MessagingTollfree.Verification.Requests.New()` — `POST /messaging_tollfree/verification/requests`
 
-Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegistrationCountry` (string | null), `businessRegistrationNumber` (string | null), `businessRegistrationType` (string | null), `campaignVerifyAuthorizationToken` (string | null), `doingBusinessAs` (string | null), `entityType` (object), `helpMessageResponse` (string | null), `isvReseller` (string | null), `optInConfirmationResponse` (string | null), `optInKeywords` (string | null), `privacyPolicyURL` (string | null), `termsAndConditionURL` (string | null), `webhookUrl` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BusinessName` | string | Yes | Name of the business; there are no specific formatting requi... |
+| `CorporateWebsite` | string | Yes | A URL, including the scheme, pointing to the corporate websi... |
+| `BusinessAddr1` | string | Yes | Line 1 of the business address |
+| `BusinessCity` | string | Yes | The city of the business address; the first letter should be... |
+| `BusinessState` | string | Yes | The full name of the state (not the 2 letter code) of the bu... |
+| `BusinessZip` | string | Yes | The ZIP code of the business address |
+| `BusinessContactFirstName` | string | Yes | First name of the business contact; there are no specific re... |
+| `BusinessContactLastName` | string | Yes | Last name of the business contact; there are no specific req... |
+| `BusinessContactEmail` | string | Yes | The email address of the business contact |
+| `BusinessContactPhone` | string | Yes | The phone number of the business contact in E.164 format |
+| `MessageVolume` | object | Yes | Estimated monthly volume of messages from the given phone nu... |
+| `PhoneNumbers` | array[object] | Yes | The phone numbers to request the verification of |
+| `UseCase` | object | Yes | Machine-readable use-case for the phone numbers |
+| `UseCaseSummary` | string | Yes | Human-readable summary of the desired use-case |
+| `ProductionMessageContent` | string | Yes | An example of a message that will be sent from the given pho... |
+| `OptInWorkflow` | string | Yes | Human-readable description of how end users will opt into re... |
+| `OptInWorkflowImageURLs` | array[object] | Yes | Images showing the opt-in workflow |
+| `AdditionalInformation` | string | Yes | Any additional information |
+| `BusinessAddr2` | string | No | Line 2 of the business address |
+| `IsvReseller` | string | No | ISV name |
+| `WebhookUrl` | string | No | URL that should receive webhooks relating to this verificati... |
+| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	verificationRequestEgress, err := client.MessagingTollfree.Verification.Requests.New(context.TODO(), telnyx.MessagingTollfreeVerificationRequestNewParams{
+	verificationRequestEgress, err := client.MessagingTollfree.Verification.Requests.New(context.Background(), telnyx.MessagingTollfreeVerificationRequestNewParams{
 		TfVerificationRequest: telnyx.TfVerificationRequestParam{
-			AdditionalInformation:    "additionalInformation",
+			AdditionalInformation: "Additional context for this request.",
 			BusinessAddr1:            "600 Congress Avenue",
 			BusinessCity:             "Austin",
 			BusinessContactEmail:     "email@example.com",
@@ -439,44 +571,72 @@ Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegist
 		},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verificationRequestEgress.ID)
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `termsAndConditionURL` (string), `useCase` (object), `useCaseSummary` (string), `verificationRequestId` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Get Verification Request
 
 Get a single verification request by its ID.
 
-`GET /messaging_tollfree/verification/requests/{id}`
+`client.MessagingTollfree.Verification.Requests.Get()` — `GET /messaging_tollfree/verification/requests/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
-	verificationRequestStatus, err := client.MessagingTollfree.Verification.Requests.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	verificationRequestStatus, err := client.MessagingTollfree.Verification.Requests.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verificationRequestStatus.ID)
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `createdAt` (date-time), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `reason` (string), `termsAndConditionURL` (string), `updatedAt` (date-time), `useCase` (object), `useCaseSummary` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Update Verification Request
 
 Update an existing tollfree verification request. This is particularly useful when there are pending customer actions to be taken.
 
-`PATCH /messaging_tollfree/verification/requests/{id}` — Required: `businessName`, `corporateWebsite`, `businessAddr1`, `businessCity`, `businessState`, `businessZip`, `businessContactFirstName`, `businessContactLastName`, `businessContactEmail`, `businessContactPhone`, `messageVolume`, `phoneNumbers`, `useCase`, `useCaseSummary`, `productionMessageContent`, `optInWorkflow`, `optInWorkflowImageURLs`, `additionalInformation`
+`client.MessagingTollfree.Verification.Requests.Update()` — `PATCH /messaging_tollfree/verification/requests/{id}`
 
-Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegistrationCountry` (string | null), `businessRegistrationNumber` (string | null), `businessRegistrationType` (string | null), `campaignVerifyAuthorizationToken` (string | null), `doingBusinessAs` (string | null), `entityType` (object), `helpMessageResponse` (string | null), `isvReseller` (string | null), `optInConfirmationResponse` (string | null), `optInKeywords` (string | null), `privacyPolicyURL` (string | null), `termsAndConditionURL` (string | null), `webhookUrl` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BusinessName` | string | Yes | Name of the business; there are no specific formatting requi... |
+| `CorporateWebsite` | string | Yes | A URL, including the scheme, pointing to the corporate websi... |
+| `BusinessAddr1` | string | Yes | Line 1 of the business address |
+| `BusinessCity` | string | Yes | The city of the business address; the first letter should be... |
+| `BusinessState` | string | Yes | The full name of the state (not the 2 letter code) of the bu... |
+| `BusinessZip` | string | Yes | The ZIP code of the business address |
+| `BusinessContactFirstName` | string | Yes | First name of the business contact; there are no specific re... |
+| `BusinessContactLastName` | string | Yes | Last name of the business contact; there are no specific req... |
+| `BusinessContactEmail` | string | Yes | The email address of the business contact |
+| `BusinessContactPhone` | string | Yes | The phone number of the business contact in E.164 format |
+| `MessageVolume` | object | Yes | Estimated monthly volume of messages from the given phone nu... |
+| `PhoneNumbers` | array[object] | Yes | The phone numbers to request the verification of |
+| `UseCase` | object | Yes | Machine-readable use-case for the phone numbers |
+| `UseCaseSummary` | string | Yes | Human-readable summary of the desired use-case |
+| `ProductionMessageContent` | string | Yes | An example of a message that will be sent from the given pho... |
+| `OptInWorkflow` | string | Yes | Human-readable description of how end users will opt into re... |
+| `OptInWorkflowImageURLs` | array[object] | Yes | Images showing the opt-in workflow |
+| `AdditionalInformation` | string | Yes | Any additional information |
+| `Id` | string (UUID) | Yes |  |
+| `BusinessAddr2` | string | No | Line 2 of the business address |
+| `IsvReseller` | string | No | ISV name |
+| `WebhookUrl` | string | No | URL that should receive webhooks relating to this verificati... |
+| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	verificationRequestEgress, err := client.MessagingTollfree.Verification.Requests.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.MessagingTollfreeVerificationRequestUpdateParams{
 			TfVerificationRequest: telnyx.TfVerificationRequestParam{
-				AdditionalInformation:    "additionalInformation",
+				AdditionalInformation: "Additional context for this request.",
 				BusinessAddr1:            "600 Congress Avenue",
 				BusinessCity:             "Austin",
 				BusinessContactEmail:     "email@example.com",
@@ -506,12 +666,12 @@ Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegist
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verificationRequestEgress.ID)
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `termsAndConditionURL` (string), `useCase` (object), `useCaseSummary` (string), `verificationRequestId` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Delete Verification Request
 
@@ -521,12 +681,16 @@ A request may only be deleted when when the request is in the "rejected" state. 
 * `HTTP 400`: request exists but can't be deleted (i.e. not rejected)
 * `HTTP 404`: request unknown or already deleted
 
-`DELETE /messaging_tollfree/verification/requests/{id}`
+`client.MessagingTollfree.Verification.Requests.Delete()` — `DELETE /messaging_tollfree/verification/requests/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
-	err := client.MessagingTollfree.Verification.Requests.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.MessagingTollfree.Verification.Requests.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -534,11 +698,15 @@ A request may only be deleted when when the request is in the "rejected" state. 
 
 Get the history of status changes for a verification request. Returns a paginated list of historical status changes including the reason for each change and when it occurred.
 
-`GET /messaging_tollfree/verification/requests/{id}/status_history`
+`client.MessagingTollfree.Verification.Requests.GetStatusHistory()` — `GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.MessagingTollfree.Verification.Requests.GetStatusHistory(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.MessagingTollfreeVerificationRequestGetStatusHistoryParams{
 			PageNumber: 1,
@@ -546,23 +714,31 @@ Get the history of status changes for a verification request. Returns a paginate
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Records)
 ```
 
-Returns: `records` (array[object]), `total_records` (integer)
+Key response fields: `response.data.records, response.data.total_records`
 
 ## List messaging URL domains
 
-`GET /messaging_url_domains`
+`client.MessagingURLDomains.List()` — `GET /messaging_url_domains`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.MessagingURLDomains.List(context.TODO(), telnyx.MessagingURLDomainListParams{})
+	page, err := client.MessagingURLDomains.List(context.Background(), telnyx.MessagingURLDomainListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `id` (string), `record_type` (string), `url_domain` (string), `use_case` (string)
+Key response fields: `response.data.id, response.data.record_type, response.data.url_domain`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

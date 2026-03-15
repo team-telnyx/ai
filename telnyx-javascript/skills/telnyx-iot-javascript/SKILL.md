@@ -1,8 +1,7 @@
 ---
 name: telnyx-iot-javascript
 description: >-
-  Manage IoT SIM cards, eSIMs, data plans, and wireless connectivity. Use when
-  building IoT/M2M solutions. This skill provides JavaScript SDK examples.
+  IoT SIM cards, eSIMs, data plans, and wireless connectivity for M2M solutions.
 metadata:
   author: telnyx
   product: iot
@@ -13,6 +12,39 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Iot - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. Purchase SIM cards (physical SIM, eSIM chip MFF2, or eSIM OTA)
+2. For physical SIMs: register via 10-digit code or CSV batch upload
+3. Insert SIM and configure APN: Name='Telnyx', APN='data00.telnyx' (leave all other fields blank)
+4. Enable data roaming on device and reboot
+
+### Steps
+
+1. **Order SIMs**: `client.simCards.list()`
+2. **Register SIMs**: `client.simCards.register({simCardId: ..., registrationCode: ...})`
+3. **Activate SIM**: `client.simCards.activate({simCardId: ...})`
+4. **Monitor usage**: `client.simCards.retrieve({simCardId: ...})`
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Traditional device, replaceable SIM | Physical IoT SIM Card |
+| Embedded/soldered into device | eSIM Chip (MFF2) |
+| Software-only, no physical card | eSIM (OTA) |
+
+### Common mistakes
+
+- NEVER modify APN fields beyond Name and APN — causes connectivity failures
+- NEVER forget to enable data roaming on the device — no connectivity without it
+- NEVER skip device reboot after APN configuration changes
+- For fleet deployments: use CSV batch registration, not one-by-one
+
+**Related skills**: telnyx-networking-javascript
 
 ## Installation
 
@@ -39,7 +71,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.sim_cards.list(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -64,14 +96,22 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Purchase eSIMs
 
 Purchases and registers the specified amount of eSIMs to the current user's account.  
 If `sim_card_group_id` is provided, the eSIMs will be associated with that group. Otherwise, the default group for the current user will be used.  
 
-`POST /actions/purchase/esims` — Required: `amount`
+`client.actions.purchase.create()` — `POST /actions/purchase/esims`
 
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum: enabled, disabled, standby), `tags` (array[string]), `whitelabel_name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | integer | Yes | The amount of eSIMs to be purchased. |
+| `tags` | array[string] | No | Searchable tags associated with the SIM cards |
+| `simCardGroupId` | string (UUID) | No | The group SIMCardGroup identification. |
+| `status` | enum (enabled, disabled, standby) | No | Status on which the SIM cards will be set after being succes... |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const purchase = await client.actions.purchase.create({ amount: 10 });
@@ -79,16 +119,21 @@ const purchase = await client.actions.purchase.create({ amount: 10 });
 console.log(purchase.data);
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Register SIM cards
 
 Register the SIM cards associated with the provided registration codes to the current user's account.  
 If `sim_card_group_id` is provided, the SIM cards will be associated with that group. Otherwise, the default group for the current user will be used.  
 
-`POST /actions/register/sim_cards` — Required: `registration_codes`
+`client.actions.register.create()` — `POST /actions/register/sim_cards`
 
-Optional: `sim_card_group_id` (uuid), `status` (enum: enabled, disabled, standby), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `registrationCodes` | array[string] | Yes |  |
+| `tags` | array[string] | No | Searchable tags associated with the SIM card |
+| `simCardGroupId` | string (UUID) | No | The group SIMCardGroup identification. |
+| `status` | enum (enabled, disabled, standby) | No | Status on which the SIM card will be set after being success... |
 
 ```javascript
 const register = await client.actions.register.create({
@@ -98,13 +143,103 @@ const register = await client.actions.register.create({
 console.log(register.data);
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.id, response.data.status, response.data.type`
+
+## Get all SIM cards
+
+Get all SIM cards belonging to the user that match the given filters.
+
+`client.simCards.list()` — `GET /sim_cards`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (current_billing_period_consumed_data.amount, -current_billing_period_consumed_data.amount) | No | Sorts SIM cards by the given field. |
+| `filter` | object | No | Consolidated filter parameter for SIM cards (deepObject styl... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const simpleSimCard of client.simCards.list()) {
+  console.log(simpleSimCard.id);
+}
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.type`
+
+## Get SIM card
+
+Returns the details regarding a specific SIM card.
+
+`client.simCards.retrieve()` — `GET /sim_cards/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `includeSimCardGroup` | boolean | No | It includes the associated SIM card group object in the resp... |
+| `includePinPukCodes` | boolean | No | When set to true, includes the PIN and PUK codes in the resp... |
+
+```javascript
+const simCard = await client.simCards.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
+
+console.log(simCard.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.type`
+
+## Create a SIM card order
+
+Creates a new order for SIM cards.
+
+`client.simCardOrders.create()` — `POST /sim_card_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `addressId` | string (UUID) | Yes | Uniquely identifies the address for the order. |
+| `quantity` | integer | Yes | The amount of SIM cards to order. |
+
+```javascript
+const simCardOrder = await client.simCardOrders.create({
+  address_id: '1293384261075731499',
+  quantity: 23,
+    simCardGroupId: '550e8400-e29b-41d4-a716-446655440000',
+});
+
+console.log(simCardOrder.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Create a SIM card group
+
+Creates a new SIM card group object
+
+`client.simCardGroups.create()` — `POST /sim_card_groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | A user friendly name for the SIM card group. |
+| `dataLimit` | object | No | Upper limit on the amount of data the SIM cards, within the ... |
+
+```javascript
+const simCardGroup = await client.simCardGroups.create({ name: 'My Test Group' });
+
+console.log(simCardGroup.data);
+```
+
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List bulk SIM card actions
 
 This API lists a paginated collection of bulk SIM card actions. A bulk SIM card action contains details about a collection of individual SIM card actions.
 
-`GET /bulk_sim_card_actions`
+`client.bulkSimCardActions.list()` — `GET /bulk_sim_card_actions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[actionType]` | enum (bulk_set_public_ips) | No | Filter by action type. |
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -113,13 +248,17 @@ for await (const bulkSimCardActionListResponse of client.bulkSimCardActions.list
 }
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Get bulk SIM card action details
 
 This API fetches information about a bulk SIM card action. A bulk SIM card action contains details about a collection of individual SIM card actions.
 
-`GET /bulk_sim_card_actions/{id}`
+`client.bulkSimCardActions.retrieve()` — `GET /bulk_sim_card_actions/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const bulkSimCardAction = await client.bulkSimCardActions.retrieve(
@@ -129,11 +268,16 @@ const bulkSimCardAction = await client.bulkSimCardActions.retrieve(
 console.log(bulkSimCardAction.data);
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List OTA updates
 
-`GET /ota_updates`
+`client.otaUpdates.list()` — `GET /ota_updates`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for OTA updates (deepObject st... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -142,13 +286,17 @@ for await (const otaUpdateListResponse of client.otaUpdates.list()) {
 }
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: sim_card_network_preferences), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Get OTA update
 
 This API returns the details of an Over the Air (OTA) update.
 
-`GET /ota_updates/{id}`
+`client.otaUpdates.retrieve()` — `GET /ota_updates/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const otaUpdate = await client.otaUpdates.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -156,13 +304,18 @@ const otaUpdate = await client.otaUpdates.retrieve('6a09cdc3-8948-47f0-aa62-74ac
 console.log(otaUpdate.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: sim_card_network_preferences), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## List SIM card actions
 
 This API lists a paginated collection of SIM card actions. It enables exploring a collection of existing asynchronous operations using specific filters.
 
-`GET /sim_card_actions`
+`client.simCards.actions.list()` — `GET /sim_card_actions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for SIM card actions (deepObje... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -171,13 +324,17 @@ for await (const simCardAction of client.simCards.actions.list()) {
 }
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get SIM card action details
 
 This API fetches detailed information about a SIM card action to follow-up on an existing asynchronous operation.
 
-`GET /sim_card_actions/{id}`
+`client.simCards.actions.retrieve()` — `GET /sim_card_actions/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const action = await client.simCards.actions.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -185,13 +342,19 @@ const action = await client.simCards.actions.retrieve('6a09cdc3-8948-47f0-aa62-7
 console.log(action.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List SIM card data usage notifications
 
 Lists a paginated collection of SIM card data usage notifications. It enables exploring the collection using specific filters.
 
-`GET /sim_card_data_usage_notifications`
+`client.simCardDataUsageNotifications.list()` — `GET /sim_card_data_usage_notifications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[simCardId]` | string (UUID) | No | A valid SIM card ID. |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -200,13 +363,18 @@ for await (const simCardDataUsageNotification of client.simCardDataUsageNotifica
 }
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a new SIM card data usage notification
 
 Creates a new SIM card data usage notification.
 
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
+`client.simCardDataUsageNotifications.create()` — `POST /sim_card_data_usage_notifications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `simCardId` | string (UUID) | Yes | The identification UUID of the related SIM card resource. |
+| `threshold` | object | Yes | Data usage threshold that will trigger the notification. |
 
 ```javascript
 const simCardDataUsageNotification = await client.simCardDataUsageNotifications.create({
@@ -217,13 +385,17 @@ const simCardDataUsageNotification = await client.simCardDataUsageNotifications.
 console.log(simCardDataUsageNotification.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Get a single SIM card data usage notification
 
 Get a single SIM Card Data Usage Notification.
 
-`GET /sim_card_data_usage_notifications/{id}`
+`client.simCardDataUsageNotifications.retrieve()` — `GET /sim_card_data_usage_notifications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const simCardDataUsageNotification = await client.simCardDataUsageNotifications.retrieve(
@@ -233,15 +405,21 @@ const simCardDataUsageNotification = await client.simCardDataUsageNotifications.
 console.log(simCardDataUsageNotification.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Updates information for a SIM Card Data Usage Notification
 
 Updates information for a SIM Card Data Usage Notification.
 
-`PATCH /sim_card_data_usage_notifications/{id}`
+`client.simCardDataUsageNotifications.update()` — `PATCH /sim_card_data_usage_notifications/{id}`
 
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `simCardId` | string (UUID) | No | The identification UUID of the related SIM card resource. |
+| `id` | string (UUID) | No | Identifies the resource. |
+| `recordType` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const simCardDataUsageNotification = await client.simCardDataUsageNotifications.update(
@@ -251,13 +429,17 @@ const simCardDataUsageNotification = await client.simCardDataUsageNotifications.
 console.log(simCardDataUsageNotification.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete SIM card data usage notifications
 
 Delete the SIM Card Data Usage Notification.
 
-`DELETE /sim_card_data_usage_notifications/{id}`
+`client.simCardDataUsageNotifications.delete()` — `DELETE /sim_card_data_usage_notifications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const simCardDataUsageNotification = await client.simCardDataUsageNotifications.delete(
@@ -267,13 +449,20 @@ const simCardDataUsageNotification = await client.simCardDataUsageNotifications.
 console.log(simCardDataUsageNotification.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List SIM card group actions
 
 This API allows listing a paginated collection a SIM card group actions. It allows to explore a collection of existing asynchronous operation using specific filters.
 
-`GET /sim_card_group_actions`
+`client.simCardGroups.actions.list()` — `GET /sim_card_group_actions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[status]` | enum (in-progress, completed, failed) | No | Filter by a specific status of the resource's lifecycle. |
+| `filter[type]` | enum (set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist) | No | Filter by action type. |
+| `page[number]` | integer | No | The page number to load. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -282,13 +471,17 @@ for await (const simCardGroupAction of client.simCardGroups.actions.list()) {
 }
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Get SIM card group action details
 
 This API allows fetching detailed information about a SIM card group action resource to make follow-ups in an existing asynchronous operation.
 
-`GET /sim_card_group_actions/{id}`
+`client.simCardGroups.actions.retrieve()` — `GET /sim_card_group_actions/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const action = await client.simCardGroups.actions.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -296,13 +489,20 @@ const action = await client.simCardGroups.actions.retrieve('6a09cdc3-8948-47f0-a
 console.log(action.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Get all SIM card groups
 
 Get all SIM card groups belonging to the user that match the given filters.
 
-`GET /sim_card_groups`
+`client.simCardGroups.list()` — `GET /sim_card_groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[name]` | string | No | A valid SIM card group name. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -311,29 +511,18 @@ for await (const simCardGroupListResponse of client.simCardGroups.list()) {
 }
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `sim_card_count` (integer), `updated_at` (string), `wireless_blocklist_id` (uuid)
-
-## Create a SIM card group
-
-Creates a new SIM card group object
-
-`POST /sim_card_groups` — Required: `name`
-
-Optional: `data_limit` (object)
-
-```javascript
-const simCardGroup = await client.simCardGroups.create({ name: 'My Test Group' });
-
-console.log(simCardGroup.data);
-```
-
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get SIM card group
 
 Returns the details regarding a specific SIM card group
 
-`GET /sim_card_groups/{id}`
+`client.simCardGroups.retrieve()` — `GET /sim_card_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
+| `includeIccids` | boolean | No | It includes a list of associated ICCIDs. |
 
 ```javascript
 const simCardGroup = await client.simCardGroups.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -341,15 +530,19 @@ const simCardGroup = await client.simCardGroups.retrieve('6a09cdc3-8948-47f0-aa6
 console.log(simCardGroup.data);
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a SIM card group
 
 Updates a SIM card group
 
-`PATCH /sim_card_groups/{id}`
+`client.simCardGroups.update()` — `PATCH /sim_card_groups/{id}`
 
-Optional: `data_limit` (object), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
+| `name` | string | No | A user friendly name for the SIM card group. |
+| `dataLimit` | object | No | Upper limit on the amount of data the SIM cards, within the ... |
 
 ```javascript
 const simCardGroup = await client.simCardGroups.update('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -357,13 +550,17 @@ const simCardGroup = await client.simCardGroups.update('6a09cdc3-8948-47f0-aa62-
 console.log(simCardGroup.data);
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a SIM card group
 
 Permanently deletes a SIM card group
 
-`DELETE /sim_card_groups/{id}`
+`client.simCardGroups.delete()` — `DELETE /sim_card_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```javascript
 const simCardGroup = await client.simCardGroups.delete('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -371,13 +568,17 @@ const simCardGroup = await client.simCardGroups.delete('6a09cdc3-8948-47f0-aa62-
 console.log(simCardGroup.data);
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Request Private Wireless Gateway removal from SIM card group
 
 This action will asynchronously remove an existing Private Wireless Gateway definition from a SIM card group. Completing this operation defines that all SIM cards in the SIM card group will get their traffic handled by Telnyx's default mobile network configuration.
 
-`POST /sim_card_groups/{id}/actions/remove_private_wireless_gateway`
+`client.simCardGroups.actions.removePrivateWirelessGateway()` — `POST /sim_card_groups/{id}/actions/remove_private_wireless_gateway`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```javascript
 const response = await client.simCardGroups.actions.removePrivateWirelessGateway(
@@ -387,13 +588,17 @@ const response = await client.simCardGroups.actions.removePrivateWirelessGateway
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Request Wireless Blocklist removal from SIM card group
 
 This action will asynchronously remove an existing Wireless Blocklist to all the SIMs in the SIM card group.
 
-`POST /sim_card_groups/{id}/actions/remove_wireless_blocklist`
+`client.simCardGroups.actions.removeWirelessBlocklist()` — `POST /sim_card_groups/{id}/actions/remove_wireless_blocklist`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```javascript
 const response = await client.simCardGroups.actions.removeWirelessBlocklist(
@@ -403,13 +608,18 @@ const response = await client.simCardGroups.actions.removeWirelessBlocklist(
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Request Private Wireless Gateway assignment for SIM card group
 
 This action will asynchronously assign a provisioned Private Wireless Gateway to the SIM card group. Completing this operation defines that all SIM cards in the SIM card group will get their traffic controlled by the associated Private Wireless Gateway. This operation will also imply that new SIM cards assigned to a group will inherit its network definitions.
 
-`POST /sim_card_groups/{id}/actions/set_private_wireless_gateway` — Required: `private_wireless_gateway_id`
+`client.simCardGroups.actions.setPrivateWirelessGateway()` — `POST /sim_card_groups/{id}/actions/set_private_wireless_gateway`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `privateWirelessGatewayId` | string (UUID) | Yes | The identification of the related Private Wireless Gateway r... |
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```javascript
 const response = await client.simCardGroups.actions.setPrivateWirelessGateway(
@@ -420,13 +630,18 @@ const response = await client.simCardGroups.actions.setPrivateWirelessGateway(
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Request Wireless Blocklist assignment for SIM card group
 
 This action will asynchronously assign a Wireless Blocklist to all the SIMs in the SIM card group.
 
-`POST /sim_card_groups/{id}/actions/set_wireless_blocklist` — Required: `wireless_blocklist_id`
+`client.simCardGroups.actions.setWirelessBlocklist()` — `POST /sim_card_groups/{id}/actions/set_wireless_blocklist`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `wirelessBlocklistId` | string (UUID) | Yes | The identification of the related Wireless Blocklist resourc... |
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```javascript
 const response = await client.simCardGroups.actions.setWirelessBlocklist(
@@ -437,13 +652,18 @@ const response = await client.simCardGroups.actions.setWirelessBlocklist(
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Preview SIM card orders
 
 Preview SIM card order purchases.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`client.simCardOrderPreview.preview()` — `POST /sim_card_order_preview`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `quantity` | integer | Yes | The amount of SIM cards that the user would like to purchase... |
+| `addressId` | string (UUID) | Yes | Uniquely identifies the address for the order. |
 
 ```javascript
 const response = await client.simCardOrderPreview.preview({
@@ -454,13 +674,18 @@ const response = await client.simCardOrderPreview.preview({
 console.log(response.data);
 ```
 
-Returns: `quantity` (integer), `record_type` (string), `shipping_cost` (object), `sim_cards_cost` (object), `total_cost` (object)
+Key response fields: `response.data.quantity, response.data.record_type, response.data.shipping_cost`
 
 ## Get all SIM card orders
 
 Get all SIM card orders according to filters.
 
-`GET /sim_card_orders`
+`client.simCardOrders.list()` — `GET /sim_card_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for SIM card orders (deepObjec... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -469,30 +694,17 @@ for await (const simCardOrder of client.simCardOrders.list()) {
 }
 ```
 
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
-
-## Create a SIM card order
-
-Creates a new order for SIM cards.
-
-`POST /sim_card_orders` — Required: `address_id`, `quantity`
-
-```javascript
-const simCardOrder = await client.simCardOrders.create({
-  address_id: '1293384261075731499',
-  quantity: 23,
-});
-
-console.log(simCardOrder.data);
-```
-
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a single SIM card order
 
 Get a single SIM card order by its ID.
 
-`GET /sim_card_orders/{id}`
+`client.simCardOrders.retrieve()` — `GET /sim_card_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const simCardOrder = await client.simCardOrders.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -500,29 +712,18 @@ const simCardOrder = await client.simCardOrders.retrieve('6a09cdc3-8948-47f0-aa6
 console.log(simCardOrder.data);
 ```
 
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
-
-## Get all SIM cards
-
-Get all SIM cards belonging to the user that match the given filters.
-
-`GET /sim_cards`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const simpleSimCard of client.simCards.list()) {
-  console.log(simpleSimCard.id);
-}
-```
-
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Request bulk disabling voice on SIM cards.
 
 This API triggers an asynchronous operation to disable voice on SIM cards belonging to a specified SIM Card Group. 
-For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Actions can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+For each SIM Card a SIM Card Action will be generated.
 
-`POST /sim_cards/actions/bulk_disable_voice` — Required: `sim_card_group_id`
+`client.simCards.actions.bulkDisableVoice()` — `POST /sim_cards/actions/bulk_disable_voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `simCardGroupId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.simCards.actions.bulkDisableVoice({
@@ -532,14 +733,18 @@ const response = await client.simCards.actions.bulkDisableVoice({
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Request bulk enabling voice on SIM cards.
 
 This API triggers an asynchronous operation to enable voice on SIM cards belonging to a specified SIM Card Group. 
-For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Actions can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+For each SIM Card a SIM Card Action will be generated.
 
-`POST /sim_cards/actions/bulk_enable_voice` — Required: `sim_card_group_id`
+`client.simCards.actions.bulkEnableVoice()` — `POST /sim_cards/actions/bulk_enable_voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `simCardGroupId` | string (UUID) | Yes |  |
 
 ```javascript
 const response = await client.simCards.actions.bulkEnableVoice({
@@ -549,14 +754,18 @@ const response = await client.simCards.actions.bulkEnableVoice({
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Request bulk setting SIM card public IPs.
 
 This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards. 
 For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
 
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+`client.simCards.actions.bulkSetPublicIPs()` — `POST /sim_cards/actions/bulk_set_public_ips`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `simCardIds` | array[object] | Yes |  |
 
 ```javascript
 const response = await client.simCards.actions.bulkSetPublicIPs({
@@ -566,15 +775,17 @@ const response = await client.simCards.actions.bulkSetPublicIPs({
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Validate SIM cards registration codes
 
 It validates whether SIM card registration codes are valid or not.
 
-`POST /sim_cards/actions/validate_registration_codes`
+`client.simCards.actions.validateRegistrationCodes()` — `POST /sim_cards/actions/validate_registration_codes`
 
-Optional: `registration_codes` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `registrationCodes` | array[string] | No |  |
 
 ```javascript
 const response = await client.simCards.actions.validateRegistrationCodes();
@@ -582,29 +793,21 @@ const response = await client.simCards.actions.validateRegistrationCodes();
 console.log(response.data);
 ```
 
-Returns: `invalid_detail` (string | null), `record_type` (string), `registration_code` (string), `valid` (boolean)
-
-## Get SIM card
-
-Returns the details regarding a specific SIM card.
-
-`GET /sim_cards/{id}`
-
-```javascript
-const simCard = await client.simCards.retrieve('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
-
-console.log(simCard.data);
-```
-
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.invalid_detail, response.data.record_type, response.data.registration_code`
 
 ## Update a SIM card
 
 Updates SIM card data
 
-`PATCH /sim_cards/{id}`
+`client.simCards.update()` — `PATCH /sim_cards/{id}`
 
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `type` | enum (physical, esim) | No | The type of SIM card |
+| `tags` | array[string] | No | Searchable tags associated with the SIM card |
+| `simCardGroupId` | string (UUID) | No | The group SIMCardGroup identification. |
+| ... | | | +25 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const simCard = await client.simCards.update('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -612,14 +815,19 @@ const simCard = await client.simCards.update('6a09cdc3-8948-47f0-aa62-74ac943d6c
 console.log(simCard.data);
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Deletes a SIM card
 
 The SIM card will be decommissioned, removed from your account and you will stop being charged. The SIM card won't be able to connect to the network after the deletion is completed, thus making it impossible to consume data. 
 Transitioning to the disabled state may take a period of time.
 
-`DELETE /sim_cards/{id}`
+`client.simCards.delete()` — `DELETE /sim_cards/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `reportLost` | boolean | No | Enables deletion of disabled eSIMs that can't be uninstalled... |
 
 ```javascript
 const simCard = await client.simCards.delete('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -627,14 +835,18 @@ const simCard = await client.simCards.delete('6a09cdc3-8948-47f0-aa62-74ac943d6c
 console.log(simCard.data);
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Request a SIM card disable
 
 This API disables a SIM card, disconnecting it from the network and making it impossible to consume data. 
 The API will trigger an asynchronous operation called a SIM Card Action. Transitioning to the disabled state may take a period of time.
 
-`POST /sim_cards/{id}/actions/disable`
+`client.simCards.actions.disable()` — `POST /sim_cards/{id}/actions/disable`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.actions.disable('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -642,7 +854,7 @@ const response = await client.simCards.actions.disable('6a09cdc3-8948-47f0-aa62-
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Request a SIM card enable
 
@@ -650,7 +862,11 @@ This API enables a SIM card, connecting it to the network and making it possible
 To enable a SIM card, it must be associated with a SIM card group. 
 The API will trigger an asynchronous operation called a SIM Card Action. Transitioning to the enabled state may take a period of time.
 
-`POST /sim_cards/{id}/actions/enable`
+`client.simCards.actions.enable()` — `POST /sim_cards/{id}/actions/enable`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.actions.enable('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -658,14 +874,18 @@ const response = await client.simCards.actions.enable('6a09cdc3-8948-47f0-aa62-7
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Request removing a SIM card public IP
 
 This API removes an existing public IP from a SIM card.   
  The API will trigger an asynchronous operation called a SIM Card Action. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
 
-`POST /sim_cards/{id}/actions/remove_public_ip`
+`client.simCards.actions.removePublicIP()` — `POST /sim_cards/{id}/actions/remove_public_ip`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.actions.removePublicIP(
@@ -675,14 +895,19 @@ const response = await client.simCards.actions.removePublicIP(
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Request setting a SIM card public IP
 
 This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.   
- The API will trigger an asynchronous operation called a SIM Card Action. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+ The API will trigger an asynchronous operation called a SIM Card Action.
 
-`POST /sim_cards/{id}/actions/set_public_ip`
+`client.simCards.actions.setPublicIP()` — `POST /sim_cards/{id}/actions/set_public_ip`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `regionCode` | string | No | The code of the region where the public IP should be assigne... |
 
 ```javascript
 const response = await client.simCards.actions.setPublicIP('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -690,7 +915,7 @@ const response = await client.simCards.actions.setPublicIP('6a09cdc3-8948-47f0-a
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Request setting a SIM card to standby
 
@@ -698,7 +923,11 @@ The SIM card will be able to connect to the network once the process to set it t
 To set a SIM card to standby, it must be associated with SIM card group. 
 The API will trigger an asynchronous operation called a SIM Card Action. Transitioning to the standby state may take a period of time.
 
-`POST /sim_cards/{id}/actions/set_standby`
+`client.simCards.actions.setStandby()` — `POST /sim_cards/{id}/actions/set_standby`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.actions.setStandby('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -706,14 +935,18 @@ const response = await client.simCards.actions.setStandby('6a09cdc3-8948-47f0-aa
 console.log(response.data);
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get activation code for an eSIM
 
 It returns the activation code for an eSIM.  
  This API is only available for eSIMs. If the given SIM is a physical SIM card, or has already been installed, an error will be returned.
 
-`GET /sim_cards/{id}/activation_code`
+`client.simCards.getActivationCode()` — `GET /sim_cards/{id}/activation_code`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.getActivationCode('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -721,13 +954,17 @@ const response = await client.simCards.getActivationCode('6a09cdc3-8948-47f0-aa6
 console.log(response.data);
 ```
 
-Returns: `activation_code` (string), `record_type` (string)
+Key response fields: `response.data.activation_code, response.data.record_type`
 
 ## Get SIM card device details
 
 It returns the device details where a SIM card is currently being used.
 
-`GET /sim_cards/{id}/device_details`
+`client.simCards.getDeviceDetails()` — `GET /sim_cards/{id}/device_details`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.getDeviceDetails('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -735,13 +972,17 @@ const response = await client.simCards.getDeviceDetails('6a09cdc3-8948-47f0-aa62
 console.log(response.data);
 ```
 
-Returns: `brand_name` (string), `device_type` (string), `imei` (string), `model_name` (string), `operating_system` (string), `record_type` (string)
+Key response fields: `response.data.brand_name, response.data.device_type, response.data.imei`
 
 ## Get SIM card public IP definition
 
 It returns the public IP requested for a SIM card.
 
-`GET /sim_cards/{id}/public_ip`
+`client.simCards.getPublicIP()` — `GET /sim_cards/{id}/public_ip`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```javascript
 const response = await client.simCards.getPublicIP('6a09cdc3-8948-47f0-aa62-74ac943d6c58');
@@ -749,13 +990,19 @@ const response = await client.simCards.getPublicIP('6a09cdc3-8948-47f0-aa62-74ac
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `ip` (string), `record_type` (string), `region_code` (string), `sim_card_id` (uuid), `type` (enum: ipv4), `updated_at` (string)
+Key response fields: `response.data.type, response.data.created_at, response.data.updated_at`
 
 ## List wireless connectivity logs
 
 This API allows listing a paginated collection of Wireless Connectivity Logs associated with a SIM Card, for troubleshooting purposes.
 
-`GET /sim_cards/{id}/wireless_connectivity_logs`
+`client.simCards.listWirelessConnectivityLogs()` — `GET /sim_cards/{id}/wireless_connectivity_logs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -766,11 +1013,11 @@ for await (const simCardListWirelessConnectivityLogsResponse of client.simCards.
 }
 ```
 
-Returns: `apn` (string), `cell_id` (string), `created_at` (string), `id` (integer), `imei` (string), `imsi` (string), `ipv4` (string), `ipv6` (string), `last_seen` (string), `log_type` (enum: registration, data), `mobile_country_code` (string), `mobile_network_code` (string), `radio_access_technology` (string), `record_type` (string), `sim_card_id` (uuid), `start_time` (string), `state` (string), `stop_time` (string)
+Key response fields: `response.data.id, response.data.state, response.data.created_at`
 
 ## List Migration Source coverage
 
-`GET /storage/migration_source_coverage`
+`client.storage.listMigrationSourceCoverage()` — `GET /storage/migration_source_coverage`
 
 ```javascript
 const response = await client.storage.listMigrationSourceCoverage();
@@ -778,11 +1025,11 @@ const response = await client.storage.listMigrationSourceCoverage();
 console.log(response.data);
 ```
 
-Returns: `provider` (enum: aws), `source_region` (string)
+Key response fields: `response.data.provider, response.data.source_region`
 
 ## List all Migration Sources
 
-`GET /storage/migration_sources`
+`client.storage.migrationSources.list()` — `GET /storage/migration_sources`
 
 ```javascript
 const migrationSources = await client.storage.migrationSources.list();
@@ -790,15 +1037,21 @@ const migrationSources = await client.storage.migrationSources.list();
 console.log(migrationSources.data);
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `response.data.id, response.data.bucket_name, response.data.provider`
 
 ## Create a Migration Source
 
 Create a source from which data can be migrated from.
 
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+`client.storage.migrationSources.create()` — `POST /storage/migration_sources`
 
-Optional: `id` (string), `source_region` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | enum (aws, telnyx) | Yes | Cloud provider from which to migrate data. |
+| `providerAuth` | object | Yes |  |
+| `bucketName` | string | Yes | Bucket name to migrate the data from. |
+| `id` | string (UUID) | No | Unique identifier for the data migration source. |
+| `sourceRegion` | string | No | For intra-Telnyx buckets migration, specify the source bucke... |
 
 ```javascript
 const migrationSource = await client.storage.migrationSources.create({
@@ -810,11 +1063,15 @@ const migrationSource = await client.storage.migrationSources.create({
 console.log(migrationSource.data);
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `response.data.id, response.data.bucket_name, response.data.provider`
 
 ## Get a Migration Source
 
-`GET /storage/migration_sources/{id}`
+`client.storage.migrationSources.retrieve()` — `GET /storage/migration_sources/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration source. |
 
 ```javascript
 const migrationSource = await client.storage.migrationSources.retrieve('');
@@ -822,11 +1079,15 @@ const migrationSource = await client.storage.migrationSources.retrieve('');
 console.log(migrationSource.data);
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `response.data.id, response.data.bucket_name, response.data.provider`
 
 ## Delete a Migration Source
 
-`DELETE /storage/migration_sources/{id}`
+`client.storage.migrationSources.delete()` — `DELETE /storage/migration_sources/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration source. |
 
 ```javascript
 const migrationSource = await client.storage.migrationSources.delete('');
@@ -834,11 +1095,11 @@ const migrationSource = await client.storage.migrationSources.delete('');
 console.log(migrationSource.data);
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `response.data.id, response.data.bucket_name, response.data.provider`
 
 ## List all Migrations
 
-`GET /storage/migrations`
+`client.storage.migrations.list()` — `GET /storage/migrations`
 
 ```javascript
 const migrations = await client.storage.migrations.list();
@@ -846,19 +1107,27 @@ const migrations = await client.storage.migrations.list();
 console.log(migrations.data);
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a Migration
 
 Initiate a migration of data from an external provider into Telnyx Cloud Storage. Currently, only S3 is supported.
 
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+`client.storage.migrations.create()` — `POST /storage/migrations`
 
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sourceId` | string (UUID) | Yes | ID of the Migration Source from which to migrate data. |
+| `targetBucketName` | string | Yes | Bucket name to migrate the data into. |
+| `targetRegion` | string | Yes | Telnyx Cloud Storage region to migrate the data to. |
+| `status` | enum (pending, checking, migrating, complete, error, ...) | No | Status of the migration. |
+| `id` | string (UUID) | No | Unique identifier for the data migration. |
+| `refresh` | boolean | No | If true, will continue to poll the source bucket to ensure n... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const migration = await client.storage.migrations.create({
-  source_id: 'source_id',
+  source_id: '550e8400-e29b-41d4-a716-446655440000',
   target_bucket_name: 'target_bucket_name',
   target_region: 'target_region',
 });
@@ -866,11 +1135,15 @@ const migration = await client.storage.migrations.create({
 console.log(migration.data);
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a Migration
 
-`GET /storage/migrations/{id}`
+`client.storage.migrations.retrieve()` — `GET /storage/migrations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration. |
 
 ```javascript
 const migration = await client.storage.migrations.retrieve('');
@@ -878,11 +1151,15 @@ const migration = await client.storage.migrations.retrieve('');
 console.log(migration.data);
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Stop a Migration
 
-`POST /storage/migrations/{id}/actions/stop`
+`client.storage.migrations.actions.stop()` — `POST /storage/migrations/{id}/actions/stop`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration. |
 
 ```javascript
 const response = await client.storage.migrations.actions.stop('');
@@ -890,11 +1167,18 @@ const response = await client.storage.migrations.actions.stop('');
 console.log(response.data);
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List Mobile Voice Connections
 
-`GET /v2/mobile_voice_connections`
+`client.mobileVoiceConnections.list()` — `GET /v2/mobile_voice_connections`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load |
+| `page[size]` | integer | No | The size of the page |
+| `filter[connectionName][contains]` | string | No | Filter by connection name containing the given string |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -903,13 +1187,18 @@ for await (const mobileVoiceConnection of client.mobileVoiceConnections.list()) 
 }
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a Mobile Voice Connection
 
-`POST /v2/mobile_voice_connections`
+`client.mobileVoiceConnections.create()` — `POST /v2/mobile_voice_connections`
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tags` | array[string] | No |  |
+| `webhookApiVersion` | enum (1, 2) | No |  |
+| `active` | boolean | No |  |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const mobileVoiceConnection = await client.mobileVoiceConnections.create();
@@ -917,51 +1206,65 @@ const mobileVoiceConnection = await client.mobileVoiceConnections.create();
 console.log(mobileVoiceConnection.data);
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Retrieve a Mobile Voice Connection
 
-`GET /v2/mobile_voice_connections/{id}`
+`client.mobileVoiceConnections.retrieve()` — `GET /v2/mobile_voice_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.retrieve('id');
+const mobileVoiceConnection = await client.mobileVoiceConnections.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(mobileVoiceConnection.data);
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update a Mobile Voice Connection
 
-`PATCH /v2/mobile_voice_connections/{id}`
+`client.mobileVoiceConnections.update()` — `PATCH /v2/mobile_voice_connections/{id}`
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
+| `tags` | array[string] | No |  |
+| `webhookApiVersion` | enum (1, 2) | No |  |
+| `active` | boolean | No |  |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.update('id');
+const mobileVoiceConnection = await client.mobileVoiceConnections.update('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(mobileVoiceConnection.data);
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a Mobile Voice Connection
 
-`DELETE /v2/mobile_voice_connections/{id}`
+`client.mobileVoiceConnections.delete()` — `DELETE /v2/mobile_voice_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
 
 ```javascript
-const mobileVoiceConnection = await client.mobileVoiceConnections.delete('id');
+const mobileVoiceConnection = await client.mobileVoiceConnections.delete('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(mobileVoiceConnection.data);
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Get all wireless regions
 
 Retrieve all wireless regions for the given product.
 
-`GET /wireless/regions`
+`client.wireless.retrieveRegions()` — `GET /wireless/regions`
 
 ```javascript
 const response = await client.wireless.retrieveRegions({ product: 'public_ips' });
@@ -969,13 +1272,13 @@ const response = await client.wireless.retrieveRegions({ product: 'public_ips' }
 console.log(response.data);
 ```
 
-Returns: `code` (string), `inserted_at` (date-time), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.updated_at, response.data.code`
 
 ## Get all possible wireless blocklist values
 
 Retrieve all wireless blocklist values for a given blocklist type.
 
-`GET /wireless_blocklist_values`
+`client.wirelessBlocklistValues.list()` — `GET /wireless_blocklist_values`
 
 ```javascript
 const wirelessBlocklistValues = await client.wirelessBlocklistValues.list({ type: 'country' });
@@ -983,13 +1286,20 @@ const wirelessBlocklistValues = await client.wirelessBlocklistValues.list({ type
 console.log(wirelessBlocklistValues.data);
 ```
 
-Returns: `data` (object), `meta` (object)
+Key response fields: `response.data.data, response.data.meta`
 
 ## Get all Wireless Blocklists
 
 Get all Wireless Blocklists belonging to the user.
 
-`GET /wireless_blocklists`
+`client.wirelessBlocklists.list()` — `GET /wireless_blocklists`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[name]` | string | No | The name of the Wireless Blocklist. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -998,13 +1308,19 @@ for await (const wirelessBlocklist of client.wirelessBlocklists.list()) {
 }
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `response.data.id, response.data.name, response.data.type`
 
 ## Create a Wireless Blocklist
 
 Create a Wireless Blocklist to prevent SIMs from connecting to certain networks.
 
-`POST /wireless_blocklists` — Required: `name`, `type`, `values`
+`client.wirelessBlocklists.create()` — `POST /wireless_blocklists`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | The name of the Wireless Blocklist. |
+| `type` | enum (country, mcc, plmn) | Yes | The type of wireless blocklist. |
+| `values` | array[object] | Yes | Values to block. |
 
 ```javascript
 const wirelessBlocklist = await client.wirelessBlocklists.create({
@@ -1016,15 +1332,19 @@ const wirelessBlocklist = await client.wirelessBlocklists.create({
 console.log(wirelessBlocklist.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `response.data.id, response.data.name, response.data.type`
 
 ## Update a Wireless Blocklist
 
 Update a Wireless Blocklist.
 
-`PATCH /wireless_blocklists`
+`client.wirelessBlocklists.update()` — `PATCH /wireless_blocklists`
 
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | enum (country, mcc, plmn) | No | The type of wireless blocklist. |
+| `name` | string | No | The name of the Wireless Blocklist. |
+| `values` | array[object] | No | Values to block. |
 
 ```javascript
 const wirelessBlocklist = await client.wirelessBlocklists.update();
@@ -1032,13 +1352,17 @@ const wirelessBlocklist = await client.wirelessBlocklists.update();
 console.log(wirelessBlocklist.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `response.data.id, response.data.name, response.data.type`
 
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
 
-`GET /wireless_blocklists/{id}`
+`client.wirelessBlocklists.retrieve()` — `GET /wireless_blocklists/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the wireless blocklist. |
 
 ```javascript
 const wirelessBlocklist = await client.wirelessBlocklists.retrieve(
@@ -1048,13 +1372,17 @@ const wirelessBlocklist = await client.wirelessBlocklists.retrieve(
 console.log(wirelessBlocklist.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `response.data.id, response.data.name, response.data.type`
 
 ## Delete a Wireless Blocklist
 
 Deletes the Wireless Blocklist.
 
-`DELETE /wireless_blocklists/{id}`
+`client.wirelessBlocklists.delete()` — `DELETE /wireless_blocklists/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the wireless blocklist. |
 
 ```javascript
 const wirelessBlocklist = await client.wirelessBlocklists.delete(
@@ -1064,4 +1392,8 @@ const wirelessBlocklist = await client.wirelessBlocklists.delete(
 console.log(wirelessBlocklist.data);
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `response.data.id, response.data.name, response.data.type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

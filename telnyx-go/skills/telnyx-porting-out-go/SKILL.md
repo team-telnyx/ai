@@ -1,8 +1,8 @@
 ---
 name: telnyx-porting-out-go
 description: >-
-  Manage port-out requests when numbers are being ported away from Telnyx. List,
-  view, and update port-out status. This skill provides Go SDK examples.
+  Manage port-out requests when numbers leave Telnyx. List, view, and update
+  status.
 metadata:
   author: telnyx
   product: porting-out
@@ -13,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Porting Out - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. Port-out requests are initiated by the GAINING carrier, not by you
+
+### Steps
+
+1. **List port-out requests**: `client.Portouts.List(ctx, params)`
+2. **View details**: `client.Portouts.Retrieve(ctx, params)`
+3. **Update status**: `client.Portouts.Update(ctx, params)`
+
+### Common mistakes
+
+- You cannot create port-out requests — they appear when another carrier requests your numbers
+- Respond promptly to port-out requests — regulatory deadlines apply
+
+**Related skills**: telnyx-numbers-go, telnyx-porting-in-go
 
 ## Installation
 
@@ -47,7 +66,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Portouts.List(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -74,64 +93,84 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List portout requests
 
 Returns the portout requests according to filters
 
-`GET /portouts`
+`client.Portouts.List()` — `GET /portouts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Portouts.List(context.TODO(), telnyx.PortoutListParams{})
+	page, err := client.Portouts.List(context.Background(), telnyx.PortoutListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all port-out events
 
 Returns a list of all port-out events.
 
-`GET /portouts/events`
+`client.Portouts.Events.List()` — `GET /portouts/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Portouts.Events.List(context.TODO(), telnyx.PortoutEventListParams{})
+	page, err := client.Portouts.Events.List(context.Background(), telnyx.PortoutEventListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Show a port-out event
 
 Show a specific port-out event.
 
-`GET /portouts/events/{id}`
+`client.Portouts.Events.Get()` — `GET /portouts/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```go
-	event, err := client.Portouts.Events.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	event, err := client.Portouts.Events.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", event.Data)
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Republish a port-out event
 
 Republish a specific port-out event.
 
-`POST /portouts/events/{id}/republish`
+`client.Portouts.Events.Republish()` — `POST /portouts/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```go
-	err := client.Portouts.Events.Republish(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.Portouts.Events.Republish(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -139,178 +178,215 @@ Republish a specific port-out event.
 
 Given a port-out ID, list rejection codes that are eligible for that port-out
 
-`GET /portouts/rejections/{portout_id}`
+`client.Portouts.ListRejectionCodes()` — `GET /portouts/rejections/{portout_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortoutId` | string (UUID) | Yes | Identifies a port out order. |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
 	response, err := client.Portouts.ListRejectionCodes(
-		context.TODO(),
+		context.Background(),
 		"329d6658-8f93-405d-862f-648776e8afd7",
 		telnyx.PortoutListRejectionCodesParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `code` (integer), `description` (string), `reason_required` (boolean)
+Key response fields: `response.data.code, response.data.description, response.data.reason_required`
 
 ## List port-out related reports
 
 List the reports generated about port-out operations.
 
-`GET /portouts/reports`
+`client.Portouts.Reports.List()` — `GET /portouts/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Portouts.Reports.List(context.TODO(), telnyx.PortoutReportListParams{})
+	page, err := client.Portouts.Reports.List(context.Background(), telnyx.PortoutReportListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a port-out related report
 
 Generate reports about port-out operations.
 
-`POST /portouts/reports`
+`client.Portouts.Reports.New()` — `POST /portouts/reports`
 
 ```go
-	report, err := client.Portouts.Reports.New(context.TODO(), telnyx.PortoutReportNewParams{
+	report, err := client.Portouts.Reports.New(context.Background(), telnyx.PortoutReportNewParams{
 		Params: telnyx.ExportPortoutsCsvReportParam{
 			Filters: telnyx.ExportPortoutsCsvReportFiltersParam{},
 		},
 		ReportType: telnyx.PortoutReportNewParamsReportTypeExportPortoutsCsv,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", report.Data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /portouts/reports/{id}`
+`client.Portouts.Reports.Get()` — `GET /portouts/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a report. |
 
 ```go
-	report, err := client.Portouts.Reports.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	report, err := client.Portouts.Reports.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", report.Data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a portout request
 
 Returns the portout request based on the ID provided
 
-`GET /portouts/{id}`
+`client.Portouts.Get()` — `GET /portouts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Portout id |
 
 ```go
-	portout, err := client.Portouts.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	portout, err := client.Portouts.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", portout.Data)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all comments for a portout request
 
 Returns a list of comments for a portout request.
 
-`GET /portouts/{id}/comments`
+`client.Portouts.Comments.List()` — `GET /portouts/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Portout id |
 
 ```go
-	comments, err := client.Portouts.Comments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	comments, err := client.Portouts.Comments.List(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", comments.Data)
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment on a portout request
 
 Creates a comment on a portout request.
 
-`POST /portouts/{id}/comments`
+`client.Portouts.Comments.New()` — `POST /portouts/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Portout id |
+| `Body` | string | No | Comment to post on this portout request |
 
 ```go
 	comment, err := client.Portouts.Comments.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortoutCommentNewParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", comment.Data)
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## List supporting documents on a portout request
 
 List every supporting documents for a portout request.
 
-`GET /portouts/{id}/supporting_documents`
+`client.Portouts.SupportingDocuments.List()` — `GET /portouts/{id}/supporting_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Portout id |
 
 ```go
-	supportingDocuments, err := client.Portouts.SupportingDocuments.List(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	supportingDocuments, err := client.Portouts.SupportingDocuments.List(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", supportingDocuments.Data)
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Create a list of supporting documents on a portout request
 
 Creates a list of supporting documents on a portout request.
 
-`POST /portouts/{id}/supporting_documents`
+`client.Portouts.SupportingDocuments.New()` — `POST /portouts/{id}/supporting_documents`
 
-Optional: `documents` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Portout id |
+| `Documents` | array[object] | No | List of supporting documents parameters |
 
 ```go
 	supportingDocument, err := client.Portouts.SupportingDocuments.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortoutSupportingDocumentNewParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", supportingDocument.Data)
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Update Status
 
 Authorize or reject portout request
 
-`PATCH /portouts/{id}/{status}` — Required: `reason`
+`client.Portouts.UpdateStatus()` — `PATCH /portouts/{id}/{status}`
 
-Optional: `host_messaging` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Reason` | string | Yes | Provide a reason if rejecting the port out request |
+| `Id` | string (UUID) | Yes | Portout id |
+| `Status` | enum (authorized, rejected-pending) | Yes | Updated portout status |
+| `HostMessaging` | boolean | No | Indicates whether messaging services should be maintained wi... |
 
 ```go
 	response, err := client.Portouts.UpdateStatus(
-		context.TODO(),
+		context.Background(),
 		telnyx.PortoutUpdateStatusParamsStatusAuthorized,
 		telnyx.PortoutUpdateStatusParams{
 			ID:     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -318,9 +394,13 @@ Optional: `host_messaging` (boolean)
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

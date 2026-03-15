@@ -2,6 +2,25 @@
 
 # Telnyx Webrtc - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Create a Credential Connection for WebRTC authentication
+
+### Steps
+
+1. **Create credential**: `client.telephonyCredentials().create(params)`
+2. **Generate SIP token**: `client.telephonyCredentials().token().create(params)`
+3. **Use in client SDK**: `Pass the token to Telnyx WebRTC SDK (JS, iOS, Android, Flutter, React Native)`
+
+### Common mistakes
+
+- SIP tokens are short-lived — generate a fresh token for each session
+- For push notifications on mobile: configure push credentials for APNS (iOS) or FCM (Android)
+
+**Related skills**: telnyx-sip-java, telnyx-video-java
+
 ## Installation
 
 ```text
@@ -9,11 +28,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -36,7 +55,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.telephonyCredentials().create(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -56,9 +75,15 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## List mobile push credentials
 
-`GET /mobile_push_credentials`
+`client.mobilePushCredentials().list()` — `GET /mobile_push_credentials`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.mobilepushcredentials.MobilePushCredentialListPage;
@@ -67,11 +92,18 @@ import com.telnyx.sdk.models.mobilepushcredentials.MobilePushCredentialListParam
 MobilePushCredentialListPage page = client.mobilePushCredentials().list();
 ```
 
-Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Creates a new mobile push credential
 
-`POST /mobile_push_credentials`
+`client.mobilePushCredentials().create()` — `POST /mobile_push_credentials`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | enum (ios) | Yes | Type of mobile push credential. |
+| `certificate` | string | Yes | Certificate as received from APNs |
+| `privateKey` | string | Yes | Corresponding private key to the certificate as received fro... |
+| `alias` | string | Yes | Alias to uniquely identify the credential |
 
 ```java
 import com.telnyx.sdk.models.mobilepushcredentials.MobilePushCredentialCreateParams;
@@ -85,13 +117,17 @@ MobilePushCredentialCreateParams.CreateMobilePushCredentialRequest.Ios params = 
 PushCredentialResponse pushCredentialResponse = client.mobilePushCredentials().create(params);
 ```
 
-Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Retrieves a mobile push credential
 
 Retrieves mobile push credential based on the given `push_credential_id`
 
-`GET /mobile_push_credentials/{push_credential_id}`
+`client.mobilePushCredentials().retrieve()` — `GET /mobile_push_credentials/{push_credential_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `pushCredentialId` | string (UUID) | Yes | The unique identifier of a mobile push credential |
 
 ```java
 import com.telnyx.sdk.models.mobilepushcredentials.MobilePushCredentialRetrieveParams;
@@ -100,13 +136,17 @@ import com.telnyx.sdk.models.mobilepushcredentials.PushCredentialResponse;
 PushCredentialResponse pushCredentialResponse = client.mobilePushCredentials().retrieve("0ccc7b76-4df3-4bca-a05a-3da1ecc389f0");
 ```
 
-Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Deletes a mobile push credential
 
 Deletes a mobile push credential based on the given `push_credential_id`
 
-`DELETE /mobile_push_credentials/{push_credential_id}`
+`client.mobilePushCredentials().delete()` — `DELETE /mobile_push_credentials/{push_credential_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `pushCredentialId` | string (UUID) | Yes | The unique identifier of a mobile push credential |
 
 ```java
 import com.telnyx.sdk.models.mobilepushcredentials.MobilePushCredentialDeleteParams;
@@ -118,7 +158,12 @@ client.mobilePushCredentials().delete("0ccc7b76-4df3-4bca-a05a-3da1ecc389f0");
 
 List all On-demand Credentials.
 
-`GET /telephony_credentials`
+`client.telephonyCredentials().list()` — `GET /telephony_credentials`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialListPage;
@@ -127,15 +172,20 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialListParams;
 TelephonyCredentialListPage page = client.telephonyCredentials().list();
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a credential
 
 Create a credential.
 
-`POST /telephony_credentials` — Required: `connection_id`
+`client.telephonyCredentials().create()` — `POST /telephony_credentials`
 
-Optional: `expires_at` (string), `name` (string), `tag` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Identifies the Credential Connection this credential is asso... |
+| `name` | string | No |  |
+| `tag` | string | No | Tags a credential. |
+| `expiresAt` | string | No | ISO-8601 formatted date indicating when the credential will ... |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialCreateParams;
@@ -147,51 +197,127 @@ TelephonyCredentialCreateParams params = TelephonyCredentialCreateParams.builder
 TelephonyCredentialCreateResponse telephonyCredential = client.telephonyCredentials().create(params);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get a credential
 
 Get the details of an existing On-demand Credential.
 
-`GET /telephony_credentials/{id}`
+`client.telephonyCredentials().retrieve()` — `GET /telephony_credentials/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialRetrieveParams;
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialRetrieveResponse;
 
-TelephonyCredentialRetrieveResponse telephonyCredential = client.telephonyCredentials().retrieve("id");
+TelephonyCredentialRetrieveResponse telephonyCredential = client.telephonyCredentials().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a credential
 
 Update an existing credential.
 
-`PATCH /telephony_credentials/{id}`
+`client.telephonyCredentials().update()` — `PATCH /telephony_credentials/{id}`
 
-Optional: `connection_id` (string), `expires_at` (string), `name` (string), `tag` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `connectionId` | string (UUID) | No | Identifies the Credential Connection this credential is asso... |
+| `name` | string | No |  |
+| `tag` | string | No | Tags a credential. |
+| ... | | | +1 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialUpdateParams;
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialUpdateResponse;
 
-TelephonyCredentialUpdateResponse telephonyCredential = client.telephonyCredentials().update("id");
+TelephonyCredentialUpdateResponse telephonyCredential = client.telephonyCredentials().update("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a credential
 
 Delete an existing credential.
 
-`DELETE /telephony_credentials/{id}`
+`client.telephonyCredentials().delete()` — `DELETE /telephony_credentials/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialDeleteParams;
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialDeleteResponse;
 
-TelephonyCredentialDeleteResponse telephonyCredential = client.telephonyCredentials().delete("id");
+TelephonyCredentialDeleteResponse telephonyCredential = client.telephonyCredentials().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
+
+---
+
+# WebRTC (Java) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** List mobile push credentials, Creates a new mobile push credential, Retrieves a mobile push credential
+
+| Field | Type |
+|-------|------|
+| `alias` | string |
+| `certificate` | string |
+| `created_at` | date-time |
+| `id` | string |
+| `private_key` | string |
+| `project_account_json_file` | object |
+| `record_type` | string |
+| `type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all credentials, Create a credential, Get a credential, Update a credential, Delete a credential
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `expired` | boolean |
+| `expires_at` | string |
+| `id` | string |
+| `name` | string |
+| `record_type` | string |
+| `resource_id` | string |
+| `sip_password` | string |
+| `sip_username` | string |
+| `updated_at` | string |
+| `user_id` | string |
+
+## Optional Parameters
+
+### Create a credential — `client.telephonyCredentials().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string |  |
+| `tag` | string | Tags a credential. |
+| `expiresAt` | string | ISO-8601 formatted date indicating when the credential will expire. |
+
+### Update a credential — `client.telephonyCredentials().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string |  |
+| `tag` | string | Tags a credential. |
+| `connectionId` | string (UUID) | Identifies the Credential Connection this credential is associated with. |
+| `expiresAt` | string | ISO-8601 formatted date indicating when the credential will expire. |

@@ -1,8 +1,8 @@
 ---
 name: telnyx-sip-integrations-javascript
 description: >-
-  Manage call recordings, media storage, Dialogflow integration, and external
-  connections for SIP trunking. This skill provides JavaScript SDK examples.
+  Call recordings, media storage, Dialogflow integration, and external
+  connections for SIP trunking.
 metadata:
   author: telnyx
   product: sip-integrations
@@ -13,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Sip Integrations - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. SIP connection configured (see telnyx-sip-javascript)
+
+### Steps
+
+1. **List call recordings**: `client.callRecordings.list()`
+2. **Download recording**: `client.callRecordings.retrieve({id: ...})`
+3. **Upload media**: `client.mediaStorage.create({mediaUrl: ...})`
+
+### Common mistakes
+
+- Call recordings require recording to be enabled on the connection or via call control commands
+- Recording files are temporary — download and store them in your own storage
+
+**Related skills**: telnyx-sip-javascript, telnyx-voice-javascript
 
 ## Installation
 
@@ -39,7 +58,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.call_recordings.list(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -64,11 +83,17 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
 
-`GET /custom_storage_credentials/{connection_id}`
+`client.customStorageCredentials.retrieve()` — `GET /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```javascript
 const customStorageCredential = await client.customStorageCredentials.retrieve('connection_id');
@@ -76,13 +101,17 @@ const customStorageCredential = await client.customStorageCredentials.retrieve('
 console.log(customStorageCredential.connection_id);
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Create a custom storage credential
 
 Creates a custom storage credentials configuration.
 
-`POST /custom_storage_credentials/{connection_id}`
+`client.customStorageCredentials.create()` — `POST /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```javascript
 const customStorageCredential = await client.customStorageCredentials.create('connection_id', {
@@ -93,13 +122,17 @@ const customStorageCredential = await client.customStorageCredentials.create('co
 console.log(customStorageCredential.connection_id);
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Update a stored credential
 
 Updates a stored custom credentials configuration.
 
-`PUT /custom_storage_credentials/{connection_id}`
+`client.customStorageCredentials.update()` — `PUT /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```javascript
 const customStorageCredential = await client.customStorageCredentials.update('connection_id', {
@@ -110,13 +143,17 @@ const customStorageCredential = await client.customStorageCredentials.update('co
 console.log(customStorageCredential.connection_id);
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Delete a stored credential
 
 Deletes a stored custom credentials configuration.
 
-`DELETE /custom_storage_credentials/{connection_id}`
+`client.customStorageCredentials.delete()` — `DELETE /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```javascript
 await client.customStorageCredentials.delete('connection_id');
@@ -126,7 +163,11 @@ await client.customStorageCredentials.delete('connection_id');
 
 Return details of the Dialogflow connection associated with the given CallControl connection.
 
-`GET /dialogflow_connections/{connection_id}`
+`client.dialogflowConnections.retrieve()` — `GET /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```javascript
 const dialogflowConnection = await client.dialogflowConnections.retrieve('connection_id');
@@ -134,13 +175,17 @@ const dialogflowConnection = await client.dialogflowConnections.retrieve('connec
 console.log(dialogflowConnection.data);
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Create a Dialogflow Connection
 
 Save Dialogflow Credentiails to Telnyx, so it can be used with other Telnyx services.
 
-`POST /dialogflow_connections/{connection_id}`
+`client.dialogflowConnections.create()` — `POST /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```javascript
 const dialogflowConnection = await client.dialogflowConnections.create('connection_id', {
@@ -161,13 +206,17 @@ const dialogflowConnection = await client.dialogflowConnections.create('connecti
 console.log(dialogflowConnection.data);
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Update stored Dialogflow Connection
 
 Updates a stored Dialogflow Connection.
 
-`PUT /dialogflow_connections/{connection_id}`
+`client.dialogflowConnections.update()` — `PUT /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```javascript
 const dialogflowConnection = await client.dialogflowConnections.update('connection_id', {
@@ -188,13 +237,17 @@ const dialogflowConnection = await client.dialogflowConnections.update('connecti
 console.log(dialogflowConnection.data);
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Delete stored Dialogflow Connection
 
 Deletes a stored Dialogflow Connection.
 
-`DELETE /dialogflow_connections/{connection_id}`
+`client.dialogflowConnections.delete()` — `DELETE /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```javascript
 await client.dialogflowConnections.delete('connection_id');
@@ -204,7 +257,12 @@ await client.dialogflowConnections.delete('connection_id');
 
 This endpoint returns a list of your External Connections inside the 'data' attribute of the response. External Connections are used by Telnyx customers to seamless configure SIP trunking integrations with Telnyx Partners, through External Voice Integrations in Mission Control Portal.
 
-`GET /external_connections`
+`client.externalConnections.list()` — `GET /external_connections`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Filter parameter for external connections (deepObject style)... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -213,15 +271,22 @@ for await (const externalConnection of client.externalConnections.list()) {
 }
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Creates an External Connection
 
 Creates a new External Connection based on the parameters sent in the request. The external_sip_connection and outbound voice profile id are required. Once created, you can assign phone numbers to your application using the `/phone_numbers` endpoint.
 
-`POST /external_connections` — Required: `external_sip_connection`, `outbound`
+`client.externalConnections.create()` — `POST /external_connections`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `externalSipConnection` | enum (zoom) | Yes | The service that will be consuming this connection. |
+| `outbound` | object | Yes |  |
+| `tags` | array[string] | No | Tags associated with the connection. |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| `webhookEventUrl` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const externalConnection = await client.externalConnections.create({
@@ -232,13 +297,18 @@ const externalConnection = await client.externalConnections.create({
 console.log(externalConnection.data);
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all log messages
 
 Retrieve a list of log messages for all external connections associated with your account.
 
-`GET /external_connections/log_messages`
+`client.externalConnections.logMessages.list()` — `GET /external_connections/log_messages`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Filter parameter for log messages (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -247,13 +317,17 @@ for await (const logMessageListResponse of client.externalConnections.logMessage
 }
 ```
 
-Returns: `log_messages` (array[object]), `meta` (object)
+Key response fields: `response.data.log_messages, response.data.meta`
 
 ## Retrieve a log message
 
 Retrieve a log message for an external connection associated with your account.
 
-`GET /external_connections/log_messages/{id}`
+`client.externalConnections.logMessages.retrieve()` — `GET /external_connections/log_messages/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const logMessage = await client.externalConnections.logMessages.retrieve('1293384261075731499');
@@ -261,13 +335,17 @@ const logMessage = await client.externalConnections.logMessages.retrieve('129338
 console.log(logMessage.log_messages);
 ```
 
-Returns: `log_messages` (array[object])
+Key response fields: `response.data.log_messages`
 
 ## Dismiss a log message
 
 Dismiss a log message for an external connection associated with your account.
 
-`DELETE /external_connections/log_messages/{id}`
+`client.externalConnections.logMessages.dismiss()` — `DELETE /external_connections/log_messages/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const response = await client.externalConnections.logMessages.dismiss('1293384261075731499');
@@ -275,13 +353,17 @@ const response = await client.externalConnections.logMessages.dismiss('129338426
 console.log(response.success);
 ```
 
-Returns: `success` (boolean)
+Key response fields: `response.data.success`
 
 ## Retrieve an External Connection
 
 Return the details of an existing External Connection inside the 'data' attribute of the response.
 
-`GET /external_connections/{id}`
+`client.externalConnections.retrieve()` — `GET /external_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const externalConnection = await client.externalConnections.retrieve('1293384261075731499');
@@ -289,15 +371,22 @@ const externalConnection = await client.externalConnections.retrieve('1293384261
 console.log(externalConnection.data);
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update an External Connection
 
 Updates settings of an existing External Connection based on the parameters of the request.
 
-`PATCH /external_connections/{id}` — Required: `outbound`
+`client.externalConnections.update()` — `PATCH /external_connections/{id}`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `outbound` | object | Yes |  |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags associated with the connection. |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| `webhookEventUrl` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const externalConnection = await client.externalConnections.update('1293384261075731499', {
@@ -307,13 +396,17 @@ const externalConnection = await client.externalConnections.update('129338426107
 console.log(externalConnection.data);
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Deletes an External Connection
 
 Permanently deletes an External Connection. Deletion may be prevented if the application is in use by phone numbers, is active, or if it is an Operator Connect connection. To remove an Operator Connect integration please contact Telnyx support.
 
-`DELETE /external_connections/{id}`
+`client.externalConnections.delete()` — `DELETE /external_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const externalConnection = await client.externalConnections.delete('1293384261075731499');
@@ -321,13 +414,18 @@ const externalConnection = await client.externalConnections.delete('129338426107
 console.log(externalConnection.data);
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all civic addresses and locations
 
 Returns the civic addresses and locations from Microsoft Teams.
 
-`GET /external_connections/{id}/civic_addresses`
+`client.externalConnections.civicAddresses.list()` — `GET /external_connections/{id}/civic_addresses`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for civic addresses (deepObject style). |
 
 ```javascript
 const civicAddresses = await client.externalConnections.civicAddresses.list('1293384261075731499');
@@ -335,13 +433,18 @@ const civicAddresses = await client.externalConnections.civicAddresses.list('129
 console.log(civicAddresses.data);
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `response.data.id, response.data.city_or_town, response.data.city_or_town_alias`
 
 ## Retrieve a Civic Address
 
 Return the details of an existing Civic Address with its Locations inside the 'data' attribute of the response.
 
-`GET /external_connections/{id}/civic_addresses/{address_id}`
+`client.externalConnections.civicAddresses.retrieve()` — `GET /external_connections/{id}/civic_addresses/{address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `addressId` | string (UUID) | Yes | Identifies a civic address or a location. |
 
 ```javascript
 const civicAddress = await client.externalConnections.civicAddresses.retrieve(
@@ -352,11 +455,17 @@ const civicAddress = await client.externalConnections.civicAddresses.retrieve(
 console.log(civicAddress.data);
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `response.data.id, response.data.city_or_town, response.data.city_or_town_alias`
 
 ## Update a location's static emergency address
 
-`PATCH /external_connections/{id}/locations/{location_id}` — Required: `static_emergency_address_id`
+`client.externalConnections.updateLocation()` — `PATCH /external_connections/{id}/locations/{location_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `staticEmergencyAddressId` | string (UUID) | Yes | A new static emergency address ID to update the location wit... |
+| `id` | string (UUID) | Yes | The ID of the external connection |
+| `locationId` | string (UUID) | Yes | The ID of the location to update |
 
 ```javascript
 const response = await client.externalConnections.updateLocation(
@@ -370,13 +479,19 @@ const response = await client.externalConnections.updateLocation(
 console.log(response.data);
 ```
 
-Returns: `accepted_address_suggestions` (boolean), `location_id` (uuid), `static_emergency_address_id` (uuid)
+Key response fields: `response.data.accepted_address_suggestions, response.data.location_id, response.data.static_emergency_address_id`
 
 ## List all phone numbers
 
 Returns a list of all active phone numbers associated with the given external connection.
 
-`GET /external_connections/{id}/phone_numbers`
+`client.externalConnections.phoneNumbers.list()` — `GET /external_connections/{id}/phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for phone numbers (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -387,13 +502,18 @@ for await (const externalConnectionPhoneNumber of client.externalConnections.pho
 }
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## Retrieve a phone number
 
 Return the details of a phone number associated with the given external connection.
 
-`GET /external_connections/{id}/phone_numbers/{phone_number_id}`
+`client.externalConnections.phoneNumbers.retrieve()` — `GET /external_connections/{id}/phone_numbers/{phone_number_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `phoneNumberId` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
 
 ```javascript
 const phoneNumber = await client.externalConnections.phoneNumbers.retrieve('1234567889', {
@@ -403,15 +523,19 @@ const phoneNumber = await client.externalConnections.phoneNumbers.retrieve('1234
 console.log(phoneNumber.data);
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## Update a phone number
 
 Asynchronously update settings of the phone number associated with the given external connection.
 
-`PATCH /external_connections/{id}/phone_numbers/{phone_number_id}`
+`client.externalConnections.phoneNumbers.update()` — `PATCH /external_connections/{id}/phone_numbers/{phone_number_id}`
 
-Optional: `location_id` (uuid)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `phoneNumberId` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
+| `locationId` | string (UUID) | No | Identifies the location to assign the phone number to. |
 
 ```javascript
 const phoneNumber = await client.externalConnections.phoneNumbers.update('1234567889', {
@@ -421,13 +545,19 @@ const phoneNumber = await client.externalConnections.phoneNumbers.update('123456
 console.log(phoneNumber.data);
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## List all Releases
 
 Returns a list of your Releases for the given external connection. These are automatically created when you change the `connection_id` of a phone number that is currently on Microsoft Teams.
 
-`GET /external_connections/{id}/releases`
+`client.externalConnections.releases.list()` — `GET /external_connections/{id}/releases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for releases (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -438,13 +568,18 @@ for await (const releaseListResponse of client.externalConnections.releases.list
 }
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.error_message`
 
 ## Retrieve a Release request
 
 Return the details of a Release request and its phone numbers.
 
-`GET /external_connections/{id}/releases/{release_id}`
+`client.externalConnections.releases.retrieve()` — `GET /external_connections/{id}/releases/{release_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `releaseId` | string (UUID) | Yes | Identifies a Release request |
 
 ```javascript
 const release = await client.externalConnections.releases.retrieve(
@@ -455,13 +590,19 @@ const release = await client.externalConnections.releases.retrieve(
 console.log(release.data);
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.error_message`
 
 ## List all Upload requests
 
 Returns a list of your Upload requests for the given external connection.
 
-`GET /external_connections/{id}/uploads`
+`client.externalConnections.uploads.list()` — `GET /external_connections/{id}/uploads`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for uploads (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -470,15 +611,22 @@ for await (const upload of client.externalConnections.uploads.list('129338426107
 }
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## Creates an Upload request
 
 Creates a new Upload request to Microsoft teams with the included phone numbers. Only one of civic_address_id or location_id must be provided, not both. The maximum allowed phone numbers for the numbers_ids array is 1000.
 
-`POST /external_connections/{id}/uploads` — Required: `number_ids`
+`client.externalConnections.uploads.create()` — `POST /external_connections/{id}/uploads`
 
-Optional: `additional_usages` (array[string]), `civic_address_id` (uuid), `location_id` (uuid), `usage` (enum: calling_user_assignment, first_party_app_assignment)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `numberIds` | array[string] | Yes |  |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `usage` | enum (calling_user_assignment, first_party_app_assignment) | No | The use case of the upload request. |
+| `locationId` | string (UUID) | No | Identifies the location to assign all phone numbers to. |
+| `civicAddressId` | string (UUID) | No | Identifies the civic address to assign all phone numbers to. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const upload = await client.externalConnections.uploads.create('1293384261075731499', {
@@ -493,13 +641,17 @@ const upload = await client.externalConnections.uploads.create('1293384261075731
 console.log(upload.ticket_id);
 ```
 
-Returns: `success` (boolean), `ticket_id` (uuid)
+Key response fields: `response.data.success, response.data.ticket_id`
 
 ## Refresh the status of all Upload requests
 
 Forces a recheck of the status of all pending Upload requests for the given external connection in the background.
 
-`POST /external_connections/{id}/uploads/refresh`
+`client.externalConnections.uploads.refreshStatus()` — `POST /external_connections/{id}/uploads/refresh`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const response = await client.externalConnections.uploads.refreshStatus('1293384261075731499');
@@ -507,13 +659,17 @@ const response = await client.externalConnections.uploads.refreshStatus('1293384
 console.log(response.success);
 ```
 
-Returns: `success` (boolean)
+Key response fields: `response.data.success`
 
 ## Get the count of pending upload requests
 
 Returns the count of all pending upload requests for the given external connection.
 
-`GET /external_connections/{id}/uploads/status`
+`client.externalConnections.uploads.pendingCount()` — `GET /external_connections/{id}/uploads/status`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const response = await client.externalConnections.uploads.pendingCount('1293384261075731499');
@@ -521,13 +677,18 @@ const response = await client.externalConnections.uploads.pendingCount('12933842
 console.log(response.data);
 ```
 
-Returns: `pending_numbers_count` (integer), `pending_orders_count` (integer)
+Key response fields: `response.data.pending_numbers_count, response.data.pending_orders_count`
 
 ## Retrieve an Upload request
 
 Return the details of an Upload request and its phone numbers.
 
-`GET /external_connections/{id}/uploads/{ticket_id}`
+`client.externalConnections.uploads.retrieve()` — `GET /external_connections/{id}/uploads/{ticket_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `ticketId` | string (UUID) | Yes | Identifies an Upload request |
 
 ```javascript
 const upload = await client.externalConnections.uploads.retrieve(
@@ -538,13 +699,18 @@ const upload = await client.externalConnections.uploads.retrieve(
 console.log(upload.data);
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## Retry an Upload request
 
 If there were any errors during the upload process, this endpoint will retry the upload request. In some cases this will reattempt the existing upload request, in other cases it may create a new upload request. Please check the ticket_id in the response to determine if a new upload request was created.
 
-`POST /external_connections/{id}/uploads/{ticket_id}/retry`
+`client.externalConnections.uploads.retry()` — `POST /external_connections/{id}/uploads/{ticket_id}/retry`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `ticketId` | string (UUID) | Yes | Identifies an Upload request |
 
 ```javascript
 const response = await client.externalConnections.uploads.retry(
@@ -555,13 +721,17 @@ const response = await client.externalConnections.uploads.retry(
 console.log(response.data);
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## List uploaded media
 
 Returns a list of stored media files.
 
-`GET /media`
+`client.media.list()` — `GET /media`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 const media = await client.media.list();
@@ -569,15 +739,19 @@ const media = await client.media.list();
 console.log(media.data);
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Upload media
 
 Upload media file to Telnyx so it can be used with other Telnyx services
 
-`POST /media` — Required: `media_url`
+`client.media.upload()` — `POST /media`
 
-Optional: `media_name` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mediaUrl` | string (URL) | Yes | The URL where the media to be stored in Telnyx network is cu... |
+| `ttlSecs` | integer | No | The number of seconds after which the media resource will be... |
+| `mediaName` | string | No | The unique identifier of a file. |
 
 ```javascript
 const response = await client.media.upload({ media_url: 'http://www.example.com/audio.mp3' });
@@ -585,13 +759,17 @@ const response = await client.media.upload({ media_url: 'http://www.example.com/
 console.log(response.data);
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Retrieve stored media
 
 Returns the information about a stored media file.
 
-`GET /media/{media_name}`
+`client.media.retrieve()` — `GET /media/{media_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```javascript
 const media = await client.media.retrieve('media_name');
@@ -599,15 +777,19 @@ const media = await client.media.retrieve('media_name');
 console.log(media.data);
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Update stored media
 
 Updates a stored media file.
 
-`PUT /media/{media_name}`
+`client.media.update()` — `PUT /media/{media_name}`
 
-Optional: `media_url` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mediaName` | string | Yes | Uniquely identifies a media resource. |
+| `mediaUrl` | string (URL) | No | The URL where the media to be stored in Telnyx network is cu... |
+| `ttlSecs` | integer | No | The number of seconds after which the media resource will be... |
 
 ```javascript
 const media = await client.media.update('media_name');
@@ -615,13 +797,17 @@ const media = await client.media.update('media_name');
 console.log(media.data);
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Deletes stored media
 
 Deletes a stored media file.
 
-`DELETE /media/{media_name}`
+`client.media.delete()` — `DELETE /media/{media_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```javascript
 await client.media.delete('media_name');
@@ -631,7 +817,11 @@ await client.media.delete('media_name');
 
 Downloads a stored media file.
 
-`GET /media/{media_name}/download`
+`client.media.download()` — `GET /media/{media_name}/download`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```javascript
 const response = await client.media.download('media_name');
@@ -646,7 +836,7 @@ console.log(content);
 
 This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user. This will create new external connections on the user's account if needed, and/or report the integration results as [log messages](https://developers.telnyx.com/api-reference/external-connections/list-all-log-messages#list-all-log-messages).
 
-`POST /operator_connect/actions/refresh`
+`client.operatorConnect.actions.refresh()` — `POST /operator_connect/actions/refresh`
 
 ```javascript
 const response = await client.operatorConnect.actions.refresh();
@@ -654,27 +844,37 @@ const response = await client.operatorConnect.actions.refresh();
 console.log(response.message);
 ```
 
-Returns: `message` (string), `success` (boolean)
+Key response fields: `response.data.message, response.data.success`
 
 ## List all recording transcriptions
 
 Returns a list of your recording transcriptions.
 
-`GET /recording_transcriptions`
+`client.recordingTranscriptions.list()` — `GET /recording_transcriptions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Filter recording transcriptions by various attributes. |
 
 ```javascript
-const recordingTranscriptions = await client.recordingTranscriptions.list();
-
-console.log(recordingTranscriptions.data);
+// Automatically fetches more pages as needed.
+for await (const recordingTranscription of client.recordingTranscriptions.list()) {
+  console.log(recordingTranscription.id);
+}
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a recording transcription
 
 Retrieves the details of an existing recording transcription.
 
-`GET /recording_transcriptions/{recording_transcription_id}`
+`client.recordingTranscriptions.retrieve()` — `GET /recording_transcriptions/{recording_transcription_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordingTranscriptionId` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
 
 ```javascript
 const recordingTranscription = await client.recordingTranscriptions.retrieve(
@@ -684,13 +884,17 @@ const recordingTranscription = await client.recordingTranscriptions.retrieve(
 console.log(recordingTranscription.data);
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a recording transcription
 
 Permanently deletes a recording transcription.
 
-`DELETE /recording_transcriptions/{recording_transcription_id}`
+`client.recordingTranscriptions.delete()` — `DELETE /recording_transcriptions/{recording_transcription_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordingTranscriptionId` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
 
 ```javascript
 const recordingTranscription = await client.recordingTranscriptions.delete(
@@ -700,13 +904,18 @@ const recordingTranscription = await client.recordingTranscriptions.delete(
 console.log(recordingTranscription.data);
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all call recordings
 
 Returns a list of your call recordings.
 
-`GET /recordings`
+`client.recordings.list()` — `GET /recordings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Filter recordings by various attributes. |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -715,25 +924,33 @@ for await (const recordingResponseData of client.recordings.list()) {
 }
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Delete a list of call recordings
 
 Permanently deletes a list of call recordings.
 
-`POST /recordings/actions/delete`
+`client.recordings.actions.delete()` — `POST /recordings/actions/delete`
 
 ```javascript
-await client.recordings.actions.delete({
+const action = await client.recordings.actions.delete({
   ids: ['428c31b6-7af4-4bcb-b7f5-5013ef9657c1', '428c31b6-7af4-4bcb-b7f5-5013ef9657c2'],
 });
+
+console.log(action.status);
 ```
+
+Key response fields: `response.data.status`
 
 ## Retrieve a call recording
 
 Retrieves the details of an existing call recording.
 
-`GET /recordings/{recording_id}`
+`client.recordings.retrieve()` — `GET /recordings/{recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordingId` | string (UUID) | Yes | Uniquely identifies the recording by id. |
 
 ```javascript
 const recording = await client.recordings.retrieve('recording_id');
@@ -741,13 +958,17 @@ const recording = await client.recordings.retrieve('recording_id');
 console.log(recording.data);
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Delete a call recording
 
 Permanently deletes a call recording.
 
-`DELETE /recordings/{recording_id}`
+`client.recordings.delete()` — `DELETE /recordings/{recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordingId` | string (UUID) | Yes | Uniquely identifies the recording by id. |
 
 ```javascript
 const recording = await client.recordings.delete('recording_id');
@@ -755,13 +976,13 @@ const recording = await client.recordings.delete('recording_id');
 console.log(recording.data);
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Create a SIPREC connector
 
 Creates a new SIPREC connector configuration.
 
-`POST /siprec_connectors`
+`client.siprecConnectors.create()` — `POST /siprec_connectors`
 
 ```javascript
 const siprecConnector = await client.siprecConnectors.create({
@@ -773,13 +994,17 @@ const siprecConnector = await client.siprecConnectors.create({
 console.log(siprecConnector.data);
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Retrieve a SIPREC connector
 
 Returns details of a stored SIPREC connector.
 
-`GET /siprec_connectors/{connector_name}`
+`client.siprecConnectors.retrieve()` — `GET /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```javascript
 const siprecConnector = await client.siprecConnectors.retrieve('connector_name');
@@ -787,13 +1012,17 @@ const siprecConnector = await client.siprecConnectors.retrieve('connector_name')
 console.log(siprecConnector.data);
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update a SIPREC connector
 
 Updates a stored SIPREC connector configuration.
 
-`PUT /siprec_connectors/{connector_name}`
+`client.siprecConnectors.update()` — `PUT /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```javascript
 const siprecConnector = await client.siprecConnectors.update('connector_name', {
@@ -805,14 +1034,22 @@ const siprecConnector = await client.siprecConnectors.update('connector_name', {
 console.log(siprecConnector.data);
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete a SIPREC connector
 
 Deletes a stored SIPREC connector.
 
-`DELETE /siprec_connectors/{connector_name}`
+`client.siprecConnectors.delete()` — `DELETE /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```javascript
 await client.siprecConnectors.delete('connector_name');
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

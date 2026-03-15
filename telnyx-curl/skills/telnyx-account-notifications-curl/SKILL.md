@@ -1,8 +1,7 @@
 ---
 name: telnyx-account-notifications-curl
 description: >-
-  Configure notification channels and settings for account alerts and events.
-  This skill provides REST API (curl) examples.
+  Notification channels and settings for account alerts.
 metadata:
   author: telnyx
   product: account-notifications
@@ -13,6 +12,19 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Account Notifications - curl
+
+## Core Workflow
+
+### Steps
+
+1. **Create notification channel**
+2. **Create notification profile**
+
+### Common mistakes
+
+- Notification channels must be verified before they receive alerts
+
+**Related skills**: telnyx-account-curl
 
 ## Installation
 
@@ -36,10 +48,10 @@ or authentication errors (401). Always handle errors in production code:
 ```bash
 # Check HTTP status code in response
 response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
+  -d '{"key": "value"}')
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
@@ -61,17 +73,24 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List notification channels
 
 List notification channels.
 
 `GET /notification_channels`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_channels"
 ```
 
-Returns: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Create a notification channel
 
@@ -79,7 +98,12 @@ Create a notification channel.
 
 `POST /notification_channels`
 
-Optional: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `notification_profile_id` | string (UUID) | No | A UUID reference to the associated Notification Profile. |
+| `channel_type_id` | enum (sms, voice, email, webhook) | No | A Channel Type ID |
+| `id` | string (UUID) | No | A UUID. |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -87,16 +111,13 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "notification_profile_id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "channel_destination": "+13125550000",
-  "created_at": "2019-10-15T10:07:15.527Z",
-  "updated_at": "2019-10-15T10:07:15.527Z"
-}' \
+      "channel_type_id": "webhook",
+      "channel_destination": "https://example.com/webhooks"
+  }' \
   "https://api.telnyx.com/v2/notification_channels"
 ```
 
-Returns: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Get a notification channel
 
@@ -104,11 +125,15 @@ Get a notification channel.
 
 `GET /notification_channels/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_channels/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_channels/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Update a notification channel
 
@@ -116,24 +141,23 @@ Update a notification channel.
 
 `PATCH /notification_channels/{id}`
 
-Optional: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+| `notification_profile_id` | string (UUID) | No | A UUID reference to the associated Notification Profile. |
+| `channel_type_id` | enum (sms, voice, email, webhook) | No | A Channel Type ID |
+| `id` | string (UUID) | No | A UUID. |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "notification_profile_id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "channel_destination": "+13125550000",
-  "created_at": "2019-10-15T10:07:15.527Z",
-  "updated_at": "2019-10-15T10:07:15.527Z"
-}' \
-  "https://api.telnyx.com/v2/notification_channels/{id}"
+  "https://api.telnyx.com/v2/notification_channels/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Delete a notification channel
 
@@ -141,14 +165,18 @@ Delete a notification channel.
 
 `DELETE /notification_channels/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/notification_channels/{id}"
+  "https://api.telnyx.com/v2/notification_channels/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `channel_destination` (string), `channel_type_id` (enum: sms, voice, email, webhook), `created_at` (date-time), `id` (string), `notification_profile_id` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## List all Notifications Events Conditions
 
@@ -156,11 +184,16 @@ Returns a list of your notifications events conditions.
 
 `GET /notification_event_conditions`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_event_conditions"
 ```
 
-Returns: `allow_multiple_channels` (boolean), `associated_record_type` (enum: account, phone_number), `asynchronous` (boolean), `created_at` (date-time), `description` (string), `enabled` (boolean), `id` (string), `name` (string), `notification_event_id` (string), `parameters` (array[object]), `supported_channels` (array[string]), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## List all Notifications Events
 
@@ -168,11 +201,15 @@ Returns a list of your notifications events.
 
 `GET /notification_events`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_events"
 ```
 
-Returns: `created_at` (date-time), `enabled` (boolean), `id` (string), `name` (string), `notification_category` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## List all Notifications Profiles
 
@@ -180,11 +217,15 @@ Returns a list of your notifications profiles.
 
 `GET /notification_profiles`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_profiles"
 ```
 
-Returns: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Create a notification profile
 
@@ -192,7 +233,12 @@ Create a notification profile.
 
 `POST /notification_profiles`
 
-Optional: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | No | A UUID. |
+| `name` | string | No | A human readable name. |
+| `created_at` | string (date-time) | No | ISO 8601 formatted date indicating when the resource was cre... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -200,14 +246,12 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "created_at": "2019-10-15T10:07:15.527Z",
-  "updated_at": "2019-10-15T10:07:15.527Z"
-}' \
+      "name": "My Notification Profile"
+  }' \
   "https://api.telnyx.com/v2/notification_profiles"
 ```
 
-Returns: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Get a notification profile
 
@@ -215,11 +259,15 @@ Get a notification profile.
 
 `GET /notification_profiles/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_profiles/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_profiles/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Update a notification profile
 
@@ -227,22 +275,23 @@ Update a notification profile.
 
 `PATCH /notification_profiles/{id}`
 
-Optional: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+| `id` | string (UUID) | No | A UUID. |
+| `name` | string | No | A human readable name. |
+| `created_at` | string (date-time) | No | ISO 8601 formatted date indicating when the resource was cre... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "created_at": "2019-10-15T10:07:15.527Z",
-  "updated_at": "2019-10-15T10:07:15.527Z"
-}' \
-  "https://api.telnyx.com/v2/notification_profiles/{id}"
+  "https://api.telnyx.com/v2/notification_profiles/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Delete a notification profile
 
@@ -250,14 +299,18 @@ Delete a notification profile.
 
 `DELETE /notification_profiles/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/notification_profiles/{id}"
+  "https://api.telnyx.com/v2/notification_profiles/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (date-time), `id` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## List notification settings
 
@@ -265,11 +318,16 @@ List notification settings.
 
 `GET /notification_settings`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_settings"
 ```
 
-Returns: `associated_record_type` (string), `associated_record_type_value` (string), `created_at` (date-time), `id` (string), `notification_channel_id` (string), `notification_event_condition_id` (string), `notification_profile_id` (string), `parameters` (array[object]), `status` (enum: enabled, enable-received, enable-pending, enable-submitted, delete-received, delete-pending, delete-submitted, deleted), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Add a Notification Setting
 
@@ -277,28 +335,22 @@ Add a notification setting.
 
 `POST /notification_settings`
 
-Optional: `associated_record_type` (string), `associated_record_type_value` (string), `created_at` (date-time), `id` (string), `notification_channel_id` (string), `notification_event_condition_id` (string), `notification_profile_id` (string), `parameters` (array[object]), `status` (enum: enabled, enable-received, enable-pending, enable-submitted, delete-received, delete-pending, delete-submitted, deleted), `updated_at` (date-time)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `notification_event_condition_id` | string (UUID) | No | A UUID reference to the associated Notification Event Condit... |
+| `notification_profile_id` | string (UUID) | No | A UUID reference to the associated Notification Profile. |
+| `status` | enum (enabled, enable-received, enable-pending, enable-submtited, delete-received, ...) | No | Most preferences apply immediately; however, other may needs... |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "id": "8eb5b5f9-5893-423c-9f15-b487713d44d4",
-  "notification_event_condition_id": "70c7c5cb-dce2-4124-accb-870d39dbe852",
-  "notification_profile_id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "associated_record_type": "phone_number",
-  "associated_record_type_value": "+13125550000",
-  "status": "enable-received",
-  "notification_channel_id": "12455643-3cf1-4683-ad23-1cd32f7d5e0a",
-  "created_at": "2019-10-15T10:07:15.527Z",
-  "updated_at": "2019-10-15T10:07:15.527Z"
-}' \
   "https://api.telnyx.com/v2/notification_settings"
 ```
 
-Returns: `associated_record_type` (string), `associated_record_type_value` (string), `created_at` (date-time), `id` (string), `notification_channel_id` (string), `notification_event_condition_id` (string), `notification_profile_id` (string), `parameters` (array[object]), `status` (enum: enabled, enable-received, enable-pending, enable-submitted, delete-received, delete-pending, delete-submitted, deleted), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Get a notification setting
 
@@ -306,11 +358,15 @@ Get a notification setting.
 
 `GET /notification_settings/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_settings/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/notification_settings/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `associated_record_type` (string), `associated_record_type_value` (string), `created_at` (date-time), `id` (string), `notification_channel_id` (string), `notification_event_condition_id` (string), `notification_profile_id` (string), `parameters` (array[object]), `status` (enum: enabled, enable-received, enable-pending, enable-submitted, delete-received, delete-pending, delete-submitted, deleted), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Delete a notification setting
 
@@ -318,11 +374,19 @@ Delete a notification setting.
 
 `DELETE /notification_settings/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the resource. |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/notification_settings/{id}"
+  "https://api.telnyx.com/v2/notification_settings/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `associated_record_type` (string), `associated_record_type_value` (string), `created_at` (date-time), `id` (string), `notification_channel_id` (string), `notification_event_condition_id` (string), `notification_profile_id` (string), `parameters` (array[object]), `status` (enum: enabled, enable-received, enable-pending, enable-submitted, delete-received, delete-pending, delete-submitted, deleted), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.created_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

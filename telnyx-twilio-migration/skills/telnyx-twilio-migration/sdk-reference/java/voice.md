@@ -2,6 +2,40 @@
 
 # Telnyx Voice - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Buy a phone number with voice capability (see telnyx-numbers-java)
+2. Create a Voice API Application (connection) with webhook URLs
+3. Assign the phone number to the Voice API Application
+4. Ensure webhook endpoint is publicly accessible before making/receiving calls
+
+### Steps
+
+1. **Buy number**: `client.availablePhoneNumbers().list(params)`
+2. **Create connection**: `client.connections().create(params)`
+3. **Assign number**: `client.phoneNumbers().update(params)`
+4. **Make outbound call**: `client.calls().create(params)`
+5. **Handle webhooks**: `call.initiated → call.answered → send commands → call.hangup`
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Full programmatic control, real-time event-driven logic, custom IVR | Call Control API (this skill) |
+| Declarative XML call flows, migrating from Twilio/TwiML | TeXML (see telnyx-texml-java) |
+| LLM-powered conversational voice agents, minimal code | AI Assistants (see telnyx-ai-assistants-java) |
+
+### Common mistakes
+
+- VOICE IS EVENT-DRIVEN: dial/create returns immediately. All subsequent actions (answer, play, gather, transfer, hangup) MUST be triggered by webhook events. You need a running webhook server that dispatches on data.event_type (e.g., 'call.initiated', 'call.answered', 'call.hangup') and issues call control commands using the call_control_id from the webhook payload
+- OUTBOUND vs INBOUND: For outbound calls, dial → wait for 'call.answered' webhook → issue commands. For inbound calls, receive 'call.initiated' webhook → answer() → issue commands. NEVER call answer() on outbound calls
+- NEVER make calls without a publicly accessible webhook URL — call events will be lost and calls uncontrollable
+- NEVER skip assigning the number to a Voice API Application — inbound calls will be rejected
+
+**Related skills**: telnyx-voice-media-java, telnyx-voice-gather-java, telnyx-voice-streaming-java, telnyx-texml-java, telnyx-ai-assistants-java
+
 ## Installation
 
 ```text
@@ -9,11 +43,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -36,7 +70,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.calls().dial(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -57,101 +91,22 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
-## List call control applications
-
-Return a list of call control applications.
-
-`GET /call_control_applications`
-
-```java
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationListPage;
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationListParams;
-
-CallControlApplicationListPage page = client.callControlApplications().list();
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Create a call control application
-
-Create a call control application.
-
-`POST /call_control_applications` — Required: `application_name`, `webhook_event_url`
-
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `redact_dtmf_debug_logging` (boolean), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_timeout_secs` (integer | null)
-
-```java
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationCreateParams;
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationCreateResponse;
-
-CallControlApplicationCreateParams params = CallControlApplicationCreateParams.builder()
-    .applicationName("call-router")
-    .webhookEventUrl("https://example.com")
-    .build();
-CallControlApplicationCreateResponse callControlApplication = client.callControlApplications().create(params);
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Retrieve a call control application
-
-Retrieves the details of an existing call control application.
-
-`GET /call_control_applications/{id}`
-
-```java
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationRetrieveParams;
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationRetrieveResponse;
-
-CallControlApplicationRetrieveResponse callControlApplication = client.callControlApplications().retrieve("1293384261075731499");
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Update a call control application
-
-Updates settings of an existing call control application.
-
-`PATCH /call_control_applications/{id}` — Required: `application_name`, `webhook_event_url`
-
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_timeout_secs` (integer | null)
-
-```java
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationUpdateParams;
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationUpdateResponse;
-
-CallControlApplicationUpdateParams params = CallControlApplicationUpdateParams.builder()
-    .id("1293384261075731499")
-    .applicationName("call-router")
-    .webhookEventUrl("https://example.com")
-    .build();
-CallControlApplicationUpdateResponse callControlApplication = client.callControlApplications().update(params);
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
-## Delete a call control application
-
-Deletes a call control application.
-
-`DELETE /call_control_applications/{id}`
-
-```java
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationDeleteParams;
-import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationDeleteResponse;
-
-CallControlApplicationDeleteResponse callControlApplication = client.callControlApplications().delete("1293384261075731499");
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia), `application_name` (string), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: call_control_application), `redact_dtmf_debug_logging` (boolean), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (url), `webhook_event_url` (url), `webhook_timeout_secs` (integer | null)
-
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## Dial
 
 Dial a number or SIP URI from a given connection. A successful response will include a `call_leg_id` which can be used to correlate the command with subsequent webhooks.
 
-`POST /calls` — Required: `connection_id`, `to`, `from`
+`client.calls().dial()` — `POST /calls`
 
-Optional: `answering_machine_detection` (enum: premium, detect, detect_beep, detect_words, greeting_end, disabled), `answering_machine_detection_config` (object), `audio_url` (string), `billing_group_id` (uuid), `bridge_intent` (boolean), `bridge_on_answer` (boolean), `client_state` (string), `command_id` (string), `conference_config` (object), `custom_headers` (array[object]), `dialogflow_config` (object), `enable_dialogflow` (boolean), `from_display_name` (string), `link_to` (string), `media_encryption` (enum: disabled, SRTP, DTLS), `media_name` (string), `park_after_unbridge` (string), `preferred_codecs` (string), `prevent_double_bridge` (boolean), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `send_silence_when_idle` (boolean), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object]), `sip_region` (enum: US, Europe, Canada, Australia, Middle East), `sip_transport_protocol` (enum: UDP, TCP, TLS), `sound_modifications` (object), `stream_auth_token` (string), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_sampling_rate` (enum: 8000, 16000, 22050, 24000, 48000), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_establish_before_call_originate` (boolean), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string), `supervise_call_control_id` (string), `supervisor_role` (enum: barge, whisper, monitor), `time_limit_secs` (int32), `timeout_secs` (int32), `transcription` (boolean), `transcription_config` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
+| `from` | string (E.164) | Yes | The `from` number to be used as the caller id presented to t... |
+| `connectionId` | string (UUID) | Yes | The ID of the Call Control App (formerly ID of the connectio... |
+| `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| ... | | | +48 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.calls.CallDialParams;
@@ -165,22 +120,7 @@ CallDialParams params = CallDialParams.builder()
 CallDialResponse response = client.calls().dial(params);
 ```
 
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `end_time` (string), `is_alive` (boolean), `record_type` (enum: call), `recording_id` (uuid), `start_time` (string)
-
-## Retrieve a call status
-
-Returns the status of a call (data is available 10 minutes after call ended).
-
-`GET /calls/{call_control_id}`
-
-```java
-import com.telnyx.sdk.models.calls.CallRetrieveStatusParams;
-import com.telnyx.sdk.models.calls.CallRetrieveStatusResponse;
-
-CallRetrieveStatusResponse response = client.calls().retrieveStatus("call_control_id");
-```
-
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `end_time` (string), `is_alive` (boolean), `record_type` (enum: call), `start_time` (string)
+Key response fields: `response.data.call_control_id, response.data.call_duration, response.data.call_leg_id`
 
 ## Answer call
 
@@ -191,42 +131,52 @@ Answer an incoming call. You must issue this command before executing subsequent
 
 When the `record` parameter is set to `record-from-answer`, the response will include a `recording_id` field.
 
-`POST /calls/{call_control_id}/actions/answer`
+`client.calls().actions().answer()` — `POST /calls/{call_control_id}/actions/answer`
 
-Optional: `billing_group_id` (uuid), `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `preferred_codecs` (enum: G722,PCMU,PCMA,G729,OPUS,VP8,H264), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `send_silence_when_idle` (boolean), `sip_headers` (array[object]), `sound_modifications` (object), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string), `transcription` (boolean), `transcription_config` (object), `webhook_retries_policies` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET), `webhook_urls` (object), `webhook_urls_method` (enum: POST, GET)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| ... | | | +26 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionAnswerParams;
 import com.telnyx.sdk.models.calls.actions.ActionAnswerResponse;
 
-ActionAnswerResponse response = client.calls().actions().answer("call_control_id");
+ActionAnswerResponse response = client.calls().actions().answer("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
 ```
 
-Returns: `recording_id` (uuid), `result` (string)
+Key response fields: `response.data.recording_id, response.data.result`
 
-## Bridge calls
+## Transfer call
 
-Bridge two call control calls. **Expected Webhooks:**
+Transfer a call to a new destination. If the transfer is unsuccessful, a `call.hangup` webhook for the other call (Leg B) will be sent indicating that the transfer could not be completed. The original call will remain active and may be issued additional commands, potentially transferring the call to an alternate destination.
 
-- `call.bridged` for Leg A
-- `call.bridged` for Leg B
+`client.calls().actions().transfer()` — `POST /calls/{call_control_id}/actions/transfer`
 
-`POST /calls/{call_control_id}/actions/bridge` — Required: `call_control_id`
-
-Optional: `client_state` (string), `command_id` (string), `hold_after_unbridge` (boolean), `mute_dtmf` (enum: none, both, self, opposite), `park_after_unbridge` (string), `play_ringtone` (boolean), `prevent_double_bridge` (boolean), `queue` (string), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `ringtone` (enum: at, au, be, bg, br, ch, cl, cn, cz, de, dk, ee, es, fi, fr, gr, hu, il, in, it, jp, lt, mx, my, nl, no, nz, ph, pl, pt, ru, se, sg, th, tw, uk, us-old, us, ve, za), `video_room_context` (string), `video_room_id` (uuid)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| ... | | | +33 optional params in the API Details section below |
 
 ```java
-import com.telnyx.sdk.models.calls.actions.ActionBridgeParams;
-import com.telnyx.sdk.models.calls.actions.ActionBridgeResponse;
+import com.telnyx.sdk.models.calls.actions.ActionTransferParams;
+import com.telnyx.sdk.models.calls.actions.ActionTransferResponse;
 
-ActionBridgeParams params = ActionBridgeParams.builder()
-    .callControlIdToBridge("call_control_id")
-    .callControlId("v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg")
+ActionTransferParams params = ActionTransferParams.builder()
+    .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
+    .to("+18005550100")
     .build();
-ActionBridgeResponse response = client.calls().actions().bridge(params);
+ActionTransferResponse response = client.calls().actions().transfer(params);
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Hangup call
 
@@ -235,18 +185,238 @@ Hang up the call. **Expected Webhooks:**
 - `call.hangup`
 - `call.recording.saved`
 
-`POST /calls/{call_control_id}/actions/hangup`
+`client.calls().actions().hangup()` — `POST /calls/{call_control_id}/actions/hangup`
 
-Optional: `client_state` (string), `command_id` (string), `custom_headers` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `customHeaders` | array[object] | No | Custom headers to be added to the SIP BYE message. |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionHangupParams;
 import com.telnyx.sdk.models.calls.actions.ActionHangupResponse;
 
-ActionHangupResponse response = client.calls().actions().hangup("call_control_id");
+ActionHangupResponse response = client.calls().actions().hangup("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
+
+## Bridge calls
+
+Bridge two call control calls. **Expected Webhooks:**
+
+- `call.bridged` for Leg A
+- `call.bridged` for Leg B
+
+`client.calls().actions().bridge()` — `POST /calls/{call_control_id}/actions/bridge`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callControlId` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `videoRoomId` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
+| ... | | | +16 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.calls.actions.ActionBridgeParams;
+import com.telnyx.sdk.models.calls.actions.ActionBridgeResponse;
+
+ActionBridgeParams params = ActionBridgeParams.builder()
+    .callControlIdToBridge("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
+    .callControlId("v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg")
+    .build();
+ActionBridgeResponse response = client.calls().actions().bridge(params);
+```
+
+Key response fields: `response.data.result`
+
+## Reject a call
+
+Reject an incoming call. **Expected Webhooks:**
+
+- `call.hangup`
+
+`client.calls().actions().reject()` — `POST /calls/{call_control_id}/actions/reject`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
+
+```java
+import com.telnyx.sdk.models.calls.actions.ActionRejectParams;
+import com.telnyx.sdk.models.calls.actions.ActionRejectResponse;
+
+ActionRejectParams params = ActionRejectParams.builder()
+    .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
+    .cause(ActionRejectParams.Cause.USER_BUSY)
+    .build();
+ActionRejectResponse response = client.calls().actions().reject(params);
+```
+
+Key response fields: `response.data.result`
+
+## Retrieve a call status
+
+Returns the status of a call (data is available 10 minutes after call ended).
+
+`client.calls().retrieveStatus()` — `GET /calls/{call_control_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+
+```java
+import com.telnyx.sdk.models.calls.CallRetrieveStatusParams;
+import com.telnyx.sdk.models.calls.CallRetrieveStatusResponse;
+
+CallRetrieveStatusResponse response = client.calls().retrieveStatus("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
+```
+
+Key response fields: `response.data.call_control_id, response.data.call_duration, response.data.call_leg_id`
+
+## List all active calls for given connection
+
+Lists all active calls for given connection. Acceptable connections are either SIP connections with webhook_url or xml_request_url, call control or texml. Returned results are cursor paginated.
+
+`client.connections().listActiveCalls()` — `GET /connections/{connection_id}/active_calls`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connectionId` | string (UUID) | Yes | Telnyx connection id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```java
+import com.telnyx.sdk.models.connections.ConnectionListActiveCallsPage;
+import com.telnyx.sdk.models.connections.ConnectionListActiveCallsParams;
+
+ConnectionListActiveCallsPage page = client.connections().listActiveCalls("1293384261075731461");
+```
+
+Key response fields: `response.data.call_control_id, response.data.call_duration, response.data.call_leg_id`
+
+## List call control applications
+
+Return a list of call control applications.
+
+`client.callControlApplications().list()` — `GET /call_control_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, connection_name, active) | No | Specifies the sort order for results. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```java
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationListPage;
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationListParams;
+
+CallControlApplicationListPage page = client.callControlApplications().list();
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Create a call control application
+
+Create a call control application.
+
+`client.callControlApplications().create()` — `POST /call_control_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `applicationName` | string | Yes | A user-assigned name to help manage the application. |
+| `webhookEventUrl` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| `webhookApiVersion` | enum (1, 2) | No | Determines which webhook format will be used, Telnyx API v1 ... |
+| ... | | | +9 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationCreateParams;
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationCreateResponse;
+
+CallControlApplicationCreateParams params = CallControlApplicationCreateParams.builder()
+    .applicationName("call-router")
+    .webhookEventUrl("https://example.com")
+    .build();
+CallControlApplicationCreateResponse callControlApplication = client.callControlApplications().create(params);
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Retrieve a call control application
+
+Retrieves the details of an existing call control application.
+
+`client.callControlApplications().retrieve()` — `GET /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```java
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationRetrieveParams;
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationRetrieveResponse;
+
+CallControlApplicationRetrieveResponse callControlApplication = client.callControlApplications().retrieve("1293384261075731499");
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Update a call control application
+
+Updates settings of an existing call control application.
+
+`client.callControlApplications().update()` — `PATCH /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `applicationName` | string | Yes | A user-assigned name to help manage the application. |
+| `webhookEventUrl` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags assigned to the Call Control Application. |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| ... | | | +10 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationUpdateParams;
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationUpdateResponse;
+
+CallControlApplicationUpdateParams params = CallControlApplicationUpdateParams.builder()
+    .id("1293384261075731499")
+    .applicationName("call-router")
+    .webhookEventUrl("https://example.com")
+    .build();
+CallControlApplicationUpdateResponse callControlApplication = client.callControlApplications().update(params);
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Delete a call control application
+
+Deletes a call control application.
+
+`client.callControlApplications().delete()` — `DELETE /call_control_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```java
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationDeleteParams;
+import com.telnyx.sdk.models.callcontrolapplications.CallControlApplicationDeleteResponse;
+
+CallControlApplicationDeleteResponse callControlApplication = client.callControlApplications().delete("1293384261075731499");
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## SIP Refer a call
 
@@ -256,45 +426,29 @@ Initiate a SIP Refer on a Call Control call. You can initiate a SIP Refer at any
 - `call.refer.completed`
 - `call.refer.failed`
 
-`POST /calls/{call_control_id}/actions/refer` — Required: `sip_address`
+`client.calls().actions().refer()` — `POST /calls/{call_control_id}/actions/refer`
 
-Optional: `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sipAddress` | string | Yes | The SIP URI to which the call will be referred to. |
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | No | Use this field to avoid execution of duplicate commands. |
+| `customHeaders` | array[object] | No | Custom headers to be added to the SIP INVITE. |
+| ... | | | +3 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionReferParams;
 import com.telnyx.sdk.models.calls.actions.ActionReferResponse;
 
 ActionReferParams params = ActionReferParams.builder()
-    .callControlId("call_control_id")
+    .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
     .sipAddress("sip:username@sip.non-telnyx-address.com")
     .build();
 ActionReferResponse response = client.calls().actions().refer(params);
 ```
 
-Returns: `result` (string)
-
-## Reject a call
-
-Reject an incoming call. **Expected Webhooks:**
-
-- `call.hangup`
-
-`POST /calls/{call_control_id}/actions/reject` — Required: `cause`
-
-Optional: `client_state` (string), `command_id` (string)
-
-```java
-import com.telnyx.sdk.models.calls.actions.ActionRejectParams;
-import com.telnyx.sdk.models.calls.actions.ActionRejectResponse;
-
-ActionRejectParams params = ActionRejectParams.builder()
-    .callControlId("call_control_id")
-    .cause(ActionRejectParams.Cause.USER_BUSY)
-    .build();
-ActionRejectResponse response = client.calls().actions().reject(params);
-```
-
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Send SIP info
 
@@ -302,59 +456,29 @@ Sends SIP info from this leg. **Expected Webhooks:**
 
 - `call.sip_info.received` (to be received on the target call leg)
 
-`POST /calls/{call_control_id}/actions/send_sip_info` — Required: `content_type`, `body`
+`client.calls().actions().sendSipInfo()` — `POST /calls/{call_control_id}/actions/send_sip_info`
 
-Optional: `client_state` (string), `command_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `contentType` | string | Yes | Content type of the INFO body. |
+| `body` | string | Yes | Content of the SIP INFO |
+| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionSendSipInfoParams;
 import com.telnyx.sdk.models.calls.actions.ActionSendSipInfoResponse;
 
 ActionSendSipInfoParams params = ActionSendSipInfoParams.builder()
-    .callControlId("call_control_id")
+    .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
     .sipInfoBody("{\"key\": \"value\", \"numValue\": 100}")
     .contentType("application/json")
     .build();
 ActionSendSipInfoResponse response = client.calls().actions().sendSipInfo(params);
 ```
 
-Returns: `result` (string)
-
-## Transfer call
-
-Transfer a call to a new destination. If the transfer is unsuccessful, a `call.hangup` webhook for the other call (Leg B) will be sent indicating that the transfer could not be completed. The original call will remain active and may be issued additional commands, potentially transferring the call to an alternate destination.
-
-`POST /calls/{call_control_id}/actions/transfer` — Required: `to`
-
-Optional: `answering_machine_detection` (enum: premium, detect, detect_beep, detect_words, greeting_end, disabled), `answering_machine_detection_config` (object), `audio_url` (string), `client_state` (string), `command_id` (string), `custom_headers` (array[object]), `early_media` (boolean), `from` (string), `from_display_name` (string), `media_encryption` (enum: disabled, SRTP, DTLS), `media_name` (string), `mute_dtmf` (enum: none, both, self, opposite), `park_after_unbridge` (string), `preferred_codecs` (string), `record` (enum: record-from-answer), `record_channels` (enum: single, dual), `record_custom_file_name` (string), `record_format` (enum: wav, mp3), `record_max_length` (int32), `record_timeout_secs` (int32), `record_track` (enum: both, inbound, outbound), `record_trim` (enum: trim-silence), `sip_auth_password` (string), `sip_auth_username` (string), `sip_headers` (array[object]), `sip_region` (enum: US, Europe, Canada, Australia, Middle East), `sip_transport_protocol` (enum: UDP, TCP, TLS), `sound_modifications` (object), `target_leg_client_state` (string), `time_limit_secs` (int32), `timeout_secs` (int32), `webhook_retries_policies` (object), `webhook_url` (string), `webhook_url_method` (enum: POST, GET), `webhook_urls` (object), `webhook_urls_method` (enum: POST, GET)
-
-```java
-import com.telnyx.sdk.models.calls.actions.ActionTransferParams;
-import com.telnyx.sdk.models.calls.actions.ActionTransferResponse;
-
-ActionTransferParams params = ActionTransferParams.builder()
-    .callControlId("call_control_id")
-    .to("+18005550100")
-    .build();
-ActionTransferResponse response = client.calls().actions().transfer(params);
-```
-
-Returns: `result` (string)
-
-## List all active calls for given connection
-
-Lists all active calls for given connection. Acceptable connections are either SIP connections with webhook_url or xml_request_url, call control or texml. Returned results are cursor paginated.
-
-`GET /connections/{connection_id}/active_calls`
-
-```java
-import com.telnyx.sdk.models.connections.ConnectionListActiveCallsPage;
-import com.telnyx.sdk.models.connections.ConnectionListActiveCallsParams;
-
-ConnectionListActiveCallsPage page = client.connections().listActiveCalls("1293384261075731461");
-```
-
-Returns: `call_control_id` (string), `call_duration` (integer), `call_leg_id` (string), `call_session_id` (string), `client_state` (string), `record_type` (enum: call)
+Key response fields: `response.data.result`
 
 ---
 
@@ -397,16 +521,334 @@ public ResponseEntity<String> handleWebhook(
 The following webhook events are sent to your configured webhook URL.
 All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
 
-| Event | Description |
-|-------|-------------|
-| `callAnswered` | Call Answered |
-| `callBridged` | Call Bridged |
-| `callHangup` | Call Hangup |
-| `callInitiated` | Call Initiated |
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `callAnswered` | `call.answered` | Call Answered |
+| `callBridged` | `call.bridged` | Call Bridged |
+| `callHangup` | `call.hangup` | Call Hangup |
+| `callInitiated` | `call.initiated` | Call Initiated |
 
-### Webhook payload fields
+Webhook payload field definitions are in the API Details section below.
 
-**`callAnswered`**
+---
+
+# Voice (Java) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+- [Webhook Payload Fields](#webhook-payload-fields)
+
+## Response Schemas
+
+**Returned by:** List call control applications, Create a call control application, Retrieve a call control application, Update a call control application, Delete a call control application
+
+| Field | Type |
+|-------|------|
+| `active` | boolean |
+| `anchorsite_override` | enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, Chennai, IN, Amsterdam, Netherlands, Toronto, Canada, Sydney, Australia |
+| `application_name` | string |
+| `call_cost_in_webhooks` | boolean |
+| `created_at` | string |
+| `dtmf_type` | enum: RFC 2833, Inband, SIP INFO |
+| `first_command_timeout` | boolean |
+| `first_command_timeout_secs` | integer |
+| `id` | string |
+| `inbound` | object |
+| `outbound` | object |
+| `record_type` | enum: call_control_application |
+| `redact_dtmf_debug_logging` | boolean |
+| `tags` | array[string] |
+| `updated_at` | string |
+| `webhook_api_version` | enum: 1, 2 |
+| `webhook_event_failover_url` | url |
+| `webhook_event_url` | url |
+| `webhook_timeout_secs` | integer \| null |
+
+**Returned by:** Dial
+
+| Field | Type |
+|-------|------|
+| `call_control_id` | string |
+| `call_duration` | integer |
+| `call_leg_id` | string |
+| `call_session_id` | string |
+| `client_state` | string |
+| `end_time` | string |
+| `is_alive` | boolean |
+| `record_type` | enum: call |
+| `recording_id` | uuid |
+| `start_time` | string |
+
+**Returned by:** Retrieve a call status
+
+| Field | Type |
+|-------|------|
+| `call_control_id` | string |
+| `call_duration` | integer |
+| `call_leg_id` | string |
+| `call_session_id` | string |
+| `client_state` | string |
+| `end_time` | string |
+| `is_alive` | boolean |
+| `record_type` | enum: call |
+| `start_time` | string |
+
+**Returned by:** Answer call
+
+| Field | Type |
+|-------|------|
+| `recording_id` | uuid |
+| `result` | string |
+
+**Returned by:** Bridge calls, Hangup call, SIP Refer a call, Reject a call, Send SIP info, Transfer call
+
+| Field | Type |
+|-------|------|
+| `result` | string |
+
+**Returned by:** List all active calls for given connection
+
+| Field | Type |
+|-------|------|
+| `call_control_id` | string |
+| `call_duration` | integer |
+| `call_leg_id` | string |
+| `call_session_id` | string |
+| `client_state` | string |
+| `record_type` | enum: call |
+
+## Optional Parameters
+
+### Create a call control application — `client.callControlApplications().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `active` | boolean | Specifies whether the connection can be used. |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | `Latency` directs Telnyx to route media through the site with the lowest roun... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | Sets the type of DTMF digits sent from Telnyx to this Connection. |
+| `firstCommandTimeout` | boolean | Specifies whether calls to phone numbers associated with this connection shou... |
+| `firstCommandTimeoutSecs` | integer | Specifies how many seconds to wait before timing out a dial command. |
+| `inbound` | object |  |
+| `outbound` | object |  |
+| `webhookApiVersion` | enum (1, 2) | Determines which webhook format will be used, Telnyx API v1 or v2. |
+| `webhookEventFailoverUrl` | string (URL) | The failover URL where webhooks related to this connection will be sent if se... |
+| `webhookTimeoutSecs` | integer | Specifies how many seconds to wait before timing out a webhook. |
+| `callCostInWebhooks` | boolean | Specifies if call cost webhooks should be sent for this Call Control Applicat... |
+| `redactDtmfDebugLogging` | boolean | When enabled, DTMF digits entered by users will be redacted in debug logs to ... |
+
+### Update a call control application — `client.callControlApplications().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `callCostInWebhooks` | boolean | Specifies if call cost webhooks should be sent for this Call Control Applicat... |
+| `active` | boolean | Specifies whether the connection can be used. |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, London, UK, ...) | `Latency` directs Telnyx to route media through the site with the lowest roun... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | Sets the type of DTMF digits sent from Telnyx to this Connection. |
+| `firstCommandTimeout` | boolean | Specifies whether calls to phone numbers associated with this connection shou... |
+| `firstCommandTimeoutSecs` | integer | Specifies how many seconds to wait before timing out a dial command. |
+| `tags` | array[string] | Tags assigned to the Call Control Application. |
+| `inbound` | object |  |
+| `outbound` | object |  |
+| `webhookApiVersion` | enum (1, 2) | Determines which webhook format will be used, Telnyx API v1 or v2. |
+| `webhookEventFailoverUrl` | string (URL) | The failover URL where webhooks related to this connection will be sent if se... |
+| `webhookTimeoutSecs` | integer | Specifies how many seconds to wait before timing out a webhook. |
+| `redactDtmfDebugLogging` | boolean | When enabled, DTMF digits entered by users will be redacted in debug logs to ... |
+
+### Dial — `client.calls().dial()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fromDisplayName` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
+| `audioUrl` | string (URL) | The URL of a file to be played back to the callee when the call is answered. |
+| `mediaName` | string | The media_name of a file to be played back to the callee when the call is ans... |
+| `preferredCodecs` | string | The list of comma-separated codecs in a preferred order for the forked media ... |
+| `timeoutSecs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
+| `timeLimitSecs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
+| `answeringMachineDetection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `answeringMachineDetectionConfig` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
+| `conferenceConfig` | object | Optional configuration parameters to dial new participant into a conference. |
+| `customHeaders` | array[object] | Custom headers to be added to the SIP INVITE. |
+| `billingGroupId` | string (UUID) | Use this field to set the Billing Group ID for the call. |
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+| `linkTo` | string | Use another call's control id for sharing the same call session id |
+| `bridgeIntent` | boolean | Indicates the intent to bridge this call with the call specified in link_to. |
+| `bridgeOnAnswer` | boolean | Whether to automatically bridge answered call to the call specified in link_to. |
+| `preventDoubleBridge` | boolean | Prevents bridging and hangs up the call if the target is already bridged. |
+| `parkAfterUnbridge` | string | If supplied with the value `self`, the current leg will be parked after unbri... |
+| `mediaEncryption` | enum (disabled, SRTP, DTLS) | Defines whether media should be encrypted on the call. |
+| `sipAuthUsername` | string | SIP Authentication username used for SIP challenges. |
+| `sipAuthPassword` | string | SIP Authentication password used for SIP challenges. |
+| `sipHeaders` | array[object] | SIP headers to be added to the SIP INVITE request. |
+| `sipTransportProtocol` | enum (UDP, TCP, TLS) | Defines SIP transport protocol to be used on the call. |
+| `soundModifications` | object | Use this field to modify sound effects, for example adjust the pitch. |
+| `streamUrl` | string (URL) | The destination WebSocket address where the stream is going to be delivered. |
+| `streamTrack` | enum (inbound_track, outbound_track, both_tracks) | Specifies which track should be streamed. |
+| `streamCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Specifies the codec to be used for the streamed audio. |
+| `streamBidirectionalMode` | enum (mp3, rtp) | Configures method of bidirectional streaming (mp3, rtp). |
+| `streamBidirectionalCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
+| `streamBidirectionalTargetLegs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
+| `streamBidirectionalSamplingRate` | enum (8000, 16000, 22050, 24000, 48000) | Audio sampling rate. |
+| `streamEstablishBeforeCallOriginate` | boolean | Establish websocket connection before dialing the destination. |
+| `sendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
+| `webhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
+| `webhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
+| `record` | enum (record-from-answer) | Start recording automatically after an event. |
+| `recordChannels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
+| `recordFormat` | enum (wav, mp3) | Defines the format of the recording ('wav' or 'mp3') when `record` is specified. |
+| `recordMaxLength` | integer | Defines the maximum length for the recording in seconds when `record` is spec... |
+| `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
+| `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
+| `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
+| `superviseCallControlId` | string (UUID) | The call leg which will be supervised by the new call. |
+| `supervisorRole` | enum (barge, whisper, monitor) | The role of the supervisor call. |
+| `enableDialogflow` | boolean | Enables Dialogflow for the current call. |
+| `dialogflowConfig` | object |  |
+| `transcription` | boolean | Enable transcription upon call answer. |
+| `transcriptionConfig` | object |  |
+| `sipRegion` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
+| `streamAuthToken` | string | An authentication token to be sent as part of the WebSocket connection when u... |
+
+### Answer call — `client.calls().actions().answer()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `billingGroupId` | string (UUID) | Use this field to set the Billing Group ID for the call. |
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+| `customHeaders` | array[object] | Custom headers to be added to the SIP INVITE response. |
+| `preferredCodecs` | enum (G722,PCMU,PCMA,G729,OPUS,VP8,H264) | The list of comma-separated codecs in a preferred order for the forked media ... |
+| `sipHeaders` | array[object] | SIP headers to be added to the SIP INVITE response. |
+| `soundModifications` | object | Use this field to modify sound effects, for example adjust the pitch. |
+| `streamUrl` | string (URL) | The destination WebSocket address where the stream is going to be delivered. |
+| `streamTrack` | enum (inbound_track, outbound_track, both_tracks) | Specifies which track should be streamed. |
+| `streamCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Specifies the codec to be used for the streamed audio. |
+| `streamBidirectionalMode` | enum (mp3, rtp) | Configures method of bidirectional streaming (mp3, rtp). |
+| `streamBidirectionalCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
+| `streamBidirectionalTargetLegs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
+| `sendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
+| `webhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
+| `webhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
+| `transcription` | boolean | Enable transcription upon call answer. |
+| `transcriptionConfig` | object |  |
+| `record` | enum (record-from-answer) | Start recording automatically after an event. |
+| `recordChannels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
+| `recordFormat` | enum (wav, mp3) | Defines the format of the recording ('wav' or 'mp3') when `record` is specified. |
+| `recordMaxLength` | integer | Defines the maximum length for the recording in seconds when `record` is spec... |
+| `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
+| `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
+| `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
+| `webhookUrls` | object | A map of event types to webhook URLs. |
+| `webhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
+| `webhookRetriesPolicies` | object | A map of event types to retry policies. |
+
+### Bridge calls — `client.calls().actions().bridge()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+| `queue` | string | The name of the queue you want to bridge with, can't be used together with ca... |
+| `videoRoomId` | string (UUID) | The ID of the video room you want to bridge with, can't be used together with... |
+| `videoRoomContext` | string | The additional parameter that will be passed to the video conference. |
+| `preventDoubleBridge` | boolean | When set to `true`, it prevents bridging if the target call is already bridge... |
+| `parkAfterUnbridge` | string | Specifies behavior after the bridge ends (i.e. |
+| `playRingtone` | boolean | Specifies whether to play a ringtone if the call you want to bridge with has ... |
+| `ringtone` | enum (at, au, be, bg, br, ...) | Specifies which country ringtone to play when `play_ringtone` is set to `true`. |
+| `record` | enum (record-from-answer) | Start recording automatically after an event. |
+| `recordChannels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
+| `recordFormat` | enum (wav, mp3) | Defines the format of the recording ('wav' or 'mp3') when `record` is specified. |
+| `recordMaxLength` | integer | Defines the maximum length for the recording in seconds when `record` is spec... |
+| `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
+| `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
+| `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
+| `muteDtmf` | enum (none, both, self, opposite) | When enabled, DTMF tones are not passed to the call participant. |
+| `holdAfterUnbridge` | boolean | Specifies behavior after the bridge ends. |
+
+### Hangup call — `client.calls().actions().hangup()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+| `customHeaders` | array[object] | Custom headers to be added to the SIP BYE message. |
+
+### SIP Refer a call — `client.calls().actions().refer()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid execution of duplicate commands. |
+| `customHeaders` | array[object] | Custom headers to be added to the SIP INVITE. |
+| `sipAuthUsername` | string | SIP Authentication username used for SIP challenges. |
+| `sipAuthPassword` | string | SIP Authentication password used for SIP challenges. |
+| `sipHeaders` | array[object] | SIP headers to be added to the request. |
+
+### Reject a call — `client.calls().actions().reject()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+
+### Send SIP info — `client.calls().actions().sendSipInfo()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+
+### Transfer call — `client.calls().actions().transfer()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` | string (E.164) | The `from` number to be used as the caller id presented to the destination (`... |
+| `fromDisplayName` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
+| `audioUrl` | string (URL) | The URL of a file to be played back when the transfer destination answers bef... |
+| `earlyMedia` | boolean | If set to false, early media will not be passed to the originating leg. |
+| `mediaName` | string | The media_name of a file to be played back when the transfer destination answ... |
+| `timeoutSecs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
+| `timeLimitSecs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
+| `parkAfterUnbridge` | string | Specifies behavior after the bridge ends (i.e. |
+| `answeringMachineDetection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `answeringMachineDetectionConfig` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
+| `customHeaders` | array[object] | Custom headers to be added to the SIP INVITE. |
+| `clientState` | string | Use this field to add state to every subsequent webhook. |
+| `targetLegClientState` | string | Use this field to add state to every subsequent webhook for the new leg. |
+| `commandId` | string (UUID) | Use this field to avoid duplicate commands. |
+| `mediaEncryption` | enum (disabled, SRTP, DTLS) | Defines whether media should be encrypted on the new call leg. |
+| `sipAuthUsername` | string | SIP Authentication username used for SIP challenges. |
+| `sipAuthPassword` | string | SIP Authentication password used for SIP challenges. |
+| `sipHeaders` | array[object] | SIP headers to be added to the SIP INVITE. |
+| `sipTransportProtocol` | enum (UDP, TCP, TLS) | Defines SIP transport protocol to be used on the call. |
+| `soundModifications` | object | Use this field to modify sound effects, for example adjust the pitch. |
+| `webhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
+| `webhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
+| `muteDtmf` | enum (none, both, self, opposite) | When enabled, DTMF tones are not passed to the call participant. |
+| `record` | enum (record-from-answer) | Start recording automatically after an event. |
+| `recordChannels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
+| `recordFormat` | enum (wav, mp3) | Defines the format of the recording ('wav' or 'mp3') when `record` is specified. |
+| `recordMaxLength` | integer | Defines the maximum length for the recording in seconds when `record` is spec... |
+| `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
+| `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
+| `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
+| `sipRegion` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
+| `preferredCodecs` | string | The list of comma-separated codecs in order of preference to be used during t... |
+| `webhookUrls` | object | A map of event types to webhook URLs. |
+| `webhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
+| `webhookRetriesPolicies` | object | A map of event types to retry policies. |
+
+## Webhook Payload Fields
+
+### `callAnswered`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -427,7 +869,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.state` | enum: answered | State received from a command. |
 | `data.payload.tags` | array[string] | Array of tags associated to number. |
 
-**`callBridged`**
+### `callBridged`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -443,7 +885,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.from` | string | Number or SIP URI placing the call. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 
-**`callHangup`**
+### `callHangup`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -466,9 +908,9 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.hangup_cause` | enum: call_rejected, normal_clearing, originator_cancel, timeout, time_limit, user_busy, not_found, no_answer, unspecified | The reason the call was ended (`call_rejected`, `normal_clearing`, `originator_cancel`, `timeout`, `time_limit`, `use... |
 | `data.payload.hangup_source` | enum: caller, callee, unknown | The party who ended the call (`callee`, `caller`, `unknown`). |
 | `data.payload.sip_hangup_cause` | string | The reason the call was ended (SIP response code). |
-| `data.payload.call_quality_stats` | object | null | Call quality statistics aggregated from the CHANNEL_HANGUP_COMPLETE event. |
+| `data.payload.call_quality_stats` | object \| null | Call quality statistics aggregated from the CHANNEL_HANGUP_COMPLETE event. |
 
-**`callInitiated`**
+### `callInitiated`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -495,3 +937,9 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.state` | enum: parked, bridging | State received from a command. |
 | `data.payload.start_time` | date-time | ISO 8601 datetime of when the call started. |
 | `data.payload.tags` | array[string] | Array of tags associated to number. |
+
+### Field Type Notes
+
+- `from` in webhook payloads: string (E.164 phone number)
+- `to` in webhook payloads: string (E.164 phone number)
+- The return value of `client.webhooks.unwrap()` is a parsed event object — access fields via `event.data.event_type`, `event.data.payload.call_control_id`, etc.

@@ -1,9 +1,8 @@
 ---
 name: telnyx-numbers-config-javascript
 description: >-
-  Configure phone number settings including caller ID, call forwarding,
-  messaging enablement, and connection assignments. This skill provides
-  JavaScript SDK examples.
+  Phone number config: caller ID, call forwarding, messaging enablement,
+  connection assignments.
 metadata:
   author: telnyx
   product: numbers-config
@@ -14,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Numbers Config - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. Phone number must be ordered first (see telnyx-numbers-javascript)
+
+### Steps
+
+1. **List your numbers**: `client.phoneNumbers.list()`
+2. **Update voice settings**: `client.phoneNumbers.voice.update({id: ..., connectionId: ...})`
+3. **Update messaging settings**: `client.phoneNumbers.messaging.update({id: ..., messagingProfileId: ...})`
+
+### Common mistakes
+
+- Use phone_numbers.voice.update() for voice/connection settings and phone_numbers.messaging.update() for messaging/profile settings — they are SEPARATE endpoints
+- Bulk operations are available for updating many numbers at once — see bulk_phone_number_operations endpoints
+
+**Related skills**: telnyx-numbers-javascript, telnyx-messaging-profiles-javascript, telnyx-voice-javascript
 
 ## Installation
 
@@ -40,7 +58,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.phone_numbers.list(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -66,11 +84,17 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Bulk update phone number profiles
 
-`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`client.messagingNumbersBulkUpdates.create()` — `POST /messaging_numbers_bulk_updates`
 
-Optional: `assign_only` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messagingProfileId` | string (UUID) | Yes | Configure the messaging profile these phone numbers are assi... |
+| `numbers` | array[string] | Yes | The list of phone numbers to update. |
+| `assignOnly` | boolean | No | If true, only assign numbers to the profile without changing... |
 
 ```javascript
 const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.create({
@@ -81,11 +105,15 @@ const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.crea
 console.log(messagingNumbersBulkUpdate.data);
 ```
 
-Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+Key response fields: `response.data.failed, response.data.order_id, response.data.pending`
 
 ## Retrieve bulk update status
 
-`GET /messaging_numbers_bulk_updates/{order_id}`
+`client.messagingNumbersBulkUpdates.retrieve()` — `GET /messaging_numbers_bulk_updates/{order_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `orderId` | string (UUID) | Yes | Order ID to verify bulk update status. |
 
 ```javascript
 const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.retrieve('order_id');
@@ -93,11 +121,15 @@ const messagingNumbersBulkUpdate = await client.messagingNumbersBulkUpdates.retr
 console.log(messagingNumbersBulkUpdate.data);
 ```
 
-Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+Key response fields: `response.data.failed, response.data.order_id, response.data.pending`
 
 ## List mobile phone numbers with messaging settings
 
-`GET /mobile_phone_numbers/messaging`
+`client.mobilePhoneNumbers.messaging.list()` — `GET /mobile_phone_numbers/messaging`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -106,23 +138,34 @@ for await (const messagingListResponse of client.mobilePhoneNumbers.messaging.li
 }
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
 
 ## Retrieve a mobile phone number with messaging settings
 
-`GET /mobile_phone_numbers/{id}/messaging`
+`client.mobilePhoneNumbers.messaging.retrieve()` — `GET /mobile_phone_numbers/{id}/messaging`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```javascript
-const messaging = await client.mobilePhoneNumbers.messaging.retrieve('id');
+const messaging = await client.mobilePhoneNumbers.messaging.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(messaging.data);
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
 
 ## List phone numbers
 
-`GET /phone_numbers`
+`client.phoneNumbers.list()` — `GET /phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `handleMessagingProfileError` | enum (true, false) | No | Although it is an infrequent occurrence, due to the highly d... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -131,13 +174,17 @@ for await (const phoneNumberDetailed of client.phoneNumbers.list()) {
 }
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Verify ownership of phone numbers
 
 Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
 
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+`client.phoneNumbers.actions.verifyOwnership()` — `POST /phone_numbers/actions/verify_ownership`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes | Array of phone numbers to verify ownership for |
 
 ```javascript
 const response = await client.phoneNumbers.actions.verifyOwnership({
@@ -147,11 +194,17 @@ const response = await client.phoneNumbers.actions.verifyOwnership({
 console.log(response.data);
 ```
 
-Returns: `found` (array[object]), `not_found` (array[string]), `record_type` (string)
+Key response fields: `response.data.found, response.data.not_found, response.data.record_type`
 
 ## Lists the phone numbers jobs
 
-`GET /phone_numbers/jobs`
+`client.phoneNumbers.jobs.list()` — `GET /phone_numbers/jobs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -160,13 +213,17 @@ for await (const phoneNumbersJob of client.phoneNumbers.jobs.list()) {
 }
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Delete a batch of numbers
 
 Creates a new background job to delete a batch of numbers. At most one thousand numbers can be updated per API call.
 
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+`client.phoneNumbers.jobs.deleteBatch()` — `POST /phone_numbers/jobs/delete_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes |  |
 
 ```javascript
 const response = await client.phoneNumbers.jobs.deleteBatch({
@@ -176,15 +233,19 @@ const response = await client.phoneNumbers.jobs.deleteBatch({
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Update the emergency settings from a batch of numbers
 
 Creates a background job to update the emergency settings of a collection of phone numbers. At most one thousand numbers can be updated per API call.
 
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+`client.phoneNumbers.jobs.updateEmergencySettingsBatch()` — `POST /phone_numbers/jobs/update_emergency_settings`
 
-Optional: `emergency_address_id` (string | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes |  |
+| `emergencyEnabled` | boolean | Yes | Indicates whether to enable or disable emergency services on... |
+| `emergencyAddressId` | string (UUID) | No | Identifies the address to be used with emergency services. |
 
 ```javascript
 const response = await client.phoneNumbers.jobs.updateEmergencySettingsBatch({
@@ -195,15 +256,21 @@ const response = await client.phoneNumbers.jobs.updateEmergencySettingsBatch({
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Update a batch of numbers
 
 Creates a new background job to update a batch of numbers. At most one thousand numbers can be updated per API call. At least one of the updateable fields must be submitted.
 
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+`client.phoneNumbers.jobs.updateBatch()` — `POST /phone_numbers/jobs/update_phone_numbers`
 
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes | Array of phone number ids and/or phone numbers in E164 forma... |
+| `tags` | array[string] | No | A list of user-assigned tags to help organize phone numbers. |
+| `connectionId` | string (UUID) | No | Identifies the connection associated with the phone number. |
+| `billingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.phoneNumbers.jobs.updateBatch({
@@ -213,23 +280,34 @@ const response = await client.phoneNumbers.jobs.updateBatch({
 console.log(response.data);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Retrieve a phone numbers job
 
-`GET /phone_numbers/jobs/{id}`
+`client.phoneNumbers.jobs.retrieve()` — `GET /phone_numbers/jobs/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the Phone Numbers Job. |
 
 ```javascript
-const job = await client.phoneNumbers.jobs.retrieve('id');
+const job = await client.phoneNumbers.jobs.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(job.data);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## List phone numbers with messaging settings
 
-`GET /phone_numbers/messaging`
+`client.phoneNumbers.messaging.list()` — `GET /phone_numbers/messaging`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[type]` | enum (tollfree, longcode, shortcode) | No | Filter by phone number type. |
+| `sort[phoneNumber]` | enum (asc, desc) | No | Sort by phone number. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -238,13 +316,20 @@ for await (const phoneNumberWithMessagingSettings of client.phoneNumbers.messagi
 }
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
 
 ## Slim List phone numbers
 
 List phone numbers, This endpoint is a lighter version of the /phone_numbers endpoint having higher performance and rate limit.
 
-`GET /phone_numbers/slim`
+`client.phoneNumbers.slimList()` — `GET /phone_numbers/slim`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `includeConnection` | boolean | No | Include the connection associated with the phone number. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -253,11 +338,17 @@ for await (const phoneNumberSlimListResponse of client.phoneNumbers.slimList()) 
 }
 ```
 
-Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `country_iso_alpha2` (string), `created_at` (string), `customer_reference` (string), `emergency_address_id` (string), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## List phone numbers with voice settings
 
-`GET /phone_numbers/voice`
+`client.phoneNumbers.voice.list()` — `GET /phone_numbers/voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -266,11 +357,15 @@ for await (const phoneNumberWithVoiceSettings of client.phoneNumbers.voice.list(
 }
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `response.data.id, response.data.phone_number, response.data.connection_id`
 
 ## Retrieve a phone number
 
-`GET /phone_numbers/{id}`
+`client.phoneNumbers.retrieve()` — `GET /phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const phoneNumber = await client.phoneNumbers.retrieve('1293384261075731499');
@@ -278,13 +373,19 @@ const phoneNumber = await client.phoneNumbers.retrieve('1293384261075731499');
 console.log(phoneNumber.data);
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Update a phone number
 
-`PATCH /phone_numbers/{id}`
+`client.phoneNumbers.update()` — `PATCH /phone_numbers/{id}`
 
-Optional: `address_id` (string), `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | A list of user-assigned tags to help organize phone numbers. |
+| `connectionId` | string (UUID) | No | Identifies the connection associated with the phone number. |
+| `billingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const phoneNumber = await client.phoneNumbers.update('1293384261075731499');
@@ -292,11 +393,15 @@ const phoneNumber = await client.phoneNumbers.update('1293384261075731499');
 console.log(phoneNumber.data);
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Delete a phone number
 
-`DELETE /phone_numbers/{id}`
+`client.phoneNumbers.delete()` — `DELETE /phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const phoneNumber = await client.phoneNumbers.delete('1293384261075731499');
@@ -304,11 +409,16 @@ const phoneNumber = await client.phoneNumbers.delete('1293384261075731499');
 console.log(phoneNumber.data);
 ```
 
-Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `connection_name` (string), `created_at` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `emergency_address_id` (string), `emergency_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `messaging_profile_id` (string), `messaging_profile_name` (string), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Change the bundle status for a phone number (set to being in a bundle or remove from a bundle)
 
-`PATCH /phone_numbers/{id}/actions/bundle_status_change` — Required: `bundle_id`
+`client.phoneNumbers.actions.changeBundleStatus()` — `PATCH /phone_numbers/{id}/actions/bundle_status_change`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `bundleId` | string (UUID) | Yes | The new bundle_id setting for the number. |
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const response = await client.phoneNumbers.actions.changeBundleStatus('1293384261075731499', {
@@ -318,11 +428,17 @@ const response = await client.phoneNumbers.actions.changeBundleStatus('129338426
 console.log(response.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `response.data.id, response.data.phone_number, response.data.connection_id`
 
 ## Enable emergency for a phone number
 
-`POST /phone_numbers/{id}/actions/enable_emergency` — Required: `emergency_enabled`, `emergency_address_id`
+`client.phoneNumbers.actions.enableEmergency()` — `POST /phone_numbers/{id}/actions/enable_emergency`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `emergencyEnabled` | boolean | Yes | Indicates whether to enable emergency services on this numbe... |
+| `emergencyAddressId` | string (UUID) | Yes | Identifies the address to be used with emergency services. |
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const response = await client.phoneNumbers.actions.enableEmergency('1293384261075731499', {
@@ -333,37 +449,52 @@ const response = await client.phoneNumbers.actions.enableEmergency('129338426107
 console.log(response.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `response.data.id, response.data.phone_number, response.data.connection_id`
 
 ## Retrieve a phone number with messaging settings
 
-`GET /phone_numbers/{id}/messaging`
+`client.phoneNumbers.messaging.retrieve()` — `GET /phone_numbers/{id}/messaging`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```javascript
-const messaging = await client.phoneNumbers.messaging.retrieve('id');
+const messaging = await client.phoneNumbers.messaging.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(messaging.data);
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
 
 ## Update the messaging profile and/or messaging product of a phone number
 
-`PATCH /phone_numbers/{id}/messaging`
+`client.phoneNumbers.messaging.update()` — `PATCH /phone_numbers/{id}/messaging`
 
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The phone number to update. |
+| `messagingProfileId` | string (UUID) | No | Configure the messaging profile this phone number is assigne... |
+| `tags` | array[string] | No | Tags to set on this phone number. |
+| `messagingProduct` | string | No | Configure the messaging product for this number:
+
+* Omit thi... |
 
 ```javascript
-const messaging = await client.phoneNumbers.messaging.update('id');
+const messaging = await client.phoneNumbers.messaging.update('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(messaging.data);
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
 
 ## Retrieve a phone number with voice settings
 
-`GET /phone_numbers/{id}/voice`
+`client.phoneNumbers.voice.retrieve()` — `GET /phone_numbers/{id}/voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```javascript
 const voice = await client.phoneNumbers.voice.retrieve('1293384261075731499');
@@ -371,13 +502,19 @@ const voice = await client.phoneNumbers.voice.retrieve('1293384261075731499');
 console.log(voice.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `response.data.id, response.data.phone_number, response.data.connection_id`
 
 ## Update a phone number with voice settings
 
-`PATCH /phone_numbers/{id}/voice`
+`client.phoneNumbers.voice.update()` — `PATCH /phone_numbers/{id}/voice`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `usagePaymentMethod` | enum (pay-per-minute, channel) | No | Controls whether a number is billed per minute or uses your ... |
+| `inboundCallScreening` | enum (disabled, reject_calls, flag_calls) | No | The inbound_call_screening setting is a phone number configu... |
+| `techPrefixEnabled` | boolean | No | Controls whether a tech prefix is enabled for this phone num... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const voice = await client.phoneNumbers.voice.update('1293384261075731499');
@@ -385,11 +522,16 @@ const voice = await client.phoneNumbers.voice.update('1293384261075731499');
 console.log(voice.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `response.data.id, response.data.phone_number, response.data.connection_id`
 
 ## List Mobile Phone Numbers
 
-`GET /v2/mobile_phone_numbers`
+`client.mobilePhoneNumbers.list()` — `GET /v2/mobile_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load |
+| `page[size]` | integer | No | The size of the page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -398,30 +540,44 @@ for await (const mobilePhoneNumber of client.mobilePhoneNumbers.list()) {
 }
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Retrieve a Mobile Phone Number
 
-`GET /v2/mobile_phone_numbers/{id}`
+`client.mobilePhoneNumbers.retrieve()` — `GET /v2/mobile_phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile phone number |
 
 ```javascript
-const mobilePhoneNumber = await client.mobilePhoneNumbers.retrieve('id');
+const mobilePhoneNumber = await client.mobilePhoneNumbers.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(mobilePhoneNumber.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Update a Mobile Phone Number
 
-`PATCH /v2/mobile_phone_numbers/{id}`
+`client.mobilePhoneNumbers.update()` — `PATCH /v2/mobile_phone_numbers/{id}`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `customer_reference` (string | null), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile phone number |
+| `connectionId` | string (UUID) | No |  |
+| `tags` | array[string] | No |  |
+| `inboundCallScreening` | enum (disabled, reject_calls, flag_calls) | No |  |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
-const mobilePhoneNumber = await client.mobilePhoneNumbers.update('id');
+const mobilePhoneNumber = await client.mobilePhoneNumbers.update('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(mobilePhoneNumber.data);
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**
