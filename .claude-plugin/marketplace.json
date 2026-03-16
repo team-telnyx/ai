@@ -295,6 +295,14 @@
       "skills": [
         "./telnyx-cli/skills/telnyx-cli"
       ]
+    },
+    {
+      "name": "telnyx-ai-patterns",
+      "description": "Workflow patterns built on Telnyx LLM inference API. Reusable problem-solving patterns that use multiple models together for better results than any single model alone.",
+      "source": "./telnyx-ai-patterns",
+      "skills": [
+        "./telnyx-ai-patterns/skills/council"
+      ]
     }
   ]
 }
