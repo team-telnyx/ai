@@ -1,8 +1,8 @@
 ---
 name: telnyx-ai-inference-go
 description: >-
-  Access Telnyx LLM inference APIs, embeddings, and AI analytics for call
-  insights and summaries. This skill provides Go SDK examples.
+  Telnyx LLM inference, embeddings, and AI analytics for call insights and
+  summaries.
 metadata:
   author: telnyx
   product: ai-inference
@@ -13,6 +13,27 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Ai Inference - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. No special setup required — just a Telnyx API key
+
+### Steps
+
+1. **Chat completion**: `client.Ai.Chat.Completions.Create(ctx, params)`
+2. **Generate embeddings**: `client.Ai.Embeddings.Create(ctx, params)`
+3. **Text-to-speech**: `client.Ai.Tts.Create(ctx, params)`
+
+### Common mistakes
+
+- NEVER use non-Telnyx model names (e.g., 'gpt-4o') — only models listed at api.telnyx.com/v2/ai/models are available. Use client.ai.models.list() to see available models
+- ALWAYS set max_tokens to prevent runaway generation — omitting it may consume excessive credits
+- For streaming responses, ALWAYS iterate over the SSE stream — do not try to read the entire response body at once
+- Telnyx AI Inference is OpenAI-compatible — use the same request/response format but with Telnyx base URL and API key
+
+**Related skills**: telnyx-ai-assistants-go
 
 ## Installation
 
@@ -47,7 +68,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Ai.Chat.Completions.Create(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -74,34 +95,42 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Transcribe speech to text
 
 Transcribe speech to text. This endpoint is consistent with the [OpenAI Transcription API](https://platform.openai.com/docs/api-reference/audio/createTranscription) and may be used with the OpenAI JS or Python SDK.
 
-`POST /ai/audio/transcriptions`
+`client.AI.Audio.Transcribe()` — `POST /ai/audio/transcriptions`
 
 ```go
-	response, err := client.AI.Audio.Transcribe(context.TODO(), telnyx.AIAudioTranscribeParams{
+	response, err := client.AI.Audio.Transcribe(context.Background(), telnyx.AIAudioTranscribeParams{
 		Model: telnyx.AIAudioTranscribeParamsModelDistilWhisperDistilLargeV2,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Text)
 ```
 
-Returns: `duration` (number), `segments` (array[object]), `text` (string)
+Key response fields: `response.data.text, response.data.duration, response.data.segments`
 
 ## Create a chat completion
 
 Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
 
-`POST /ai/chat/completions` — Required: `messages`
+`client.AI.Chat.NewCompletion()` — `POST /ai/chat/completions`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Messages` | array[object] | Yes | A list of the previous chat messages for context. |
+| `ToolChoice` | enum (none, auto, required) | No |  |
+| `Model` | string | No | The language model to chat with. |
+| `ApiKeyRef` | string | No | If you are using an external inference provider like xAI or ... |
+| ... | | | +20 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	response, err := client.AI.Chat.NewCompletion(context.TODO(), telnyx.AIChatNewCompletionParams{
+	response, err := client.AI.Chat.NewCompletion(context.Background(), telnyx.AIChatNewCompletionParams{
 		Messages: []telnyx.AIChatNewCompletionParamsMessage{{
 			Role: "system",
 			Content: telnyx.AIChatNewCompletionParamsMessageContentUnion{
@@ -115,7 +144,7 @@ Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean
 		}},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -124,120 +153,151 @@ Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean
 
 Retrieve a list of all AI conversations configured by the user. Supports [PostgREST-style query parameters](https://postgrest.org/en/stable/api.html#horizontal-filtering-rows) for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object.
 
-`GET /ai/conversations`
+`client.AI.Conversations.List()` — `GET /ai/conversations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Metadata->assistantId` | string (UUID) | No | Filter by assistant ID (e.g., `metadata->assistant_id=eq.ass... |
+| `Metadata->callControlId` | string (UUID) | No | Filter by call control ID (e.g., `metadata->call_control_id=... |
+| `Id` | string (UUID) | No | Filter by conversation ID (e.g. |
+| ... | | | +9 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	conversations, err := client.AI.Conversations.List(context.TODO(), telnyx.AIConversationListParams{})
+	conversations, err := client.AI.Conversations.List(context.Background(), telnyx.AIConversationListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", conversations.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a conversation
 
 Create a new AI Conversation.
 
-`POST /ai/conversations`
+`client.AI.Conversations.New()` — `POST /ai/conversations`
 
-Optional: `metadata` (object), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | No |  |
+| `Metadata` | object | No | Metadata associated with the conversation. |
 
 ```go
-	conversation, err := client.AI.Conversations.New(context.TODO(), telnyx.AIConversationNewParams{})
+	conversation, err := client.AI.Conversations.New(context.Background(), telnyx.AIConversationNewParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", conversation.ID)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get Insight Template Groups
 
 Get all insight groups
 
-`GET /ai/conversations/insight-groups`
+`client.AI.Conversations.InsightGroups.GetInsightGroups()` — `GET /ai/conversations/insight-groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.AI.Conversations.InsightGroups.GetInsightGroups(context.TODO(), telnyx.AIConversationInsightGroupGetInsightGroupsParams{})
+	page, err := client.AI.Conversations.InsightGroups.GetInsightGroups(context.Background(), telnyx.AIConversationInsightGroupGetInsightGroupsParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create Insight Template Group
 
 Create a new insight group
 
-`POST /ai/conversations/insight-groups` — Required: `name`
+`client.AI.Conversations.InsightGroups.InsightGroups()` — `POST /ai/conversations/insight-groups`
 
-Optional: `description` (string), `webhook` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | Yes |  |
+| `Description` | string | No |  |
+| `Webhook` | string | No |  |
 
 ```go
-	insightTemplateGroupDetail, err := client.AI.Conversations.InsightGroups.InsightGroups(context.TODO(), telnyx.AIConversationInsightGroupInsightGroupsParams{
-		Name: "name",
+	insightTemplateGroupDetail, err := client.AI.Conversations.InsightGroups.InsightGroups(context.Background(), telnyx.AIConversationInsightGroupInsightGroupsParams{
+		Name: "my-resource",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get Insight Template Group
 
 Get insight group by ID
 
-`GET /ai/conversations/insight-groups/{group_id}`
+`client.AI.Conversations.InsightGroups.Get()` — `GET /ai/conversations/insight-groups/{group_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `GroupId` | string (UUID) | Yes | The ID of the insight group |
 
 ```go
-	insightTemplateGroupDetail, err := client.AI.Conversations.InsightGroups.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	insightTemplateGroupDetail, err := client.AI.Conversations.InsightGroups.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update Insight Template Group
 
 Update an insight template group
 
-`PUT /ai/conversations/insight-groups/{group_id}`
+`client.AI.Conversations.InsightGroups.Update()` — `PUT /ai/conversations/insight-groups/{group_id}`
 
-Optional: `description` (string), `name` (string), `webhook` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `GroupId` | string (UUID) | Yes | The ID of the insight group |
+| `Name` | string | No |  |
+| `Description` | string | No |  |
+| `Webhook` | string | No |  |
 
 ```go
 	insightTemplateGroupDetail, err := client.AI.Conversations.InsightGroups.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIConversationInsightGroupUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateGroupDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insights` (array[object]), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete Insight Template Group
 
 Delete insight group by ID
 
-`DELETE /ai/conversations/insight-groups/{group_id}`
+`client.AI.Conversations.InsightGroups.Delete()` — `DELETE /ai/conversations/insight-groups/{group_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `GroupId` | string (UUID) | Yes | The ID of the insight group |
 
 ```go
-	err := client.AI.Conversations.InsightGroups.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.AI.Conversations.InsightGroups.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -245,18 +305,23 @@ Delete insight group by ID
 
 Assign an insight to a group
 
-`POST /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign`
+`client.AI.Conversations.InsightGroups.Insights.Assign()` — `POST /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `GroupId` | string (UUID) | Yes | The ID of the insight group |
+| `InsightId` | string (UUID) | Yes | The ID of the insight |
 
 ```go
 	err := client.AI.Conversations.InsightGroups.Insights.Assign(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIConversationInsightGroupInsightAssignParams{
 			GroupID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -264,18 +329,23 @@ Assign an insight to a group
 
 Remove an insight from a group
 
-`DELETE /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/unassign`
+`client.AI.Conversations.InsightGroups.Insights.DeleteUnassign()` — `DELETE /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/unassign`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `GroupId` | string (UUID) | Yes | The ID of the insight group |
+| `InsightId` | string (UUID) | Yes | The ID of the insight |
 
 ```go
 	err := client.AI.Conversations.InsightGroups.Insights.DeleteUnassign(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIConversationInsightGroupInsightDeleteUnassignParams{
 			GroupID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -283,87 +353,110 @@ Remove an insight from a group
 
 Get all insights
 
-`GET /ai/conversations/insights`
+`client.AI.Conversations.Insights.List()` — `GET /ai/conversations/insights`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.AI.Conversations.Insights.List(context.TODO(), telnyx.AIConversationInsightListParams{})
+	page, err := client.AI.Conversations.Insights.List(context.Background(), telnyx.AIConversationInsightListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create Insight Template
 
 Create a new insight
 
-`POST /ai/conversations/insights` — Required: `instructions`, `name`
+`client.AI.Conversations.Insights.New()` — `POST /ai/conversations/insights`
 
-Optional: `json_schema` (object), `webhook` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Instructions` | string | Yes |  |
+| `Name` | string | Yes |  |
+| `Webhook` | string | No |  |
+| `JsonSchema` | object | No | If specified, the output will follow the JSON schema. |
 
 ```go
-	insightTemplateDetail, err := client.AI.Conversations.Insights.New(context.TODO(), telnyx.AIConversationInsightNewParams{
-		Instructions: "instructions",
-		Name:         "name",
+	insightTemplateDetail, err := client.AI.Conversations.Insights.New(context.Background(), telnyx.AIConversationInsightNewParams{
+		Instructions: "You are a helpful assistant.",
+		Name: "my-resource",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get Insight Template
 
 Get insight by ID
 
-`GET /ai/conversations/insights/{insight_id}`
+`client.AI.Conversations.Insights.Get()` — `GET /ai/conversations/insights/{insight_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `InsightId` | string (UUID) | Yes | The ID of the insight |
 
 ```go
-	insightTemplateDetail, err := client.AI.Conversations.Insights.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	insightTemplateDetail, err := client.AI.Conversations.Insights.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update Insight Template
 
 Update an insight template
 
-`PUT /ai/conversations/insights/{insight_id}`
+`client.AI.Conversations.Insights.Update()` — `PUT /ai/conversations/insights/{insight_id}`
 
-Optional: `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `InsightId` | string (UUID) | Yes | The ID of the insight |
+| `Instructions` | string | No |  |
+| `Name` | string | No |  |
+| `Webhook` | string | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	insightTemplateDetail, err := client.AI.Conversations.Insights.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIConversationInsightUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", insightTemplateDetail.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, default), `instructions` (string), `json_schema` (object), `name` (string), `webhook` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete Insight Template
 
 Delete insight by ID
 
-`DELETE /ai/conversations/insights/{insight_id}`
+`client.AI.Conversations.Insights.Delete()` — `DELETE /ai/conversations/insights/{insight_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `InsightId` | string (UUID) | Yes | The ID of the insight |
 
 ```go
-	err := client.AI.Conversations.Insights.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.AI.Conversations.Insights.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -371,50 +464,61 @@ Delete insight by ID
 
 Retrieve a specific AI conversation by its ID.
 
-`GET /ai/conversations/{conversation_id}`
+`client.AI.Conversations.Get()` — `GET /ai/conversations/{conversation_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | string (UUID) | Yes | The ID of the conversation to retrieve |
 
 ```go
-	conversation, err := client.AI.Conversations.Get(context.TODO(), "conversation_id")
+	conversation, err := client.AI.Conversations.Get(context.Background(), "conversation_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", conversation.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update conversation metadata
 
 Update metadata for a specific conversation.
 
-`PUT /ai/conversations/{conversation_id}`
+`client.AI.Conversations.Update()` — `PUT /ai/conversations/{conversation_id}`
 
-Optional: `metadata` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | string (UUID) | Yes | The ID of the conversation to update |
+| `Metadata` | object | No | Metadata associated with the conversation. |
 
 ```go
 	conversation, err := client.AI.Conversations.Update(
-		context.TODO(),
+		context.Background(),
 		"conversation_id",
 		telnyx.AIConversationUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", conversation.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a conversation
 
 Delete a specific conversation by its ID.
 
-`DELETE /ai/conversations/{conversation_id}`
+`client.AI.Conversations.Delete()` — `DELETE /ai/conversations/{conversation_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | string (UUID) | Yes | The ID of the conversation to delete |
 
 ```go
-	err := client.AI.Conversations.Delete(context.TODO(), "conversation_id")
+	err := client.AI.Conversations.Delete(context.Background(), "conversation_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -422,36 +526,47 @@ Delete a specific conversation by its ID.
 
 Retrieve insights for a specific conversation
 
-`GET /ai/conversations/{conversation_id}/conversations-insights`
+`client.AI.Conversations.GetConversationsInsights()` — `GET /ai/conversations/{conversation_id}/conversations-insights`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Conversations.GetConversationsInsights(context.TODO(), "conversation_id")
+	response, err := client.AI.Conversations.GetConversationsInsights(context.Background(), "conversation_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create Message
 
 Add a new message to the conversation. Used to insert a new messages to a conversation manually ( without using chat endpoint )
 
-`POST /ai/conversations/{conversation_id}/message` — Required: `role`
+`client.AI.Conversations.AddMessage()` — `POST /ai/conversations/{conversation_id}/message`
 
-Optional: `content` (string), `metadata` (object), `name` (string), `sent_at` (date-time), `tool_call_id` (string), `tool_calls` (array[object]), `tool_choice` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Role` | string | Yes |  |
+| `ConversationId` | string (UUID) | Yes | The ID of the conversation |
+| `ToolCallId` | string (UUID) | No |  |
+| `Content` | string | No |  |
+| `Name` | string | No |  |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	err := client.AI.Conversations.AddMessage(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIConversationAddMessageParams{
-			Role: "role",
+			Role: "user",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -459,33 +574,41 @@ Optional: `content` (string), `metadata` (object), `name` (string), `sent_at` (d
 
 Retrieve messages for a specific conversation, including tool calls made by the assistant.
 
-`GET /ai/conversations/{conversation_id}/messages`
+`client.AI.Conversations.Messages.List()` — `GET /ai/conversations/{conversation_id}/messages`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConversationId` | string (UUID) | Yes |  |
 
 ```go
-	messages, err := client.AI.Conversations.Messages.List(context.TODO(), "conversation_id")
+	messages, err := client.AI.Conversations.Messages.List(context.Background(), "conversation_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messages.Data)
 ```
 
-Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
+Key response fields: `response.data.text, response.data.created_at, response.data.role`
 
 ## Get Tasks by Status
 
 Retrieve tasks for the user that are either `queued`, `processing`, `failed`, `success` or `partial_success` based on the query string. Defaults to `queued` and `processing`.
 
-`GET /ai/embeddings`
+`client.AI.Embeddings.List()` — `GET /ai/embeddings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Status` | array[string] | No | List of task statuses i.e. |
 
 ```go
-	embeddings, err := client.AI.Embeddings.List(context.TODO(), telnyx.AIEmbeddingListParams{})
+	embeddings, err := client.AI.Embeddings.List(context.Background(), telnyx.AIEmbeddingListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", embeddings.Data)
 ```
 
-Returns: `bucket` (string), `created_at` (date-time), `finished_at` (date-time), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (string), `task_name` (string), `user_id` (string)
+Key response fields: `response.data.status, response.data.created_at, response.data.bucket`
 
 ## Embed documents
 
@@ -497,64 +620,78 @@ Perform embedding on a Telnyx Storage Bucket using an embedding model. The curre
 - csv
 - audio / video (mp3, mp4, mpeg, mpga, m4a, wav, or webm ) - Max of 100mb file size. Any files not matching the above types will be attempted to be embedded as unstructured text.
 
-`POST /ai/embeddings` — Required: `bucket_name`
+`client.AI.Embeddings.New()` — `POST /ai/embeddings`
 
-Optional: `document_chunk_overlap_size` (integer), `document_chunk_size` (integer), `embedding_model` (object), `loader` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BucketName` | string | Yes |  |
+| `DocumentChunkSize` | integer | No |  |
+| `DocumentChunkOverlapSize` | integer | No |  |
+| `EmbeddingModel` | object | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	embeddingResponse, err := client.AI.Embeddings.New(context.TODO(), telnyx.AIEmbeddingNewParams{
-		BucketName: "bucket_name",
+	embeddingResponse, err := client.AI.Embeddings.New(context.Background(), telnyx.AIEmbeddingNewParams{
+		BucketName: "my-bucket",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", embeddingResponse.Data)
 ```
 
-Returns: `created_at` (string), `finished_at` (string | null), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.finished_at`
 
 ## List embedded buckets
 
 Get all embedding buckets for a user.
 
-`GET /ai/embeddings/buckets`
+`client.AI.Embeddings.Buckets.List()` — `GET /ai/embeddings/buckets`
 
 ```go
-	buckets, err := client.AI.Embeddings.Buckets.List(context.TODO())
+	buckets, err := client.AI.Embeddings.Buckets.List(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", buckets.Data)
 ```
 
-Returns: `buckets` (array[string])
+Key response fields: `response.data.buckets`
 
 ## Get file-level embedding statuses for a bucket
 
 Get all embedded files for a given user bucket, including their processing status.
 
-`GET /ai/embeddings/buckets/{bucket_name}`
+`client.AI.Embeddings.Buckets.Get()` — `GET /ai/embeddings/buckets/{bucket_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BucketName` | string | Yes |  |
 
 ```go
-	bucket, err := client.AI.Embeddings.Buckets.Get(context.TODO(), "bucket_name")
+	bucket, err := client.AI.Embeddings.Buckets.Get(context.Background(), "bucket_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", bucket.Data)
 ```
 
-Returns: `created_at` (date-time), `error_reason` (string), `filename` (string), `last_embedded_at` (date-time), `status` (string), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.created_at, response.data.updated_at`
 
 ## Disable AI for an Embedded Bucket
 
 Deletes an entire bucket's embeddings and disables the bucket for AI-use, returning it to normal storage pricing.
 
-`DELETE /ai/embeddings/buckets/{bucket_name}`
+`client.AI.Embeddings.Buckets.Delete()` — `DELETE /ai/embeddings/buckets/{bucket_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BucketName` | string | Yes |  |
 
 ```go
-	err := client.AI.Embeddings.Buckets.Delete(context.TODO(), "bucket_name")
+	err := client.AI.Embeddings.Buckets.Delete(context.Background(), "bucket_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -562,41 +699,50 @@ Deletes an entire bucket's embeddings and disables the bucket for AI-use, return
 
 Perform a similarity search on a Telnyx Storage Bucket, returning the most similar `num_docs` document chunks to the query. Currently the only available distance metric is cosine similarity which will return a `distance` between 0 and 1. The lower the distance, the more similar the returned document chunks are to the query.
 
-`POST /ai/embeddings/similarity-search` — Required: `bucket_name`, `query`
+`client.AI.Embeddings.SimilaritySearch()` — `POST /ai/embeddings/similarity-search`
 
-Optional: `num_of_docs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `BucketName` | string | Yes |  |
+| `Query` | string | Yes |  |
+| `NumOfDocs` | integer | No |  |
 
 ```go
-	response, err := client.AI.Embeddings.SimilaritySearch(context.TODO(), telnyx.AIEmbeddingSimilaritySearchParams{
-		BucketName: "bucket_name",
-		Query:      "query",
+	response, err := client.AI.Embeddings.SimilaritySearch(context.Background(), telnyx.AIEmbeddingSimilaritySearchParams{
+		BucketName: "my-bucket",
+		Query: "What is Telnyx?",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `distance` (number), `document_chunk` (string), `metadata` (object)
+Key response fields: `response.data.distance, response.data.document_chunk, response.data.metadata`
 
 ## Embed URL content
 
 Embed website content from a specified URL, including child pages up to 5 levels deep within the same domain. The process crawls and loads content from the main URL and its linked pages into a Telnyx Cloud Storage bucket.
 
-`POST /ai/embeddings/url` — Required: `url`, `bucket_name`
+`client.AI.Embeddings.URL()` — `POST /ai/embeddings/url`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Url` | string (URL) | Yes | The URL of the webpage to embed |
+| `BucketName` | string | Yes | Name of the bucket to store the embeddings. |
 
 ```go
-	embeddingResponse, err := client.AI.Embeddings.URL(context.TODO(), telnyx.AIEmbeddingURLParams{
-		BucketName: "bucket_name",
-		URL:        "url",
+	embeddingResponse, err := client.AI.Embeddings.URL(context.Background(), telnyx.AIEmbeddingURLParams{
+		BucketName: "my-bucket",
+		URL: "https://example.com/resource",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", embeddingResponse.Data)
 ```
 
-Returns: `created_at` (string), `finished_at` (string | null), `status` (string), `task_id` (uuid), `task_name` (string), `user_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.finished_at`
 
 ## Get an embedding task's status
 
@@ -607,141 +753,164 @@ Check the status of a current embedding task. Will be one of the following:
 - `failure` - Task failed and no files were embedded successfully
 - `partial_success` - Some files were embedded successfully, but at least one failed
 
-`GET /ai/embeddings/{task_id}`
+`client.AI.Embeddings.Get()` — `GET /ai/embeddings/{task_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `TaskId` | string (UUID) | Yes |  |
 
 ```go
-	embedding, err := client.AI.Embeddings.Get(context.TODO(), "task_id")
+	embedding, err := client.AI.Embeddings.Get(context.Background(), "task_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", embedding.Data)
 ```
 
-Returns: `created_at` (string), `finished_at` (string), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (uuid), `task_name` (string)
+Key response fields: `response.data.status, response.data.created_at, response.data.finished_at`
 
 ## List fine tuning jobs
 
 Retrieve a list of all fine tuning jobs created by the user.
 
-`GET /ai/fine_tuning/jobs`
+`client.AI.FineTuning.Jobs.List()` — `GET /ai/fine_tuning/jobs`
 
 ```go
-	jobs, err := client.AI.FineTuning.Jobs.List(context.TODO())
+	jobs, err := client.AI.FineTuning.Jobs.List(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", jobs.Data)
 ```
 
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a fine tuning job
 
 Create a new fine tuning job.
 
-`POST /ai/fine_tuning/jobs` — Required: `model`, `training_file`
+`client.AI.FineTuning.Jobs.New()` — `POST /ai/fine_tuning/jobs`
 
-Optional: `hyperparameters` (object), `suffix` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Model` | string | Yes | The base model that is being fine-tuned. |
+| `TrainingFile` | string | Yes | The storage bucket or object used for training. |
+| `Suffix` | string | No | Optional suffix to append to the fine tuned model's name. |
+| `Hyperparameters` | object | No | The hyperparameters used for the fine-tuning job. |
 
 ```go
-	fineTuningJob, err := client.AI.FineTuning.Jobs.New(context.TODO(), telnyx.AIFineTuningJobNewParams{
-		Model:        "model",
-		TrainingFile: "training_file",
+	fineTuningJob, err := client.AI.FineTuning.Jobs.New(context.Background(), telnyx.AIFineTuningJobNewParams{
+		Model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+		TrainingFile: "training-data.jsonl",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a fine tuning job
 
 Retrieve a fine tuning job by `job_id`.
 
-`GET /ai/fine_tuning/jobs/{job_id}`
+`client.AI.FineTuning.Jobs.Get()` — `GET /ai/fine_tuning/jobs/{job_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `JobId` | string (UUID) | Yes |  |
 
 ```go
-	fineTuningJob, err := client.AI.FineTuning.Jobs.Get(context.TODO(), "job_id")
+	fineTuningJob, err := client.AI.FineTuning.Jobs.Get(context.Background(), "job_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Cancel a fine tuning job
 
 Cancel a fine tuning job.
 
-`POST /ai/fine_tuning/jobs/{job_id}/cancel`
+`client.AI.FineTuning.Jobs.Cancel()` — `POST /ai/fine_tuning/jobs/{job_id}/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `JobId` | string (UUID) | Yes |  |
 
 ```go
-	fineTuningJob, err := client.AI.FineTuning.Jobs.Cancel(context.TODO(), "job_id")
+	fineTuningJob, err := client.AI.FineTuning.Jobs.Cancel(context.Background(), "job_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", fineTuningJob.ID)
 ```
 
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get available models
 
 This endpoint returns a list of Open Source and OpenAI models that are available for use.    **Note**: Model `id`'s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.
 
-`GET /ai/models`
+`client.AI.GetModels()` — `GET /ai/models`
 
 ```go
-	response, err := client.AI.GetModels(context.TODO())
+	response, err := client.AI.GetModels(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+Key response fields: `response.data.id, response.data.created, response.data.object`
 
 ## Create embeddings
 
 Creates an embedding vector representing the input text. This endpoint is compatible with the [OpenAI Embeddings API](https://platform.openai.com/docs/api-reference/embeddings) and may be used with the OpenAI JS or Python SDK by setting the base URL to `https://api.telnyx.com/v2/ai/openai`.
 
-`POST /ai/openai/embeddings` — Required: `input`, `model`
+`client.AI.OpenAI.Embeddings.NewEmbeddings()` — `POST /ai/openai/embeddings`
 
-Optional: `dimensions` (integer), `encoding_format` (enum: float, base64), `user` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Input` | object | Yes | Input text to embed. |
+| `Model` | string | Yes | ID of the model to use. |
+| `EncodingFormat` | enum (float, base64) | No | The format to return the embeddings in. |
+| `Dimensions` | integer | No | The number of dimensions the resulting output embeddings sho... |
+| `User` | string | No | A unique identifier representing your end-user for monitorin... |
 
 ```go
-	response, err := client.AI.OpenAI.Embeddings.NewEmbeddings(context.TODO(), telnyx.AIOpenAIEmbeddingNewEmbeddingsParams{
+	response, err := client.AI.OpenAI.Embeddings.NewEmbeddings(context.Background(), telnyx.AIOpenAIEmbeddingNewEmbeddingsParams{
 		Input: telnyx.AIOpenAIEmbeddingNewEmbeddingsParamsInputUnion{
 			OfString: telnyx.String("The quick brown fox jumps over the lazy dog"),
 		},
 		Model: "thenlper/gte-large",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `data` (array[object]), `model` (string), `object` (string), `usage` (object)
+Key response fields: `response.data.data, response.data.model, response.data.object`
 
 ## List embedding models
 
 Returns a list of available embedding models. This endpoint is compatible with the OpenAI Models API format.
 
-`GET /ai/openai/embeddings/models`
+`client.AI.OpenAI.Embeddings.ListEmbeddingModels()` — `GET /ai/openai/embeddings/models`
 
 ```go
-	response, err := client.AI.OpenAI.Embeddings.ListEmbeddingModels(context.TODO())
+	response, err := client.AI.OpenAI.Embeddings.ListEmbeddingModels(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+Key response fields: `response.data.id, response.data.created, response.data.object`
 
 ## Summarize file content
 
@@ -752,202 +921,172 @@ Generate a summary of a file's contents. Supports the following text formats:
 - flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm
 - Up to 100 MB
 
-`POST /ai/summarize` — Required: `bucket`, `filename`
+`client.AI.Summarize()` — `POST /ai/summarize`
 
-Optional: `system_prompt` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Bucket` | string | Yes | The name of the bucket that contains the file to be summariz... |
+| `Filename` | string | Yes | The name of the file to be summarized. |
+| `SystemPrompt` | string | No | A system prompt to guide the summary generation. |
 
 ```go
-	response, err := client.AI.Summarize(context.TODO(), telnyx.AISummarizeParams{
-		Bucket:   "bucket",
-		Filename: "filename",
+	response, err := client.AI.Summarize(context.Background(), telnyx.AISummarizeParams{
+		Bucket: "my-bucket",
+		Filename: "data.csv",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `summary` (string)
+Key response fields: `response.data.summary`
 
 ## Get all Speech to Text batch report requests
 
 Retrieves all Speech to Text batch report requests for the authenticated user
 
-`GET /legacy/reporting/batch_detail_records/speech_to_text`
+`client.Legacy.Reporting.BatchDetailRecords.SpeechToText.List()` — `GET /legacy/reporting/batch_detail_records/speech_to_text`
 
 ```go
-	speechToTexts, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.List(context.TODO())
+	speechToTexts, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.List(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", speechToTexts.Data)
 ```
 
-Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a new Speech to Text batch report request
 
 Creates a new Speech to Text batch report request with the specified filters
 
-`POST /legacy/reporting/batch_detail_records/speech_to_text` — Required: `start_date`, `end_date`
+`client.Legacy.Reporting.BatchDetailRecords.SpeechToText.New()` — `POST /legacy/reporting/batch_detail_records/speech_to_text`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `StartDate` | string (date-time) | Yes | Start date in ISO format with timezone |
+| `EndDate` | string (date-time) | Yes | End date in ISO format with timezone (date range must be up ... |
 
 ```go
-	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.New(context.TODO(), telnyx.LegacyReportingBatchDetailRecordSpeechToTextNewParams{
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.New(context.Background(), telnyx.LegacyReportingBatchDetailRecordSpeechToTextNewParams{
 		EndDate:   time.Now(),
 		StartDate: time.Now(),
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
 
-Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a specific Speech to Text batch report request
 
 Retrieves a specific Speech to Text batch report request by ID
 
-`GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+`client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Get()` — `GET /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
-	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
 
-Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a Speech to Text batch report request
 
 Deletes a specific Speech to Text batch report request by ID
 
-`DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+`client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Delete()` — `DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
-	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	speechToText, err := client.Legacy.Reporting.BatchDetailRecords.SpeechToText.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", speechToText.Data)
 ```
 
-Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get speech to text usage report
 
 Generate and fetch speech to text usage report synchronously. This endpoint will both generate and fetch the speech to text report over a specified time period.
 
-`GET /legacy/reporting/usage_reports/speech_to_text`
+`client.Legacy.Reporting.UsageReports.GetSpeechToText()` — `GET /legacy/reporting/usage_reports/speech_to_text`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `StartDate` | string (date-time) | No |  |
+| `EndDate` | string (date-time) | No |  |
 
 ```go
-	response, err := client.Legacy.Reporting.UsageReports.GetSpeechToText(context.TODO(), telnyx.LegacyReportingUsageReportGetSpeechToTextParams{})
+	response, err := client.Legacy.Reporting.UsageReports.GetSpeechToText(context.Background(), telnyx.LegacyReportingUsageReportGetSpeechToTextParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.data`
 
 ## Generate speech from text
 
 Generate synthesized speech audio from text input. Returns audio in the requested format (binary audio stream, base64-encoded JSON, or an audio URL for later retrieval). Authentication is provided via the standard `Authorization: Bearer ` header.
 
-`POST /text-to-speech/speech`
+`client.TextToSpeech.Generate()` — `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `inworld` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble, inworld), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Provider` | enum (aws, telnyx, azure, elevenlabs, minimax, ...) | No | TTS provider. |
+| `TextType` | enum (text, ssml) | No | Text type. |
+| `OutputType` | enum (binary_output, base64_output) | No | Determines the response format. |
+| ... | | | +13 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	response, err := client.TextToSpeech.Generate(context.TODO(), telnyx.TextToSpeechGenerateParams{})
+	response, err := client.TextToSpeech.Generate(context.Background(), telnyx.TextToSpeechGenerateParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Base64Audio)
 ```
 
-Returns: `base64_audio` (string)
+Key response fields: `response.data.base64_audio`
 
 ## List available voices
 
 Retrieve a list of available voices from one or all TTS providers. When `provider` is specified, returns voices for that provider only. Otherwise, returns voices from all providers.
 
-`GET /text-to-speech/voices`
+`client.TextToSpeech.ListVoices()` — `GET /text-to-speech/voices`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Provider` | enum (aws, telnyx, azure, elevenlabs, minimax, ...) | No | Filter voices by provider. |
+| `ApiKey` | string | No | API key for providers that require one to list voices (e.g. |
 
 ```go
-	response, err := client.TextToSpeech.ListVoices(context.TODO(), telnyx.TextToSpeechListVoicesParams{})
+	response, err := client.TextToSpeech.ListVoices(context.Background(), telnyx.TextToSpeechListVoicesParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Voices)
 ```
 
-Returns: `voices` (array[object])
+Key response fields: `response.data.voices`
 
-## Get all Wireless Detail Records (WDRs) Reports
+---
 
-Returns the WDR Reports that match the given parameters.
-
-`GET /wireless/detail_records_reports`
-
-```go
-	detailRecordsReports, err := client.Wireless.DetailRecordsReports.List(context.TODO(), telnyx.WirelessDetailRecordsReportListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", detailRecordsReports.Data)
-```
-
-Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
-
-## Create a Wireless Detail Records (WDRs) Report
-
-Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
-
-`POST /wireless/detail_records_reports`
-
-Optional: `end_time` (string), `start_time` (string)
-
-```go
-	detailRecordsReport, err := client.Wireless.DetailRecordsReports.New(context.TODO(), telnyx.WirelessDetailRecordsReportNewParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", detailRecordsReport.Data)
-```
-
-Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
-
-## Get a Wireless Detail Record (WDR) Report
-
-Returns one specific WDR report
-
-`GET /wireless/detail_records_reports/{id}`
-
-```go
-	detailRecordsReport, err := client.Wireless.DetailRecordsReports.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", detailRecordsReport.Data)
-```
-
-Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
-
-## Delete a Wireless Detail Record (WDR) Report
-
-Deletes one specific WDR report.
-
-`DELETE /wireless/detail_records_reports/{id}`
-
-```go
-	detailRecordsReport, err := client.Wireless.DetailRecordsReports.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", detailRecordsReport.Data)
-```
-
-Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

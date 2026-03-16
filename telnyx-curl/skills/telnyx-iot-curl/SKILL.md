@@ -1,8 +1,7 @@
 ---
 name: telnyx-iot-curl
 description: >-
-  Manage IoT SIM cards, eSIMs, data plans, and wireless connectivity. Use when
-  building IoT/M2M solutions. This skill provides REST API (curl) examples.
+  IoT SIM cards, eSIMs, data plans, and wireless connectivity for M2M solutions.
 metadata:
   author: telnyx
   product: iot
@@ -13,6 +12,39 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Iot - curl
+
+## Core Workflow
+
+### Prerequisites
+
+1. Purchase SIM cards (physical SIM, eSIM chip MFF2, or eSIM OTA)
+2. For physical SIMs: register via 10-digit code or CSV batch upload
+3. Insert SIM and configure APN: Name='Telnyx', APN='data00.telnyx' (leave all other fields blank)
+4. Enable data roaming on device and reboot
+
+### Steps
+
+1. **Order SIMs**
+2. **Register SIMs**
+3. **Activate SIM**
+4. **Monitor usage**
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Traditional device, replaceable SIM | Physical IoT SIM Card |
+| Embedded/soldered into device | eSIM Chip (MFF2) |
+| Software-only, no physical card | eSIM (OTA) |
+
+### Common mistakes
+
+- NEVER modify APN fields beyond Name and APN — causes connectivity failures
+- NEVER forget to enable data roaming on the device — no connectivity without it
+- NEVER skip device reboot after APN configuration changes
+- For fleet deployments: use CSV batch registration, not one-by-one
+
+**Related skills**: telnyx-networking-curl
 
 ## Installation
 
@@ -36,10 +68,10 @@ or authentication errors (401). Always handle errors in production code:
 ```bash
 # Check HTTP status code in response
 response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
+  -d '{"key": "value"}')
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
@@ -61,14 +93,22 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Purchase eSIMs
 
 Purchases and registers the specified amount of eSIMs to the current user's account.  
 If `sim_card_group_id` is provided, the eSIMs will be associated with that group. Otherwise, the default group for the current user will be used.  
 
-`POST /actions/purchase/esims` — Required: `amount`
+`POST /actions/purchase/esims`
 
-Optional: `product` (string), `sim_card_group_id` (uuid), `status` (enum: enabled, disabled, standby), `tags` (array[string]), `whitelabel_name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | integer | Yes | The amount of eSIMs to be purchased. |
+| `tags` | array[string] | No | Searchable tags associated with the SIM cards |
+| `sim_card_group_id` | string (UUID) | No | The group SIMCardGroup identification. |
+| `status` | enum (enabled, disabled, standby) | No | Status on which the SIM cards will be set after being succes... |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -76,30 +116,26 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "sim_card_group_id": "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  "tags": [
-    "personal",
-    "customers",
-    "active-customers"
-  ],
-  "product": "whitelabel",
-  "whitelabel_name": "Custom SPN",
-  "amount": 10,
-  "status": "standby"
+  "amount": 10
 }' \
   "https://api.telnyx.com/v2/actions/purchase/esims"
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Register SIM cards
 
 Register the SIM cards associated with the provided registration codes to the current user's account.  
 If `sim_card_group_id` is provided, the SIM cards will be associated with that group. Otherwise, the default group for the current user will be used.  
 
-`POST /actions/register/sim_cards` — Required: `registration_codes`
+`POST /actions/register/sim_cards`
 
-Optional: `sim_card_group_id` (uuid), `status` (enum: enabled, disabled, standby), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `registration_codes` | array[string] | Yes |  |
+| `tags` | array[string] | No | Searchable tags associated with the SIM card |
+| `sim_card_group_id` | string (UUID) | No | The group SIMCardGroup identification. |
+| `status` | enum (enabled, disabled, standby) | No | Status on which the SIM card will be set after being success... |
 
 ```bash
 curl \
@@ -107,23 +143,103 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "sim_card_group_id": "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  "tags": [
-    "personal",
-    "customers",
-    "active-customers"
-  ],
   "registration_codes": [
     "0000000001",
     "0000000002",
     "0000000003"
-  ],
-  "status": "standby"
+  ]
 }' \
   "https://api.telnyx.com/v2/actions/register/sim_cards"
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.id, .data.status, .data.type`
+
+## Get all SIM cards
+
+Get all SIM cards belonging to the user that match the given filters.
+
+`GET /sim_cards`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (current_billing_period_consumed_data.amount, -current_billing_period_consumed_data.amount) | No | Sorts SIM cards by the given field. |
+| `filter` | object | No | Consolidated filter parameter for SIM cards (deepObject styl... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards?include_sim_card_group=True&filter[sim_card_group_id]=47a1c2b0-cc7b-4ab1-bb98-b33fb0fc61b9&sort=-current_billing_period_consumed_data.amount"
+```
+
+Key response fields: `.data.id, .data.status, .data.type`
+
+## Get SIM card
+
+Returns the details regarding a specific SIM card.
+
+`GET /sim_cards/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `include_sim_card_group` | boolean | No | It includes the associated SIM card group object in the resp... |
+| `include_pin_puk_codes` | boolean | No | When set to true, includes the PIN and PUK codes in the resp... |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58?include_sim_card_group=True"
+```
+
+Key response fields: `.data.id, .data.status, .data.type`
+
+## Create a SIM card order
+
+Creates a new order for SIM cards.
+
+`POST /sim_card_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address_id` | string (UUID) | Yes | Uniquely identifies the address for the order. |
+| `quantity` | integer | Yes | The amount of SIM cards to order. |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+      "address_id": "1293384261075731499",
+      "quantity": 23,
+      "sim_card_group_id": "550e8400-e29b-41d4-a716-446655440000"
+  }' \
+  "https://api.telnyx.com/v2/sim_card_orders"
+```
+
+Key response fields: `.data.id, .data.status, .data.created_at`
+
+## Create a SIM card group
+
+Creates a new SIM card group object
+
+`POST /sim_card_groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | A user friendly name for the SIM card group. |
+| `data_limit` | object | No | Upper limit on the amount of data the SIM cards, within the ... |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "name": "My Test Group"
+}' \
+  "https://api.telnyx.com/v2/sim_card_groups"
+```
+
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## List bulk SIM card actions
 
@@ -131,11 +247,17 @@ This API lists a paginated collection of bulk SIM card actions. A bulk SIM card 
 
 `GET /bulk_sim_card_actions`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[action_type]` | enum (bulk_set_public_ips) | No | Filter by action type. |
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/bulk_sim_card_actions?filter[action_type]=bulk_set_public_ips"
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Get bulk SIM card action details
 
@@ -143,21 +265,30 @@ This API fetches information about a bulk SIM card action. A bulk SIM card actio
 
 `GET /bulk_sim_card_actions/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/bulk_sim_card_actions/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## List OTA updates
 
 `GET /ota_updates`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for OTA updates (deepObject st... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ota_updates"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: sim_card_network_preferences), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Get OTA update
 
@@ -165,11 +296,15 @@ This API returns the details of an Over the Air (OTA) update.
 
 `GET /ota_updates/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ota_updates/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: sim_card_network_preferences), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## List SIM card actions
 
@@ -177,11 +312,16 @@ This API lists a paginated collection of SIM card actions. It enables exploring 
 
 `GET /sim_card_actions`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for SIM card actions (deepObje... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_actions"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Get SIM card action details
 
@@ -189,11 +329,15 @@ This API fetches detailed information about a SIM card action to follow-up on an
 
 `GET /sim_card_actions/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_actions/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## List SIM card data usage notifications
 
@@ -201,17 +345,28 @@ Lists a paginated collection of SIM card data usage notifications. It enables ex
 
 `GET /sim_card_data_usage_notifications`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[sim_card_id]` | string (UUID) | No | A valid SIM card ID. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_data_usage_notifications?filter[sim_card_id]=47a1c2b0-cc7b-4ab1-bb98-b33fb0fc61b9"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Create a new SIM card data usage notification
 
 Creates a new SIM card data usage notification.
 
-`POST /sim_card_data_usage_notifications` — Required: `sim_card_id`, `threshold`
+`POST /sim_card_data_usage_notifications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sim_card_id` | string (UUID) | Yes | The identification UUID of the related SIM card resource. |
+| `threshold` | object | Yes | Data usage threshold that will trigger the notification. |
 
 ```bash
 curl \
@@ -225,7 +380,7 @@ curl \
   "https://api.telnyx.com/v2/sim_card_data_usage_notifications"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Get a single SIM card data usage notification
 
@@ -233,11 +388,15 @@ Get a single SIM Card Data Usage Notification.
 
 `GET /sim_card_data_usage_notifications/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_data_usage_notifications/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Updates information for a SIM Card Data Usage Notification
 
@@ -245,24 +404,23 @@ Updates information for a SIM Card Data Usage Notification.
 
 `PATCH /sim_card_data_usage_notifications/{id}`
 
-Optional: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `sim_card_id` | string (UUID) | No | The identification UUID of the related SIM card resource. |
+| `id` | string (UUID) | No | Identifies the resource. |
+| `record_type` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "id": "79228acc-3f08-4e70-ac68-cb5aae8b537a",
-  "sim_card_id": "b34c1683-cd85-4493-b9a5-315eb4bc5e19",
-  "record_type": "sim_card_data_usage_notification",
-  "created_at": "2018-02-02T22:25:27.521Z",
-  "updated_at": "2018-02-02T22:25:27.521Z"
-}' \
   "https://api.telnyx.com/v2/sim_card_data_usage_notifications/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Delete SIM card data usage notifications
 
@@ -270,6 +428,10 @@ Delete the SIM Card Data Usage Notification.
 
 `DELETE /sim_card_data_usage_notifications/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl \
   -X DELETE \
@@ -277,7 +439,7 @@ curl \
   "https://api.telnyx.com/v2/sim_card_data_usage_notifications/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `sim_card_id` (uuid), `threshold` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## List SIM card group actions
 
@@ -285,11 +447,18 @@ This API allows listing a paginated collection a SIM card group actions. It allo
 
 `GET /sim_card_group_actions`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[status]` | enum (in-progress, completed, failed) | No | Filter by a specific status of the resource's lifecycle. |
+| `filter[type]` | enum (set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist) | No | Filter by action type. |
+| `page[number]` | integer | No | The page number to load. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_group_actions?filter[sim_card_group_id]=47a1c2b0-cc7b-4ab1-bb98-b33fb0fc61b9&filter[status]=in-progress&filter[type]=set_private_wireless_gateway"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Get SIM card group action details
 
@@ -297,11 +466,15 @@ This API allows fetching detailed information about a SIM card group action reso
 
 `GET /sim_card_group_actions/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_group_actions/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Get all SIM card groups
 
@@ -309,32 +482,18 @@ Get all SIM card groups belonging to the user that match the given filters.
 
 `GET /sim_card_groups`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[name]` | string | No | A valid SIM card group name. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_groups?filter[name]=My Test Group&filter[private_wireless_gateway_id]=7606c6d3-ff7c-49c1-943d-68879e9d584d&filter[wireless_blocklist_id]=0f3f490e-c4d3-4cf5-838a-9970f10ee259"
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `sim_card_count` (integer), `updated_at` (string), `wireless_blocklist_id` (uuid)
-
-## Create a SIM card group
-
-Creates a new SIM card group object
-
-`POST /sim_card_groups` — Required: `name`
-
-Optional: `data_limit` (object)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "name": "My Test Group"
-}' \
-  "https://api.telnyx.com/v2/sim_card_groups"
-```
-
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Get SIM card group
 
@@ -342,11 +501,16 @@ Returns the details regarding a specific SIM card group
 
 `GET /sim_card_groups/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
+| `include_iccids` | boolean | No | It includes a list of associated ICCIDs. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58?include_iccids=True"
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Update a SIM card group
 
@@ -354,26 +518,31 @@ Updates a SIM card group
 
 `PATCH /sim_card_groups/{id}`
 
-Optional: `data_limit` (object), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
+| `name` | string | No | A user friendly name for the SIM card group. |
+| `data_limit` | object | No | Upper limit on the amount of data the SIM cards, within the ... |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "name": "My Test Group"
-}' \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Delete a SIM card group
 
 Permanently deletes a SIM card group
 
 `DELETE /sim_card_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```bash
 curl \
@@ -382,13 +551,17 @@ curl \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object), `default` (boolean), `id` (uuid), `name` (string), `private_wireless_gateway_id` (uuid), `record_type` (string), `updated_at` (string), `wireless_blocklist_id` (uuid)
+Key response fields: `.data.id, .data.name, .data.created_at`
 
 ## Request Private Wireless Gateway removal from SIM card group
 
 This action will asynchronously remove an existing Private Wireless Gateway definition from a SIM card group. Completing this operation defines that all SIM cards in the SIM card group will get their traffic handled by Telnyx's default mobile network configuration.
 
 `POST /sim_card_groups/{id}/actions/remove_private_wireless_gateway`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```bash
 curl \
@@ -398,13 +571,17 @@ curl \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/remove_private_wireless_gateway"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Request Wireless Blocklist removal from SIM card group
 
 This action will asynchronously remove an existing Wireless Blocklist to all the SIMs in the SIM card group.
 
 `POST /sim_card_groups/{id}/actions/remove_wireless_blocklist`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```bash
 curl \
@@ -414,13 +591,18 @@ curl \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/remove_wireless_blocklist"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Request Private Wireless Gateway assignment for SIM card group
 
 This action will asynchronously assign a provisioned Private Wireless Gateway to the SIM card group. Completing this operation defines that all SIM cards in the SIM card group will get their traffic controlled by the associated Private Wireless Gateway. This operation will also imply that new SIM cards assigned to a group will inherit its network definitions.
 
-`POST /sim_card_groups/{id}/actions/set_private_wireless_gateway` — Required: `private_wireless_gateway_id`
+`POST /sim_card_groups/{id}/actions/set_private_wireless_gateway`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `private_wireless_gateway_id` | string (UUID) | Yes | The identification of the related Private Wireless Gateway r... |
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```bash
 curl \
@@ -433,13 +615,18 @@ curl \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/set_private_wireless_gateway"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Request Wireless Blocklist assignment for SIM card group
 
 This action will asynchronously assign a Wireless Blocklist to all the SIMs in the SIM card group.
 
-`POST /sim_card_groups/{id}/actions/set_wireless_blocklist` — Required: `wireless_blocklist_id`
+`POST /sim_card_groups/{id}/actions/set_wireless_blocklist`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `wireless_blocklist_id` | string (UUID) | Yes | The identification of the related Wireless Blocklist resourc... |
+| `id` | string (UUID) | Yes | Identifies the SIM group. |
 
 ```bash
 curl \
@@ -452,13 +639,18 @@ curl \
   "https://api.telnyx.com/v2/sim_card_groups/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/set_wireless_blocklist"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_group_id` (uuid), `status` (enum: in-progress, completed, failed), `type` (enum: set_private_wireless_gateway, remove_private_wireless_gateway, set_wireless_blocklist, remove_wireless_blocklist), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Preview SIM card orders
 
 Preview SIM card order purchases.
 
-`POST /sim_card_order_preview` — Required: `quantity`, `address_id`
+`POST /sim_card_order_preview`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `quantity` | integer | Yes | The amount of SIM cards that the user would like to purchase... |
+| `address_id` | string (UUID) | Yes | Uniquely identifies the address for the order. |
 
 ```bash
 curl \
@@ -472,7 +664,7 @@ curl \
   "https://api.telnyx.com/v2/sim_card_order_preview"
 ```
 
-Returns: `quantity` (integer), `record_type` (string), `shipping_cost` (object), `sim_cards_cost` (object), `total_cost` (object)
+Key response fields: `.data.quantity, .data.record_type, .data.shipping_cost`
 
 ## Get all SIM card orders
 
@@ -480,31 +672,16 @@ Get all SIM card orders according to filters.
 
 `GET /sim_card_orders`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter for SIM card orders (deepObjec... |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_orders"
 ```
 
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
-
-## Create a SIM card order
-
-Creates a new order for SIM cards.
-
-`POST /sim_card_orders` — Required: `address_id`, `quantity`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "address_id": "1293384261075731499",
-  "quantity": 23
-}' \
-  "https://api.telnyx.com/v2/sim_card_orders"
-```
-
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Get a single SIM card order
 
@@ -512,30 +689,26 @@ Get a single SIM card order by its ID.
 
 `GET /sim_card_orders/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_card_orders/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (object), `quantity` (integer), `record_type` (string), `status` (enum: pending, processing, ready_to_ship, shipped, delivered, canceled), `tracking_url` (uri), `updated_at` (string)
-
-## Get all SIM cards
-
-Get all SIM cards belonging to the user that match the given filters.
-
-`GET /sim_cards`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards?include_sim_card_group=True&filter[sim_card_group_id]=47a1c2b0-cc7b-4ab1-bb98-b33fb0fc61b9&sort=-current_billing_period_consumed_data.amount"
-```
-
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `msisdn` (string), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Request bulk disabling voice on SIM cards.
 
 This API triggers an asynchronous operation to disable voice on SIM cards belonging to a specified SIM Card Group. 
-For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Actions can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+For each SIM Card a SIM Card Action will be generated.
 
-`POST /sim_cards/actions/bulk_disable_voice` — Required: `sim_card_group_id`
+`POST /sim_cards/actions/bulk_disable_voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sim_card_group_id` | string (UUID) | Yes |  |
 
 ```bash
 curl \
@@ -548,14 +721,18 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/actions/bulk_disable_voice"
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Request bulk enabling voice on SIM cards.
 
 This API triggers an asynchronous operation to enable voice on SIM cards belonging to a specified SIM Card Group. 
-For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Actions can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+For each SIM Card a SIM Card Action will be generated.
 
-`POST /sim_cards/actions/bulk_enable_voice` — Required: `sim_card_group_id`
+`POST /sim_cards/actions/bulk_enable_voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sim_card_group_id` | string (UUID) | Yes |  |
 
 ```bash
 curl \
@@ -568,14 +745,18 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/actions/bulk_enable_voice"
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Request bulk setting SIM card public IPs.
 
 This API triggers an asynchronous operation to set a public IP for each of the specified SIM cards. 
 For each SIM Card a SIM Card Action will be generated. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
 
-`POST /sim_cards/actions/bulk_set_public_ips` — Required: `sim_card_ids`
+`POST /sim_cards/actions/bulk_set_public_ips`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sim_card_ids` | array[object] | Yes |  |
 
 ```bash
 curl \
@@ -590,7 +771,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/actions/bulk_set_public_ips"
 ```
 
-Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Validate SIM cards registration codes
 
@@ -598,7 +779,9 @@ It validates whether SIM card registration codes are valid or not.
 
 `POST /sim_cards/actions/validate_registration_codes`
 
-Optional: `registration_codes` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `registration_codes` | array[string] | No |  |
 
 ```bash
 curl \
@@ -608,19 +791,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/actions/validate_registration_codes"
 ```
 
-Returns: `invalid_detail` (string | null), `record_type` (string), `registration_code` (string), `valid` (boolean)
-
-## Get SIM card
-
-Returns the details regarding a specific SIM card.
-
-`GET /sim_cards/{id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58?include_sim_card_group=True"
-```
-
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.invalid_detail, .data.record_type, .data.registration_code`
 
 ## Update a SIM card
 
@@ -628,50 +799,23 @@ Updates SIM card data
 
 `PATCH /sim_cards/{id}`
 
-Optional: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `type` | enum (physical, esim) | No | The type of SIM card |
+| `tags` | array[string] | No | Searchable tags associated with the SIM card |
+| `sim_card_group_id` | string (UUID) | No | The group SIMCardGroup identification. |
+| ... | | | +25 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "id": "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  "record_type": "sim_card",
-  "type": "physical",
-  "iccid": "89310410106543789301",
-  "imsi": "081932214823362973",
-  "msisdn": "+13109976224",
-  "sim_card_group_id": "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
-  "tags": [
-    "personal",
-    "customers",
-    "active-customers"
-  ],
-  "authorized_imeis": [
-    "106516771852751",
-    "534051870479563",
-    "508821468377961"
-  ],
-  "current_imei": "457032284023794",
-  "actions_in_progress": true,
-  "created_at": "2018-02-02T22:25:27.521Z",
-  "updated_at": "2018-02-02T22:25:27.521Z",
-  "ipv4": "192.168.0.0",
-  "ipv6": "2001:cdba:0000:0000:0000:0000:3257:9652",
-  "current_mnc": "260",
-  "current_mcc": "410",
-  "live_data_session": "connected",
-  "esim_installation_status": "released",
-  "version": "4.3",
-  "resources_with_in_progress_actions": [],
-  "eid": null,
-  "voice_enabled": false
-}' \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Deletes a SIM card
 
@@ -680,6 +824,11 @@ Transitioning to the disabled state may take a period of time.
 
 `DELETE /sim_cards/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `report_lost` | boolean | No | Enables deletion of disabled eSIMs that can't be uninstalled... |
+
 ```bash
 curl \
   -X DELETE \
@@ -687,7 +836,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `created_at` (string), `current_billing_period_consumed_data` (object), `current_device_location` (object), `current_imei` (string), `current_mcc` (string), `current_mnc` (string), `data_limit` (object), `eid` (string | null), `esim_installation_status` (enum: released, disabled), `iccid` (string), `id` (uuid), `imsi` (string), `ipv4` (string), `ipv6` (string), `live_data_session` (enum: connected, disconnected, unknown), `msisdn` (string), `pin_puk_codes` (object), `record_type` (string), `resources_with_in_progress_actions` (array[object]), `sim_card_group_id` (uuid), `status` (object), `tags` (array[string]), `type` (enum: physical, esim), `updated_at` (string), `version` (string), `voice_enabled` (boolean)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Request a SIM card disable
 
@@ -695,6 +844,10 @@ This API disables a SIM card, disconnecting it from the network and making it im
 The API will trigger an asynchronous operation called a SIM Card Action. Transitioning to the disabled state may take a period of time.
 
 `POST /sim_cards/{id}/actions/disable`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```bash
 curl \
@@ -704,7 +857,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/disable"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Request a SIM card enable
 
@@ -714,6 +867,10 @@ The API will trigger an asynchronous operation called a SIM Card Action. Transit
 
 `POST /sim_cards/{id}/actions/enable`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+
 ```bash
 curl \
   -X POST \
@@ -722,7 +879,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/enable"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Request removing a SIM card public IP
 
@@ -730,6 +887,10 @@ This API removes an existing public IP from a SIM card.
  The API will trigger an asynchronous operation called a SIM Card Action. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
 
 `POST /sim_cards/{id}/actions/remove_public_ip`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
 
 ```bash
 curl \
@@ -739,14 +900,19 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/remove_public_ip"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Request setting a SIM card public IP
 
 This API makes a SIM card reachable on the public internet by mapping a random public IP to the SIM card.   
- The API will trigger an asynchronous operation called a SIM Card Action. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+ The API will trigger an asynchronous operation called a SIM Card Action.
 
 `POST /sim_cards/{id}/actions/set_public_ip`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `region_code` | string | No | The code of the region where the public IP should be assigne... |
 
 ```bash
 curl \
@@ -756,7 +922,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/set_public_ip"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Request setting a SIM card to standby
 
@@ -766,6 +932,10 @@ The API will trigger an asynchronous operation called a SIM Card Action. Transit
 
 `POST /sim_cards/{id}/actions/set_standby`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+
 ```bash
 curl \
   -X POST \
@@ -774,7 +944,7 @@ curl \
   "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/actions/set_standby"
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Get activation code for an eSIM
 
@@ -783,11 +953,15 @@ It returns the activation code for an eSIM.
 
 `GET /sim_cards/{id}/activation_code`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/activation_code"
 ```
 
-Returns: `activation_code` (string), `record_type` (string)
+Key response fields: `.data.activation_code, .data.record_type`
 
 ## Get SIM card device details
 
@@ -795,11 +969,15 @@ It returns the device details where a SIM card is currently being used.
 
 `GET /sim_cards/{id}/device_details`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/device_details"
 ```
 
-Returns: `brand_name` (string), `device_type` (string), `imei` (string), `model_name` (string), `operating_system` (string), `record_type` (string)
+Key response fields: `.data.brand_name, .data.device_type, .data.imei`
 
 ## Get SIM card public IP definition
 
@@ -807,11 +985,15 @@ It returns the public IP requested for a SIM card.
 
 `GET /sim_cards/{id}/public_ip`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/public_ip"
 ```
 
-Returns: `created_at` (string), `ip` (string), `record_type` (string), `region_code` (string), `sim_card_id` (uuid), `type` (enum: ipv4), `updated_at` (string)
+Key response fields: `.data.type, .data.created_at, .data.updated_at`
 
 ## List wireless connectivity logs
 
@@ -819,11 +1001,17 @@ This API allows listing a paginated collection of Wireless Connectivity Logs ass
 
 `GET /sim_cards/{id}/wireless_connectivity_logs`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the SIM. |
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/sim_cards/6a09cdc3-8948-47f0-aa62-74ac943d6c58/wireless_connectivity_logs"
 ```
 
-Returns: `apn` (string), `cell_id` (string), `created_at` (string), `id` (integer), `imei` (string), `imsi` (string), `ipv4` (string), `ipv6` (string), `last_seen` (string), `log_type` (enum: registration, data), `mobile_country_code` (string), `mobile_network_code` (string), `radio_access_technology` (string), `record_type` (string), `sim_card_id` (uuid), `start_time` (string), `state` (string), `stop_time` (string)
+Key response fields: `.data.id, .data.state, .data.created_at`
 
 ## List Migration Source coverage
 
@@ -833,7 +1021,7 @@ Returns: `apn` (string), `cell_id` (string), `created_at` (string), `id` (intege
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migration_source_coverage"
 ```
 
-Returns: `provider` (enum: aws), `source_region` (string)
+Key response fields: `.data.provider, .data.source_region`
 
 ## List all Migration Sources
 
@@ -843,15 +1031,21 @@ Returns: `provider` (enum: aws), `source_region` (string)
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migration_sources"
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `.data.id, .data.bucket_name, .data.provider`
 
 ## Create a Migration Source
 
 Create a source from which data can be migrated from.
 
-`POST /storage/migration_sources` — Required: `provider`, `provider_auth`, `bucket_name`
+`POST /storage/migration_sources`
 
-Optional: `id` (string), `source_region` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | enum (aws, telnyx) | Yes | Cloud provider from which to migrate data. |
+| `provider_auth` | object | Yes |  |
+| `bucket_name` | string | Yes | Bucket name to migrate the data from. |
+| `id` | string (UUID) | No | Unique identifier for the data migration source. |
+| `source_region` | string | No | For intra-Telnyx buckets migration, specify the source bucke... |
 
 ```bash
 curl \
@@ -861,35 +1055,43 @@ curl \
   -d '{
   "provider": "aws",
   "provider_auth": {},
-  "bucket_name": "string"
+  "bucket_name": "my-bucket"
 }' \
   "https://api.telnyx.com/v2/storage/migration_sources"
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `.data.id, .data.bucket_name, .data.provider`
 
 ## Get a Migration Source
 
 `GET /storage/migration_sources/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration source. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migration_sources/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migration_sources/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `.data.id, .data.bucket_name, .data.provider`
 
 ## Delete a Migration Source
 
 `DELETE /storage/migration_sources/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration source. |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/storage/migration_sources/{id}"
+  "https://api.telnyx.com/v2/storage/migration_sources/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
+Key response fields: `.data.id, .data.bucket_name, .data.provider`
 
 ## List all Migrations
 
@@ -899,15 +1101,23 @@ Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), 
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migrations"
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Create a Migration
 
 Initiate a migration of data from an external provider into Telnyx Cloud Storage. Currently, only S3 is supported.
 
-`POST /storage/migrations` — Required: `source_id`, `target_bucket_name`, `target_region`
+`POST /storage/migrations`
 
-Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source_id` | string (UUID) | Yes | ID of the Migration Source from which to migrate data. |
+| `target_bucket_name` | string | Yes | Bucket name to migrate the data into. |
+| `target_region` | string | Yes | Telnyx Cloud Storage region to migrate the data to. |
+| `status` | enum (pending, checking, migrating, complete, error, ...) | No | Status of the migration. |
+| `id` | string (UUID) | No | Unique identifier for the data migration. |
+| `refresh` | boolean | No | If true, will continue to poll the source bucket to ensure n... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -915,57 +1125,74 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "source_id": "string",
-  "target_bucket_name": "string",
-  "target_region": "string",
-  "last_copy": "2020-01-01T00:00:00Z",
-  "eta": "2020-01-01T00:00:00Z",
-  "created_at": "2020-01-01T00:00:00Z"
+  "source_id": "550e8400-e29b-41d4-a716-446655440000",
+  "target_bucket_name": "my-target-bucket",
+  "target_region": "us-central-1"
 }' \
   "https://api.telnyx.com/v2/storage/migrations"
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Get a Migration
 
 `GET /storage/migrations/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migrations/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/storage/migrations/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Stop a Migration
 
 `POST /storage/migrations/{id}/actions/stop`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Unique identifier for the data migration. |
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/storage/migrations/{id}/actions/stop"
+  "https://api.telnyx.com/v2/storage/migrations/550e8400-e29b-41d4-a716-446655440000/actions/stop"
 ```
 
-Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## List Mobile Voice Connections
 
 `GET /v2/mobile_voice_connections`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load |
+| `page[size]` | integer | No | The size of the page |
+| `filter[connection_name][contains]` | string | No | Filter by connection name containing the given string |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_voice_connections"
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Create a Mobile Voice Connection
 
 `POST /v2/mobile_voice_connections`
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tags` | array[string] | No |  |
+| `webhook_api_version` | enum (1, 2) | No |  |
+| `active` | boolean | No |  |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -975,46 +1202,60 @@ curl \
   "https://api.telnyx.com/v2/v2/mobile_voice_connections"
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Retrieve a Mobile Voice Connection
 
 `GET /v2/mobile_voice_connections/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_voice_connections/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Update a Mobile Voice Connection
 
 `PATCH /v2/mobile_voice_connections/{id}`
 
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
+| `tags` | array[string] | No |  |
+| `webhook_api_version` | enum (1, 2) | No |  |
+| `active` | boolean | No |  |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/v2/mobile_voice_connections/{id}"
+  "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Delete a Mobile Voice Connection
 
 `DELETE /v2/mobile_voice_connections/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile voice connection |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/v2/mobile_voice_connections/{id}"
+  "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Get all wireless regions
 
@@ -1026,7 +1267,7 @@ Retrieve all wireless regions for the given product.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless/regions?product=public_ips"
 ```
 
-Returns: `code` (string), `inserted_at` (date-time), `name` (string), `updated_at` (date-time)
+Key response fields: `.data.name, .data.updated_at, .data.code`
 
 ## Get all possible wireless blocklist values
 
@@ -1038,7 +1279,7 @@ Retrieve all wireless blocklist values for a given blocklist type.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless_blocklist_values?type=country"
 ```
 
-Returns: `data` (object), `meta` (object)
+Key response fields: `.data.data, .data.meta`
 
 ## Get all Wireless Blocklists
 
@@ -1046,17 +1287,30 @@ Get all Wireless Blocklists belonging to the user.
 
 `GET /wireless_blocklists`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+| `filter[name]` | string | No | The name of the Wireless Blocklist. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless_blocklists?filter[name]=my private gateway&filter[type]=country&filter[values]=US,CA"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `.data.id, .data.name, .data.type`
 
 ## Create a Wireless Blocklist
 
 Create a Wireless Blocklist to prevent SIMs from connecting to certain networks.
 
-`POST /wireless_blocklists` — Required: `name`, `type`, `values`
+`POST /wireless_blocklists`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | The name of the Wireless Blocklist. |
+| `type` | enum (country, mcc, plmn) | Yes | The type of wireless blocklist. |
+| `values` | array[object] | Yes | Values to block. |
 
 ```bash
 curl \
@@ -1074,7 +1328,7 @@ curl \
   "https://api.telnyx.com/v2/wireless_blocklists"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `.data.id, .data.name, .data.type`
 
 ## Update a Wireless Blocklist
 
@@ -1082,25 +1336,21 @@ Update a Wireless Blocklist.
 
 `PATCH /wireless_blocklists`
 
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | enum (country, mcc, plmn) | No | The type of wireless blocklist. |
+| `name` | string | No | The name of the Wireless Blocklist. |
+| `values` | array[object] | No | Values to block. |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "name": "My Wireless Blocklist",
-  "type": "country",
-  "values": [
-    "CA",
-    "US"
-  ]
-}' \
   "https://api.telnyx.com/v2/wireless_blocklists"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `.data.id, .data.name, .data.type`
 
 ## Get a Wireless Blocklist
 
@@ -1108,17 +1358,25 @@ Retrieve information about a Wireless Blocklist.
 
 `GET /wireless_blocklists/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the wireless blocklist. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless_blocklists/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `.data.id, .data.name, .data.type`
 
 ## Delete a Wireless Blocklist
 
 Deletes the Wireless Blocklist.
 
 `DELETE /wireless_blocklists/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the wireless blocklist. |
 
 ```bash
 curl \
@@ -1127,4 +1385,8 @@ curl \
   "https://api.telnyx.com/v2/wireless_blocklists/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Key response fields: `.data.id, .data.name, .data.type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

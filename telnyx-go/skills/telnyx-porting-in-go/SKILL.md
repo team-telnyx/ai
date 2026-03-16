@@ -1,8 +1,8 @@
 ---
 name: telnyx-porting-in-go
 description: >-
-  Port phone numbers into Telnyx. Check portability, create port orders, upload
-  LOA documents, and track porting status. This skill provides Go SDK examples.
+  Port numbers into Telnyx: portability checks, port orders, LOA upload, status
+  tracking.
 metadata:
   author: telnyx
   product: porting-in
@@ -13,6 +13,31 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Porting In - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. Run portability check on all numbers before creating a port order
+2. Have Letter of Authorization (LOA) and recent invoice from current carrier ready
+3. Pre-create connection_id and/or messaging_profile_id to assign during fulfillment
+
+### Steps
+
+1. **Check portability**: `client.Porting.PortabilityChecks.Create(ctx, params)`
+2. **Create draft order**: `client.Porting.Orders.Create(ctx, params)`
+3. **Fulfill each split order**: `Upload LOA, invoice, end-user info, service address`
+4. **Submit order**: `Transitions from draft to in-process`
+5. **Monitor via webhooks**: `porting_order.status_changed, porting_order.new_comment`
+
+### Common mistakes
+
+- NEVER skip portability check — non-portable numbers cause downstream failures
+- NEVER treat auto-split orders as a single entity — each split requires independent completion
+- NEVER assume requested FOC date is guaranteed — the losing carrier determines the actual date
+- ALWAYS monitor for Porting Operations comments — unanswered info requests kill the port
+
+**Related skills**: telnyx-numbers-go, telnyx-numbers-config-go, telnyx-voice-go, telnyx-messaging-go
 
 ## Installation
 
@@ -47,7 +72,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Porting.Orders.Create(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -75,66 +100,154 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Run a portability check
 
 Runs a portability check, returning the results immediately.
 
-`POST /portability_checks`
+`client.PortabilityChecks.Run()` — `POST /portability_checks`
 
-Optional: `phone_numbers` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[string] | No | The list of +E.164 formatted phone numbers to check for port... |
 
 ```go
-	response, err := client.PortabilityChecks.Run(context.TODO(), telnyx.PortabilityCheckRunParams{})
+	response, err := client.PortabilityChecks.Run(context.Background(), telnyx.PortabilityCheckRunParams{
+		PhoneNumbers: []string{"+18005550101"},
+	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `fast_portable` (boolean), `not_portable_reason` (string), `phone_number` (string), `portable` (boolean), `record_type` (string)
+Key response fields: `response.data.phone_number, response.data.fast_portable, response.data.not_portable_reason`
+
+## Create a porting order
+
+Creates a new porting order object.
+
+`client.PortingOrders.New()` — `POST /porting_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumbers` | array[string] | Yes | The list of +E.164 formatted phone numbers |
+| `CustomerReference` | string | No | A customer-specified reference number for customer bookkeepi... |
+| `CustomerGroupReference` | string | No | A customer-specified group reference for customer bookkeepin... |
+
+```go
+	portingOrder, err := client.PortingOrders.New(context.Background(), telnyx.PortingOrderNewParams{
+		PhoneNumbers: []string{"+13035550000", "+13035550001", "+13035550002"},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", portingOrder.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Retrieve a porting order
+
+Retrieves the details of an existing porting order.
+
+`client.PortingOrders.Get()` — `GET /porting_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `IncludePhoneNumbers` | boolean | No | Include the first 50 phone number objects in the results |
+
+```go
+	portingOrder, err := client.PortingOrders.Get(
+		context.Background(),
+		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+		telnyx.PortingOrderGetParams{},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", portingOrder.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Submit a porting order.
+
+Confirm and submit your porting order.
+
+`client.PortingOrders.Actions.Confirm()` — `POST /porting_orders/{id}/actions/confirm`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+
+```go
+	response, err := client.PortingOrders.Actions.Confirm(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all porting events
 
 Returns a list of all porting events.
 
-`GET /porting/events`
+`client.Porting.Events.List()` — `GET /porting/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Porting.Events.List(context.TODO(), telnyx.PortingEventListParams{})
+	page, err := client.Porting.Events.List(context.Background(), telnyx.PortingEventListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.available_notification_methods, response.data.event_type`
 
 ## Show a porting event
 
 Show a specific porting event.
 
-`GET /porting/events/{id}`
+`client.Porting.Events.Get()` — `GET /porting/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the porting event. |
 
 ```go
-	event, err := client.Porting.Events.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	event, err := client.Porting.Events.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", event.Data)
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.available_notification_methods, response.data.event_type`
 
 ## Republish a porting event
 
 Republish a specific porting event.
 
-`POST /porting/events/{id}/republish`
+`client.Porting.Events.Republish()` — `POST /porting/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the porting event. |
 
 ```go
-	err := client.Porting.Events.Republish(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.Porting.Events.Republish(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -142,10 +255,10 @@ Republish a specific porting event.
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration/preview`
+`client.Porting.LoaConfigurations.Preview0()` — `POST /porting/loa_configuration/preview`
 
 ```go
-	response, err := client.Porting.LoaConfigurations.Preview0(context.TODO(), telnyx.PortingLoaConfigurationPreview0Params{
+	response, err := client.Porting.LoaConfigurations.Preview0(context.Background(), telnyx.PortingLoaConfigurationPreview0Params{
 		Address: telnyx.PortingLoaConfigurationPreview0ParamsAddress{
 			City:          "Austin",
 			CountryCode:   "US",
@@ -164,7 +277,7 @@ Preview the LOA template that would be generated without need to create LOA conf
 		Name: "My LOA Configuration",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -173,26 +286,30 @@ Preview the LOA template that would be generated without need to create LOA conf
 
 List the LOA configurations.
 
-`GET /porting/loa_configurations`
+`client.Porting.LoaConfigurations.List()` — `GET /porting/loa_configurations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.Porting.LoaConfigurations.List(context.TODO(), telnyx.PortingLoaConfigurationListParams{})
+	page, err := client.Porting.LoaConfigurations.List(context.Background(), telnyx.PortingLoaConfigurationListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a LOA configuration
 
 Create a LOA configuration.
 
-`POST /porting/loa_configurations`
+`client.Porting.LoaConfigurations.New()` — `POST /porting/loa_configurations`
 
 ```go
-	loaConfiguration, err := client.Porting.LoaConfigurations.New(context.TODO(), telnyx.PortingLoaConfigurationNewParams{
+	loaConfiguration, err := client.Porting.LoaConfigurations.New(context.Background(), telnyx.PortingLoaConfigurationNewParams{
 		Address: telnyx.PortingLoaConfigurationNewParamsAddress{
 			City:          "Austin",
 			CountryCode:   "US",
@@ -211,38 +328,46 @@ Create a LOA configuration.
 		Name: "My LOA Configuration",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", loaConfiguration.Data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve a LOA configuration
 
 Retrieve a specific LOA configuration.
 
-`GET /porting/loa_configurations/{id}`
+`client.Porting.LoaConfigurations.Get()` — `GET /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```go
-	loaConfiguration, err := client.Porting.LoaConfigurations.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	loaConfiguration, err := client.Porting.LoaConfigurations.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", loaConfiguration.Data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a LOA configuration
 
 Update a specific LOA configuration.
 
-`PATCH /porting/loa_configurations/{id}`
+`client.Porting.LoaConfigurations.Update()` — `PATCH /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```go
 	loaConfiguration, err := client.Porting.LoaConfigurations.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingLoaConfigurationUpdateParams{
 			Address: telnyx.PortingLoaConfigurationUpdateParamsAddress{
@@ -264,23 +389,27 @@ Update a specific LOA configuration.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", loaConfiguration.Data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a LOA configuration
 
 Delete a specific LOA configuration.
 
-`DELETE /porting/loa_configurations/{id}`
+`client.Porting.LoaConfigurations.Delete()` — `DELETE /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```go
-	err := client.Porting.LoaConfigurations.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.Porting.LoaConfigurations.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -288,12 +417,16 @@ Delete a specific LOA configuration.
 
 Preview a specific LOA configuration.
 
-`GET /porting/loa_configurations/{id}/preview`
+`client.Porting.LoaConfigurations.Preview1()` — `GET /porting/loa_configurations/{id}/preview`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```go
-	response, err := client.Porting.LoaConfigurations.Preview1(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	response, err := client.Porting.LoaConfigurations.Preview1(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -302,207 +435,199 @@ Preview a specific LOA configuration.
 
 List the reports generated about porting operations.
 
-`GET /porting/reports`
+`client.Porting.Reports.List()` — `GET /porting/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Porting.Reports.List(context.TODO(), telnyx.PortingReportListParams{})
+	page, err := client.Porting.Reports.List(context.Background(), telnyx.PortingReportListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a porting related report
 
 Generate reports about porting operations.
 
-`POST /porting/reports`
+`client.Porting.Reports.New()` — `POST /porting/reports`
 
 ```go
-	report, err := client.Porting.Reports.New(context.TODO(), telnyx.PortingReportNewParams{
+	report, err := client.Porting.Reports.New(context.Background(), telnyx.PortingReportNewParams{
 		Params: telnyx.ExportPortingOrdersCsvReportParam{
 			Filters: telnyx.ExportPortingOrdersCsvReportFiltersParam{},
 		},
 		ReportType: telnyx.PortingReportNewParamsReportTypeExportPortingOrdersCsv,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", report.Data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /porting/reports/{id}`
+`client.Porting.Reports.Get()` — `GET /porting/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies a report. |
 
 ```go
-	report, err := client.Porting.Reports.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	report, err := client.Porting.Reports.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", report.Data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List available carriers in the UK
 
 List available carriers in the UK.
 
-`GET /porting/uk_carriers`
+`client.Porting.ListUkCarriers()` — `GET /porting/uk_carriers`
 
 ```go
-	response, err := client.Porting.ListUkCarriers(context.TODO())
+	response, err := client.Porting.ListUkCarriers(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `alternative_cupids` (array[string]), `created_at` (date-time), `cupid` (string), `id` (uuid), `name` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List all porting orders
 
 Returns a list of your porting order.
 
-`GET /porting_orders`
+`client.PortingOrders.List()` — `GET /porting_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `IncludePhoneNumbers` | boolean | No | Include the first 50 phone number objects in the results |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	page, err := client.PortingOrders.List(context.TODO(), telnyx.PortingOrderListParams{})
+	page, err := client.PortingOrders.List(context.Background(), telnyx.PortingOrderListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
-
-## Create a porting order
-
-Creates a new porting order object.
-
-`POST /porting_orders` — Required: `phone_numbers`
-
-Optional: `customer_group_reference` (string), `customer_reference` (string | null)
-
-```go
-	portingOrder, err := client.PortingOrders.New(context.TODO(), telnyx.PortingOrderNewParams{
-		PhoneNumbers: []string{"+13035550000", "+13035550001", "+13035550002"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", portingOrder.Data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all exception types
 
 Returns a list of all possible exception types for a porting order.
 
-`GET /porting_orders/exception_types`
+`client.PortingOrders.GetExceptionTypes()` — `GET /porting_orders/exception_types`
 
 ```go
-	response, err := client.PortingOrders.GetExceptionTypes(context.TODO())
+	response, err := client.PortingOrders.GetExceptionTypes(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `code` (enum: ACCOUNT_NUMBER_MISMATCH, AUTH_PERSON_MISMATCH, BTN_ATN_MISMATCH, ENTITY_NAME_MISMATCH, FOC_EXPIRED, FOC_REJECTED, LOCATION_MISMATCH, LSR_PENDING, MAIN_BTN_PORTING, OSP_IRRESPONSIVE, OTHER, PASSCODE_PIN_INVALID, PHONE_NUMBER_HAS_SPECIAL_FEATURE, PHONE_NUMBER_MISMATCH, PHONE_NUMBER_NOT_PORTABLE, PORT_TYPE_INCORRECT, PORTING_ORDER_SPLIT_REQUIRED, POSTAL_CODE_MISMATCH, RATE_CENTER_NOT_PORTABLE, SV_CONFLICT, SV_UNKNOWN_FAILURE), `description` (string)
+Key response fields: `response.data.code, response.data.description`
 
 ## List all phone number configurations
 
 Returns a list of phone number configurations paginated.
 
-`GET /porting_orders/phone_number_configurations`
+`client.PortingOrders.PhoneNumberConfigurations.List()` — `GET /porting_orders/phone_number_configurations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
-	page, err := client.PortingOrders.PhoneNumberConfigurations.List(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationListParams{})
+	page, err := client.PortingOrders.PhoneNumberConfigurations.List(context.Background(), telnyx.PortingOrderPhoneNumberConfigurationListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time), `user_bundle_id` (uuid)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a list of phone number configurations
 
 Creates a list of phone number configurations.
 
-`POST /porting_orders/phone_number_configurations`
+`client.PortingOrders.PhoneNumberConfigurations.New()` — `POST /porting_orders/phone_number_configurations`
 
 ```go
-	phoneNumberConfiguration, err := client.PortingOrders.PhoneNumberConfigurations.New(context.TODO(), telnyx.PortingOrderPhoneNumberConfigurationNewParams{})
+	phoneNumberConfiguration, err := client.PortingOrders.PhoneNumberConfigurations.New(context.Background(), telnyx.PortingOrderPhoneNumberConfigurationNewParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumberConfiguration.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time), `user_bundle_id` (uuid)
-
-## Retrieve a porting order
-
-Retrieves the details of an existing porting order.
-
-`GET /porting_orders/{id}`
-
-```go
-	portingOrder, err := client.PortingOrders.Get(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.PortingOrderGetParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", portingOrder.Data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Edit a porting order
 
 Edits the details of an existing porting order. Any or all of a porting orders attributes may be included in the resource object included in a PATCH request. If a request does not include all of the attributes for a resource, the system will interpret the missing attributes as if they were included with their current values.
 
-`PATCH /porting_orders/{id}`
+`client.PortingOrders.Update()` — `PATCH /porting_orders/{id}`
 
-Optional: `activation_settings` (object), `customer_group_reference` (string), `customer_reference` (string), `documents` (object), `end_user` (object), `messaging` (object), `misc` (object), `phone_number_configuration` (object), `requirement_group_id` (uuid), `requirements` (array[object]), `user_feedback` (object), `webhook_url` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `WebhookUrl` | string (URL) | No |  |
+| `RequirementGroupId` | string (UUID) | No | If present, we will read the current values from the specifi... |
+| `Misc` | object | No |  |
+| ... | | | +9 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	portingOrder, err := client.PortingOrders.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", portingOrder.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a porting order
 
 Deletes an existing porting order. This operation is restrict to porting orders in draft state.
 
-`DELETE /porting_orders/{id}`
+`client.PortingOrders.Delete()` — `DELETE /porting_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
-	err := client.PortingOrders.Delete(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.PortingOrders.Delete(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -510,188 +635,215 @@ Deletes an existing porting order. This operation is restrict to porting orders 
 
 Activate each number in a porting order asynchronously. This operation is limited to US FastPort orders only.
 
-`POST /porting_orders/{id}/actions/activate`
+`client.PortingOrders.Actions.Activate()` — `POST /porting_orders/{id}/actions/activate`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
-	response, err := client.PortingOrders.Actions.Activate(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	response, err := client.PortingOrders.Actions.Activate(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Cancel a porting order
 
-`POST /porting_orders/{id}/actions/cancel`
+`client.PortingOrders.Actions.Cancel()` — `POST /porting_orders/{id}/actions/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
-	response, err := client.PortingOrders.Actions.Cancel(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	response, err := client.PortingOrders.Actions.Cancel(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
-
-## Submit a porting order.
-
-Confirm and submit your porting order.
-
-`POST /porting_orders/{id}/actions/confirm`
-
-```go
-	response, err := client.PortingOrders.Actions.Confirm(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Share a porting order
 
 Creates a sharing token for a porting order. The token can be used to share the porting order with non-Telnyx users.
 
-`POST /porting_orders/{id}/actions/share`
+`client.PortingOrders.Actions.Share()` — `POST /porting_orders/{id}/actions/share`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
 	response, err := client.PortingOrders.Actions.Share(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderActionShareParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created_at` (date-time), `expires_at` (date-time), `expires_in_seconds` (integer), `id` (uuid), `permissions` (array[string]), `porting_order_id` (uuid), `record_type` (string), `token` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.expires_at`
 
 ## List all porting activation jobs
 
 Returns a list of your porting activation jobs.
 
-`GET /porting_orders/{id}/activation_jobs`
+`client.PortingOrders.ActivationJobs.List()` — `GET /porting_orders/{id}/activation_jobs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.ActivationJobs.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderActivationJobListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a porting activation job
 
 Returns a porting activation job.
 
-`GET /porting_orders/{id}/activation_jobs/{activationJobId}`
+`client.PortingOrders.ActivationJobs.Get()` — `GET /porting_orders/{id}/activation_jobs/{activationJobId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `ActivationJobId` | string (UUID) | Yes | Activation Job Identifier |
 
 ```go
 	activationJob, err := client.PortingOrders.ActivationJobs.Get(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderActivationJobGetParams{
 			ID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", activationJob.Data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Update a porting activation job
 
 Updates the activation time of a porting activation job.
 
-`PATCH /porting_orders/{id}/activation_jobs/{activationJobId}`
+`client.PortingOrders.ActivationJobs.Update()` — `PATCH /porting_orders/{id}/activation_jobs/{activationJobId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `ActivationJobId` | string (UUID) | Yes | Activation Job Identifier |
 
 ```go
 	activationJob, err := client.PortingOrders.ActivationJobs.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderActivationJobUpdateParams{
 			ID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", activationJob.Data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List additional documents
 
 Returns a list of additional documents for a porting order.
 
-`GET /porting_orders/{id}/additional_documents`
+`client.PortingOrders.AdditionalDocuments.List()` — `GET /porting_orders/{id}/additional_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.AdditionalDocuments.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAdditionalDocumentListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `content_type` (string), `created_at` (date-time), `document_id` (uuid), `document_type` (enum: loa, invoice, csr, other), `filename` (string), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a list of additional documents
 
 Creates a list of additional documents for a porting order.
 
-`POST /porting_orders/{id}/additional_documents`
+`client.PortingOrders.AdditionalDocuments.New()` — `POST /porting_orders/{id}/additional_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
 	additionalDocument, err := client.PortingOrders.AdditionalDocuments.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAdditionalDocumentNewParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", additionalDocument.Data)
 ```
 
-Returns: `content_type` (string), `created_at` (date-time), `document_id` (uuid), `document_type` (enum: loa, invoice, csr, other), `filename` (string), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an additional document
 
 Deletes an additional document for a porting order.
 
-`DELETE /porting_orders/{id}/additional_documents/{additional_document_id}`
+`client.PortingOrders.AdditionalDocuments.Delete()` — `DELETE /porting_orders/{id}/additional_documents/{additional_document_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `AdditionalDocumentId` | string (UUID) | Yes | Additional document identification. |
 
 ```go
 	err := client.PortingOrders.AdditionalDocuments.Delete(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAdditionalDocumentDeleteParams{
 			ID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -699,72 +851,89 @@ Deletes an additional document for a porting order.
 
 Returns a list of allowed FOC dates for a porting order.
 
-`GET /porting_orders/{id}/allowed_foc_windows`
+`client.PortingOrders.GetAllowedFocWindows()` — `GET /porting_orders/{id}/allowed_foc_windows`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
-	response, err := client.PortingOrders.GetAllowedFocWindows(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	response, err := client.PortingOrders.GetAllowedFocWindows(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `ended_at` (date-time), `record_type` (string), `started_at` (date-time)
+Key response fields: `response.data.ended_at, response.data.record_type, response.data.started_at`
 
 ## List all comments of a porting order
 
 Returns a list of all comments of a porting order.
 
-`GET /porting_orders/{id}/comments`
+`client.PortingOrders.Comments.List()` — `GET /porting_orders/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.Comments.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderCommentListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `user_type` (enum: admin, user, system)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment for a porting order
 
 Creates a new comment for a porting order.
 
-`POST /porting_orders/{id}/comments`
+`client.PortingOrders.Comments.New()` — `POST /porting_orders/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Body` | string | No |  |
 
 ```go
 	comment, err := client.PortingOrders.Comments.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderCommentNewParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", comment.Data)
 ```
 
-Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `user_type` (enum: admin, user, system)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Download a porting order loa template
 
-`GET /porting_orders/{id}/loa_template`
+`client.PortingOrders.GetLoaTemplate()` — `GET /porting_orders/{id}/loa_template`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `LoaConfigurationId` | string (UUID) | No | The identifier of the LOA configuration to use for the templ... |
 
 ```go
 	response, err := client.PortingOrders.GetLoaTemplate(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderGetLoaTemplateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -773,70 +942,90 @@ Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_
 
 Returns a list of all requirements based on country/number type for this porting order.
 
-`GET /porting_orders/{id}/requirements`
+`client.PortingOrders.GetRequirements()` — `GET /porting_orders/{id}/requirements`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.GetRequirements(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderGetRequirementsParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `field_type` (enum: document, textual), `field_value` (string), `record_type` (string), `requirement_status` (string), `requirement_type` (object)
+Key response fields: `response.data.field_type, response.data.field_value, response.data.record_type`
 
 ## Retrieve the associated V1 sub_request_id and port_request_id
 
-`GET /porting_orders/{id}/sub_request`
+`client.PortingOrders.GetSubRequest()` — `GET /porting_orders/{id}/sub_request`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
-	response, err := client.PortingOrders.GetSubRequest(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	response, err := client.PortingOrders.GetSubRequest(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `port_request_id` (string), `sub_request_id` (string)
+Key response fields: `response.data.port_request_id, response.data.sub_request_id`
 
 ## List verification codes
 
 Returns a list of verification codes for a porting order.
 
-`GET /porting_orders/{id}/verification_codes`
+`client.PortingOrders.VerificationCodes.List()` — `GET /porting_orders/{id}/verification_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.VerificationCodes.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderVerificationCodeListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `phone_number` (string), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time), `verified` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Send the verification codes
 
 Send the verification code for all porting phone numbers.
 
-`POST /porting_orders/{id}/verification_codes/send`
+`client.PortingOrders.VerificationCodes.Send()` — `POST /porting_orders/{id}/verification_codes/send`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
 	err := client.PortingOrders.VerificationCodes.Send(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderVerificationCodeSendParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -844,54 +1033,70 @@ Send the verification code for all porting phone numbers.
 
 Verifies the verification code for a list of phone numbers.
 
-`POST /porting_orders/{id}/verification_codes/verify`
+`client.PortingOrders.VerificationCodes.Verify()` — `POST /porting_orders/{id}/verification_codes/verify`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Porting Order id |
 
 ```go
 	response, err := client.PortingOrders.VerificationCodes.Verify(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderVerificationCodeVerifyParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `phone_number` (string), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time), `verified` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## List action requirements for a porting order
 
 Returns a list of action requirements for a specific porting order.
 
-`GET /porting_orders/{porting_order_id}/action_requirements`
+`client.PortingOrders.ActionRequirements.List()` — `GET /porting_orders/{porting_order_id}/action_requirements`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | The ID of the porting order |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.ActionRequirements.List(
-		context.TODO(),
+		context.Background(),
 		"porting_order_id",
 		telnyx.PortingOrderActionRequirementListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `action_type` (string), `action_url` (string | null), `cancel_reason` (string | null), `created_at` (date-time), `id` (string), `porting_order_id` (string), `record_type` (enum: porting_action_requirement), `requirement_type_id` (string), `status` (enum: created, pending, completed, cancelled, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Initiate an action requirement
 
 Initiates a specific action requirement for a porting order.
 
-`POST /porting_orders/{porting_order_id}/action_requirements/{id}/initiate`
+`client.PortingOrders.ActionRequirements.Initiate()` — `POST /porting_orders/{porting_order_id}/action_requirements/{id}/initiate`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | The ID of the porting order |
+| `Id` | string (UUID) | Yes | The ID of the action requirement |
 
 ```go
 	response, err := client.PortingOrders.ActionRequirements.Initiate(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.PortingOrderActionRequirementInitiateParams{
-			PortingOrderID: "porting_order_id",
+			PortingOrderID: "550e8400-e29b-41d4-a716-446655440000",
 			Params: telnyx.PortingOrderActionRequirementInitiateParamsParams{
 				FirstName: "John",
 				LastName:  "Doe",
@@ -899,42 +1104,53 @@ Initiates a specific action requirement for a porting order.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (string), `action_url` (string | null), `cancel_reason` (string | null), `created_at` (date-time), `id` (string), `porting_order_id` (string), `record_type` (enum: porting_action_requirement), `requirement_type_id` (string), `status` (enum: created, pending, completed, cancelled, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all associated phone numbers
 
 Returns a list of all associated phone numbers for a porting order. Associated phone numbers are used for partial porting in GB to specify which phone numbers should be kept or disconnected.
 
-`GET /porting_orders/{porting_order_id}/associated_phone_numbers`
+`client.PortingOrders.AssociatedPhoneNumbers.List()` — `GET /porting_orders/{porting_order_id}/associated_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.AssociatedPhoneNumbers.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAssociatedPhoneNumberListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create an associated phone number
 
 Creates a new associated phone number for a porting order. This is used for partial porting in GB to specify which phone numbers should be kept or disconnected.
 
-`POST /porting_orders/{porting_order_id}/associated_phone_numbers`
+`client.PortingOrders.AssociatedPhoneNumbers.New()` — `POST /porting_orders/{porting_order_id}/associated_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```go
 	associatedPhoneNumber, err := client.PortingOrders.AssociatedPhoneNumbers.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAssociatedPhoneNumberNewParams{
 			Action:           telnyx.PortingOrderAssociatedPhoneNumberNewParamsActionKeep,
@@ -942,64 +1158,80 @@ Creates a new associated phone number for a porting order. This is used for part
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", associatedPhoneNumber.Data)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an associated phone number
 
 Deletes an associated phone number from a porting order.
 
-`DELETE /porting_orders/{porting_order_id}/associated_phone_numbers/{id}`
+`client.PortingOrders.AssociatedPhoneNumbers.Delete()` — `DELETE /porting_orders/{porting_order_id}/associated_phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Id` | string (UUID) | Yes | Identifies the associated phone number to be deleted |
 
 ```go
 	associatedPhoneNumber, err := client.PortingOrders.AssociatedPhoneNumbers.Delete(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderAssociatedPhoneNumberDeleteParams{
 			PortingOrderID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", associatedPhoneNumber.Data)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all phone number blocks
 
 Returns a list of all phone number blocks of a porting order.
 
-`GET /porting_orders/{porting_order_id}/phone_number_blocks`
+`client.PortingOrders.PhoneNumberBlocks.List()` — `GET /porting_orders/{porting_order_id}/phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.PhoneNumberBlocks.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberBlockListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a phone number block
 
 Creates a new phone number block.
 
-`POST /porting_orders/{porting_order_id}/phone_number_blocks`
+`client.PortingOrders.PhoneNumberBlocks.New()` — `POST /porting_orders/{porting_order_id}/phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```go
 	phoneNumberBlock, err := client.PortingOrders.PhoneNumberBlocks.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberBlockNewParams{
 			ActivationRanges: []telnyx.PortingOrderPhoneNumberBlockNewParamsActivationRange{{
@@ -1013,64 +1245,80 @@ Creates a new phone number block.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumberBlock.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a phone number block
 
 Deletes a phone number block.
 
-`DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}`
+`client.PortingOrders.PhoneNumberBlocks.Delete()` — `DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Id` | string (UUID) | Yes | Identifies the phone number block to be deleted |
 
 ```go
 	phoneNumberBlock, err := client.PortingOrders.PhoneNumberBlocks.Delete(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberBlockDeleteParams{
 			PortingOrderID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumberBlock.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all phone number extensions
 
 Returns a list of all phone number extensions of a porting order.
 
-`GET /porting_orders/{porting_order_id}/phone_number_extensions`
+`client.PortingOrders.PhoneNumberExtensions.List()` — `GET /porting_orders/{porting_order_id}/phone_number_extensions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```go
 	page, err := client.PortingOrders.PhoneNumberExtensions.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberExtensionListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a phone number extension
 
 Creates a new phone number extension.
 
-`POST /porting_orders/{porting_order_id}/phone_number_extensions`
+`client.PortingOrders.PhoneNumberExtensions.New()` — `POST /porting_orders/{porting_order_id}/phone_number_extensions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```go
 	phoneNumberExtension, err := client.PortingOrders.PhoneNumberExtensions.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberExtensionNewParams{
 			ActivationRanges: []telnyx.PortingOrderPhoneNumberExtensionNewParamsActivationRange{{
@@ -1085,47 +1333,61 @@ Creates a new phone number extension.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumberExtension.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a phone number extension
 
 Deletes a phone number extension.
 
-`DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}`
+`client.PortingOrders.PhoneNumberExtensions.Delete()` — `DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PortingOrderId` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `Id` | string (UUID) | Yes | Identifies the phone number extension to be deleted |
 
 ```go
 	phoneNumberExtension, err := client.PortingOrders.PhoneNumberExtensions.Delete(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.PortingOrderPhoneNumberExtensionDeleteParams{
 			PortingOrderID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumberExtension.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting_phone_numbers`
+`client.PortingPhoneNumbers.List()` — `GET /porting_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.PortingPhoneNumbers.List(context.TODO(), telnyx.PortingPhoneNumberListParams{})
+	page, err := client.PortingPhoneNumbers.List(context.Background(), telnyx.PortingPhoneNumberListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_status` (enum: New, Pending, Conflict, Cancel Pending, Failed, Concurred, Activate RDY, Disconnect Pending, Concurrence Sent, Old, Sending, Active, Cancelled), `phone_number` (string), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `portability_status` (enum: pending, confirmed, provisional), `porting_order_id` (uuid), `porting_order_status` (enum: draft, in-process, submitted, exception, foc-date-confirmed, cancel-pending, ported, cancelled), `record_type` (string), `requirements_status` (enum: requirement-info-pending, requirement-info-under-review, requirement-info-exception, approved), `support_key` (string)
+Key response fields: `response.data.phone_number, response.data.activation_status, response.data.phone_number_type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

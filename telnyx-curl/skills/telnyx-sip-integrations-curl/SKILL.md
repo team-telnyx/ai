@@ -1,8 +1,8 @@
 ---
 name: telnyx-sip-integrations-curl
 description: >-
-  Manage call recordings, media storage, Dialogflow integration, and external
-  connections for SIP trunking. This skill provides REST API (curl) examples.
+  Call recordings, media storage, Dialogflow integration, and external
+  connections for SIP trunking.
 metadata:
   author: telnyx
   product: sip-integrations
@@ -13,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Sip Integrations - curl
+
+## Core Workflow
+
+### Prerequisites
+
+1. SIP connection configured (see telnyx-sip-curl)
+
+### Steps
+
+1. **List call recordings**
+2. **Download recording**
+3. **Upload media**
+
+### Common mistakes
+
+- Call recordings require recording to be enabled on the connection or via call control commands
+- Recording files are temporary — download and store them in your own storage
+
+**Related skills**: telnyx-sip-curl, telnyx-voice-curl
 
 ## Installation
 
@@ -36,10 +55,10 @@ or authentication errors (401). Always handle errors in production code:
 ```bash
 # Check HTTP status code in response
 response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
+  -d '{"key": "value"}')
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
@@ -61,23 +80,33 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
 
 `GET /custom_storage_credentials/{connection_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `.data.backend, .data.configuration`
 
 ## Create a custom storage credential
 
 Creates a custom storage credentials configuration.
 
 `POST /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```bash
 curl \
@@ -87,13 +116,17 @@ curl \
   "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `.data.backend, .data.configuration`
 
 ## Update a stored credential
 
 Updates a stored custom credentials configuration.
 
 `PUT /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```bash
 curl \
@@ -103,13 +136,17 @@ curl \
   "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `.data.backend, .data.configuration`
 
 ## Delete a stored credential
 
 Deletes a stored custom credentials configuration.
 
 `DELETE /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```bash
 curl \
@@ -124,17 +161,25 @@ Return details of the Dialogflow connection associated with the given CallContro
 
 `GET /dialogflow_connections/{connection_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/dialogflow_connections/{connection_id}"
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `.data.connection_id, .data.conversation_profile_id, .data.environment`
 
 ## Create a Dialogflow Connection
 
 Save Dialogflow Credentiails to Telnyx, so it can be used with other Telnyx services.
 
 `POST /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```bash
 curl \
@@ -144,13 +189,17 @@ curl \
   "https://api.telnyx.com/v2/dialogflow_connections/{connection_id}"
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `.data.connection_id, .data.conversation_profile_id, .data.environment`
 
 ## Update stored Dialogflow Connection
 
 Updates a stored Dialogflow Connection.
 
 `PUT /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```bash
 curl \
@@ -160,13 +209,17 @@ curl \
   "https://api.telnyx.com/v2/dialogflow_connections/{connection_id}"
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `.data.connection_id, .data.conversation_profile_id, .data.environment`
 
 ## Delete stored Dialogflow Connection
 
 Deletes a stored Dialogflow Connection.
 
 `DELETE /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```bash
 curl \
@@ -181,19 +234,31 @@ This endpoint returns a list of your External Connections inside the 'data' attr
 
 `GET /external_connections`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Filter parameter for external connections (deepObject style)... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections"
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Creates an External Connection
 
 Creates a new External Connection based on the parameters sent in the request. The external_sip_connection and outbound voice profile id are required. Once created, you can assign phone numbers to your application using the `/phone_numbers` endpoint.
 
-`POST /external_connections` — Required: `external_sip_connection`, `outbound`
+`POST /external_connections`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `external_sip_connection` | enum (zoom) | Yes | The service that will be consuming this connection. |
+| `outbound` | object | Yes |  |
+| `tags` | array[string] | No | Tags associated with the connection. |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| `webhook_event_url` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -201,21 +266,13 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "active": false,
   "external_sip_connection": "zoom",
-  "tags": [
-    "tag1",
-    "tag2"
-  ],
-  "webhook_event_url": "https://example.com",
-  "webhook_event_failover_url": "https://failover.example.com",
-  "webhook_timeout_secs": 25,
   "outbound": {}
 }' \
   "https://api.telnyx.com/v2/external_connections"
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## List all log messages
 
@@ -223,11 +280,16 @@ Retrieve a list of log messages for all external connections associated with you
 
 `GET /external_connections/log_messages`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Filter parameter for log messages (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/log_messages"
 ```
 
-Returns: `log_messages` (array[object]), `meta` (object)
+Key response fields: `.data.log_messages, .data.meta`
 
 ## Retrieve a log message
 
@@ -235,17 +297,25 @@ Retrieve a log message for an external connection associated with your account.
 
 `GET /external_connections/log_messages/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/log_messages/1293384261075731499"
 ```
 
-Returns: `log_messages` (array[object])
+Key response fields: `.data.log_messages`
 
 ## Dismiss a log message
 
 Dismiss a log message for an external connection associated with your account.
 
 `DELETE /external_connections/log_messages/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -254,7 +324,7 @@ curl \
   "https://api.telnyx.com/v2/external_connections/log_messages/1293384261075731499"
 ```
 
-Returns: `success` (boolean)
+Key response fields: `.data.success`
 
 ## Retrieve an External Connection
 
@@ -262,19 +332,30 @@ Return the details of an existing External Connection inside the 'data' attribut
 
 `GET /external_connections/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499"
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Update an External Connection
 
 Updates settings of an existing External Connection based on the parameters of the request.
 
-`PATCH /external_connections/{id}` — Required: `outbound`
+`PATCH /external_connections/{id}`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `outbound` | object | Yes |  |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags associated with the connection. |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| `webhook_event_url` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -282,26 +363,22 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "active": false,
-  "webhook_event_url": "https://example.com",
-  "webhook_event_failover_url": "https://failover.example.com",
-  "tags": [
-    "tag1",
-    "tag2"
-  ],
-  "webhook_timeout_secs": 25,
   "outbound": {}
 }' \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499"
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## Deletes an External Connection
 
 Permanently deletes an External Connection. Deletion may be prevented if the application is in use by phone numbers, is active, or if it is an Operator Connect connection. To remove an Operator Connect integration please contact Telnyx support.
 
 `DELETE /external_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -310,7 +387,7 @@ curl \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499"
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `.data.id, .data.created_at, .data.updated_at`
 
 ## List all civic addresses and locations
 
@@ -318,11 +395,16 @@ Returns the civic addresses and locations from Microsoft Teams.
 
 `GET /external_connections/{id}/civic_addresses`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for civic addresses (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/civic_addresses"
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `.data.id, .data.city_or_town, .data.city_or_town_alias`
 
 ## Retrieve a Civic Address
 
@@ -330,15 +412,26 @@ Return the details of an existing Civic Address with its Locations inside the 'd
 
 `GET /external_connections/{id}/civic_addresses/{address_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `address_id` | string (UUID) | Yes | Identifies a civic address or a location. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/civic_addresses/318fb664-d341-44d2-8405-e6bfb9ced6d9"
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `.data.id, .data.city_or_town, .data.city_or_town_alias`
 
 ## Update a location's static emergency address
 
-`PATCH /external_connections/{id}/locations/{location_id}` — Required: `static_emergency_address_id`
+`PATCH /external_connections/{id}/locations/{location_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `static_emergency_address_id` | string (UUID) | Yes | A new static emergency address ID to update the location wit... |
+| `id` | string (UUID) | Yes | The ID of the external connection |
+| `location_id` | string (UUID) | Yes | The ID of the location to update |
 
 ```bash
 curl \
@@ -348,10 +441,10 @@ curl \
   -d '{
   "static_emergency_address_id": "550e8400-e29b-41d4-a716-446655440000"
 }' \
-  "https://api.telnyx.com/v2/external_connections/{id}/locations/{location_id}"
+  "https://api.telnyx.com/v2/external_connections/550e8400-e29b-41d4-a716-446655440000/locations/{location_id}"
 ```
 
-Returns: `accepted_address_suggestions` (boolean), `location_id` (uuid), `static_emergency_address_id` (uuid)
+Key response fields: `.data.accepted_address_suggestions, .data.location_id, .data.static_emergency_address_id`
 
 ## List all phone numbers
 
@@ -359,11 +452,17 @@ Returns a list of all active phone numbers associated with the given external co
 
 `GET /external_connections/{id}/phone_numbers`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for phone numbers (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/phone_numbers"
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `.data.acquired_capabilities, .data.civic_address_id, .data.displayed_country_code`
 
 ## Retrieve a phone number
 
@@ -371,11 +470,16 @@ Return the details of a phone number associated with the given external connecti
 
 `GET /external_connections/{id}/phone_numbers/{phone_number_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `phone_number_id` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/phone_numbers/1234567889"
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `.data.acquired_capabilities, .data.civic_address_id, .data.displayed_country_code`
 
 ## Update a phone number
 
@@ -383,7 +487,11 @@ Asynchronously update settings of the phone number associated with the given ext
 
 `PATCH /external_connections/{id}/phone_numbers/{phone_number_id}`
 
-Optional: `location_id` (uuid)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `phone_number_id` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
+| `location_id` | string (UUID) | No | Identifies the location to assign the phone number to. |
 
 ```bash
 curl \
@@ -393,7 +501,7 @@ curl \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499/phone_numbers/1234567889"
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `.data.acquired_capabilities, .data.civic_address_id, .data.displayed_country_code`
 
 ## List all Releases
 
@@ -401,11 +509,17 @@ Returns a list of your Releases for the given external connection. These are aut
 
 `GET /external_connections/{id}/releases`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for releases (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/releases"
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `.data.status, .data.created_at, .data.error_message`
 
 ## Retrieve a Release request
 
@@ -413,11 +527,16 @@ Return the details of a Release request and its phone numbers.
 
 `GET /external_connections/{id}/releases/{release_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `release_id` | string (UUID) | Yes | Identifies a Release request |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/releases/7b6a6449-b055-45a6-81f6-f6f0dffa4cc6"
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `.data.status, .data.created_at, .data.error_message`
 
 ## List all Upload requests
 
@@ -425,19 +544,32 @@ Returns a list of your Upload requests for the given external connection.
 
 `GET /external_connections/{id}/uploads`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `filter` | object | No | Filter parameter for uploads (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads"
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `.data.status, .data.available_usages, .data.error_code`
 
 ## Creates an Upload request
 
 Creates a new Upload request to Microsoft teams with the included phone numbers. Only one of civic_address_id or location_id must be provided, not both. The maximum allowed phone numbers for the numbers_ids array is 1000.
 
-`POST /external_connections/{id}/uploads` — Required: `number_ids`
+`POST /external_connections/{id}/uploads`
 
-Optional: `additional_usages` (array[string]), `civic_address_id` (uuid), `location_id` (uuid), `usage` (enum: calling_user_assignment, first_party_app_assignment)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `number_ids` | array[string] | Yes |  |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `usage` | enum (calling_user_assignment, first_party_app_assignment) | No | The use case of the upload request. |
+| `location_id` | string (UUID) | No | Identifies the location to assign all phone numbers to. |
+| `civic_address_id` | string (UUID) | No | Identifies the civic address to assign all phone numbers to. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -446,19 +578,23 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "number_ids": [
-    "string"
+    "550e8400-e29b-41d4-a716-446655440000"
   ]
 }' \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads"
 ```
 
-Returns: `success` (boolean), `ticket_id` (uuid)
+Key response fields: `.data.success, .data.ticket_id`
 
 ## Refresh the status of all Upload requests
 
 Forces a recheck of the status of all pending Upload requests for the given external connection in the background.
 
 `POST /external_connections/{id}/uploads/refresh`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -468,7 +604,7 @@ curl \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads/refresh"
 ```
 
-Returns: `success` (boolean)
+Key response fields: `.data.success`
 
 ## Get the count of pending upload requests
 
@@ -476,11 +612,15 @@ Returns the count of all pending upload requests for the given external connecti
 
 `GET /external_connections/{id}/uploads/status`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads/status"
 ```
 
-Returns: `pending_numbers_count` (integer), `pending_orders_count` (integer)
+Key response fields: `.data.pending_numbers_count, .data.pending_orders_count`
 
 ## Retrieve an Upload request
 
@@ -488,17 +628,27 @@ Return the details of an Upload request and its phone numbers.
 
 `GET /external_connections/{id}/uploads/{ticket_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `ticket_id` | string (UUID) | Yes | Identifies an Upload request |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads/7b6a6449-b055-45a6-81f6-f6f0dffa4cc6"
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `.data.status, .data.available_usages, .data.error_code`
 
 ## Retry an Upload request
 
 If there were any errors during the upload process, this endpoint will retry the upload request. In some cases this will reattempt the existing upload request, in other cases it may create a new upload request. Please check the ticket_id in the response to determine if a new upload request was created.
 
 `POST /external_connections/{id}/uploads/{ticket_id}/retry`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `ticket_id` | string (UUID) | Yes | Identifies an Upload request |
 
 ```bash
 curl \
@@ -508,7 +658,7 @@ curl \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499/uploads/7b6a6449-b055-45a6-81f6-f6f0dffa4cc6/retry"
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `.data.status, .data.available_usages, .data.error_code`
 
 ## List uploaded media
 
@@ -516,19 +666,27 @@ Returns a list of stored media files.
 
 `GET /media`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/media"
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `.data.created_at, .data.updated_at, .data.content_type`
 
 ## Upload media
 
 Upload media file to Telnyx so it can be used with other Telnyx services
 
-`POST /media` — Required: `media_url`
+`POST /media`
 
-Optional: `media_name` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `media_url` | string (URL) | Yes | The URL where the media to be stored in Telnyx network is cu... |
+| `ttl_secs` | integer | No | The number of seconds after which the media resource will be... |
+| `media_name` | string | No | The unique identifier of a file. |
 
 ```bash
 curl \
@@ -540,7 +698,7 @@ curl \
   "https://api.telnyx.com/v2/media"
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `.data.created_at, .data.updated_at, .data.content_type`
 
 ## Retrieve stored media
 
@@ -548,11 +706,15 @@ Returns the information about a stored media file.
 
 `GET /media/{media_name}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `media_name` | string | Yes | Uniquely identifies a media resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/media/{media_name}"
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `.data.created_at, .data.updated_at, .data.content_type`
 
 ## Update stored media
 
@@ -560,7 +722,11 @@ Updates a stored media file.
 
 `PUT /media/{media_name}`
 
-Optional: `media_url` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `media_name` | string | Yes | Uniquely identifies a media resource. |
+| `media_url` | string (URL) | No | The URL where the media to be stored in Telnyx network is cu... |
+| `ttl_secs` | integer | No | The number of seconds after which the media resource will be... |
 
 ```bash
 curl \
@@ -571,13 +737,17 @@ curl \
   "https://api.telnyx.com/v2/media/{media_name}"
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `.data.created_at, .data.updated_at, .data.content_type`
 
 ## Deletes stored media
 
 Deletes a stored media file.
 
 `DELETE /media/{media_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `media_name` | string | Yes | Uniquely identifies a media resource. |
 
 ```bash
 curl \
@@ -591,6 +761,10 @@ curl \
 Downloads a stored media file.
 
 `GET /media/{media_name}/download`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `media_name` | string | Yes | Uniquely identifies a media resource. |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/media/{media_name}/download"
@@ -610,7 +784,7 @@ curl \
   "https://api.telnyx.com/v2/operator_connect/actions/refresh"
 ```
 
-Returns: `message` (string), `success` (boolean)
+Key response fields: `.data.message, .data.success`
 
 ## List all recording transcriptions
 
@@ -618,11 +792,16 @@ Returns a list of your recording transcriptions.
 
 `GET /recording_transcriptions`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Filter recording transcriptions by various attributes. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/recording_transcriptions"
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Retrieve a recording transcription
 
@@ -630,17 +809,25 @@ Retrieves the details of an existing recording transcription.
 
 `GET /recording_transcriptions/{recording_transcription_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recording_transcription_id` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/recording_transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## Delete a recording transcription
 
 Permanently deletes a recording transcription.
 
 `DELETE /recording_transcriptions/{recording_transcription_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recording_transcription_id` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
 
 ```bash
 curl \
@@ -649,7 +836,7 @@ curl \
   "https://api.telnyx.com/v2/recording_transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.created_at`
 
 ## List all call recordings
 
@@ -657,11 +844,16 @@ Returns a list of your call recordings.
 
 `GET /recordings`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Filter recordings by various attributes. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/recordings"
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.to`
 
 ## Delete a list of call recordings
 
@@ -677,23 +869,33 @@ curl \
   "https://api.telnyx.com/v2/recordings/actions/delete"
 ```
 
+Key response fields: `.data.status`
+
 ## Retrieve a call recording
 
 Retrieves the details of an existing call recording.
 
 `GET /recordings/{recording_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recording_id` | string (UUID) | Yes | Uniquely identifies the recording by id. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/recordings/{recording_id}"
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.to`
 
 ## Delete a call recording
 
 Permanently deletes a call recording.
 
 `DELETE /recordings/{recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recording_id` | string (UUID) | Yes | Uniquely identifies the recording by id. |
 
 ```bash
 curl \
@@ -702,7 +904,7 @@ curl \
   "https://api.telnyx.com/v2/recordings/{recording_id}"
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.to`
 
 ## Create a SIPREC connector
 
@@ -718,7 +920,7 @@ curl \
   "https://api.telnyx.com/v2/siprec_connectors"
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `.data.name, .data.created_at, .data.updated_at`
 
 ## Retrieve a SIPREC connector
 
@@ -726,17 +928,25 @@ Returns details of a stored SIPREC connector.
 
 `GET /siprec_connectors/{connector_name}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connector_name` | string | Yes | Uniquely identifies a SIPREC connector. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/siprec_connectors/{connector_name}"
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `.data.name, .data.created_at, .data.updated_at`
 
 ## Update a SIPREC connector
 
 Updates a stored SIPREC connector configuration.
 
 `PUT /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connector_name` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```bash
 curl \
@@ -746,7 +956,7 @@ curl \
   "https://api.telnyx.com/v2/siprec_connectors/{connector_name}"
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `.data.name, .data.created_at, .data.updated_at`
 
 ## Delete a SIPREC connector
 
@@ -754,9 +964,17 @@ Deletes a stored SIPREC connector.
 
 `DELETE /siprec_connectors/{connector_name}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connector_name` | string | Yes | Uniquely identifies a SIPREC connector. |
+
 ```bash
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   "https://api.telnyx.com/v2/siprec_connectors/{connector_name}"
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

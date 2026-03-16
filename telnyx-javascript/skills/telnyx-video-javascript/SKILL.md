@@ -1,8 +1,7 @@
 ---
 name: telnyx-video-javascript
 description: >-
-  Create and manage video rooms for real-time video communication and
-  conferencing. This skill provides JavaScript SDK examples.
+  Video rooms for real-time communication and conferencing.
 metadata:
   author: telnyx
   product: video
@@ -13,6 +12,26 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Video - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. No phone number needed — video rooms are standalone
+
+### Steps
+
+1. **Create room**: `client.rooms.create({uniqueName: ..., maxParticipants: ...})`
+2. **Generate client token**: `client.rooms.clientTokens.create({roomId: ..., tokenTtlSecs: ...})`
+3. **Join from client**: `Use the client token in a WebRTC client SDK`
+4. **List recordings**: `client.roomRecordings.list()`
+
+### Common mistakes
+
+- Client tokens are short-lived — generate a new one for each participant session
+- Room unique_name must be globally unique — use UUIDs or prefixed names
+
+**Related skills**: telnyx-webrtc-javascript
 
 ## Installation
 
@@ -39,7 +58,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.rooms.create(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -60,9 +79,119 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
+## Create a room.
+
+Synchronously create a Room.
+
+`client.rooms.create()` — `POST /rooms`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `uniqueName` | string | No | The unique (within the Telnyx account scope) name of the roo... |
+| `maxParticipants` | integer | No | The maximum amount of participants allowed in a room. |
+| `enableRecording` | boolean | No | Enable or disable recording for that room. |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+
+```javascript
+const room = await client.rooms.create({
+    uniqueName: 'my-meeting-room',
+    maxParticipants: 10,
+});
+
+console.log(room.data);
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Create Client Token to join a room.
+
+Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
+
+`client.rooms.actions.generateJoinClientToken()` — `POST /rooms/{room_id}/actions/generate_join_client_token`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
+| `tokenTtlSecs` | integer | No | The time to live in seconds of the Client Token, after that ... |
+| `refreshTokenTtlSecs` | integer | No | The time to live in seconds of the Refresh Token, after that... |
+
+```javascript
+const response = await client.rooms.actions.generateJoinClientToken(
+  '0ccc7b54-4df3-4bca-a65a-3da1ecc777f0',
+);
+
+console.log(response.data);
+```
+
+Key response fields: `response.data.refresh_token, response.data.refresh_token_expires_at, response.data.token`
+
+## View a list of rooms.
+
+`client.rooms.list()` — `GET /rooms`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `includeSessions` | boolean | No | To decide if room sessions should be included in the respons... |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const room of client.rooms.list()) {
+  console.log(room.id);
+}
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## View a room.
+
+`client.rooms.retrieve()` — `GET /rooms/{room_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
+| `includeSessions` | boolean | No | To decide if room sessions should be included in the respons... |
+
+```javascript
+const room = await client.rooms.retrieve('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
+
+console.log(room.data);
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Create a room composition.
+
+Asynchronously create a room composition.
+
+`client.roomCompositions.create()` — `POST /room_compositions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sessionId` | string (UUID) | No | id of the room session associated with the room composition. |
+| `format` | string | No | The desired format of the room composition. |
+| `resolution` | string | No | The desired resolution (width/height in pixels) of the resul... |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
+
+```javascript
+const roomComposition = await client.roomCompositions.create();
+
+console.log(roomComposition.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
 ## View a list of room compositions.
 
-`GET /room_compositions`
+`client.roomCompositions.list()` — `GET /room_compositions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -71,27 +200,15 @@ for await (const roomComposition of client.roomCompositions.list()) {
 }
 ```
 
-Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
-
-## Create a room composition.
-
-Asynchronously create a room composition.
-
-`POST /room_compositions`
-
-Optional: `format` (string), `resolution` (string), `session_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
-
-```javascript
-const roomComposition = await client.roomCompositions.create();
-
-console.log(roomComposition.data);
-```
-
-Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## View a room composition.
 
-`GET /room_compositions/{room_composition_id}`
+`client.roomCompositions.retrieve()` — `GET /room_compositions/{room_composition_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomCompositionId` | string (UUID) | Yes | The unique identifier of a room composition. |
 
 ```javascript
 const roomComposition = await client.roomCompositions.retrieve(
@@ -101,13 +218,17 @@ const roomComposition = await client.roomCompositions.retrieve(
 console.log(roomComposition.data);
 ```
 
-Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `format` (enum: mp4), `id` (uuid), `record_type` (string), `resolution` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, enqueued, processing), `updated_at` (date-time), `user_id` (uuid), `video_layout` (object), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a room composition.
 
 Synchronously delete a room composition.
 
-`DELETE /room_compositions/{room_composition_id}`
+`client.roomCompositions.delete()` — `DELETE /room_compositions/{room_composition_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomCompositionId` | string (UUID) | Yes | The unique identifier of a room composition. |
 
 ```javascript
 await client.roomCompositions.delete('5219b3af-87c6-4c08-9b58-5a533d893e21');
@@ -115,7 +236,12 @@ await client.roomCompositions.delete('5219b3af-87c6-4c08-9b58-5a533d893e21');
 
 ## View a list of room participants.
 
-`GET /room_participants`
+`client.roomParticipants.list()` — `GET /room_participants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -124,11 +250,15 @@ for await (const roomParticipant of client.roomParticipants.list()) {
 }
 ```
 
-Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.updated_at, response.data.context`
 
 ## View a room participant.
 
-`GET /room_participants/{room_participant_id}`
+`client.roomParticipants.retrieve()` — `GET /room_participants/{room_participant_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomParticipantId` | string (UUID) | Yes | The unique identifier of a room participant. |
 
 ```javascript
 const roomParticipant = await client.roomParticipants.retrieve(
@@ -138,11 +268,16 @@ const roomParticipant = await client.roomParticipants.retrieve(
 console.log(roomParticipant.data);
 ```
 
-Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.updated_at, response.data.context`
 
 ## View a list of room recordings.
 
-`GET /room_recordings`
+`client.roomRecordings.list()` — `GET /room_recordings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -151,11 +286,16 @@ for await (const roomRecordingListResponse of client.roomRecordings.list()) {
 }
 ```
 
-Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Delete several room recordings in a bulk.
 
-`DELETE /room_recordings`
+`client.roomRecordings.deleteBulk()` — `DELETE /room_recordings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 const response = await client.roomRecordings.deleteBulk();
@@ -163,11 +303,15 @@ const response = await client.roomRecordings.deleteBulk();
 console.log(response.data);
 ```
 
-Returns: `room_recordings` (integer)
+Key response fields: `response.data.room_recordings`
 
 ## View a room recording.
 
-`GET /room_recordings/{room_recording_id}`
+`client.roomRecordings.retrieve()` — `GET /room_recordings/{room_recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomRecordingId` | string (UUID) | Yes | The unique identifier of a room recording. |
 
 ```javascript
 const roomRecording = await client.roomRecordings.retrieve('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -175,13 +319,17 @@ const roomRecording = await client.roomRecordings.retrieve('0ccc7b54-4df3-4bca-a
 console.log(roomRecording.data);
 ```
 
-Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.type`
 
 ## Delete a room recording.
 
 Synchronously delete a Room Recording.
 
-`DELETE /room_recordings/{room_recording_id}`
+`client.roomRecordings.delete()` — `DELETE /room_recordings/{room_recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomRecordingId` | string (UUID) | Yes | The unique identifier of a room recording. |
 
 ```javascript
 await client.roomRecordings.delete('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -189,7 +337,13 @@ await client.roomRecordings.delete('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
 
 ## View a list of room sessions.
 
-`GET /room_sessions`
+`client.rooms.sessions.list0()` — `GET /room_sessions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `includeParticipants` | boolean | No | To decide if room participants should be included in the res... |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -198,11 +352,16 @@ for await (const roomSession of client.rooms.sessions.list0()) {
 }
 ```
 
-Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## View a room session.
 
-`GET /room_sessions/{room_session_id}`
+`client.rooms.sessions.retrieve()` — `GET /room_sessions/{room_session_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
+| `includeParticipants` | boolean | No | To decide if room participants should be included in the res... |
 
 ```javascript
 const session = await client.rooms.sessions.retrieve('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -210,13 +369,17 @@ const session = await client.rooms.sessions.retrieve('0ccc7b54-4df3-4bca-a65a-3d
 console.log(session.data);
 ```
 
-Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## End a room session.
 
 Note: this will also kick all participants currently present in the room
 
-`POST /room_sessions/{room_session_id}/actions/end`
+`client.rooms.sessions.actions.end()` — `POST /room_sessions/{room_session_id}/actions/end`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
 
 ```javascript
 const response = await client.rooms.sessions.actions.end('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -224,13 +387,17 @@ const response = await client.rooms.sessions.actions.end('0ccc7b54-4df3-4bca-a65
 console.log(response.data);
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Kick participants from a room session.
 
-`POST /room_sessions/{room_session_id}/actions/kick`
+`client.rooms.sessions.actions.kick()` — `POST /room_sessions/{room_session_id}/actions/kick`
 
-Optional: `exclude` (array[string]), `participants` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
+| `participants` | object | No | Either a list of participant id to perform the action on, or... |
+| `exclude` | array[string] | No | List of participant id to exclude from the action. |
 
 ```javascript
 const response = await client.rooms.sessions.actions.kick('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -238,13 +405,17 @@ const response = await client.rooms.sessions.actions.kick('0ccc7b54-4df3-4bca-a6
 console.log(response.data);
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Mute participants in room session.
 
-`POST /room_sessions/{room_session_id}/actions/mute`
+`client.rooms.sessions.actions.mute()` — `POST /room_sessions/{room_session_id}/actions/mute`
 
-Optional: `exclude` (array[string]), `participants` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
+| `participants` | object | No | Either a list of participant id to perform the action on, or... |
+| `exclude` | array[string] | No | List of participant id to exclude from the action. |
 
 ```javascript
 const response = await client.rooms.sessions.actions.mute('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -252,13 +423,17 @@ const response = await client.rooms.sessions.actions.mute('0ccc7b54-4df3-4bca-a6
 console.log(response.data);
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Unmute participants in room session.
 
-`POST /room_sessions/{room_session_id}/actions/unmute`
+`client.rooms.sessions.actions.unmute()` — `POST /room_sessions/{room_session_id}/actions/unmute`
 
-Optional: `exclude` (array[string]), `participants` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
+| `participants` | object | No | Either a list of participant id to perform the action on, or... |
+| `exclude` | array[string] | No | List of participant id to exclude from the action. |
 
 ```javascript
 const response = await client.rooms.sessions.actions.unmute('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -266,11 +441,17 @@ const response = await client.rooms.sessions.actions.unmute('0ccc7b54-4df3-4bca-
 console.log(response.data);
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## View a list of room participants.
 
-`GET /room_sessions/{room_session_id}/participants`
+`client.rooms.sessions.retrieveParticipants()` — `GET /room_sessions/{room_session_id}/participants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomSessionId` | string (UUID) | Yes | The unique identifier of a room session. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -281,56 +462,21 @@ for await (const roomParticipant of client.rooms.sessions.retrieveParticipants(
 }
 ```
 
-Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
-
-## View a list of rooms.
-
-`GET /rooms`
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const room of client.rooms.list()) {
-  console.log(room.id);
-}
-```
-
-Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
-
-## Create a room.
-
-Synchronously create a Room.
-
-`POST /rooms`
-
-Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_name` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
-
-```javascript
-const room = await client.rooms.create();
-
-console.log(room.data);
-```
-
-Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
-
-## View a room.
-
-`GET /rooms/{room_id}`
-
-```javascript
-const room = await client.rooms.retrieve('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
-
-console.log(room.data);
-```
-
-Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+Key response fields: `response.data.id, response.data.updated_at, response.data.context`
 
 ## Update a room.
 
 Synchronously update a Room.
 
-`PATCH /rooms/{room_id}`
+`client.rooms.update()` — `PATCH /rooms/{room_id}`
 
-Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_name` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
+| `uniqueName` | string | No | The unique (within the Telnyx account scope) name of the roo... |
+| `maxParticipants` | integer | No | The maximum amount of participants allowed in a room. |
+| `enableRecording` | boolean | No | Enable or disable recording for that room. |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const room = await client.rooms.update('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
@@ -338,43 +484,33 @@ const room = await client.rooms.update('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
 console.log(room.data);
 ```
 
-Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording` (boolean), `id` (uuid), `max_participants` (integer), `record_type` (string), `sessions` (array[object]), `unique_name` (string), `updated_at` (date-time), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a room.
 
 Synchronously delete a Room. Participants from that room will be kicked out, they won't be able to join that room anymore, and you won't be charged anymore for that room.
 
-`DELETE /rooms/{room_id}`
+`client.rooms.delete()` — `DELETE /rooms/{room_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
 
 ```javascript
 await client.rooms.delete('0ccc7b54-4df3-4bca-a65a-3da1ecc777f0');
 ```
 
-## Create Client Token to join a room.
-
-Synchronously create an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`, a Refresh Token is also provided to refresh a Client Token, the Refresh Token expires after `refresh_token_ttl_secs`.
-
-`POST /rooms/{room_id}/actions/generate_join_client_token`
-
-Optional: `refresh_token_ttl_secs` (integer), `token_ttl_secs` (integer)
-
-```javascript
-const response = await client.rooms.actions.generateJoinClientToken(
-  '0ccc7b54-4df3-4bca-a65a-3da1ecc777f0',
-);
-
-console.log(response.data);
-```
-
-Returns: `refresh_token` (string), `refresh_token_expires_at` (date-time), `token` (string), `token_expires_at` (date-time)
-
 ## Refresh Client Token to join a room.
 
 Synchronously refresh an Client Token to join a Room. Client Token is necessary to join a Telnyx Room. Client Token will expire after `token_ttl_secs`.
 
-`POST /rooms/{room_id}/actions/refresh_client_token` — Required: `refresh_token`
+`client.rooms.actions.refreshClientToken()` — `POST /rooms/{room_id}/actions/refresh_client_token`
 
-Optional: `token_ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `refreshToken` | string | Yes |  |
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
+| `tokenTtlSecs` | integer | No | The time to live in seconds of the Client Token, after that ... |
 
 ```javascript
 const response = await client.rooms.actions.refreshClientToken(
@@ -388,11 +524,18 @@ const response = await client.rooms.actions.refreshClientToken(
 console.log(response.data);
 ```
 
-Returns: `token` (string), `token_expires_at` (date-time)
+Key response fields: `response.data.token, response.data.token_expires_at`
 
 ## View a list of room sessions.
 
-`GET /rooms/{room_id}/sessions`
+`client.rooms.sessions.list1()` — `GET /rooms/{room_id}/sessions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `roomId` | string (UUID) | Yes | The unique identifier of a room. |
+| `includeParticipants` | boolean | No | To decide if room participants should be included in the res... |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -403,4 +546,8 @@ for await (const roomSession of client.rooms.sessions.list1(
 }
 ```
 
-Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

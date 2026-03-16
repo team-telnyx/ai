@@ -1,8 +1,7 @@
 ---
 name: telnyx-seti-ruby
 description: >-
-  Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
-  skill provides Ruby SDK examples.
+  SETI (Space Exploration Telecommunications Infrastructure) APIs.
 metadata:
   author: telnyx
   product: seti
@@ -57,9 +56,15 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Get Enum
 
-`GET /10dlc/enum/{endpoint}`
+`client.messaging_10dlc.get_enum()` — `GET /10dlc/enum/{endpoint}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `endpoint` | enum (mno, optionalAttributes, usecase, vertical, altBusinessIdType, ...) | Yes |  |
 
 ```ruby
 response = client.messaging_10dlc.get_enum(:mno)
@@ -71,7 +76,11 @@ puts(response)
 
 Returns the results of the various black box tests
 
-`GET /seti/black_box_test_results`
+`client.seti.retrieve_black_box_test_results()` — `GET /seti/black_box_test_results`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```ruby
 response = client.seti.retrieve_black_box_test_results
@@ -79,4 +88,8 @@ response = client.seti.retrieve_black_box_test_results
 puts(response)
 ```
 
-Returns: `black_box_tests` (array[object]), `product` (string), `record_type` (string)
+Key response fields: `response.data.black_box_tests, response.data.product, response.data.record_type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

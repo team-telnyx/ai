@@ -2,6 +2,38 @@
 
 # Telnyx Verify - Go
 
+## Core Workflow
+
+### Prerequisites
+
+1. Create a Verify Profile with channel settings (SMS, Call, Flashcall, RCS, DTMF)
+
+### Steps
+
+1. **Create profile**: `client.VerifyProfiles.Create(ctx, params)`
+2. **Trigger verification**: `client.Verifications.TriggerSms(ctx, params)`
+3. **User receives code**: `Via SMS, call, flashcall, RCS, or DTMF`
+4. **Submit code**: `client.Verifications.ByPhoneNumber.Actions.Verify(ctx, params)`
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Default, widest reach | SMS verification |
+| Landlines or accessibility | Voice call verification |
+| Frictionless mobile (code in caller ID) | Flashcall verification |
+| Ownership confirmation without code entry | DTMF Confirm |
+| Rich mobile UX with SMS fallback | RCS verification |
+
+### Common mistakes
+
+- NEVER use non-E.164 phone numbers — returns 400 Bad Request
+- NEVER reuse expired verification IDs — must re-trigger verification
+- For DTMF Confirm: result is ONLY delivered via webhook — configure your webhook endpoint in the Verify Profile settings. No verify webhooks are documented in this skill; handle the verify.dtmf_confirm event manually
+- When verifying by ID, you MUST pass the code parameter — omitting it will not validate the user's input
+
+**Related skills**: telnyx-messaging-go, telnyx-voice-go
+
 ## Installation
 
 ```bash
@@ -35,7 +67,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Verifications.TriggerSms(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -63,47 +95,44 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
-## Lookup phone number data
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
+## Trigger SMS verification
 
-Returns information about the provided phone number.
+`client.Verifications.TriggerSMS()` — `POST /verifications/sms`
 
-`GET /number_lookup/{phone_number}`
-
-```go
-	numberLookup, err := client.NumberLookup.Get(
-		context.TODO(),
-		"+18665552368",
-		telnyx.NumberLookupGetParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", numberLookup.Data)
-```
-
-Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `fraud` (string | null), `national_format` (string), `phone_number` (string), `portability` (object), `record_type` (string)
-
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumber` | string (E.164) | Yes | +E164 formatted phone number. |
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `TimeoutSecs` | integer | No | The number of seconds the verification code is valid for. |
+| `CustomCode` | string | No | Send a self-generated numeric code to the end-user |
 
 ```go
-	byPhoneNumbers, err := client.Verifications.ByPhoneNumber.List(context.TODO(), "+13035551234")
+	createVerificationResponse, err := client.Verifications.TriggerSMS(context.Background(), telnyx.VerificationTriggerSMSParams{
+		PhoneNumber:     "+13035551234",
+		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
+	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", byPhoneNumbers.Data)
+	fmt.Printf("%+v\n", createVerificationResponse.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Verify verification code by phone number
 
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+`client.Verifications.ByPhoneNumber.Actions.Verify()` — `POST /verifications/by_phone_number/{phone_number}/actions/verify`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Code` | string | Yes | This is the code the user submits for verification. |
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `PhoneNumber` | string (E.164) | Yes | +E164 formatted phone number. |
 
 ```go
 	verifyVerificationCodeResponse, err := client.Verifications.ByPhoneNumber.Actions.Verify(
-		context.TODO(),
+		context.Background(),
 		"+13035551234",
 		telnyx.VerificationByPhoneNumberActionVerifyParams{
 			Code:            "17686",
@@ -111,242 +140,447 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
 ```
 
-Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
-
-## Trigger Call verification
-
-`POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
-
-Optional: `custom_code` (string | null), `extension` (string | null), `timeout_secs` (integer)
-
-```go
-	createVerificationResponse, err := client.Verifications.TriggerCall(context.TODO(), telnyx.VerificationTriggerCallParams{
-		PhoneNumber:     "+13035551234",
-		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", createVerificationResponse.Data)
-```
-
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
-
-## Trigger Flash call verification
-
-`POST /verifications/flashcall` — Required: `phone_number`, `verify_profile_id`
-
-Optional: `timeout_secs` (integer)
-
-```go
-	createVerificationResponse, err := client.Verifications.TriggerFlashcall(context.TODO(), telnyx.VerificationTriggerFlashcallParams{
-		PhoneNumber:     "+13035551234",
-		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", createVerificationResponse.Data)
-```
-
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
-
-## Trigger SMS verification
-
-`POST /verifications/sms` — Required: `phone_number`, `verify_profile_id`
-
-Optional: `custom_code` (string | null), `timeout_secs` (integer)
-
-```go
-	createVerificationResponse, err := client.Verifications.TriggerSMS(context.TODO(), telnyx.VerificationTriggerSMSParams{
-		PhoneNumber:     "+13035551234",
-		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", createVerificationResponse.Data)
-```
-
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
-
-## Retrieve verification
-
-`GET /verifications/{verification_id}`
-
-```go
-	verification, err := client.Verifications.Get(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verification.Data)
-```
-
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
-
-## Verify verification code by ID
-
-`POST /verifications/{verification_id}/actions/verify`
-
-Optional: `code` (string), `status` (enum: accepted, rejected)
-
-```go
-	verifyVerificationCodeResponse, err := client.Verifications.Actions.Verify(
-		context.TODO(),
-		"12ade33a-21c0-473b-b055-b3c836e1c292",
-		telnyx.VerificationActionVerifyParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
-```
-
-Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
-
-## List all Verify profiles
-
-Gets a paginated list of Verify profiles.
-
-`GET /verify_profiles`
-
-```go
-	page, err := client.VerifyProfiles.List(context.TODO(), telnyx.VerifyProfileListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.phone_number, response.data.response_code`
 
 ## Create a Verify profile
 
 Creates a new Verify profile to associate verifications with.
 
-`POST /verify_profiles` — Required: `name`
+`client.VerifyProfiles.New()` — `POST /verify_profiles`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | Yes |  |
+| `WebhookUrl` | string (URL) | No |  |
+| `WebhookFailoverUrl` | string (URL) | No |  |
+| `Sms` | object | No |  |
+| ... | | | +4 optional params in the API Details section below |
 
 ```go
-	verifyProfileData, err := client.VerifyProfiles.New(context.TODO(), telnyx.VerifyProfileNewParams{
+	verifyProfileData, err := client.VerifyProfiles.New(context.Background(), telnyx.VerifyProfileNewParams{
 		Name: "Test Profile",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
+
+## Trigger Call verification
+
+`client.Verifications.TriggerCall()` — `POST /verifications/call`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumber` | string (E.164) | Yes | +E164 formatted phone number. |
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `TimeoutSecs` | integer | No | The number of seconds the verification code is valid for. |
+| `CustomCode` | string | No | Send a self-generated numeric code to the end-user |
+| `Extension` | string | No | Optional extension to dial after call is answered using DTMF... |
+
+```go
+	createVerificationResponse, err := client.Verifications.TriggerCall(context.Background(), telnyx.VerificationTriggerCallParams{
+		PhoneNumber:     "+13035551234",
+		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", createVerificationResponse.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+## Lookup phone number data
+
+Returns information about the provided phone number.
+
+`client.NumberLookup.Get()` — `GET /number_lookup/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumber` | string (E.164) | Yes | The phone number to be looked up |
+| `Type` | enum (carrier, caller-name) | No | Specifies the type of number lookup to be performed |
+
+```go
+	numberLookup, err := client.NumberLookup.Get(
+		context.Background(),
+		"+18665552368",
+		telnyx.NumberLookupGetParams{},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", numberLookup.Data)
+```
+
+Key response fields: `response.data.phone_number, response.data.caller_name, response.data.carrier`
+
+## List verifications by phone number
+
+`client.Verifications.ByPhoneNumber.List()` — `GET /verifications/by_phone_number/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumber` | string (E.164) | Yes | +E164 formatted phone number. |
+
+```go
+	byPhoneNumbers, err := client.Verifications.ByPhoneNumber.List(context.Background(), "+13035551234")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", byPhoneNumbers.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+## Trigger Flash call verification
+
+`client.Verifications.TriggerFlashcall()` — `POST /verifications/flashcall`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `PhoneNumber` | string (E.164) | Yes | +E164 formatted phone number. |
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `TimeoutSecs` | integer | No | The number of seconds the verification code is valid for. |
+
+```go
+	createVerificationResponse, err := client.Verifications.TriggerFlashcall(context.Background(), telnyx.VerificationTriggerFlashcallParams{
+		PhoneNumber:     "+13035551234",
+		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", createVerificationResponse.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+## Retrieve verification
+
+`client.Verifications.Get()` — `GET /verifications/{verification_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerificationId` | string (UUID) | Yes | The identifier of the verification to retrieve. |
+
+```go
+	verification, err := client.Verifications.Get(context.Background(), "12ade33a-21c0-473b-b055-b3c836e1c292")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", verification.Data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+## Verify verification code by ID
+
+`client.Verifications.Actions.Verify()` — `POST /verifications/{verification_id}/actions/verify`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerificationId` | string (UUID) | Yes | The identifier of the verification to retrieve. |
+| `Status` | enum (accepted, rejected) | No | Identifies if the verification code has been accepted or rej... |
+| `Code` | string | No | This is the code the user submits for verification. |
+
+```go
+	verifyVerificationCodeResponse, err := client.Verifications.Actions.Verify(
+		context.Background(),
+		"12ade33a-21c0-473b-b055-b3c836e1c292",
+		telnyx.VerificationActionVerifyParams{
+		Code: "12345",
+	},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", verifyVerificationCodeResponse.Data)
+```
+
+Key response fields: `response.data.phone_number, response.data.response_code`
+
+## List all Verify profiles
+
+Gets a paginated list of Verify profiles.
+
+`client.VerifyProfiles.List()` — `GET /verify_profiles`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+
+```go
+	page, err := client.VerifyProfiles.List(context.Background(), telnyx.VerifyProfileListParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve Verify profile message templates
 
 List all Verify profile message templates.
 
-`GET /verify_profiles/templates`
+`client.VerifyProfiles.GetTemplates()` — `GET /verify_profiles/templates`
 
 ```go
-	response, err := client.VerifyProfiles.GetTemplates(context.TODO())
+	response, err := client.VerifyProfiles.GetTemplates(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Create message template
 
 Create a new Verify profile message template.
 
-`POST /verify_profiles/templates` — Required: `text`
+`client.VerifyProfiles.NewTemplate()` — `POST /verify_profiles/templates`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Text` | string | Yes | The text content of the message template. |
 
 ```go
-	messageTemplate, err := client.VerifyProfiles.NewTemplate(context.TODO(), telnyx.VerifyProfileNewTemplateParams{
+	messageTemplate, err := client.VerifyProfiles.NewTemplate(context.Background(), telnyx.VerifyProfileNewTemplateParams{
 		Text: "Your {{app_name}} verification code is: {{code}}.",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messageTemplate.Data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Update message template
 
 Update an existing Verify profile message template.
 
-`PATCH /verify_profiles/templates/{template_id}` — Required: `text`
+`client.VerifyProfiles.UpdateTemplate()` — `PATCH /verify_profiles/templates/{template_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Text` | string | Yes | The text content of the message template. |
+| `TemplateId` | string (UUID) | Yes | The identifier of the message template to update. |
 
 ```go
 	messageTemplate, err := client.VerifyProfiles.UpdateTemplate(
-		context.TODO(),
+		context.Background(),
 		"12ade33a-21c0-473b-b055-b3c836e1c292",
 		telnyx.VerifyProfileUpdateTemplateParams{
 			Text: "Your {{app_name}} verification code is: {{code}}.",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", messageTemplate.Data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Retrieve Verify profile
 
 Gets a single Verify profile.
 
-`GET /verify_profiles/{verify_profile_id}`
+`client.VerifyProfiles.Get()` — `GET /verify_profiles/{verify_profile_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the Verify profile to retrieve. |
 
 ```go
-	verifyProfileData, err := client.VerifyProfiles.Get(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
+	verifyProfileData, err := client.VerifyProfiles.Get(context.Background(), "12ade33a-21c0-473b-b055-b3c836e1c292")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update Verify profile
 
-`PATCH /verify_profiles/{verify_profile_id}`
+`client.VerifyProfiles.Update()` — `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the Verify profile to update. |
+| `WebhookUrl` | string (URL) | No |  |
+| `WebhookFailoverUrl` | string (URL) | No |  |
+| `Name` | string | No |  |
+| ... | | | +5 optional params in the API Details section below |
 
 ```go
 	verifyProfileData, err := client.VerifyProfiles.Update(
-		context.TODO(),
+		context.Background(),
 		"12ade33a-21c0-473b-b055-b3c836e1c292",
 		telnyx.VerifyProfileUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete Verify profile
 
-`DELETE /verify_profiles/{verify_profile_id}`
+`client.VerifyProfiles.Delete()` — `DELETE /verify_profiles/{verify_profile_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `VerifyProfileId` | string (UUID) | Yes | The identifier of the Verify profile to delete. |
 
 ```go
-	verifyProfileData, err := client.VerifyProfiles.Delete(context.TODO(), "12ade33a-21c0-473b-b055-b3c836e1c292")
+	verifyProfileData, err := client.VerifyProfiles.Delete(context.Background(), "12ade33a-21c0-473b-b055-b3c836e1c292")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
+
+---
+
+# Verify (Go) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** Lookup phone number data
+
+| Field | Type |
+|-------|------|
+| `caller_name` | object |
+| `carrier` | object |
+| `country_code` | string |
+| `fraud` | string \| null |
+| `national_format` | string |
+| `phone_number` | string |
+| `portability` | object |
+| `record_type` | string |
+
+**Returned by:** List verifications by phone number, Trigger Call verification, Trigger Flash call verification, Trigger SMS verification, Retrieve verification
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `custom_code` | string \| null |
+| `id` | uuid |
+| `phone_number` | string |
+| `record_type` | enum: verification |
+| `status` | enum: pending, accepted, invalid, expired, error |
+| `timeout_secs` | integer |
+| `type` | enum: sms, call, flashcall |
+| `updated_at` | string |
+| `verify_profile_id` | uuid |
+
+**Returned by:** Verify verification code by phone number, Verify verification code by ID
+
+| Field | Type |
+|-------|------|
+| `phone_number` | string |
+| `response_code` | enum: accepted, rejected |
+
+**Returned by:** List all Verify profiles, Create a Verify profile, Retrieve Verify profile, Update Verify profile, Delete Verify profile
+
+| Field | Type |
+|-------|------|
+| `call` | object |
+| `created_at` | string |
+| `flashcall` | object |
+| `id` | uuid |
+| `language` | string |
+| `name` | string |
+| `rcs` | object |
+| `record_type` | enum: verification_profile |
+| `sms` | object |
+| `updated_at` | string |
+| `webhook_failover_url` | string |
+| `webhook_url` | string |
+
+**Returned by:** Retrieve Verify profile message templates, Create message template, Update message template
+
+| Field | Type |
+|-------|------|
+| `id` | uuid |
+| `text` | string |
+
+## Optional Parameters
+
+### Trigger Call verification — `client.Verifications.TriggerCall()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CustomCode` | string | Send a self-generated numeric code to the end-user |
+| `TimeoutSecs` | integer | The number of seconds the verification code is valid for. |
+| `Extension` | string | Optional extension to dial after call is answered using DTMF digits. |
+
+### Trigger Flash call verification — `client.Verifications.TriggerFlashcall()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `TimeoutSecs` | integer | The number of seconds the verification code is valid for. |
+
+### Trigger SMS verification — `client.Verifications.TriggerSMS()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CustomCode` | string | Send a self-generated numeric code to the end-user |
+| `TimeoutSecs` | integer | The number of seconds the verification code is valid for. |
+
+### Verify verification code by ID — `client.Verifications.Actions.Verify()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Code` | string | This is the code the user submits for verification. |
+| `Status` | enum (accepted, rejected) | Identifies if the verification code has been accepted or rejected. |
+
+### Create a Verify profile — `client.VerifyProfiles.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `WebhookUrl` | string (URL) |  |
+| `WebhookFailoverUrl` | string (URL) |  |
+| `Sms` | object |  |
+| `Call` | object |  |
+| `Flashcall` | object |  |
+| `Language` | string |  |
+| `Rcs` | object |  |
+
+### Update Verify profile — `client.VerifyProfiles.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Name` | string |  |
+| `WebhookUrl` | string (URL) |  |
+| `WebhookFailoverUrl` | string (URL) |  |
+| `Sms` | object |  |
+| `Call` | object |  |
+| `Flashcall` | object |  |
+| `Language` | string |  |
+| `Rcs` | object |  |

@@ -1,9 +1,8 @@
 ---
 name: telnyx-messaging-profiles-python
 description: >-
-  Create and manage messaging profiles with number pools, sticky sender, and
-  geomatch features. Configure short codes for high-volume messaging. This skill
-  provides Python SDK examples.
+  Messaging profiles: number pools, sticky sender, geomatch, short codes.
+  Controls routing and webhook config for messaging.
 metadata:
   author: telnyx
   product: messaging-profiles
@@ -14,6 +13,29 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Messaging Profiles - Python
+
+## Core Workflow
+
+### Prerequisites
+
+1. Buy phone number(s) to assign to the profile (see telnyx-numbers-python)
+
+### Steps
+
+1. **Create profile**: `client.messaging_profiles.create(name=..., whitelisted_destinations=[...])`
+2. **Configure webhooks**: `client.messaging_profiles.update(id=..., webhook_url=..., webhook_failover_url=...)`
+3. **Assign numbers**: `client.phone_numbers.messaging.update(id=..., messaging_profile_id=...)`
+4. **(Optional) Enable number pool**: `client.messaging_profiles.update(id=..., number_pool_settings={...})`
+
+### Common mistakes
+
+- NEVER omit whitelisted_destinations — messages fail if the destination country is not whitelisted
+- NEVER send messages with a disabled messaging profile — error 40312
+- NEVER forget to assign numbers to the profile — the from number will be rejected
+- Number pool requires number_pool_settings to be set AND multiple numbers assigned
+- Setting messaging_profile_id to empty string unassigns the number — use null/omit to keep current value
+
+**Related skills**: telnyx-messaging-python, telnyx-numbers-python, telnyx-10dlc-python
 
 ## Installation
 
@@ -43,7 +65,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.messaging_profiles.create(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -64,23 +86,20 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
-## List messaging profiles
-
-`GET /messaging_profiles`
-
-```python
-page = client.messaging_profiles.list()
-page = page.data[0]
-print(page.id)
-```
-
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
 
 ## Create a messaging profile
 
-`POST /messaging_profiles` — Required: `name`, `whitelisted_destinations`
+`client.messaging_profiles.create()` — `POST /messaging_profiles`
 
-Optional: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `number_pool_settings` (object | null), `resource_group_id` (string | null), `smart_encoding` (boolean), `url_shortener_settings` (object | null), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | A user friendly name for the messaging profile. |
+| `whitelisted_destinations` | array[string] | Yes | Destinations to which the messaging profile is allowed to se... |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this messaging profile wil... |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this messaging pr... |
+| `webhook_api_version` | enum (1, 2, 2010-04-01) | No | Determines which webhook format will be used, Telnyx API v1,... |
+| ... | | | +13 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 messaging_profile = client.messaging_profiles.create(
@@ -90,11 +109,34 @@ messaging_profile = client.messaging_profiles.create(
 print(messaging_profile.data)
 ```
 
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
+
+## List messaging profiles
+
+`client.messaging_profiles.list()` — `GET /messaging_profiles`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter[name][eq]` | string | No | Filter profiles by exact name match. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```python
+page = client.messaging_profiles.list()
+page = page.data[0]
+print(page.id)
+```
+
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve a messaging profile
 
-`GET /messaging_profiles/{id}`
+`client.messaging_profiles.retrieve()` — `GET /messaging_profiles/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the messaging profile to retrieve |
 
 ```python
 messaging_profile = client.messaging_profiles.retrieve(
@@ -103,13 +145,19 @@ messaging_profile = client.messaging_profiles.retrieve(
 print(messaging_profile.data)
 ```
 
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a messaging profile
 
-`PATCH /messaging_profiles/{id}`
+`client.messaging_profiles.update()` — `PATCH /messaging_profiles/{id}`
 
-Optional: `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `record_type` (enum: messaging_profile), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the messaging profile to retrieve |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this messaging profile wil... |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this messaging pr... |
+| `record_type` | enum (messaging_profile) | No | Identifies the type of the resource. |
+| ... | | | +17 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 messaging_profile = client.messaging_profiles.update(
@@ -118,24 +166,16 @@ messaging_profile = client.messaging_profiles.update(
 print(messaging_profile.data)
 ```
 
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
-
-## Delete a messaging profile
-
-`DELETE /messaging_profiles/{id}`
-
-```python
-messaging_profile = client.messaging_profiles.delete(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(messaging_profile.data)
-```
-
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List phone numbers associated with a messaging profile
 
-`GET /messaging_profiles/{id}/phone_numbers`
+`client.messaging_profiles.list_phone_numbers()` — `GET /messaging_profiles/{id}/phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the messaging profile to retrieve |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.messaging_profiles.list_phone_numbers(
@@ -145,11 +185,33 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.phone_number, response.data.type`
+
+## Delete a messaging profile
+
+`client.messaging_profiles.delete()` — `DELETE /messaging_profiles/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the messaging profile to retrieve |
+
+```python
+messaging_profile = client.messaging_profiles.delete(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(messaging_profile.data)
+```
+
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List short codes associated with a messaging profile
 
-`GET /messaging_profiles/{id}/short_codes`
+`client.messaging_profiles.list_short_codes()` — `GET /messaging_profiles/{id}/short_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the messaging profile to retrieve |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.messaging_profiles.list_short_codes(
@@ -159,11 +221,16 @@ page = page.data[0]
 print(page.messaging_profile_id)
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (string | null), `record_type` (enum: short_code), `short_code` (string), `tags` (array), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.messaging_profile_id, response.data.created_at`
 
 ## List short codes
 
-`GET /short_codes`
+`client.short_codes.list()` — `GET /short_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.short_codes.list()
@@ -171,11 +238,15 @@ page = page.data[0]
 print(page.messaging_profile_id)
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (string | null), `record_type` (enum: short_code), `short_code` (string), `tags` (array), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.messaging_profile_id, response.data.created_at`
 
 ## Retrieve a short code
 
-`GET /short_codes/{id}`
+`client.short_codes.retrieve()` — `GET /short_codes/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the short code |
 
 ```python
 short_code = client.short_codes.retrieve(
@@ -184,15 +255,19 @@ short_code = client.short_codes.retrieve(
 print(short_code.data)
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (string | null), `record_type` (enum: short_code), `short_code` (string), `tags` (array), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.messaging_profile_id, response.data.created_at`
 
 ## Update short code
 
 Update the settings for a specific short code. To unbind a short code from a profile, set the `messaging_profile_id` to `null` or an empty string. To add or update tags, include the tags field as an array of strings.
 
-`PATCH /short_codes/{id}` — Required: `messaging_profile_id`
+`client.short_codes.update()` — `PATCH /short_codes/{id}`
 
-Optional: `tags` (array)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messaging_profile_id` | string (UUID) | Yes | Unique identifier for a messaging profile. |
+| `id` | string (UUID) | Yes | The id of the short code |
+| `tags` | array[string] | No |  |
 
 ```python
 short_code = client.short_codes.update(
@@ -202,4 +277,8 @@ short_code = client.short_codes.update(
 print(short_code.data)
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `id` (uuid), `messaging_profile_id` (string | null), `record_type` (enum: short_code), `short_code` (string), `tags` (array), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.messaging_profile_id, response.data.created_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

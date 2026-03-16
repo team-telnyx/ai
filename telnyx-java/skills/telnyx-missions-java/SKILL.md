@@ -1,9 +1,8 @@
 ---
 name: telnyx-missions-java
 description: >-
-  Create and manage Telnyx Missions — automated workflows, tasks, and
-  sub-resources for AI-driven telecom operations. This skill provides Java SDK
-  examples.
+  Telnyx Missions: automated workflows, tasks, and sub-resources for AI-driven
+  operations.
 metadata:
   author: telnyx
   product: missions
@@ -15,6 +14,24 @@ metadata:
 
 # Telnyx Missions - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. No special setup required — just a Telnyx API key
+
+### Steps
+
+1. **Create mission**: `client.missions().create(params)`
+2. **Add tasks**: `client.missionTasks().create(params)`
+3. **Monitor progress**: `client.missions().retrieve(params)`
+
+### Common mistakes
+
+- Missions orchestrate multi-step AI workflows — each task runs independently
+
+**Related skills**: telnyx-ai-assistants-java, telnyx-ai-inference-java
+
 ## Installation
 
 ```text
@@ -22,11 +39,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -49,7 +66,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.missions().create(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -69,11 +86,18 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List missions
 
 List all missions for the organization
 
-`GET /ai/missions`
+`client.ai().missions().list()` — `GET /ai/missions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionListPage;
@@ -82,33 +106,45 @@ import com.telnyx.sdk.models.ai.missions.MissionListParams;
 MissionListPage page = client.ai().missions().list();
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Create mission
 
 Create a new mission definition
 
-`POST /ai/missions` — Required: `name`
+`client.ai().missions().create()` — `POST /ai/missions`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes |  |
+| `executionMode` | enum (external, managed) | No |  |
+| `description` | string | No |  |
+| `model` | string | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionCreateParams;
 import com.telnyx.sdk.models.ai.missions.MissionCreateResponse;
 
 MissionCreateParams params = MissionCreateParams.builder()
-    .name("name")
+    .name("my-resource")
     .build();
 MissionCreateResponse mission = client.ai().missions().create(params);
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## List recent events
 
 List recent events across all missions
 
-`GET /ai/missions/events`
+`client.ai().missions().listEvents()` — `GET /ai/missions/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionListEventsPage;
@@ -117,13 +153,19 @@ import com.telnyx.sdk.models.ai.missions.MissionListEventsParams;
 MissionListEventsPage page = client.ai().missions().listEvents();
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## List recent runs
 
 List recent runs across all missions
 
-`GET /ai/missions/runs`
+`client.ai().missions().runs().listRuns()` — `GET /ai/missions/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunListRunsPage;
@@ -132,13 +174,17 @@ import com.telnyx.sdk.models.ai.missions.runs.RunListRunsParams;
 RunListRunsPage page = client.ai().missions().runs().listRuns();
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get mission
 
 Get a mission by ID (includes tools, knowledge_bases, mcp_servers)
 
-`GET /ai/missions/{mission_id}`
+`client.ai().missions().retrieve()` — `GET /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionRetrieveParams;
@@ -147,15 +193,21 @@ import com.telnyx.sdk.models.ai.missions.MissionRetrieveResponse;
 MissionRetrieveResponse mission = client.ai().missions().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update mission
 
 Update a mission definition
 
-`PUT /ai/missions/{mission_id}`
+`client.ai().missions().updateMission()` — `PUT /ai/missions/{mission_id}`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `executionMode` | enum (external, managed) | No |  |
+| `name` | string | No |  |
+| `description` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionUpdateMissionParams;
@@ -164,13 +216,17 @@ import com.telnyx.sdk.models.ai.missions.MissionUpdateMissionResponse;
 MissionUpdateMissionResponse response = client.ai().missions().updateMission("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete mission
 
 Delete a mission
 
-`DELETE /ai/missions/{mission_id}`
+`client.ai().missions().deleteMission()` — `DELETE /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionDeleteMissionParams;
@@ -182,54 +238,71 @@ client.ai().missions().deleteMission("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 
 Clone an existing mission
 
-`POST /ai/missions/{mission_id}/clone`
+`client.ai().missions().cloneMission()` — `POST /ai/missions/{mission_id}/clone`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.MissionCloneMissionParams;
 import com.telnyx.sdk.models.ai.missions.MissionCloneMissionResponse;
 
-MissionCloneMissionResponse response = client.ai().missions().cloneMission("mission_id");
+MissionCloneMissionResponse response = client.ai().missions().cloneMission("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## List knowledge bases
 
 List all knowledge bases for a mission
 
-`GET /ai/missions/{mission_id}/knowledge-bases`
+`client.ai().missions().knowledgeBases().listKnowledgeBases()` — `GET /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseListKnowledgeBasesParams;
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseListKnowledgeBasesResponse;
 
-KnowledgeBaseListKnowledgeBasesResponse response = client.ai().missions().knowledgeBases().listKnowledgeBases("mission_id");
+KnowledgeBaseListKnowledgeBasesResponse response = client.ai().missions().knowledgeBases().listKnowledgeBases("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Create knowledge base
 
 Create a new knowledge base for a mission
 
-`POST /ai/missions/{mission_id}/knowledge-bases`
+`client.ai().missions().knowledgeBases().createKnowledgeBase()` — `POST /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseCreateKnowledgeBaseParams;
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseCreateKnowledgeBaseResponse;
 
-KnowledgeBaseCreateKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().createKnowledgeBase("mission_id");
+KnowledgeBaseCreateKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().createKnowledgeBase("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Get knowledge base
 
 Get a specific knowledge base by ID
 
-`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai().missions().knowledgeBases().getKnowledgeBase()` — `GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseGetKnowledgeBaseParams;
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseGetKnowledgeBaseResponse;
 
 KnowledgeBaseGetKnowledgeBaseParams params = KnowledgeBaseGetKnowledgeBaseParams.builder()
-    .missionId("mission_id")
-    .knowledgeBaseId("knowledge_base_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .knowledgeBaseId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 KnowledgeBaseGetKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().getKnowledgeBase(params);
 ```
@@ -238,15 +311,20 @@ KnowledgeBaseGetKnowledgeBaseResponse response = client.ai().missions().knowledg
 
 Update a knowledge base definition
 
-`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai().missions().knowledgeBases().updateKnowledgeBase()` — `PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseUpdateKnowledgeBaseParams;
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseUpdateKnowledgeBaseResponse;
 
 KnowledgeBaseUpdateKnowledgeBaseParams params = KnowledgeBaseUpdateKnowledgeBaseParams.builder()
-    .missionId("mission_id")
-    .knowledgeBaseId("knowledge_base_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .knowledgeBaseId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 KnowledgeBaseUpdateKnowledgeBaseResponse response = client.ai().missions().knowledgeBases().updateKnowledgeBase(params);
 ```
@@ -255,14 +333,19 @@ KnowledgeBaseUpdateKnowledgeBaseResponse response = client.ai().missions().knowl
 
 Delete a knowledge base from a mission
 
-`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.ai().missions().knowledgeBases().deleteKnowledgeBase()` — `DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `knowledgeBaseId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.knowledgebases.KnowledgeBaseDeleteKnowledgeBaseParams;
 
 KnowledgeBaseDeleteKnowledgeBaseParams params = KnowledgeBaseDeleteKnowledgeBaseParams.builder()
-    .missionId("mission_id")
-    .knowledgeBaseId("knowledge_base_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .knowledgeBaseId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 client.ai().missions().knowledgeBases().deleteKnowledgeBase(params);
 ```
@@ -271,41 +354,54 @@ client.ai().missions().knowledgeBases().deleteKnowledgeBase(params);
 
 List all MCP servers for a mission
 
-`GET /ai/missions/{mission_id}/mcp-servers`
+`client.ai().missions().mcpServers().listMcpServers()` — `GET /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerListMcpServersParams;
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerListMcpServersResponse;
 
-McpServerListMcpServersResponse response = client.ai().missions().mcpServers().listMcpServers("mission_id");
+McpServerListMcpServersResponse response = client.ai().missions().mcpServers().listMcpServers("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Create MCP server
 
 Create a new MCP server for a mission
 
-`POST /ai/missions/{mission_id}/mcp-servers`
+`client.ai().missions().mcpServers().createMcpServer()` — `POST /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerCreateMcpServerParams;
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerCreateMcpServerResponse;
 
-McpServerCreateMcpServerResponse response = client.ai().missions().mcpServers().createMcpServer("mission_id");
+McpServerCreateMcpServerResponse response = client.ai().missions().mcpServers().createMcpServer("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Get MCP server
 
 Get a specific MCP server by ID
 
-`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai().missions().mcpServers().getMcpServer()` — `GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerGetMcpServerParams;
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerGetMcpServerResponse;
 
 McpServerGetMcpServerParams params = McpServerGetMcpServerParams.builder()
-    .missionId("mission_id")
-    .mcpServerId("mcp_server_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .mcpServerId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 McpServerGetMcpServerResponse response = client.ai().missions().mcpServers().getMcpServer(params);
 ```
@@ -314,15 +410,20 @@ McpServerGetMcpServerResponse response = client.ai().missions().mcpServers().get
 
 Update an MCP server definition
 
-`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai().missions().mcpServers().updateMcpServer()` — `PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerUpdateMcpServerParams;
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerUpdateMcpServerResponse;
 
 McpServerUpdateMcpServerParams params = McpServerUpdateMcpServerParams.builder()
-    .missionId("mission_id")
-    .mcpServerId("mcp_server_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .mcpServerId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 McpServerUpdateMcpServerResponse response = client.ai().missions().mcpServers().updateMcpServer(params);
 ```
@@ -331,14 +432,19 @@ McpServerUpdateMcpServerResponse response = client.ai().missions().mcpServers().
 
 Delete an MCP server from a mission
 
-`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.ai().missions().mcpServers().deleteMcpServer()` — `DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `mcpServerId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.mcpservers.McpServerDeleteMcpServerParams;
 
 McpServerDeleteMcpServerParams params = McpServerDeleteMcpServerParams.builder()
-    .missionId("mission_id")
-    .mcpServerId("mcp_server_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .mcpServerId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 client.ai().missions().mcpServers().deleteMcpServer(params);
 ```
@@ -347,7 +453,14 @@ client.ai().missions().mcpServers().deleteMcpServer(params);
 
 List all runs for a specific mission
 
-`GET /ai/missions/{mission_id}/runs`
+`client.ai().missions().runs().list()` — `GET /ai/missions/{mission_id}/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `status` | string | No |  |
+| `page[number]` | integer | No | Page number (1-based) |
+| `page[size]` | integer | No | Number of items per page |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunListPage;
@@ -356,15 +469,19 @@ import com.telnyx.sdk.models.ai.missions.runs.RunListParams;
 RunListPage page = client.ai().missions().runs().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Start a run
 
 Start a new run for a mission
 
-`POST /ai/missions/{mission_id}/runs`
+`client.ai().missions().runs().create()` — `POST /ai/missions/{mission_id}/runs`
 
-Optional: `input` (object), `metadata` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `input` | object | No |  |
+| `metadata` | object | No |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunCreateParams;
@@ -373,13 +490,18 @@ import com.telnyx.sdk.models.ai.missions.runs.RunCreateResponse;
 RunCreateResponse run = client.ai().missions().runs().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get run details
 
 Get details of a specific run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}`
+`client.ai().missions().runs().retrieve()` — `GET /ai/missions/{mission_id}/runs/{run_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunRetrieveParams;
@@ -392,15 +514,22 @@ RunRetrieveParams params = RunRetrieveParams.builder()
 RunRetrieveResponse run = client.ai().missions().runs().retrieve(params);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Update run
 
 Update run status and/or result
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}`
+`client.ai().missions().runs().update()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}`
 
-Optional: `error` (string), `metadata` (object), `result_payload` (object), `result_summary` (string), `status` (enum: pending, running, paused, succeeded, failed, cancelled)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `status` | enum (pending, running, paused, succeeded, failed, ...) | No |  |
+| `resultSummary` | string | No |  |
+| `resultPayload` | object | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunUpdateParams;
@@ -413,13 +542,18 @@ RunUpdateParams params = RunUpdateParams.builder()
 RunUpdateResponse run = client.ai().missions().runs().update(params);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Cancel run
 
 Cancel a running or paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+`client.ai().missions().runs().cancelRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunCancelRunParams;
@@ -432,13 +566,22 @@ RunCancelRunParams params = RunCancelRunParams.builder()
 RunCancelRunResponse response = client.ai().missions().runs().cancelRun(params);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List events
 
 List events for a run (paginated)
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events`
+`client.ai().missions().runs().events().list()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `type` | string | No |  |
+| `stepId` | string (UUID) | No |  |
+| `agentId` | string (UUID) | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.events.EventListPage;
@@ -451,15 +594,24 @@ EventListParams params = EventListParams.builder()
 EventListPage page = client.ai().missions().runs().events().list(params);
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Log event
 
 Log an event for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/events` — Required: `type`, `summary`
+`client.ai().missions().runs().events().log()` — `POST /ai/missions/{mission_id}/runs/{run_id}/events`
 
-Optional: `agent_id` (string), `idempotency_key` (string), `payload` (object), `step_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | enum (status_change, step_started, step_completed, step_failed, tool_call, ...) | Yes |  |
+| `summary` | string | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | No |  |
+| `agentId` | string (UUID) | No |  |
+| `payload` | object | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.events.EventLogParams;
@@ -468,19 +620,25 @@ import com.telnyx.sdk.models.ai.missions.runs.events.EventLogResponse;
 EventLogParams params = EventLogParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .summary("summary")
+    .summary("Brief task summary")
     .type(EventLogParams.Type.STATUS_CHANGE)
     .build();
 EventLogResponse response = client.ai().missions().runs().events().log(params);
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Get event details
 
 Get details of a specific event
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+`client.ai().missions().runs().events().getEventDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `eventId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.events.EventGetEventDetailsParams;
@@ -489,18 +647,23 @@ import com.telnyx.sdk.models.ai.missions.runs.events.EventGetEventDetailsRespons
 EventGetEventDetailsParams params = EventGetEventDetailsParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .eventId("event_id")
+    .eventId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 EventGetEventDetailsResponse response = client.ai().missions().runs().events().getEventDetails(params);
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Pause run
 
 Pause a running run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+`client.ai().missions().runs().pauseRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunPauseRunParams;
@@ -513,13 +676,18 @@ RunPauseRunParams params = RunPauseRunParams.builder()
 RunPauseRunResponse response = client.ai().missions().runs().pauseRun(params);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get plan
 
 Get the plan (all steps) for a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+`client.ai().missions().runs().plan().retrieve()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.plan.PlanRetrieveParams;
@@ -532,13 +700,19 @@ PlanRetrieveParams params = PlanRetrieveParams.builder()
 PlanRetrieveResponse plan = client.ai().missions().runs().plan().retrieve(params);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Create initial plan
 
 Create the initial plan for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan` — Required: `steps`
+`client.ai().missions().runs().plan().create()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `steps` | array[object] | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.plan.PlanCreateParams;
@@ -550,19 +724,25 @@ PlanCreateParams params = PlanCreateParams.builder()
     .addStep(PlanCreateParams.Step.builder()
         .description("description")
         .sequence(0L)
-        .stepId("step_id")
+        .stepId("550e8400-e29b-41d4-a716-446655440000")
         .build())
     .build();
 PlanCreateResponse plan = client.ai().missions().runs().plan().create(params);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Add step(s) to plan
 
 Add one or more steps to an existing plan
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps` — Required: `steps`
+`client.ai().missions().runs().plan().addStepsToPlan()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `steps` | array[object] | Yes |  |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.plan.PlanAddStepsToPlanParams;
@@ -574,19 +754,25 @@ PlanAddStepsToPlanParams params = PlanAddStepsToPlanParams.builder()
     .addStep(PlanAddStepsToPlanParams.Step.builder()
         .description("description")
         .sequence(0L)
-        .stepId("step_id")
+        .stepId("550e8400-e29b-41d4-a716-446655440000")
         .build())
     .build();
 PlanAddStepsToPlanResponse response = client.ai().missions().runs().plan().addStepsToPlan(params);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Get step details
 
 Get details of a specific plan step
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.ai().missions().runs().plan().getStepDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.plan.PlanGetStepDetailsParams;
@@ -595,20 +781,26 @@ import com.telnyx.sdk.models.ai.missions.runs.plan.PlanGetStepDetailsResponse;
 PlanGetStepDetailsParams params = PlanGetStepDetailsParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .stepId("step_id")
+    .stepId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 PlanGetStepDetailsResponse response = client.ai().missions().runs().plan().getStepDetails(params);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Update step status
 
 Update the status of a plan step
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.ai().missions().runs().plan().updateStep()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
 
-Optional: `metadata` (object), `status` (enum: pending, in_progress, completed, skipped, failed)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `stepId` | string (UUID) | Yes |  |
+| `status` | enum (pending, in_progress, completed, skipped, failed) | No |  |
+| `metadata` | object | No |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.plan.PlanUpdateStepParams;
@@ -617,18 +809,23 @@ import com.telnyx.sdk.models.ai.missions.runs.plan.PlanUpdateStepResponse;
 PlanUpdateStepParams params = PlanUpdateStepParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .stepId("step_id")
+    .stepId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 PlanUpdateStepResponse response = client.ai().missions().runs().plan().updateStep(params);
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Resume run
 
 Resume a paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+`client.ai().missions().runs().resumeRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.RunResumeRunParams;
@@ -641,13 +838,18 @@ RunResumeRunParams params = RunResumeRunParams.builder()
 RunResumeRunResponse response = client.ai().missions().runs().resumeRun(params);
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List linked Telnyx agents
 
 List all Telnyx agents linked to a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+`client.ai().missions().runs().telnyxAgents().list()` — `GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.telnyxagents.TelnyxAgentListParams;
@@ -660,13 +862,19 @@ TelnyxAgentListParams params = TelnyxAgentListParams.builder()
 TelnyxAgentListResponse telnyxAgents = client.ai().missions().runs().telnyxAgents().list(params);
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Link Telnyx agent to run
 
 Link a Telnyx AI agent (voice/messaging) to a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents` — Required: `telnyx_agent_id`
+`client.ai().missions().runs().telnyxAgents().link()` — `POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `telnyxAgentId` | string (UUID) | Yes | The Telnyx AI agent ID to link |
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.telnyxagents.TelnyxAgentLinkParams;
@@ -675,18 +883,24 @@ import com.telnyx.sdk.models.ai.missions.runs.telnyxagents.TelnyxAgentLinkRespon
 TelnyxAgentLinkParams params = TelnyxAgentLinkParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .telnyxAgentId("telnyx_agent_id")
+    .telnyxAgentId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 TelnyxAgentLinkResponse response = client.ai().missions().runs().telnyxAgents().link(params);
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Unlink Telnyx agent
 
 Unlink a Telnyx agent from a run
 
-`DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+`client.ai().missions().runs().telnyxAgents().unlink()` — `DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `runId` | string (UUID) | Yes |  |
+| `telnyxAgentId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.runs.telnyxagents.TelnyxAgentUnlinkParams;
@@ -694,7 +908,7 @@ import com.telnyx.sdk.models.ai.missions.runs.telnyxagents.TelnyxAgentUnlinkPara
 TelnyxAgentUnlinkParams params = TelnyxAgentUnlinkParams.builder()
     .missionId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .runId("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-    .telnyxAgentId("telnyx_agent_id")
+    .telnyxAgentId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 client.ai().missions().runs().telnyxAgents().unlink(params);
 ```
@@ -703,41 +917,54 @@ client.ai().missions().runs().telnyxAgents().unlink(params);
 
 List all tools for a mission
 
-`GET /ai/missions/{mission_id}/tools`
+`client.ai().missions().tools().listTools()` — `GET /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.tools.ToolListToolsParams;
 import com.telnyx.sdk.models.ai.missions.tools.ToolListToolsResponse;
 
-ToolListToolsResponse response = client.ai().missions().tools().listTools("mission_id");
+ToolListToolsResponse response = client.ai().missions().tools().listTools("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Create tool
 
 Create a new tool for a mission
 
-`POST /ai/missions/{mission_id}/tools`
+`client.ai().missions().tools().createTool()` — `POST /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.tools.ToolCreateToolParams;
 import com.telnyx.sdk.models.ai.missions.tools.ToolCreateToolResponse;
 
-ToolCreateToolResponse response = client.ai().missions().tools().createTool("mission_id");
+ToolCreateToolResponse response = client.ai().missions().tools().createTool("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Get tool
 
 Get a specific tool by ID
 
-`GET /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai().missions().tools().getTool()` — `GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.tools.ToolGetToolParams;
 import com.telnyx.sdk.models.ai.missions.tools.ToolGetToolResponse;
 
 ToolGetToolParams params = ToolGetToolParams.builder()
-    .missionId("mission_id")
-    .toolId("tool_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .toolId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 ToolGetToolResponse response = client.ai().missions().tools().getTool(params);
 ```
@@ -746,15 +973,20 @@ ToolGetToolResponse response = client.ai().missions().tools().getTool(params);
 
 Update a tool definition
 
-`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai().missions().tools().updateTool()` — `PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.tools.ToolUpdateToolParams;
 import com.telnyx.sdk.models.ai.missions.tools.ToolUpdateToolResponse;
 
 ToolUpdateToolParams params = ToolUpdateToolParams.builder()
-    .missionId("mission_id")
-    .toolId("tool_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .toolId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 ToolUpdateToolResponse response = client.ai().missions().tools().updateTool(params);
 ```
@@ -763,14 +995,23 @@ ToolUpdateToolResponse response = client.ai().missions().tools().updateTool(para
 
 Delete a tool from a mission
 
-`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+`client.ai().missions().tools().deleteTool()` — `DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `missionId` | string (UUID) | Yes |  |
+| `toolId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.ai.missions.tools.ToolDeleteToolParams;
 
 ToolDeleteToolParams params = ToolDeleteToolParams.builder()
-    .missionId("mission_id")
-    .toolId("tool_id")
+    .missionId("550e8400-e29b-41d4-a716-446655440000")
+    .toolId("550e8400-e29b-41d4-a716-446655440000")
     .build();
 client.ai().missions().tools().deleteTool(params);
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

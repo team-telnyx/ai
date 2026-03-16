@@ -2,6 +2,31 @@
 
 # Telnyx Porting In - Python
 
+## Core Workflow
+
+### Prerequisites
+
+1. Run portability check on all numbers before creating a port order
+2. Have Letter of Authorization (LOA) and recent invoice from current carrier ready
+3. Pre-create connection_id and/or messaging_profile_id to assign during fulfillment
+
+### Steps
+
+1. **Check portability**: `client.porting.portability_checks.create(phone_numbers=[...])`
+2. **Create draft order**: `client.porting.orders.create(phone_numbers=[...]) — auto-splits by country/type/carrier`
+3. **Fulfill each split order**: `Upload LOA, invoice, end-user info, service address`
+4. **Submit order**: `Transitions from draft to in-process`
+5. **Monitor via webhooks**: `porting_order.status_changed, porting_order.new_comment`
+
+### Common mistakes
+
+- NEVER skip portability check — non-portable numbers cause downstream failures
+- NEVER treat auto-split orders as a single entity — each split requires independent completion
+- NEVER assume requested FOC date is guaranteed — the losing carrier determines the actual date
+- ALWAYS monitor for Porting Operations comments — unanswered info requests kill the port
+
+**Related skills**: telnyx-numbers-python, telnyx-numbers-config-python, telnyx-voice-python, telnyx-messaging-python
+
 ## Installation
 
 ```bash
@@ -30,7 +55,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.porting.orders.create(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -52,26 +77,96 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## Run a portability check
 
 Runs a portability check, returning the results immediately.
 
-`POST /portability_checks`
+`client.portability_checks.run()` — `POST /portability_checks`
 
-Optional: `phone_numbers` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | No | The list of +E.164 formatted phone numbers to check for port... |
 
 ```python
-response = client.portability_checks.run()
+response = client.portability_checks.run(
+    phone_numbers=["+18005550101"],
+)
 print(response.data)
 ```
 
-Returns: `fast_portable` (boolean), `not_portable_reason` (string), `phone_number` (string), `portable` (boolean), `record_type` (string)
+Key response fields: `response.data.phone_number, response.data.fast_portable, response.data.not_portable_reason`
+
+## Create a porting order
+
+Creates a new porting order object.
+
+`client.porting_orders.create()` — `POST /porting_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | Yes | The list of +E.164 formatted phone numbers |
+| `customer_reference` | string | No | A customer-specified reference number for customer bookkeepi... |
+| `customer_group_reference` | string | No | A customer-specified group reference for customer bookkeepin... |
+
+```python
+porting_order = client.porting_orders.create(
+    phone_numbers=["+13035550000", "+13035550001", "+13035550002"],
+)
+print(porting_order.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Retrieve a porting order
+
+Retrieves the details of an existing porting order.
+
+`client.porting_orders.retrieve()` — `GET /porting_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `include_phone_numbers` | boolean | No | Include the first 50 phone number objects in the results |
+
+```python
+porting_order = client.porting_orders.retrieve(
+    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(porting_order.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Submit a porting order.
+
+Confirm and submit your porting order.
+
+`client.porting_orders.actions.confirm()` — `POST /porting_orders/{id}/actions/confirm`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+
+```python
+response = client.porting_orders.actions.confirm(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(response.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all porting events
 
 Returns a list of all porting events.
 
-`GET /porting/events`
+`client.porting.events.list()` — `GET /porting/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```python
 page = client.porting.events.list()
@@ -79,13 +174,17 @@ page = page.data[0]
 print(page)
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.available_notification_methods, response.data.event_type`
 
 ## Show a porting event
 
 Show a specific porting event.
 
-`GET /porting/events/{id}`
+`client.porting.events.retrieve()` — `GET /porting/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the porting event. |
 
 ```python
 event = client.porting.events.retrieve(
@@ -94,13 +193,17 @@ event = client.porting.events.retrieve(
 print(event.data)
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.available_notification_methods, response.data.event_type`
 
 ## Republish a porting event
 
 Republish a specific porting event.
 
-`POST /porting/events/{id}/republish`
+`client.porting.events.republish()` — `POST /porting/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the porting event. |
 
 ```python
 client.porting.events.republish(
@@ -112,7 +215,7 @@ client.porting.events.republish(
 
 Preview the LOA template that would be generated without need to create LOA configuration.
 
-`POST /porting/loa_configuration/preview`
+`client.porting.loa_configurations.preview_0()` — `POST /porting/loa_configuration/preview`
 
 ```python
 response = client.porting.loa_configurations.preview_0(
@@ -142,7 +245,11 @@ print(content)
 
 List the LOA configurations.
 
-`GET /porting/loa_configurations`
+`client.porting.loa_configurations.list()` — `GET /porting/loa_configurations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.porting.loa_configurations.list()
@@ -150,13 +257,13 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a LOA configuration
 
 Create a LOA configuration.
 
-`POST /porting/loa_configurations`
+`client.porting.loa_configurations.create()` — `POST /porting/loa_configurations`
 
 ```python
 loa_configuration = client.porting.loa_configurations.create(
@@ -180,13 +287,17 @@ loa_configuration = client.porting.loa_configurations.create(
 print(loa_configuration.data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve a LOA configuration
 
 Retrieve a specific LOA configuration.
 
-`GET /porting/loa_configurations/{id}`
+`client.porting.loa_configurations.retrieve()` — `GET /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```python
 loa_configuration = client.porting.loa_configurations.retrieve(
@@ -195,13 +306,17 @@ loa_configuration = client.porting.loa_configurations.retrieve(
 print(loa_configuration.data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a LOA configuration
 
 Update a specific LOA configuration.
 
-`PATCH /porting/loa_configurations/{id}`
+`client.porting.loa_configurations.update()` — `PATCH /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```python
 loa_configuration = client.porting.loa_configurations.update(
@@ -226,13 +341,17 @@ loa_configuration = client.porting.loa_configurations.update(
 print(loa_configuration.data)
 ```
 
-Returns: `address` (object), `company_name` (string), `contact` (object), `created_at` (date-time), `id` (uuid), `logo` (object), `name` (string), `organization_id` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a LOA configuration
 
 Delete a specific LOA configuration.
 
-`DELETE /porting/loa_configurations/{id}`
+`client.porting.loa_configurations.delete()` — `DELETE /porting/loa_configurations/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```python
 client.porting.loa_configurations.delete(
@@ -244,7 +363,11 @@ client.porting.loa_configurations.delete(
 
 Preview a specific LOA configuration.
 
-`GET /porting/loa_configurations/{id}/preview`
+`client.porting.loa_configurations.preview_1()` — `GET /porting/loa_configurations/{id}/preview`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a LOA configuration. |
 
 ```python
 response = client.porting.loa_configurations.preview_1(
@@ -259,7 +382,12 @@ print(content)
 
 List the reports generated about porting operations.
 
-`GET /porting/reports`
+`client.porting.reports.list()` — `GET /porting/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```python
 page = client.porting.reports.list()
@@ -267,13 +395,13 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a porting related report
 
 Generate reports about porting operations.
 
-`POST /porting/reports`
+`client.porting.reports.create()` — `POST /porting/reports`
 
 ```python
 report = client.porting.reports.create(
@@ -285,13 +413,17 @@ report = client.porting.reports.create(
 print(report.data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /porting/reports/{id}`
+`client.porting.reports.retrieve()` — `GET /porting/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a report. |
 
 ```python
 report = client.porting.reports.retrieve(
@@ -300,26 +432,33 @@ report = client.porting.reports.retrieve(
 print(report.data)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_porting_orders_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List available carriers in the UK
 
 List available carriers in the UK.
 
-`GET /porting/uk_carriers`
+`client.porting.list_uk_carriers()` — `GET /porting/uk_carriers`
 
 ```python
 response = client.porting.list_uk_carriers()
 print(response.data)
 ```
 
-Returns: `alternative_cupids` (array[string]), `created_at` (date-time), `cupid` (string), `id` (uuid), `name` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List all porting orders
 
 Returns a list of your porting order.
 
-`GET /porting_orders`
+`client.porting_orders.list()` — `GET /porting_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `include_phone_numbers` | boolean | No | Include the first 50 phone number objects in the results |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| ... | | | +1 optional params in the API Details section below |
 
 ```python
 page = client.porting_orders.list()
@@ -327,43 +466,32 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
-
-## Create a porting order
-
-Creates a new porting order object.
-
-`POST /porting_orders` — Required: `phone_numbers`
-
-Optional: `customer_group_reference` (string), `customer_reference` (string | null)
-
-```python
-porting_order = client.porting_orders.create(
-    phone_numbers=["+13035550000", "+13035550001", "+13035550002"],
-)
-print(porting_order.data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all exception types
 
 Returns a list of all possible exception types for a porting order.
 
-`GET /porting_orders/exception_types`
+`client.porting_orders.retrieve_exception_types()` — `GET /porting_orders/exception_types`
 
 ```python
 response = client.porting_orders.retrieve_exception_types()
 print(response.data)
 ```
 
-Returns: `code` (enum: ACCOUNT_NUMBER_MISMATCH, AUTH_PERSON_MISMATCH, BTN_ATN_MISMATCH, ENTITY_NAME_MISMATCH, FOC_EXPIRED, FOC_REJECTED, LOCATION_MISMATCH, LSR_PENDING, MAIN_BTN_PORTING, OSP_IRRESPONSIVE, OTHER, PASSCODE_PIN_INVALID, PHONE_NUMBER_HAS_SPECIAL_FEATURE, PHONE_NUMBER_MISMATCH, PHONE_NUMBER_NOT_PORTABLE, PORT_TYPE_INCORRECT, PORTING_ORDER_SPLIT_REQUIRED, POSTAL_CODE_MISMATCH, RATE_CENTER_NOT_PORTABLE, SV_CONFLICT, SV_UNKNOWN_FAILURE), `description` (string)
+Key response fields: `response.data.code, response.data.description`
 
 ## List all phone number configurations
 
 Returns a list of phone number configurations paginated.
 
-`GET /porting_orders/phone_number_configurations`
+`client.porting_orders.phone_number_configurations.list()` — `GET /porting_orders/phone_number_configurations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.phone_number_configurations.list()
@@ -371,43 +499,34 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time), `user_bundle_id` (uuid)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a list of phone number configurations
 
 Creates a list of phone number configurations.
 
-`POST /porting_orders/phone_number_configurations`
+`client.porting_orders.phone_number_configurations.create()` — `POST /porting_orders/phone_number_configurations`
 
 ```python
 phone_number_configuration = client.porting_orders.phone_number_configurations.create()
 print(phone_number_configuration.data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time), `user_bundle_id` (uuid)
-
-## Retrieve a porting order
-
-Retrieves the details of an existing porting order.
-
-`GET /porting_orders/{id}`
-
-```python
-porting_order = client.porting_orders.retrieve(
-    id="182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(porting_order.data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Edit a porting order
 
 Edits the details of an existing porting order. Any or all of a porting orders attributes may be included in the resource object included in a PATCH request. If a request does not include all of the attributes for a resource, the system will interpret the missing attributes as if they were included with their current values.
 
-`PATCH /porting_orders/{id}`
+`client.porting_orders.update()` — `PATCH /porting_orders/{id}`
 
-Optional: `activation_settings` (object), `customer_group_reference` (string), `customer_reference` (string), `documents` (object), `end_user` (object), `messaging` (object), `misc` (object), `phone_number_configuration` (object), `requirement_group_id` (uuid), `requirements` (array[object]), `user_feedback` (object), `webhook_url` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `webhook_url` | string (URL) | No |  |
+| `requirement_group_id` | string (UUID) | No | If present, we will read the current values from the specifi... |
+| `misc` | object | No |  |
+| ... | | | +9 optional params in the API Details section below |
 
 ```python
 porting_order = client.porting_orders.update(
@@ -416,13 +535,17 @@ porting_order = client.porting_orders.update(
 print(porting_order.data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a porting order
 
 Deletes an existing porting order. This operation is restrict to porting orders in draft state.
 
-`DELETE /porting_orders/{id}`
+`client.porting_orders.delete()` — `DELETE /porting_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 client.porting_orders.delete(
@@ -434,7 +557,11 @@ client.porting_orders.delete(
 
 Activate each number in a porting order asynchronously. This operation is limited to US FastPort orders only.
 
-`POST /porting_orders/{id}/actions/activate`
+`client.porting_orders.actions.activate()` — `POST /porting_orders/{id}/actions/activate`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.actions.activate(
@@ -443,11 +570,15 @@ response = client.porting_orders.actions.activate(
 print(response.data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Cancel a porting order
 
-`POST /porting_orders/{id}/actions/cancel`
+`client.porting_orders.actions.cancel()` — `POST /porting_orders/{id}/actions/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.actions.cancel(
@@ -456,28 +587,17 @@ response = client.porting_orders.actions.cancel(
 print(response.data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
-
-## Submit a porting order.
-
-Confirm and submit your porting order.
-
-`POST /porting_orders/{id}/actions/confirm`
-
-```python
-response = client.porting_orders.actions.confirm(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(response.data)
-```
-
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Share a porting order
 
 Creates a sharing token for a porting order. The token can be used to share the porting order with non-Telnyx users.
 
-`POST /porting_orders/{id}/actions/share`
+`client.porting_orders.actions.share()` — `POST /porting_orders/{id}/actions/share`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.actions.share(
@@ -486,13 +606,18 @@ response = client.porting_orders.actions.share(
 print(response.data)
 ```
 
-Returns: `created_at` (date-time), `expires_at` (date-time), `expires_in_seconds` (integer), `id` (uuid), `permissions` (array[string]), `porting_order_id` (uuid), `record_type` (string), `token` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.expires_at`
 
 ## List all porting activation jobs
 
 Returns a list of your porting activation jobs.
 
-`GET /porting_orders/{id}/activation_jobs`
+`client.porting_orders.activation_jobs.list()` — `GET /porting_orders/{id}/activation_jobs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.activation_jobs.list(
@@ -502,13 +627,18 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a porting activation job
 
 Returns a porting activation job.
 
-`GET /porting_orders/{id}/activation_jobs/{activationJobId}`
+`client.porting_orders.activation_jobs.retrieve()` — `GET /porting_orders/{id}/activation_jobs/{activationJobId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `activation_job_id` | string (UUID) | Yes | Activation Job Identifier |
 
 ```python
 activation_job = client.porting_orders.activation_jobs.retrieve(
@@ -518,13 +648,18 @@ activation_job = client.porting_orders.activation_jobs.retrieve(
 print(activation_job.data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Update a porting activation job
 
 Updates the activation time of a porting activation job.
 
-`PATCH /porting_orders/{id}/activation_jobs/{activationJobId}`
+`client.porting_orders.activation_jobs.update()` — `PATCH /porting_orders/{id}/activation_jobs/{activationJobId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `activation_job_id` | string (UUID) | Yes | Activation Job Identifier |
 
 ```python
 activation_job = client.porting_orders.activation_jobs.update(
@@ -534,13 +669,20 @@ activation_job = client.porting_orders.activation_jobs.update(
 print(activation_job.data)
 ```
 
-Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-demand), `activation_windows` (array[object]), `created_at` (date-time), `id` (uuid), `record_type` (string), `status` (enum: created, in-process, completed, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List additional documents
 
 Returns a list of additional documents for a porting order.
 
-`GET /porting_orders/{id}/additional_documents`
+`client.porting_orders.additional_documents.list()` — `GET /porting_orders/{id}/additional_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.additional_documents.list(
@@ -550,13 +692,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `content_type` (string), `created_at` (date-time), `document_id` (uuid), `document_type` (enum: loa, invoice, csr, other), `filename` (string), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a list of additional documents
 
 Creates a list of additional documents for a porting order.
 
-`POST /porting_orders/{id}/additional_documents`
+`client.porting_orders.additional_documents.create()` — `POST /porting_orders/{id}/additional_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 additional_document = client.porting_orders.additional_documents.create(
@@ -565,13 +711,18 @@ additional_document = client.porting_orders.additional_documents.create(
 print(additional_document.data)
 ```
 
-Returns: `content_type` (string), `created_at` (date-time), `document_id` (uuid), `document_type` (enum: loa, invoice, csr, other), `filename` (string), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an additional document
 
 Deletes an additional document for a porting order.
 
-`DELETE /porting_orders/{id}/additional_documents/{additional_document_id}`
+`client.porting_orders.additional_documents.delete()` — `DELETE /porting_orders/{id}/additional_documents/{additional_document_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `additional_document_id` | string (UUID) | Yes | Additional document identification. |
 
 ```python
 client.porting_orders.additional_documents.delete(
@@ -584,7 +735,11 @@ client.porting_orders.additional_documents.delete(
 
 Returns a list of allowed FOC dates for a porting order.
 
-`GET /porting_orders/{id}/allowed_foc_windows`
+`client.porting_orders.retrieve_allowed_foc_windows()` — `GET /porting_orders/{id}/allowed_foc_windows`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.retrieve_allowed_foc_windows(
@@ -593,13 +748,18 @@ response = client.porting_orders.retrieve_allowed_foc_windows(
 print(response.data)
 ```
 
-Returns: `ended_at` (date-time), `record_type` (string), `started_at` (date-time)
+Key response fields: `response.data.ended_at, response.data.record_type, response.data.started_at`
 
 ## List all comments of a porting order
 
 Returns a list of all comments of a porting order.
 
-`GET /porting_orders/{id}/comments`
+`client.porting_orders.comments.list()` — `GET /porting_orders/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.comments.list(
@@ -609,15 +769,18 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `user_type` (enum: admin, user, system)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment for a porting order
 
 Creates a new comment for a porting order.
 
-`POST /porting_orders/{id}/comments`
+`client.porting_orders.comments.create()` — `POST /porting_orders/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `body` | string | No |  |
 
 ```python
 comment = client.porting_orders.comments.create(
@@ -626,11 +789,16 @@ comment = client.porting_orders.comments.create(
 print(comment.data)
 ```
 
-Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `user_type` (enum: admin, user, system)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Download a porting order loa template
 
-`GET /porting_orders/{id}/loa_template`
+`client.porting_orders.retrieve_loa_template()` — `GET /porting_orders/{id}/loa_template`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `loa_configuration_id` | string (UUID) | No | The identifier of the LOA configuration to use for the templ... |
 
 ```python
 response = client.porting_orders.retrieve_loa_template(
@@ -645,7 +813,12 @@ print(content)
 
 Returns a list of all requirements based on country/number type for this porting order.
 
-`GET /porting_orders/{id}/requirements`
+`client.porting_orders.retrieve_requirements()` — `GET /porting_orders/{id}/requirements`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.retrieve_requirements(
@@ -655,11 +828,15 @@ page = page.data[0]
 print(page.field_type)
 ```
 
-Returns: `field_type` (enum: document, textual), `field_value` (string), `record_type` (string), `requirement_status` (string), `requirement_type` (object)
+Key response fields: `response.data.field_type, response.data.field_value, response.data.record_type`
 
 ## Retrieve the associated V1 sub_request_id and port_request_id
 
-`GET /porting_orders/{id}/sub_request`
+`client.porting_orders.retrieve_sub_request()` — `GET /porting_orders/{id}/sub_request`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.retrieve_sub_request(
@@ -668,13 +845,20 @@ response = client.porting_orders.retrieve_sub_request(
 print(response.data)
 ```
 
-Returns: `port_request_id` (string), `sub_request_id` (string)
+Key response fields: `response.data.port_request_id, response.data.sub_request_id`
 
 ## List verification codes
 
 Returns a list of verification codes for a porting order.
 
-`GET /porting_orders/{id}/verification_codes`
+`client.porting_orders.verification_codes.list()` — `GET /porting_orders/{id}/verification_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.verification_codes.list(
@@ -684,13 +868,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `phone_number` (string), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time), `verified` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Send the verification codes
 
 Send the verification code for all porting phone numbers.
 
-`POST /porting_orders/{id}/verification_codes/send`
+`client.porting_orders.verification_codes.send()` — `POST /porting_orders/{id}/verification_codes/send`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 client.porting_orders.verification_codes.send(
@@ -702,7 +890,11 @@ client.porting_orders.verification_codes.send(
 
 Verifies the verification code for a list of phone numbers.
 
-`POST /porting_orders/{id}/verification_codes/verify`
+`client.porting_orders.verification_codes.verify()` — `POST /porting_orders/{id}/verification_codes/verify`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Porting Order id |
 
 ```python
 response = client.porting_orders.verification_codes.verify(
@@ -711,34 +903,46 @@ response = client.porting_orders.verification_codes.verify(
 print(response.data)
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `phone_number` (string), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time), `verified` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## List action requirements for a porting order
 
 Returns a list of action requirements for a specific porting order.
 
-`GET /porting_orders/{porting_order_id}/action_requirements`
+`client.porting_orders.action_requirements.list()` — `GET /porting_orders/{porting_order_id}/action_requirements`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | The ID of the porting order |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.action_requirements.list(
-    porting_order_id="porting_order_id",
+    porting_order_id="550e8400-e29b-41d4-a716-446655440000",
 )
 page = page.data[0]
 print(page.id)
 ```
 
-Returns: `action_type` (string), `action_url` (string | null), `cancel_reason` (string | null), `created_at` (date-time), `id` (string), `porting_order_id` (string), `record_type` (enum: porting_action_requirement), `requirement_type_id` (string), `status` (enum: created, pending, completed, cancelled, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Initiate an action requirement
 
 Initiates a specific action requirement for a porting order.
 
-`POST /porting_orders/{porting_order_id}/action_requirements/{id}/initiate`
+`client.porting_orders.action_requirements.initiate()` — `POST /porting_orders/{porting_order_id}/action_requirements/{id}/initiate`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | The ID of the porting order |
+| `id` | string (UUID) | Yes | The ID of the action requirement |
 
 ```python
 response = client.porting_orders.action_requirements.initiate(
-    id="id",
-    porting_order_id="porting_order_id",
+    id="550e8400-e29b-41d4-a716-446655440000",
+    porting_order_id="550e8400-e29b-41d4-a716-446655440000",
     params={
         "first_name": "John",
         "last_name": "Doe",
@@ -747,13 +951,20 @@ response = client.porting_orders.action_requirements.initiate(
 print(response.data)
 ```
 
-Returns: `action_type` (string), `action_url` (string | null), `cancel_reason` (string | null), `created_at` (date-time), `id` (string), `porting_order_id` (string), `record_type` (enum: porting_action_requirement), `requirement_type_id` (string), `status` (enum: created, pending, completed, cancelled, failed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all associated phone numbers
 
 Returns a list of all associated phone numbers for a porting order. Associated phone numbers are used for partial porting in GB to specify which phone numbers should be kept or disconnected.
 
-`GET /porting_orders/{porting_order_id}/associated_phone_numbers`
+`client.porting_orders.associated_phone_numbers.list()` — `GET /porting_orders/{porting_order_id}/associated_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.associated_phone_numbers.list(
@@ -763,13 +974,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create an associated phone number
 
 Creates a new associated phone number for a porting order. This is used for partial porting in GB to specify which phone numbers should be kept or disconnected.
 
-`POST /porting_orders/{porting_order_id}/associated_phone_numbers`
+`client.porting_orders.associated_phone_numbers.create()` — `POST /porting_orders/{porting_order_id}/associated_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```python
 associated_phone_number = client.porting_orders.associated_phone_numbers.create(
@@ -780,13 +995,18 @@ associated_phone_number = client.porting_orders.associated_phone_numbers.create(
 print(associated_phone_number.data)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an associated phone number
 
 Deletes an associated phone number from a porting order.
 
-`DELETE /porting_orders/{porting_order_id}/associated_phone_numbers/{id}`
+`client.porting_orders.associated_phone_numbers.delete()` — `DELETE /porting_orders/{porting_order_id}/associated_phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `id` | string (UUID) | Yes | Identifies the associated phone number to be deleted |
 
 ```python
 associated_phone_number = client.porting_orders.associated_phone_numbers.delete(
@@ -796,13 +1016,20 @@ associated_phone_number = client.porting_orders.associated_phone_numbers.delete(
 print(associated_phone_number.data)
 ```
 
-Returns: `action` (enum: keep, disconnect), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `porting_order_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all phone number blocks
 
 Returns a list of all phone number blocks of a porting order.
 
-`GET /porting_orders/{porting_order_id}/phone_number_blocks`
+`client.porting_orders.phone_number_blocks.list()` — `GET /porting_orders/{porting_order_id}/phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.phone_number_blocks.list(
@@ -812,13 +1039,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a phone number block
 
 Creates a new phone number block.
 
-`POST /porting_orders/{porting_order_id}/phone_number_blocks`
+`client.porting_orders.phone_number_blocks.create()` — `POST /porting_orders/{porting_order_id}/phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```python
 phone_number_block = client.porting_orders.phone_number_blocks.create(
@@ -835,13 +1066,18 @@ phone_number_block = client.porting_orders.phone_number_blocks.create(
 print(phone_number_block.data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a phone number block
 
 Deletes a phone number block.
 
-`DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}`
+`client.porting_orders.phone_number_blocks.delete()` — `DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `id` | string (UUID) | Yes | Identifies the phone number block to be deleted |
 
 ```python
 phone_number_block = client.porting_orders.phone_number_blocks.delete(
@@ -851,13 +1087,20 @@ phone_number_block = client.porting_orders.phone_number_blocks.delete(
 print(phone_number_block.data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all phone number extensions
 
 Returns a list of all phone number extensions of a porting order.
 
-`GET /porting_orders/{porting_order_id}/phone_number_extensions`
+`client.porting_orders.phone_number_extensions.list()` — `GET /porting_orders/{porting_order_id}/phone_number_extensions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `sort` | object | No | Consolidated sort parameter (deepObject style). |
 
 ```python
 page = client.porting_orders.phone_number_extensions.list(
@@ -867,13 +1110,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a phone number extension
 
 Creates a new phone number extension.
 
-`POST /porting_orders/{porting_order_id}/phone_number_extensions`
+`client.porting_orders.phone_number_extensions.create()` — `POST /porting_orders/{porting_order_id}/phone_number_extensions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
 
 ```python
 phone_number_extension = client.porting_orders.phone_number_extensions.create(
@@ -891,13 +1138,18 @@ phone_number_extension = client.porting_orders.phone_number_extensions.create(
 print(phone_number_extension.data)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete a phone number extension
 
 Deletes a phone number extension.
 
-`DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}`
+`client.porting_orders.phone_number_extensions.delete()` — `DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `porting_order_id` | string (UUID) | Yes | Identifies the Porting Order associated with the phone numbe... |
+| `id` | string (UUID) | Yes | Identifies the phone number extension to be deleted |
 
 ```python
 phone_number_extension = client.porting_orders.phone_number_extensions.delete(
@@ -907,13 +1159,18 @@ phone_number_extension = client.porting_orders.phone_number_extensions.delete(
 print(phone_number_extension.data)
 ```
 
-Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extension_range` (object), `id` (uuid), `porting_phone_number_id` (uuid), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all porting phone numbers
 
 Returns a list of your porting phone numbers.
 
-`GET /porting_phone_numbers`
+`client.porting_phone_numbers.list()` — `GET /porting_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```python
 page = client.porting_phone_numbers.list()
@@ -921,4 +1178,321 @@ page = page.data[0]
 print(page.porting_order_id)
 ```
 
-Returns: `activation_status` (enum: New, Pending, Conflict, Cancel Pending, Failed, Concurred, Activate RDY, Disconnect Pending, Concurrence Sent, Old, Sending, Active, Cancelled), `phone_number` (string), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `portability_status` (enum: pending, confirmed, provisional), `porting_order_id` (uuid), `porting_order_status` (enum: draft, in-process, submitted, exception, foc-date-confirmed, cancel-pending, ported, cancelled), `record_type` (string), `requirements_status` (enum: requirement-info-pending, requirement-info-under-review, requirement-info-exception, approved), `support_key` (string)
+Key response fields: `response.data.phone_number, response.data.activation_status, response.data.phone_number_type`
+
+---
+
+# Porting In (Python) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** Run a portability check
+
+| Field | Type |
+|-------|------|
+| `fast_portable` | boolean |
+| `not_portable_reason` | string |
+| `phone_number` | string |
+| `portable` | boolean |
+| `record_type` | string |
+
+**Returned by:** List all porting events, Show a porting event
+
+| Field | Type |
+|-------|------|
+| `available_notification_methods` | array[string] |
+| `event_type` | enum: porting_order.deleted |
+| `id` | uuid |
+| `payload` | object |
+| `payload_status` | enum: created, completed |
+| `porting_order_id` | uuid |
+
+**Returned by:** List LOA configurations, Create a LOA configuration, Retrieve a LOA configuration, Update a LOA configuration
+
+| Field | Type |
+|-------|------|
+| `address` | object |
+| `company_name` | string |
+| `contact` | object |
+| `created_at` | date-time |
+| `id` | uuid |
+| `logo` | object |
+| `name` | string |
+| `organization_id` | string |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List porting related reports, Create a porting related report, Retrieve a report
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `document_id` | uuid |
+| `id` | uuid |
+| `params` | object |
+| `record_type` | string |
+| `report_type` | enum: export_porting_orders_csv |
+| `status` | enum: pending, completed |
+| `updated_at` | date-time |
+
+**Returned by:** List available carriers in the UK
+
+| Field | Type |
+|-------|------|
+| `alternative_cupids` | array[string] |
+| `created_at` | date-time |
+| `cupid` | string |
+| `id` | uuid |
+| `name` | string |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all porting orders, Create a porting order, Retrieve a porting order, Edit a porting order, Cancel a porting order, Submit a porting order.
+
+| Field | Type |
+|-------|------|
+| `activation_settings` | object |
+| `additional_steps` | array[string] |
+| `created_at` | date-time |
+| `customer_group_reference` | string \| null |
+| `customer_reference` | string \| null |
+| `description` | string |
+| `documents` | object |
+| `end_user` | object |
+| `id` | uuid |
+| `messaging` | object |
+| `misc` | object |
+| `old_service_provider_ocn` | string |
+| `parent_support_key` | string \| null |
+| `phone_number_configuration` | object |
+| `phone_number_type` | enum: landline, local, mobile, national, shared_cost, toll_free |
+| `phone_numbers` | array[object] |
+| `porting_phone_numbers_count` | integer |
+| `record_type` | string |
+| `requirements` | array[object] |
+| `requirements_met` | boolean |
+| `status` | object |
+| `support_key` | string \| null |
+| `updated_at` | date-time |
+| `user_feedback` | object |
+| `user_id` | uuid |
+| `webhook_url` | uri |
+
+**Returned by:** List all exception types
+
+| Field | Type |
+|-------|------|
+| `code` | enum: ACCOUNT_NUMBER_MISMATCH, AUTH_PERSON_MISMATCH, BTN_ATN_MISMATCH, ENTITY_NAME_MISMATCH, FOC_EXPIRED, FOC_REJECTED, LOCATION_MISMATCH, LSR_PENDING, MAIN_BTN_PORTING, OSP_IRRESPONSIVE, OTHER, PASSCODE_PIN_INVALID, PHONE_NUMBER_HAS_SPECIAL_FEATURE, PHONE_NUMBER_MISMATCH, PHONE_NUMBER_NOT_PORTABLE, PORT_TYPE_INCORRECT, PORTING_ORDER_SPLIT_REQUIRED, POSTAL_CODE_MISMATCH, RATE_CENTER_NOT_PORTABLE, SV_CONFLICT, SV_UNKNOWN_FAILURE |
+| `description` | string |
+
+**Returned by:** List all phone number configurations, Create a list of phone number configurations
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `id` | uuid |
+| `porting_phone_number_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+| `user_bundle_id` | uuid |
+
+**Returned by:** Activate every number in a porting order asynchronously., List all porting activation jobs, Retrieve a porting activation job, Update a porting activation job
+
+| Field | Type |
+|-------|------|
+| `activate_at` | date-time |
+| `activation_type` | enum: scheduled, on-demand |
+| `activation_windows` | array[object] |
+| `created_at` | date-time |
+| `id` | uuid |
+| `record_type` | string |
+| `status` | enum: created, in-process, completed, failed |
+| `updated_at` | date-time |
+
+**Returned by:** Share a porting order
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `expires_at` | date-time |
+| `expires_in_seconds` | integer |
+| `id` | uuid |
+| `permissions` | array[string] |
+| `porting_order_id` | uuid |
+| `record_type` | string |
+| `token` | string |
+
+**Returned by:** List additional documents, Create a list of additional documents
+
+| Field | Type |
+|-------|------|
+| `content_type` | string |
+| `created_at` | date-time |
+| `document_id` | uuid |
+| `document_type` | enum: loa, invoice, csr, other |
+| `filename` | string |
+| `id` | uuid |
+| `porting_order_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List allowed FOC dates
+
+| Field | Type |
+|-------|------|
+| `ended_at` | date-time |
+| `record_type` | string |
+| `started_at` | date-time |
+
+**Returned by:** List all comments of a porting order, Create a comment for a porting order
+
+| Field | Type |
+|-------|------|
+| `body` | string |
+| `created_at` | date-time |
+| `id` | uuid |
+| `porting_order_id` | uuid |
+| `record_type` | string |
+| `user_type` | enum: admin, user, system |
+
+**Returned by:** List porting order requirements
+
+| Field | Type |
+|-------|------|
+| `field_type` | enum: document, textual |
+| `field_value` | string |
+| `record_type` | string |
+| `requirement_status` | string |
+| `requirement_type` | object |
+
+**Returned by:** Retrieve the associated V1 sub_request_id and port_request_id
+
+| Field | Type |
+|-------|------|
+| `port_request_id` | string |
+| `sub_request_id` | string |
+
+**Returned by:** List verification codes, Verify the verification code for a list of phone numbers
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `id` | uuid |
+| `phone_number` | string |
+| `porting_order_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+| `verified` | boolean |
+
+**Returned by:** List action requirements for a porting order, Initiate an action requirement
+
+| Field | Type |
+|-------|------|
+| `action_type` | string |
+| `action_url` | string \| null |
+| `cancel_reason` | string \| null |
+| `created_at` | date-time |
+| `id` | string |
+| `porting_order_id` | string |
+| `record_type` | enum: porting_action_requirement |
+| `requirement_type_id` | string |
+| `status` | enum: created, pending, completed, cancelled, failed |
+| `updated_at` | date-time |
+
+**Returned by:** List all associated phone numbers, Create an associated phone number, Delete an associated phone number
+
+| Field | Type |
+|-------|------|
+| `action` | enum: keep, disconnect |
+| `country_code` | string |
+| `created_at` | date-time |
+| `id` | uuid |
+| `phone_number_range` | object |
+| `phone_number_type` | enum: landline, local, mobile, national, shared_cost, toll_free |
+| `porting_order_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all phone number blocks, Create a phone number block, Delete a phone number block
+
+| Field | Type |
+|-------|------|
+| `activation_ranges` | array[object] |
+| `country_code` | string |
+| `created_at` | date-time |
+| `id` | uuid |
+| `phone_number_range` | object |
+| `phone_number_type` | enum: landline, local, mobile, national, shared_cost, toll_free |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all phone number extensions, Create a phone number extension, Delete a phone number extension
+
+| Field | Type |
+|-------|------|
+| `activation_ranges` | array[object] |
+| `created_at` | date-time |
+| `extension_range` | object |
+| `id` | uuid |
+| `porting_phone_number_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all porting phone numbers
+
+| Field | Type |
+|-------|------|
+| `activation_status` | enum: New, Pending, Conflict, Cancel Pending, Failed, Concurred, Activate RDY, Disconnect Pending, Concurrence Sent, Old, Sending, Active, Cancelled |
+| `phone_number` | string |
+| `phone_number_type` | enum: landline, local, mobile, national, shared_cost, toll_free |
+| `portability_status` | enum: pending, confirmed, provisional |
+| `porting_order_id` | uuid |
+| `porting_order_status` | enum: draft, in-process, submitted, exception, foc-date-confirmed, cancel-pending, ported, cancelled |
+| `record_type` | string |
+| `requirements_status` | enum: requirement-info-pending, requirement-info-under-review, requirement-info-exception, approved |
+| `support_key` | string |
+
+## Optional Parameters
+
+### Run a portability check — `client.portability_checks.run()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `phone_numbers` | array[string] | The list of +E.164 formatted phone numbers to check for portability |
+
+### Create a porting order — `client.porting_orders.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `customer_reference` | string | A customer-specified reference number for customer bookkeeping purposes |
+| `customer_group_reference` | string | A customer-specified group reference for customer bookkeeping purposes |
+
+### Edit a porting order — `client.porting_orders.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `misc` | object |  |
+| `end_user` | object |  |
+| `documents` | object | Can be specified directly or via the `requirement_group_id` parameter. |
+| `activation_settings` | object |  |
+| `phone_number_configuration` | object |  |
+| `requirement_group_id` | string (UUID) | If present, we will read the current values from the specified Requirement Gr... |
+| `requirements` | array[object] | List of requirements for porting numbers. |
+| `user_feedback` | object |  |
+| `webhook_url` | string (URL) |  |
+| `customer_reference` | string |  |
+| `customer_group_reference` | string |  |
+| `messaging` | object |  |
+
+### Create a comment for a porting order — `client.porting_orders.comments.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `body` | string |  |
