@@ -320,6 +320,8 @@ console.log('WebRTC supported:', webRTCInfo.supportWebRTC);
 
 <!-- BEGIN AUTO-GENERATED API REFERENCE -- do not edit below this line -->
 
+**[references/webrtc-server-api.md](references/webrtc-server-api.md) has the server-side WebRTC API — credential creation, token generation, and push notification setup. You MUST read it when setting up authentication or push notifications.**
+
 ## API Reference
 
 
@@ -486,6 +488,9 @@ client.newCall({
   trickleIce: true,
 });
 ```
+### Call Recovery and `recoveredCallId`
+
+When a call is recovered after a network reconnection (reattach), the SDK
 ### Voice Isolation
 
 Voice isolation options can be set by passing an `audio` object to the `newCall` method. This property controls the settings of a MediaStreamTrack object. For reference on available audio constraints, see [MediaTrackConstraints](https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints).

@@ -1,8 +1,7 @@
 ---
 name: telnyx-oauth-javascript
 description: >-
-  Implement OAuth 2.0 authentication flows for Telnyx API access. This skill
-  provides JavaScript SDK examples.
+  OAuth 2.0 authentication flows for Telnyx API access.
 metadata:
   author: telnyx
   product: oauth
@@ -13,6 +12,24 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Oauth - JavaScript
+
+## Core Workflow
+
+### Prerequisites
+
+1. Create an OAuth client in the Telnyx Portal
+
+### Steps
+
+1. **Create OAuth client**: `client.oauth.clients.create({...: ...})`
+2. **Get access token**: `POST /oauth/token with client_id and client_secret`
+
+### Common mistakes
+
+- OAuth tokens are short-lived — implement token refresh logic
+- Use OAuth for third-party integrations; use API keys for your own services
+
+**Related skills**: telnyx-account-access-javascript
 
 ## Installation
 
@@ -39,7 +56,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.oauth.clients.create(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -64,11 +81,13 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Authorization server metadata
 
 OAuth 2.0 Authorization Server Metadata (RFC 8414)
 
-`GET /.well-known/oauth-authorization-server`
+`client.wellKnown.retrieveAuthorizationServerMetadata()` — `GET /.well-known/oauth-authorization-server`
 
 ```javascript
 const response = await client.wellKnown.retrieveAuthorizationServerMetadata();
@@ -76,13 +95,13 @@ const response = await client.wellKnown.retrieveAuthorizationServerMetadata();
 console.log(response.authorization_endpoint);
 ```
 
-Returns: `authorization_endpoint` (uri), `code_challenge_methods_supported` (array[string]), `grant_types_supported` (array[string]), `introspection_endpoint` (uri), `issuer` (uri), `jwks_uri` (uri), `registration_endpoint` (uri), `response_types_supported` (array[string]), `scopes_supported` (array[string]), `token_endpoint` (uri), `token_endpoint_auth_methods_supported` (array[string])
+Key response fields: `response.data.authorization_endpoint, response.data.code_challenge_methods_supported, response.data.grant_types_supported`
 
 ## Protected resource metadata
 
 OAuth 2.0 Protected Resource Metadata for resource discovery
 
-`GET /.well-known/oauth-protected-resource`
+`client.wellKnown.retrieveProtectedResourceMetadata()` — `GET /.well-known/oauth-protected-resource`
 
 ```javascript
 const response = await client.wellKnown.retrieveProtectedResourceMetadata();
@@ -90,17 +109,24 @@ const response = await client.wellKnown.retrieveProtectedResourceMetadata();
 console.log(response.authorization_servers);
 ```
 
-Returns: `authorization_servers` (array[string]), `resource` (uri)
+Key response fields: `response.data.authorization_servers, response.data.resource`
 
 ## OAuth authorization endpoint
 
 OAuth 2.0 authorization endpoint for the authorization code flow
 
-`GET /oauth/authorize`
+`client.oauth.retrieveAuthorize()` — `GET /oauth/authorize`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `codeChallengeMethod` | enum (plain, S256) | No | PKCE code challenge method |
+| `scope` | string | No | Space-separated list of requested scopes |
+| `state` | string | No | State parameter for CSRF protection |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 await client.oauth.retrieveAuthorize({
-  client_id: 'client_id',
+  client_id: '550e8400-e29b-41d4-a716-446655440000',
   redirect_uri: 'https://example.com',
   response_type: 'code',
 });
@@ -110,7 +136,11 @@ await client.oauth.retrieveAuthorize({
 
 Retrieve details about an OAuth consent token
 
-`GET /oauth/consent/{consent_token}`
+`client.oauth.retrieve()` — `GET /oauth/consent/{consent_token}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `consentToken` | string | Yes | OAuth consent token |
 
 ```javascript
 const oauth = await client.oauth.retrieve('consent_token');
@@ -118,13 +148,18 @@ const oauth = await client.oauth.retrieve('consent_token');
 console.log(oauth.data);
 ```
 
-Returns: `client_id` (string), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uri` (uri), `requested_scopes` (array[object]), `tos_uri` (uri), `verified` (boolean)
+Key response fields: `response.data.name, response.data.client_id, response.data.logo_uri`
 
 ## Create OAuth grant
 
 Create an OAuth authorization grant
 
-`POST /oauth/grants` — Required: `allowed`, `consent_token`
+`client.oauth.grants()` — `POST /oauth/grants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `allowed` | boolean | Yes | Whether the grant is allowed |
+| `consentToken` | string | Yes | Consent token |
 
 ```javascript
 const response = await client.oauth.grants({ allowed: true, consent_token: 'consent_token' });
@@ -132,27 +167,31 @@ const response = await client.oauth.grants({ allowed: true, consent_token: 'cons
 console.log(response.redirect_uri);
 ```
 
-Returns: `redirect_uri` (uri)
+Key response fields: `response.data.redirect_uri`
 
 ## Token introspection
 
 Introspect an OAuth access token to check its validity and metadata
 
-`POST /oauth/introspect` — Required: `token`
+`client.oauth.introspect()` — `POST /oauth/introspect`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token` | string | Yes | The token to introspect |
 
 ```javascript
-const response = await client.oauth.introspect({ token: 'token' });
+const response = await client.oauth.introspect({ token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example' });
 
 console.log(response.client_id);
 ```
 
-Returns: `active` (boolean), `aud` (string), `client_id` (string), `exp` (integer), `iat` (integer), `iss` (string), `scope` (string)
+Key response fields: `response.data.active, response.data.aud, response.data.client_id`
 
 ## JSON Web Key Set
 
 Retrieve the JSON Web Key Set for token verification
 
-`GET /oauth/jwks`
+`client.oauth.retrieveJwks()` — `GET /oauth/jwks`
 
 ```javascript
 const response = await client.oauth.retrieveJwks();
@@ -160,15 +199,20 @@ const response = await client.oauth.retrieveJwks();
 console.log(response.keys);
 ```
 
-Returns: `keys` (array[object])
+Key response fields: `response.data.keys`
 
 ## Dynamic client registration
 
 Register a new OAuth client dynamically (RFC 7591)
 
-`POST /oauth/register`
+`client.oauth.register()` — `POST /oauth/register`
 
-Optional: `client_name` (string), `grant_types` (array[string]), `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `response_types` (array[string]), `scope` (string), `token_endpoint_auth_method` (enum: none, client_secret_basic, client_secret_post), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tokenEndpointAuthMethod` | enum (none, client_secret_basic, client_secret_post) | No | Authentication method for the token endpoint |
+| `redirectUris` | array[string] | No | Array of redirection URI strings for use in redirect-based f... |
+| `clientName` | string | No | Human-readable string name of the client to be presented to ... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.oauth.register();
@@ -176,15 +220,21 @@ const response = await client.oauth.register();
 console.log(response.client_id);
 ```
 
-Returns: `client_id` (string), `client_id_issued_at` (integer), `client_name` (string), `client_secret` (string), `grant_types` (array[string]), `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `response_types` (array[string]), `scope` (string), `token_endpoint_auth_method` (string), `tos_uri` (uri)
+Key response fields: `response.data.client_id, response.data.client_id_issued_at, response.data.client_name`
 
 ## OAuth token endpoint
 
 Exchange authorization code, client credentials, or refresh token for access token
 
-`POST /oauth/token` — Required: `grant_type`
+`client.oauth.token()` — `POST /oauth/token`
 
-Optional: `client_id` (string), `client_secret` (string), `code` (string), `code_verifier` (string), `redirect_uri` (uri), `refresh_token` (string), `scope` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `grantType` | enum (client_credentials, authorization_code, refresh_token) | Yes | OAuth 2.0 grant type |
+| `clientId` | string (UUID) | No | OAuth client ID (if not using HTTP Basic auth) |
+| `scope` | string | No | Space-separated list of requested scopes (for client_credent... |
+| `code` | string | No | Authorization code (for authorization_code flow) |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.oauth.token({ grant_type: 'client_credentials' });
@@ -192,13 +242,20 @@ const response = await client.oauth.token({ grant_type: 'client_credentials' });
 console.log(response.access_token);
 ```
 
-Returns: `access_token` (string), `expires_in` (integer), `refresh_token` (string), `scope` (string), `token_type` (enum: Bearer)
+Key response fields: `response.data.access_token, response.data.expires_in, response.data.refresh_token`
 
 ## List OAuth clients
 
 Retrieve a paginated list of OAuth clients for the authenticated user
 
-`GET /oauth_clients`
+`client.oauthClients.list()` — `GET /oauth_clients`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[clientType]` | enum (confidential, public) | No | Filter by client type |
+| `filter[allowedGrantTypes][contains]` | enum (client_credentials, authorization_code, refresh_token) | No | Filter by allowed grant type |
+| `page[size]` | integer | No | Number of results per page |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -207,15 +264,24 @@ for await (const oauthClient of client.oauthClients.list()) {
 }
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Create OAuth client
 
 Create a new OAuth client
 
-`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+`client.oauthClients.create()` — `POST /oauth_clients`
 
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | The name of the OAuth client |
+| `allowedScopes` | array[string] | Yes | List of allowed OAuth scopes |
+| `clientType` | enum (public, confidential) | Yes | OAuth client type |
+| `allowedGrantTypes` | array[string] | Yes | List of allowed OAuth grant types |
+| `requirePkce` | boolean | No | Whether PKCE (Proof Key for Code Exchange) is required for t... |
+| `redirectUris` | array[string] | No | List of redirect URIs (required for authorization_code flow) |
+| `logoUri` | string (URL) | No | URL of the client logo |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const oauthClient = await client.oauthClients.create({
@@ -228,13 +294,17 @@ const oauthClient = await client.oauthClients.create({
 console.log(oauthClient.data);
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Get OAuth client
 
 Retrieve a single OAuth client by ID
 
-`GET /oauth_clients/{id}`
+`client.oauthClients.retrieve()` — `GET /oauth_clients/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
 
 ```javascript
 const oauthClient = await client.oauthClients.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -242,15 +312,21 @@ const oauthClient = await client.oauthClients.retrieve('182bd5e5-6e1a-4fe4-a799-
 console.log(oauthClient.data);
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update OAuth client
 
 Update an existing OAuth client
 
-`PUT /oauth_clients/{id}`
+`client.oauthClients.update()` — `PUT /oauth_clients/{id}`
 
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
+| `name` | string | No | The name of the OAuth client |
+| `allowedScopes` | array[string] | No | List of allowed OAuth scopes |
+| `requirePkce` | boolean | No | Whether PKCE (Proof Key for Code Exchange) is required for t... |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const oauthClient = await client.oauthClients.update('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -258,13 +334,17 @@ const oauthClient = await client.oauthClients.update('182bd5e5-6e1a-4fe4-a799-aa
 console.log(oauthClient.data);
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete OAuth client
 
 Delete an OAuth client
 
-`DELETE /oauth_clients/{id}`
+`client.oauthClients.delete()` — `DELETE /oauth_clients/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
 
 ```javascript
 await client.oauthClients.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -274,7 +354,12 @@ await client.oauthClients.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 
 Retrieve a paginated list of OAuth grants for the authenticated user
 
-`GET /oauth_grants`
+`client.oauthGrants.list()` — `GET /oauth_grants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[size]` | integer | No | Number of results per page |
+| `page[number]` | integer | No | Page number |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -283,13 +368,17 @@ for await (const oauthGrant of client.oauthGrants.list()) {
 }
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
 
 ## Get OAuth grant
 
 Retrieve a single OAuth grant by ID
 
-`GET /oauth_grants/{id}`
+`client.oauthGrants.retrieve()` — `GET /oauth_grants/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth grant ID |
 
 ```javascript
 const oauthGrant = await client.oauthGrants.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -297,13 +386,17 @@ const oauthGrant = await client.oauthGrants.retrieve('182bd5e5-6e1a-4fe4-a799-aa
 console.log(oauthGrant.data);
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
 
 ## Revoke OAuth grant
 
 Revoke an OAuth grant
 
-`DELETE /oauth_grants/{id}`
+`client.oauthGrants.delete()` — `DELETE /oauth_grants/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth grant ID |
 
 ```javascript
 const oauthGrant = await client.oauthGrants.delete('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -311,4 +404,8 @@ const oauthGrant = await client.oauthGrants.delete('182bd5e5-6e1a-4fe4-a799-aa6d
 console.log(oauthGrant.data);
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

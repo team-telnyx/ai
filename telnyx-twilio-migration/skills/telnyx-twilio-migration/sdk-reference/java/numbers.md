@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>6.29.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:6.29.0")
 ```
 
 ## Setup
@@ -33,19 +33,9 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```java
-import com.telnyx.sdk.errors.TelnyxServiceException;
-
-try {
-    var result = client.messages().send(params);
-} catch (TelnyxServiceException e) {
-    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
-    if (e.statusCode() == 422) {
-        System.err.println("Validation error — check required fields and formats");
-    } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
-        Thread.sleep(1000);
-    }
-}
+import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListParams;
+import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListResponse;
+AvailablePhoneNumberListResponse availablePhoneNumbers = client.availablePhoneNumbers().list();
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -57,9 +47,191 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
-## List Advanced Orders
+## Reference Use Rules
 
-`GET /advanced_orders`
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
+
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+
+## Core Tasks
+
+### Search available phone numbers
+
+Number search is the entrypoint for provisioning. Agents need the search method, key query filters, and the fields returned for candidate numbers.
+
+`client.availablePhoneNumbers().list()` — `GET /available_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
+```java
+import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListParams;
+import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListResponse;
+
+AvailablePhoneNumberListResponse availablePhoneNumbers = client.availablePhoneNumbers().list();
+```
+
+Response wrapper:
+- items: `availablePhoneNumbers.data`
+- pagination: `availablePhoneNumbers.meta`
+
+Primary item fields:
+- `phoneNumber`
+- `recordType`
+- `quickship`
+- `reservable`
+- `bestEffort`
+- `costInformation`
+
+### Create a number order
+
+Number ordering is the production provisioning step after number selection.
+
+`client.numberOrders().create()` — `POST /number_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[object] | Yes |  |
+| `connectionId` | string (UUID) | No | Identifies the connection associated with this phone number. |
+| `messagingProfileId` | string (UUID) | No | Identifies the messaging profile associated with the phone n... |
+| `billingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +1 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.numberorders.NumberOrderCreateParams;
+import com.telnyx.sdk.models.numberorders.NumberOrderCreateResponse;
+
+NumberOrderCreateParams params = NumberOrderCreateParams.builder()
+
+    .addPhoneNumber(
+
+        NumberOrderCreateParams.PhoneNumber.builder()
+
+            .phoneNumber("+18005550101")
+
+            .build()
+
+        )
+
+    .build();
+
+NumberOrderCreateResponse numberOrder = client.numberOrders().create(params);
+```
+
+Primary response fields:
+- `numberOrder.data.id`
+- `numberOrder.data.status`
+- `numberOrder.data.phoneNumbersCount`
+- `numberOrder.data.requirementsMet`
+- `numberOrder.data.messagingProfileId`
+- `numberOrder.data.connectionId`
+
+### Check number order status
+
+Order status determines whether provisioning completed or additional requirements are still blocking fulfillment.
+
+`client.numberOrders().retrieve()` — `GET /number_orders/{number_order_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `numberOrderId` | string (UUID) | Yes | The number order ID. |
+
+```java
+import com.telnyx.sdk.models.numberorders.NumberOrderRetrieveParams;
+import com.telnyx.sdk.models.numberorders.NumberOrderRetrieveResponse;
+
+NumberOrderRetrieveResponse numberOrder = client.numberOrders().retrieve("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Primary response fields:
+- `numberOrder.data.id`
+- `numberOrder.data.status`
+- `numberOrder.data.requirementsMet`
+- `numberOrder.data.phoneNumbersCount`
+- `numberOrder.data.phoneNumbers`
+- `numberOrder.data.connectionId`
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Create a number reservation
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.numberReservations().create()` — `POST /number_reservations`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[object] | Yes |  |
+| `status` | enum (pending, success, failure) | No | The status of the entire reservation. |
+| `id` | string (UUID) | No |  |
+| `recordType` | string | No |  |
+| ... | | | +3 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.numberreservations.NumberReservationCreateParams;
+import com.telnyx.sdk.models.numberreservations.NumberReservationCreateResponse;
+
+NumberReservationCreateParams params = NumberReservationCreateParams.builder()
+
+    .addPhoneNumber(
+
+        NumberReservationCreateParams.PhoneNumber.builder()
+
+            .phoneNumber("+18005550101")
+
+            .build()
+
+        )
+
+    .build();
+
+NumberReservationCreateResponse numberReservation = client.numberReservations().create(params);
+```
+
+Primary response fields:
+- `numberReservation.data.id`
+- `numberReservation.data.status`
+- `numberReservation.data.createdAt`
+- `numberReservation.data.updatedAt`
+- `numberReservation.data.customerReference`
+- `numberReservation.data.errors`
+
+### Retrieve a number reservation
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.numberReservations().retrieve()` — `GET /number_reservations/{number_reservation_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `numberReservationId` | string (UUID) | Yes | The number reservation ID. |
+
+```java
+import com.telnyx.sdk.models.numberreservations.NumberReservationRetrieveParams;
+import com.telnyx.sdk.models.numberreservations.NumberReservationRetrieveResponse;
+
+NumberReservationRetrieveResponse numberReservation = client.numberReservations().retrieve("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Primary response fields:
+- `numberReservation.data.id`
+- `numberReservation.data.status`
+- `numberReservation.data.createdAt`
+- `numberReservation.data.updatedAt`
+- `numberReservation.data.customerReference`
+- `numberReservation.data.errors`
+
+### List Advanced Orders
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.advancedOrders().list()` — `GET /advanced_orders`
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrderListParams;
@@ -68,13 +240,29 @@ import com.telnyx.sdk.models.advancedorders.AdvancedOrderListResponse;
 AdvancedOrderListResponse advancedOrders = client.advancedOrders().list();
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Response wrapper:
+- items: `advancedOrders.data`
 
-## Create Advanced Order
+Primary item fields:
+- `id`
+- `status`
+- `areaCode`
+- `comments`
+- `countryCode`
+- `customerReference`
 
-`POST /advanced_orders`
+### Create Advanced Order
 
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum: local, mobile, toll_free, shared_cost, national, landline), `quantity` (integer), `requirement_group_id` (uuid)
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.advancedOrders().create()` — `POST /advanced_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
+| `requirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
+| `countryCode` | string (ISO 3166-1 alpha-2) | No |  |
+| ... | | | +5 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrder;
@@ -85,13 +273,27 @@ AdvancedOrder params = AdvancedOrder.builder().build();
 AdvancedOrderCreateResponse advancedOrder = client.advancedOrders().create(params);
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `advancedOrder.id`
+- `advancedOrder.status`
+- `advancedOrder.areaCode`
+- `advancedOrder.comments`
+- `advancedOrder.countryCode`
+- `advancedOrder.customerReference`
 
-## Update Advanced Order
+### Update Advanced Order
 
-`PATCH /advanced_orders/{advanced-order-id}/requirement_group`
+Modify an existing resource without recreating it.
 
-Optional: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `phone_number_type` (enum: local, mobile, toll_free, shared_cost, national, landline), `quantity` (integer), `requirement_group_id` (uuid)
+`client.advancedOrders().updateRequirementGroup()` — `PATCH /advanced_orders/{advanced-order-id}/requirement_group`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `advanced-order-id` | string (UUID) | Yes |  |
+| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
+| `requirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
+| `countryCode` | string (ISO 3166-1 alpha-2) | No |  |
+| ... | | | +5 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrder;
@@ -105,11 +307,23 @@ AdvancedOrderUpdateRequirementGroupParams params = AdvancedOrderUpdateRequiremen
 AdvancedOrderUpdateRequirementGroupResponse response = client.advancedOrders().updateRequirementGroup(params);
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `response.id`
+- `response.status`
+- `response.areaCode`
+- `response.comments`
+- `response.countryCode`
+- `response.customerReference`
 
-## Get Advanced Order
+### Get Advanced Order
 
-`GET /advanced_orders/{order_id}`
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.advancedOrders().retrieve()` — `GET /advanced_orders/{order_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `orderId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrderRetrieveParams;
@@ -118,11 +332,23 @@ import com.telnyx.sdk.models.advancedorders.AdvancedOrderRetrieveResponse;
 AdvancedOrderRetrieveResponse advancedOrder = client.advancedOrders().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `area_code` (string), `comments` (string), `country_code` (string), `customer_reference` (string), `features` (array[object]), `id` (uuid), `orders` (array[string]), `phone_number_type` (object), `quantity` (integer), `requirement_group_id` (uuid), `status` (object)
+Primary response fields:
+- `advancedOrder.id`
+- `advancedOrder.status`
+- `advancedOrder.areaCode`
+- `advancedOrder.comments`
+- `advancedOrder.countryCode`
+- `advancedOrder.customerReference`
 
-## List available phone number blocks
+### List available phone number blocks
 
-`GET /available_phone_number_blocks`
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.availablePhoneNumberBlocks().list()` — `GET /available_phone_number_blocks`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.availablephonenumberblocks.AvailablePhoneNumberBlockListParams;
@@ -131,24 +357,27 @@ import com.telnyx.sdk.models.availablephonenumberblocks.AvailablePhoneNumberBloc
 AvailablePhoneNumberBlockListResponse availablePhoneNumberBlocks = client.availablePhoneNumberBlocks().list();
 ```
 
-Returns: `cost_information` (object), `features` (array[object]), `phone_number` (string), `range` (integer), `record_type` (enum: available_phone_number_block), `region_information` (array[object])
+Response wrapper:
+- items: `availablePhoneNumberBlocks.data`
+- pagination: `availablePhoneNumberBlocks.meta`
 
-## List available phone numbers
+Primary item fields:
+- `phoneNumber`
+- `costInformation`
+- `features`
+- `range`
+- `recordType`
+- `regionInformation`
 
-`GET /available_phone_numbers`
+### Retrieve all comments
 
-```java
-import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListParams;
-import com.telnyx.sdk.models.availablephonenumbers.AvailablePhoneNumberListResponse;
+Inspect available resources or choose an existing resource before mutating it.
 
-AvailablePhoneNumberListResponse availablePhoneNumbers = client.availablePhoneNumbers().list();
-```
+`client.comments().list()` — `GET /comments`
 
-Returns: `best_effort` (boolean), `cost_information` (object), `features` (array[object]), `phone_number` (string), `quickship` (boolean), `record_type` (enum: available_phone_number), `region_information` (array[object]), `reservable` (boolean), `vanity_format` (string)
-
-## Retrieve all comments
-
-`GET /comments`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.comments.CommentListParams;
@@ -157,699 +386,70 @@ import com.telnyx.sdk.models.comments.CommentListResponse;
 CommentListResponse comments = client.comments().list();
 ```
 
-Returns: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum: sub_number_order, requirement_group), `commenter` (string), `commenter_type` (enum: admin, user), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
-
-## Create a comment
-
-`POST /comments`
-
-Optional: `body` (string), `comment_record_id` (uuid), `comment_record_type` (enum: sub_number_order, requirement_group), `commenter` (string), `commenter_type` (enum: admin, user), `created_at` (date-time), `id` (uuid), `read_at` (date-time), `updated_at` (date-time)
-
-```java
-import com.telnyx.sdk.models.comments.Comment;
-import com.telnyx.sdk.models.comments.CommentCreateParams;
-import com.telnyx.sdk.models.comments.CommentCreateResponse;
-
-Comment params = Comment.builder().build();
-CommentCreateResponse comment = client.comments().create(params);
-```
-
-Returns: `data` (object)
-
-## Retrieve a comment
-
-`GET /comments/{id}`
-
-```java
-import com.telnyx.sdk.models.comments.CommentRetrieveParams;
-import com.telnyx.sdk.models.comments.CommentRetrieveResponse;
-
-CommentRetrieveResponse comment = client.comments().retrieve("id");
-```
-
-Returns: `data` (object)
-
-## Mark a comment as read
-
-`PATCH /comments/{id}/read`
-
-```java
-import com.telnyx.sdk.models.comments.CommentMarkAsReadParams;
-import com.telnyx.sdk.models.comments.CommentMarkAsReadResponse;
-
-CommentMarkAsReadResponse response = client.comments().markAsRead("id");
-```
-
-Returns: `data` (object)
-
-## Get country coverage
-
-`GET /country_coverage`
-
-```java
-import com.telnyx.sdk.models.countrycoverage.CountryCoverageRetrieveParams;
-import com.telnyx.sdk.models.countrycoverage.CountryCoverageRetrieveResponse;
-
-CountryCoverageRetrieveResponse countryCoverage = client.countryCoverage().retrieve();
-```
-
-Returns: `data` (object)
-
-## Get coverage for a specific country
-
-`GET /country_coverage/countries/{country_code}`
-
-```java
-import com.telnyx.sdk.models.countrycoverage.CountryCoverageRetrieveCountryParams;
-import com.telnyx.sdk.models.countrycoverage.CountryCoverageRetrieveCountryResponse;
-
-CountryCoverageRetrieveCountryResponse response = client.countryCoverage().retrieveCountry("US");
-```
-
-Returns: `code` (string), `features` (array[string]), `international_sms` (boolean), `inventory_coverage` (boolean), `local` (object), `mobile` (object), `national` (object), `numbers` (boolean), `p2p` (boolean), `phone_number_type` (array[string]), `quickship` (boolean), `region` (string | null), `reservable` (boolean), `shared_cost` (object), `toll_free` (object)
-
-## List customer service records
-
-List customer service records.
-
-`GET /customer_service_records`
-
-```java
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordListPage;
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordListParams;
-
-CustomerServiceRecordListPage page = client.customerServiceRecords().list();
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## Create a customer service record
-
-Create a new customer service record for the provided phone number.
-
-`POST /customer_service_records`
-
-```java
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordCreateParams;
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordCreateResponse;
-
-CustomerServiceRecordCreateParams params = CustomerServiceRecordCreateParams.builder()
-    .phoneNumber("+13035553000")
-    .build();
-CustomerServiceRecordCreateResponse customerServiceRecord = client.customerServiceRecords().create(params);
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## Verify CSR phone number coverage
-
-Verify the coverage for a list of phone numbers.
-
-`POST /customer_service_records/phone_number_coverages`
-
-```java
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordVerifyPhoneNumberCoverageParams;
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordVerifyPhoneNumberCoverageResponse;
-
-CustomerServiceRecordVerifyPhoneNumberCoverageParams params = CustomerServiceRecordVerifyPhoneNumberCoverageParams.builder()
-    .addPhoneNumber("+13035553000")
-    .build();
-CustomerServiceRecordVerifyPhoneNumberCoverageResponse response = client.customerServiceRecords().verifyPhoneNumberCoverage(params);
-```
-
-Returns: `additional_data_required` (array[string]), `has_csr_coverage` (boolean), `phone_number` (string), `reason` (string), `record_type` (string)
-
-## Get a customer service record
-
-Get a specific customer service record.
-
-`GET /customer_service_records/{customer_service_record_id}`
-
-```java
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordRetrieveParams;
-import com.telnyx.sdk.models.customerservicerecords.CustomerServiceRecordRetrieveResponse;
-
-CustomerServiceRecordRetrieveResponse customerServiceRecord = client.customerServiceRecords().retrieve("customer_service_record_id");
-```
-
-Returns: `created_at` (date-time), `error_message` (string | null), `id` (uuid), `phone_number` (string), `record_type` (string), `result` (object | null), `status` (enum: pending, completed, failed), `updated_at` (date-time), `webhook_url` (string)
-
-## List inexplicit number orders
-
-Get a paginated list of inexplicit number orders.
-
-`GET /inexplicit_number_orders`
-
-```java
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderListPage;
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderListParams;
-
-InexplicitNumberOrderListPage page = client.inexplicitNumberOrders().list();
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Create an inexplicit number order
-
-Create an inexplicit number order to programmatically purchase phone numbers without specifying exact numbers.
-
-`POST /inexplicit_number_orders` — Required: `ordering_groups`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string)
-
-```java
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderCreateParams;
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderCreateResponse;
-
-InexplicitNumberOrderCreateParams params = InexplicitNumberOrderCreateParams.builder()
-    .addOrderingGroup(InexplicitNumberOrderCreateParams.OrderingGroup.builder()
-        .countRequested("count_requested")
-        .countryIso(InexplicitNumberOrderCreateParams.OrderingGroup.CountryIso.US)
-        .phoneNumberType("phone_number_type")
-        .build())
-    .build();
-InexplicitNumberOrderCreateResponse inexplicitNumberOrder = client.inexplicitNumberOrders().create(params);
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Retrieve an inexplicit number order
-
-Get an existing inexplicit number order by ID.
-
-`GET /inexplicit_number_orders/{id}`
-
-```java
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderRetrieveParams;
-import com.telnyx.sdk.models.inexplicitnumberorders.InexplicitNumberOrderRetrieveResponse;
-
-InexplicitNumberOrderRetrieveResponse inexplicitNumberOrder = client.inexplicitNumberOrders().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `messaging_profile_id` (string), `ordering_groups` (array[object]), `updated_at` (date-time)
-
-## Create an inventory coverage request
-
-Creates an inventory coverage request. If locality, npa or national_destination_code is used in groupBy, and no region or locality filters are used, the whole paginated set is returned.
-
-`GET /inventory_coverage`
-
-```java
-import com.telnyx.sdk.models.inventorycoverage.InventoryCoverageListParams;
-import com.telnyx.sdk.models.inventorycoverage.InventoryCoverageListResponse;
-
-InventoryCoverageListResponse inventoryCoverages = client.inventoryCoverage().list();
-```
-
-Returns: `administrative_area` (string), `advance_requirements` (boolean), `count` (integer), `coverage_type` (enum: number, block), `group` (string), `group_type` (string), `number_range` (integer), `number_type` (enum: did, toll-free), `phone_number_type` (enum: local, toll_free, national, landline, shared_cost, mobile), `record_type` (string)
-
-## List mobile network operators
-
-Telnyx has a set of GSM mobile operators partners that are available through our mobile network roaming. This resource is entirely managed by Telnyx and may change over time. That means that this resource won't allow any write operations for it.
-
-`GET /mobile_network_operators`
-
-```java
-import com.telnyx.sdk.models.mobilenetworkoperators.MobileNetworkOperatorListPage;
-import com.telnyx.sdk.models.mobilenetworkoperators.MobileNetworkOperatorListParams;
-
-MobileNetworkOperatorListPage page = client.mobileNetworkOperators().list();
-```
-
-Returns: `country_code` (string), `id` (uuid), `mcc` (string), `mnc` (string), `name` (string), `network_preferences_enabled` (boolean), `record_type` (string), `tadig` (string)
-
-## List network coverage locations
-
-List all locations and the interfaces that region supports
-
-`GET /network_coverage`
-
-```java
-import com.telnyx.sdk.models.networkcoverage.NetworkCoverageListPage;
-import com.telnyx.sdk.models.networkcoverage.NetworkCoverageListParams;
-
-NetworkCoverageListPage page = client.networkCoverage().list();
-```
-
-Returns: `available_services` (array[object]), `location` (object), `record_type` (string)
-
-## List number block orders
-
-Get a paginated list of number block orders.
-
-`GET /number_block_orders`
-
-```java
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderListPage;
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderListParams;
-
-NumberBlockOrderListPage page = client.numberBlockOrders().list();
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Create a number block order
-
-Creates a phone number block order.
-
-`POST /number_block_orders` — Required: `starting_number`, `range`
-
-Optional: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-```java
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderCreateParams;
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderCreateResponse;
-
-NumberBlockOrderCreateParams params = NumberBlockOrderCreateParams.builder()
-    .range(10L)
-    .startingNumber("+19705555000")
-    .build();
-NumberBlockOrderCreateResponse numberBlockOrder = client.numberBlockOrders().create(params);
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a number block order
-
-Get an existing phone number block order.
-
-`GET /number_block_orders/{number_block_order_id}`
-
-```java
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderRetrieveParams;
-import com.telnyx.sdk.models.numberblockorders.NumberBlockOrderRetrieveResponse;
-
-NumberBlockOrderRetrieveResponse numberBlockOrder = client.numberBlockOrders().retrieve("number_block_order_id");
-```
-
-Returns: `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers_count` (integer), `range` (integer), `record_type` (string), `requirements_met` (boolean), `starting_number` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a list of phone numbers associated to orders
-
-Get a list of phone numbers associated to orders.
-
-`GET /number_order_phone_numbers`
-
-```java
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberListParams;
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberListResponse;
-
-NumberOrderPhoneNumberListResponse numberOrderPhoneNumbers = client.numberOrderPhoneNumbers().list();
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## Retrieve a single phone number within a number order.
-
-Get an existing phone number in number order.
-
-`GET /number_order_phone_numbers/{number_order_phone_number_id}`
-
-```java
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberRetrieveParams;
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberRetrieveResponse;
-
-NumberOrderPhoneNumberRetrieveResponse numberOrderPhoneNumber = client.numberOrderPhoneNumbers().retrieve("number_order_phone_number_id");
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## Update requirements for a single phone number within a number order.
-
-Updates requirements for a single phone number within a number order.
-
-`PATCH /number_order_phone_numbers/{number_order_phone_number_id}`
-
-Optional: `regulatory_requirements` (array[object])
-
-```java
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberUpdateRequirementsParams;
-import com.telnyx.sdk.models.numberorderphonenumbers.NumberOrderPhoneNumberUpdateRequirementsResponse;
-
-NumberOrderPhoneNumberUpdateRequirementsResponse response = client.numberOrderPhoneNumbers().updateRequirements("number_order_phone_number_id");
-```
-
-Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (enum: pending, approved, cancelled, deleted, requirement-info-exception, requirement-info-pending, requirement-info-under-review), `status` (enum: pending, success, failure), `sub_number_order_id` (uuid)
-
-## List number orders
-
-Get a paginated list of number orders.
-
-`GET /number_orders`
-
-```java
-import com.telnyx.sdk.models.numberorders.NumberOrderListPage;
-import com.telnyx.sdk.models.numberorders.NumberOrderListParams;
-
-NumberOrderListPage page = client.numberOrders().list();
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Create a number order
-
-Creates a phone number order.
-
-`POST /number_orders`
-
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `messaging_profile_id` (string), `phone_numbers` (array[object])
-
-```java
-import com.telnyx.sdk.models.numberorders.NumberOrderCreateParams;
-import com.telnyx.sdk.models.numberorders.NumberOrderCreateResponse;
-
-NumberOrderCreateResponse numberOrder = client.numberOrders().create();
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Retrieve a number order
-
-Get an existing phone number order.
-
-`GET /number_orders/{number_order_id}`
-
-```java
-import com.telnyx.sdk.models.numberorders.NumberOrderRetrieveParams;
-import com.telnyx.sdk.models.numberorders.NumberOrderRetrieveResponse;
-
-NumberOrderRetrieveResponse numberOrder = client.numberOrders().retrieve("number_order_id");
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## Update a number order
-
-Updates a phone number order.
-
-`PATCH /number_orders/{number_order_id}`
-
-Optional: `customer_reference` (string), `regulatory_requirements` (array[object])
-
-```java
-import com.telnyx.sdk.models.numberorders.NumberOrderUpdateParams;
-import com.telnyx.sdk.models.numberorders.NumberOrderUpdateResponse;
-
-NumberOrderUpdateResponse numberOrder = client.numberOrders().update("number_order_id");
-```
-
-Returns: `billing_group_id` (string), `connection_id` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `messaging_profile_id` (string), `phone_numbers` (array[object]), `phone_numbers_count` (integer), `record_type` (string), `requirements_met` (boolean), `status` (enum: pending, success, failure), `sub_number_orders_ids` (array[string]), `updated_at` (date-time)
-
-## List number reservations
-
-Gets a paginated list of phone number reservations.
-
-`GET /number_reservations`
-
-```java
-import com.telnyx.sdk.models.numberreservations.NumberReservationListPage;
-import com.telnyx.sdk.models.numberreservations.NumberReservationListParams;
-
-NumberReservationListPage page = client.numberReservations().list();
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Create a number reservation
-
-Creates a Phone Number Reservation for multiple numbers.
-
-`POST /number_reservations`
-
-Optional: `created_at` (date-time), `customer_reference` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-```java
-import com.telnyx.sdk.models.numberreservations.NumberReservationCreateParams;
-import com.telnyx.sdk.models.numberreservations.NumberReservationCreateResponse;
-
-NumberReservationCreateResponse numberReservation = client.numberReservations().create();
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve a number reservation
-
-Gets a single phone number reservation.
-
-`GET /number_reservations/{number_reservation_id}`
-
-```java
-import com.telnyx.sdk.models.numberreservations.NumberReservationRetrieveParams;
-import com.telnyx.sdk.models.numberreservations.NumberReservationRetrieveResponse;
-
-NumberReservationRetrieveResponse numberReservation = client.numberReservations().retrieve("number_reservation_id");
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Extend a number reservation
-
-Extends reservation expiry time on all phone numbers.
-
-`POST /number_reservations/{number_reservation_id}/actions/extend`
-
-```java
-import com.telnyx.sdk.models.numberreservations.actions.ActionExtendParams;
-import com.telnyx.sdk.models.numberreservations.actions.ActionExtendResponse;
-
-ActionExtendResponse response = client.numberReservations().actions().extend("number_reservation_id");
-```
-
-Returns: `created_at` (date-time), `customer_reference` (string), `errors` (string), `id` (uuid), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, success, failure), `updated_at` (date-time)
-
-## Retrieve the features for a list of numbers
-
-`POST /numbers_features` — Required: `phone_numbers`
-
-```java
-import com.telnyx.sdk.models.numbersfeatures.NumbersFeatureCreateParams;
-import com.telnyx.sdk.models.numbersfeatures.NumbersFeatureCreateResponse;
-
-NumbersFeatureCreateParams params = NumbersFeatureCreateParams.builder()
-    .addPhoneNumber("string")
-    .build();
-NumbersFeatureCreateResponse numbersFeature = client.numbersFeatures().create(params);
-```
-
-Returns: `features` (array[string]), `phone_number` (string)
-
-## Lists the phone number blocks jobs
-
-`GET /phone_number_blocks/jobs`
-
-```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobListPage;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobListParams;
-
-JobListPage page = client.phoneNumberBlocks().jobs().list();
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## Deletes all numbers associated with a phone number block
-
-Creates a new background job to delete all the phone numbers associated with the given block. We will only consider the phone number block as deleted after all phone numbers associated with it are removed, so multiple executions of this job may be necessary in case some of the phone numbers present errors during the deletion process.
-
-`POST /phone_number_blocks/jobs/delete_phone_number_block` — Required: `phone_number_block_id`
-
-```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobDeletePhoneNumberBlockParams;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobDeletePhoneNumberBlockResponse;
-
-JobDeletePhoneNumberBlockParams params = JobDeletePhoneNumberBlockParams.builder()
-    .phoneNumberBlockId("f3946371-7199-4261-9c3d-81a0d7935146")
-    .build();
-JobDeletePhoneNumberBlockResponse response = client.phoneNumberBlocks().jobs().deletePhoneNumberBlock(params);
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## Retrieves a phone number blocks job
-
-`GET /phone_number_blocks/jobs/{id}`
-
-```java
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobRetrieveParams;
-import com.telnyx.sdk.models.phonenumberblocks.jobs.JobRetrieveResponse;
-
-JobRetrieveResponse job = client.phoneNumberBlocks().jobs().retrieve("id");
-```
-
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `record_type` (string), `status` (enum: pending, in_progress, completed, failed), `successful_operations` (array[object]), `type` (enum: delete_phone_number_block), `updated_at` (string)
-
-## List sub number orders
-
-Get a paginated list of sub number orders.
-
-`GET /sub_number_orders`
-
-```java
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderListParams;
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderListResponse;
-
-SubNumberOrderListResponse subNumberOrders = client.subNumberOrders().list();
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Retrieve a sub number order
-
-Get an existing sub number order.
-
-`GET /sub_number_orders/{sub_number_order_id}`
-
-```java
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderRetrieveParams;
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderRetrieveResponse;
-
-SubNumberOrderRetrieveResponse subNumberOrder = client.subNumberOrders().retrieve("sub_number_order_id");
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Update a sub number order's requirements
-
-Updates a sub number order.
-
-`PATCH /sub_number_orders/{sub_number_order_id}`
-
-Optional: `regulatory_requirements` (array[object])
-
-```java
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderUpdateParams;
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderUpdateResponse;
-
-SubNumberOrderUpdateResponse subNumberOrder = client.subNumberOrders().update("sub_number_order_id");
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Cancel a sub number order
-
-Allows you to cancel a sub number order in 'pending' status.
-
-`PATCH /sub_number_orders/{sub_number_order_id}/cancel`
-
-```java
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderCancelParams;
-import com.telnyx.sdk.models.subnumberorders.SubNumberOrderCancelResponse;
-
-SubNumberOrderCancelResponse response = client.subNumberOrders().cancel("sub_number_order_id");
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (uuid), `is_block_sub_number_order` (boolean), `order_request_id` (uuid), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `phone_numbers_count` (integer), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `status` (enum: pending, success, failure), `updated_at` (date-time), `user_id` (uuid)
-
-## Create a sub number orders report
-
-Create a CSV report for sub number orders. The report will be generated asynchronously and can be downloaded once complete.
-
-`POST /sub_number_orders_report`
-
-Optional: `country_code` (string), `created_at_gt` (date-time), `created_at_lt` (date-time), `customer_reference` (string), `order_request_id` (uuid), `status` (enum: pending, success, failure)
-
-```java
-import com.telnyx.sdk.models.subnumberordersreport.SubNumberOrdersReportCreateParams;
-import com.telnyx.sdk.models.subnumberordersreport.SubNumberOrdersReportCreateResponse;
-
-SubNumberOrdersReportCreateResponse subNumberOrdersReport = client.subNumberOrdersReport().create();
-```
-
-Returns: `created_at` (date-time), `filters` (object), `id` (uuid), `order_type` (string), `status` (enum: pending, success, failed, expired), `updated_at` (date-time), `user_id` (uuid)
-
-## Retrieve a sub number orders report
-
-Get the status and details of a sub number orders report.
-
-`GET /sub_number_orders_report/{report_id}`
-
-```java
-import com.telnyx.sdk.models.subnumberordersreport.SubNumberOrdersReportRetrieveParams;
-import com.telnyx.sdk.models.subnumberordersreport.SubNumberOrdersReportRetrieveResponse;
-
-SubNumberOrdersReportRetrieveResponse subNumberOrdersReport = client.subNumberOrdersReport().retrieve("12ade33a-21c0-473b-b055-b3c836e1c293");
-```
-
-Returns: `created_at` (date-time), `filters` (object), `id` (uuid), `order_type` (string), `status` (enum: pending, success, failed, expired), `updated_at` (date-time), `user_id` (uuid)
-
-## Download a sub number orders report
-
-Download the CSV file for a completed sub number orders report. The report status must be 'success' before the file can be downloaded.
-
-`GET /sub_number_orders_report/{report_id}/download`
-
-```java
-import com.telnyx.sdk.models.subnumberordersreport.SubNumberOrdersReportDownloadParams;
-
-String response = client.subNumberOrdersReport().download("12ade33a-21c0-473b-b055-b3c836e1c293");
-```
+Response wrapper:
+- items: `comments.data`
+- pagination: `comments.meta`
+
+Primary item fields:
+- `id`
+- `body`
+- `createdAt`
+- `updatedAt`
+- `commentRecordId`
+- `commentRecordType`
 
 ---
 
-## Webhooks
+## Additional Operations
 
-### Webhook Verification
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
 
-Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
-and `telnyx-timestamp` headers. Always verify signatures in production:
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Create a comment | `client.comments().create()` | `POST /comments` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a comment | `client.comments().retrieve()` | `GET /comments/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| Mark a comment as read | `client.comments().markAsRead()` | `PATCH /comments/{id}/read` | Modify an existing resource without recreating it. | `id` |
+| Get country coverage | `client.countryCoverage().retrieve()` | `GET /country_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get coverage for a specific country | `client.countryCoverage().retrieveCountry()` | `GET /country_coverage/countries/{country_code}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `countryCode` |
+| List customer service records | `client.customerServiceRecords().list()` | `GET /customer_service_records` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a customer service record | `client.customerServiceRecords().create()` | `POST /customer_service_records` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Verify CSR phone number coverage | `client.customerServiceRecords().verifyPhoneNumberCoverage()` | `POST /customer_service_records/phone_number_coverages` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Get a customer service record | `client.customerServiceRecords().retrieve()` | `GET /customer_service_records/{customer_service_record_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `customerServiceRecordId` |
+| List inexplicit number orders | `client.inexplicitNumberOrders().list()` | `GET /inexplicit_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create an inexplicit number order | `client.inexplicitNumberOrders().create()` | `POST /inexplicit_number_orders` | Create or provision an additional resource when the core tasks do not cover this flow. | `orderingGroups` |
+| Retrieve an inexplicit number order | `client.inexplicitNumberOrders().retrieve()` | `GET /inexplicit_number_orders/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| Create an inventory coverage request | `client.inventoryCoverage().list()` | `GET /inventory_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List mobile network operators | `client.mobileNetworkOperators().list()` | `GET /mobile_network_operators` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List network coverage locations | `client.networkCoverage().list()` | `GET /network_coverage` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List number block orders | `client.numberBlockOrders().list()` | `GET /number_block_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a number block order | `client.numberBlockOrders().create()` | `POST /number_block_orders` | Create or provision an additional resource when the core tasks do not cover this flow. | `startingNumber`, `range` |
+| Retrieve a number block order | `client.numberBlockOrders().retrieve()` | `GET /number_block_orders/{number_block_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `numberBlockOrderId` |
+| Retrieve a list of phone numbers associated to orders | `client.numberOrderPhoneNumbers().list()` | `GET /number_order_phone_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Retrieve a single phone number within a number order. | `client.numberOrderPhoneNumbers().retrieve()` | `GET /number_order_phone_numbers/{number_order_phone_number_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `numberOrderPhoneNumberId` |
+| Update requirements for a single phone number within a number order. | `client.numberOrderPhoneNumbers().updateRequirements()` | `PATCH /number_order_phone_numbers/{number_order_phone_number_id}` | Modify an existing resource without recreating it. | `numberOrderPhoneNumberId` |
+| List number orders | `client.numberOrders().list()` | `GET /number_orders` | Create or inspect provisioning orders for number purchases. | None |
+| Update a number order | `client.numberOrders().update()` | `PATCH /number_orders/{number_order_id}` | Modify an existing resource without recreating it. | `numberOrderId` |
+| List number reservations | `client.numberReservations().list()` | `GET /number_reservations` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Extend a number reservation | `client.numberReservations().actions().extend()` | `POST /number_reservations/{number_reservation_id}/actions/extend` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `numberReservationId` |
+| Retrieve the features for a list of numbers | `client.numbersFeatures().create()` | `POST /numbers_features` | Create or provision an additional resource when the core tasks do not cover this flow. | `phoneNumbers` |
+| Lists the phone number blocks jobs | `client.phoneNumberBlocks().jobs().list()` | `GET /phone_number_blocks/jobs` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Deletes all numbers associated with a phone number block | `client.phoneNumberBlocks().jobs().deletePhoneNumberBlock()` | `POST /phone_number_blocks/jobs/delete_phone_number_block` | Create or provision an additional resource when the core tasks do not cover this flow. | `phoneNumberBlockId` |
+| Retrieves a phone number blocks job | `client.phoneNumberBlocks().jobs().retrieve()` | `GET /phone_number_blocks/jobs/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| List sub number orders | `client.subNumberOrders().list()` | `GET /sub_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Retrieve a sub number order | `client.subNumberOrders().retrieve()` | `GET /sub_number_orders/{sub_number_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `subNumberOrderId` |
+| Update a sub number order's requirements | `client.subNumberOrders().update()` | `PATCH /sub_number_orders/{sub_number_order_id}` | Modify an existing resource without recreating it. | `subNumberOrderId` |
+| Cancel a sub number order | `client.subNumberOrders().cancel()` | `PATCH /sub_number_orders/{sub_number_order_id}/cancel` | Modify an existing resource without recreating it. | `subNumberOrderId` |
+| Create a sub number orders report | `client.subNumberOrdersReport().create()` | `POST /sub_number_orders_report` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a sub number orders report | `client.subNumberOrdersReport().retrieve()` | `GET /sub_number_orders_report/{report_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `reportId` |
+| Download a sub number orders report | `client.subNumberOrdersReport().download()` | `GET /sub_number_orders_report/{report_id}/download` | Fetch the current state before updating, deleting, or making control-flow decisions. | `reportId` |
 
-```java
-import com.telnyx.sdk.core.UnwrapWebhookParams;
-import com.telnyx.sdk.core.http.Headers;
+### Other Webhook Events
 
-// In your webhook handler (e.g., Spring — use raw body):
-@PostMapping("/webhooks")
-public ResponseEntity<String> handleWebhook(
-    @RequestBody String payload,
-    HttpServletRequest request) {
-  try {
-    Headers headers = Headers.builder()
-        .put("telnyx-signature-ed25519", request.getHeader("telnyx-signature-ed25519"))
-        .put("telnyx-timestamp", request.getHeader("telnyx-timestamp"))
-        .build();
-    var event = client.webhooks().unwrap(
-        UnwrapWebhookParams.builder()
-            .body(payload)
-            .headers(headers)
-            .build());
-    // Signature valid — process the event
-    System.out.println("Received webhook event");
-    return ResponseEntity.ok("OK");
-  } catch (Exception e) {
-    System.err.println("Webhook verification failed: " + e.getMessage());
-    return ResponseEntity.badRequest().body("Invalid signature");
-  }
-}
-```
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `numberOrderStatusUpdate` | `number.order.status.update` | Number Order Status Update |
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+---
 
-| Event | Description |
-|-------|-------------|
-| `numberOrderStatusUpdate` | Number Order Status Update |
-
-### Webhook payload fields
-
-**`numberOrderStatusUpdate`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.event_type` | string | The type of event being sent |
-| `data.id` | uuid | Unique identifier for the event |
-| `data.occurred_at` | date-time | ISO 8601 timestamp of when the event occurred |
-| `data.payload.id` | uuid |  |
-| `data.payload.record_type` | string |  |
-| `data.payload.phone_numbers_count` | integer | The count of phone numbers in the number order. |
-| `data.payload.connection_id` | string | Identifies the connection associated with this phone number. |
-| `data.payload.messaging_profile_id` | string | Identifies the messaging profile associated with the phone number. |
-| `data.payload.billing_group_id` | string | Identifies the messaging profile associated with the phone number. |
-| `data.payload.phone_numbers` | array[object] |  |
-| `data.payload.sub_number_orders_ids` | array[string] |  |
-| `data.payload.status` | enum: pending, success, failure | The status of the order. |
-| `data.payload.customer_reference` | string | A customer reference string for customer look ups. |
-| `data.payload.created_at` | date-time | An ISO 8901 datetime string denoting when the number order was created. |
-| `data.payload.updated_at` | date-time | An ISO 8901 datetime string for when the number order was updated. |
-| `data.payload.requirements_met` | boolean | True if all requirements are met for every phone number, false otherwise. |
-| `data.record_type` | string | Type of record |
-| `meta.attempt` | integer | Webhook delivery attempt number |
-| `meta.delivered_to` | uri | URL where the webhook was delivered |
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.

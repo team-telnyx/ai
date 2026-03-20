@@ -318,6 +318,8 @@ await AsyncStorage.multiRemove([
 
 <!-- BEGIN AUTO-GENERATED API REFERENCE -- do not edit below this line -->
 
+**[references/webrtc-server-api.md](references/webrtc-server-api.md) has the server-side WebRTC API — credential creation, token generation, and push notification setup. You MUST read it when setting up authentication or push notifications.**
+
 ## API Reference
 
 

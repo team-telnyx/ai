@@ -2,6 +2,23 @@
 
 # Telnyx Account Management - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Managed account features must be enabled on your account
+
+### Steps
+
+1. **Create sub-account**: `client.managedAccounts().create(params)`
+2. **List sub-accounts**: `client.managedAccounts().list(params)`
+
+### Common mistakes
+
+- Sub-accounts are fully isolated — they have their own API keys, numbers, and billing
+
+**Related skills**: telnyx-account-java
+
 ## Installation
 
 ```text
@@ -9,11 +26,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -36,7 +53,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.managedAccounts().list(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -56,11 +73,19 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## Lists accounts managed by the current user.
 
 Lists the accounts managed by the current user. Users need to be explictly approved by Telnyx in order to become manager accounts.
 
-`GET /managed_accounts`
+`client.managedAccounts().list()` — `GET /managed_accounts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, email) | No | Specifies the sort order for results. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +1 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountListPage;
@@ -69,15 +94,21 @@ import com.telnyx.sdk.models.managedaccounts.ManagedAccountListParams;
 ManagedAccountListPage page = client.managedAccounts().list();
 ```
 
-Returns: `api_user` (string), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a new managed account.
 
 Create a new managed account owned by the authenticated user. You need to be explictly approved by Telnyx in order to become a manager account.
 
-`POST /managed_accounts` — Required: `business_name`
+`client.managedAccounts().create()` — `POST /managed_accounts`
 
-Optional: `email` (string), `managed_account_allow_custom_pricing` (boolean), `password` (string), `rollup_billing` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `businessName` | string | Yes | The name of the business for which the new managed account i... |
+| `email` | string | No | The email address for the managed account. |
+| `password` | string | No | Password for the managed account. |
+| `managedAccountAllowCustomPricing` | boolean | No | Boolean value that indicates if the managed account is able ... |
+| ... | | | +1 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountCreateParams;
@@ -89,13 +120,13 @@ ManagedAccountCreateParams params = ManagedAccountCreateParams.builder()
 ManagedAccountCreateResponse managedAccount = client.managedAccounts().create(params);
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Display information about allocatable global outbound channels for the current user.
 
 Display information about allocatable global outbound channels for the current user. Only usable by account managers.
 
-`GET /managed_accounts/allocatable_global_outbound_channels`
+`client.managedAccounts().getAllocatableGlobalOutboundChannels()` — `GET /managed_accounts/allocatable_global_outbound_channels`
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalOutboundChannelsParams;
@@ -104,92 +135,116 @@ import com.telnyx.sdk.models.managedaccounts.ManagedAccountGetAllocatableGlobalO
 ManagedAccountGetAllocatableGlobalOutboundChannelsResponse response = client.managedAccounts().getAllocatableGlobalOutboundChannels();
 ```
 
-Returns: `allocatable_global_outbound_channels` (integer), `managed_account_allow_custom_pricing` (boolean), `record_type` (string), `total_global_channels_allocated` (integer)
+Key response fields: `response.data.allocatable_global_outbound_channels, response.data.managed_account_allow_custom_pricing, response.data.record_type`
 
 ## Retrieve a managed account
 
 Retrieves the details of a single managed account.
 
-`GET /managed_accounts/{id}`
+`client.managedAccounts().retrieve()` — `GET /managed_accounts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Managed Account User ID |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountRetrieveParams;
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountRetrieveResponse;
 
-ManagedAccountRetrieveResponse managedAccount = client.managedAccounts().retrieve("id");
+ManagedAccountRetrieveResponse managedAccount = client.managedAccounts().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update a managed account
 
 Update a single managed account.
 
-`PATCH /managed_accounts/{id}`
+`client.managedAccounts().update()` — `PATCH /managed_accounts/{id}`
 
-Optional: `managed_account_allow_custom_pricing` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Managed Account User ID |
+| `managedAccountAllowCustomPricing` | boolean | No | Boolean value that indicates if the managed account is able ... |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountUpdateParams;
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountUpdateResponse;
 
-ManagedAccountUpdateResponse managedAccount = client.managedAccounts().update("id");
+ManagedAccountUpdateResponse managedAccount = client.managedAccounts().update("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Disables a managed account
 
 Disables a managed account, forbidding it to use Telnyx services, including sending or receiving phone calls and SMS messages. Ongoing phone calls will not be affected. The managed account and its sub-users will no longer be able to log in via the mission control portal.
 
-`POST /managed_accounts/{id}/actions/disable`
+`client.managedAccounts().actions().disable()` — `POST /managed_accounts/{id}/actions/disable`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Managed Account User ID |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.actions.ActionDisableParams;
 import com.telnyx.sdk.models.managedaccounts.actions.ActionDisableResponse;
 
-ActionDisableResponse response = client.managedAccounts().actions().disable("id");
+ActionDisableResponse response = client.managedAccounts().actions().disable("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Enables a managed account
 
 Enables a managed account and its sub-users to use Telnyx services.
 
-`POST /managed_accounts/{id}/actions/enable`
+`client.managedAccounts().actions().enable()` — `POST /managed_accounts/{id}/actions/enable`
 
-Optional: `reenable_all_connections` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Managed Account User ID |
+| `reenableAllConnections` | boolean | No | When true, all connections owned by this managed account wil... |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.actions.ActionEnableParams;
 import com.telnyx.sdk.models.managedaccounts.actions.ActionEnableResponse;
 
-ActionEnableResponse response = client.managedAccounts().actions().enable("id");
+ActionEnableResponse response = client.managedAccounts().actions().enable("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance` (object), `created_at` (string), `email` (email), `id` (uuid), `managed_account_allow_custom_pricing` (boolean), `manager_account_id` (string), `organization_name` (string), `record_type` (enum: managed_account), `rollup_billing` (boolean), `updated_at` (string)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update the amount of allocatable global outbound channels allocated to a specific managed account.
 
-`PATCH /managed_accounts/{id}/update_global_channel_limit`
+`client.managedAccounts().updateGlobalChannelLimit()` — `PATCH /managed_accounts/{id}/update_global_channel_limit`
 
-Optional: `channel_limit` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Managed Account User ID |
+| `channelLimit` | integer | No | Integer value that indicates the number of allocatable globa... |
 
 ```java
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountUpdateGlobalChannelLimitParams;
 import com.telnyx.sdk.models.managedaccounts.ManagedAccountUpdateGlobalChannelLimitResponse;
 
-ManagedAccountUpdateGlobalChannelLimitResponse response = client.managedAccounts().updateGlobalChannelLimit("id");
+ManagedAccountUpdateGlobalChannelLimitResponse response = client.managedAccounts().updateGlobalChannelLimit("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `channel_limit` (integer), `email` (string), `id` (string), `manager_account_id` (string), `record_type` (string)
+Key response fields: `response.data.id, response.data.channel_limit, response.data.email`
 
 ## List organization users
 
 Returns a list of the users in your organization.
 
-`GET /organizations/users`
+`client.organizations().users().list()` — `GET /organizations/users`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[userStatus]` | enum (enabled, disabled, blocked) | No | Filter by user status |
+| `page[number]` | integer | No | The page number to load |
+| `page[size]` | integer | No | The size of the page |
+| ... | | | +2 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.organizations.users.UserListPage;
@@ -198,13 +253,17 @@ import com.telnyx.sdk.models.organizations.users.UserListParams;
 UserListPage page = client.organizations().users().list();
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Get organization users groups report
 
 Returns a report of all users in your organization with their group memberships. This endpoint returns all users without pagination and always includes group information. The report can be retrieved in JSON or CSV format by sending specific content-type headers.
 
-`GET /organizations/users/users_groups_report`
+`client.organizations().users().getGroupsReport()` — `GET /organizations/users/users_groups_report`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Accept` | enum (application/json, text/csv) | No | Specify the response format. |
 
 ```java
 import com.telnyx.sdk.models.organizations.users.UserGetGroupsReportParams;
@@ -213,34 +272,150 @@ import com.telnyx.sdk.models.organizations.users.UserGetGroupsReportResponse;
 UserGetGroupsReportResponse response = client.organizations().users().getGroupsReport();
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Get organization user
 
 Returns a user in your organization.
 
-`GET /organizations/users/{id}`
+`client.organizations().users().retrieve()` — `GET /organizations/users/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Organization User ID |
+| `includeGroups` | boolean | No | When set to true, includes the groups array for each user in... |
 
 ```java
 import com.telnyx.sdk.models.organizations.users.UserRetrieveParams;
 import com.telnyx.sdk.models.organizations.users.UserRetrieveResponse;
 
-UserRetrieveResponse user = client.organizations().users().retrieve("id");
+UserRetrieveResponse user = client.organizations().users().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
 
 ## Delete organization user
 
 Deletes a user in your organization.
 
-`POST /organizations/users/{id}/actions/remove`
+`client.organizations().users().actions().remove()` — `POST /organizations/users/{id}/actions/remove`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Organization User ID |
 
 ```java
 import com.telnyx.sdk.models.organizations.users.actions.ActionRemoveParams;
 import com.telnyx.sdk.models.organizations.users.actions.ActionRemoveResponse;
 
-ActionRemoveResponse action = client.organizations().users().actions().remove("id");
+ActionRemoveResponse action = client.organizations().users().actions().remove("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` (string), `last_sign_in_at` (string | null), `organization_user_bypasses_sso` (boolean), `record_type` (string), `user_status` (enum: enabled, disabled, blocked)
+Key response fields: `response.data.id, response.data.created_at, response.data.email`
+
+---
+
+# Account Management (Java) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** Lists accounts managed by the current user.
+
+| Field | Type |
+|-------|------|
+| `api_user` | string |
+| `created_at` | string |
+| `email` | email |
+| `id` | uuid |
+| `managed_account_allow_custom_pricing` | boolean |
+| `manager_account_id` | string |
+| `organization_name` | string |
+| `record_type` | enum: managed_account |
+| `rollup_billing` | boolean |
+| `updated_at` | string |
+
+**Returned by:** Create a new managed account., Retrieve a managed account, Update a managed account, Disables a managed account, Enables a managed account
+
+| Field | Type |
+|-------|------|
+| `api_key` | string |
+| `api_token` | string |
+| `api_user` | string |
+| `balance` | object |
+| `created_at` | string |
+| `email` | email |
+| `id` | uuid |
+| `managed_account_allow_custom_pricing` | boolean |
+| `manager_account_id` | string |
+| `organization_name` | string |
+| `record_type` | enum: managed_account |
+| `rollup_billing` | boolean |
+| `updated_at` | string |
+
+**Returned by:** Display information about allocatable global outbound channels for the current user.
+
+| Field | Type |
+|-------|------|
+| `allocatable_global_outbound_channels` | integer |
+| `managed_account_allow_custom_pricing` | boolean |
+| `record_type` | string |
+| `total_global_channels_allocated` | integer |
+
+**Returned by:** Update the amount of allocatable global outbound channels allocated to a specific managed account.
+
+| Field | Type |
+|-------|------|
+| `channel_limit` | integer |
+| `email` | string |
+| `id` | string |
+| `manager_account_id` | string |
+| `record_type` | string |
+
+**Returned by:** List organization users, Get organization users groups report, Get organization user, Delete organization user
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `email` | email |
+| `groups` | array[object] |
+| `id` | string |
+| `last_sign_in_at` | string \| null |
+| `organization_user_bypasses_sso` | boolean |
+| `record_type` | string |
+| `user_status` | enum: enabled, disabled, blocked |
+
+## Optional Parameters
+
+### Create a new managed account. — `client.managedAccounts().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `email` | string | The email address for the managed account. |
+| `password` | string | Password for the managed account. |
+| `managedAccountAllowCustomPricing` | boolean | Boolean value that indicates if the managed account is able to have custom pr... |
+| `rollupBilling` | boolean | Boolean value that indicates if the billing information and charges to the ma... |
+
+### Update a managed account — `client.managedAccounts().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `managedAccountAllowCustomPricing` | boolean | Boolean value that indicates if the managed account is able to have custom pr... |
+
+### Enables a managed account — `client.managedAccounts().actions().enable()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `reenableAllConnections` | boolean | When true, all connections owned by this managed account will automatically b... |
+
+### Update the amount of allocatable global outbound channels allocated to a specific managed account. — `client.managedAccounts().updateGlobalChannelLimit()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `channelLimit` | integer | Integer value that indicates the number of allocatable global outbound channe... |

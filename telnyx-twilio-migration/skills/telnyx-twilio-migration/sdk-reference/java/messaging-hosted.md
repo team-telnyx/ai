@@ -2,6 +2,26 @@
 
 # Telnyx Messaging Hosted - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Host phone numbers on Telnyx by completing the hosted number order process
+2. For toll-free: submit toll-free verification request
+
+### Steps
+
+1. **Create hosted number order**: `client.hostedNumberOrders().create(params)`
+2. **Upload LOA**: `Provide Letter of Authorization for the numbers`
+3. **Monitor status**: `client.hostedNumberOrders().retrieve(params)`
+
+### Common mistakes
+
+- Hosted numbers remain with the original carrier — Telnyx routes messaging only
+- Toll-free verification is required before sending A2P traffic on toll-free numbers
+
+**Related skills**: telnyx-messaging-java, telnyx-messaging-profiles-java
+
 ## Installation
 
 ```text
@@ -9,11 +29,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -36,7 +56,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.hostedNumberOrders().create(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -57,11 +77,21 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## Send an RCS message
 
-`POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
+`client.messages().rcs().send()` — `POST /messages/rcs`
 
-Optional: `mms_fallback` (object), `sms_fallback` (object), `type` (enum: RCS), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string (UUID) | Yes | RCS Agent ID |
+| `to` | string (E.164) | Yes | Phone number in +E.164 format |
+| `messagingProfileId` | string (UUID) | Yes | A valid messaging profile ID |
+| `agentMessage` | object | Yes |  |
+| `type` | enum (RCS) | No | Message type - must be set to "RCS" |
+| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `smsFallback` | object | No |  |
+| ... | | | +1 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messages.RcsAgentMessage;
@@ -71,32 +101,42 @@ import com.telnyx.sdk.models.messages.rcs.RcSendResponse;
 RcSendParams params = RcSendParams.builder()
     .agentId("Agent007")
     .agentMessage(RcsAgentMessage.builder().build())
-    .messagingProfileId("messaging_profile_id")
+    .messagingProfileId("550e8400-e29b-41d4-a716-446655440000")
     .to("+13125551234")
     .build();
 RcSendResponse response = client.messages().rcs().send(params);
 ```
 
-Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string), `wait_seconds` (float)
+Key response fields: `response.data.id, response.data.to, response.data.from`
 
 ## Generate RCS deeplink
 
 Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
 
-`GET /messages/rcs/deeplinks/{agent_id}`
+`client.messages().rcs().generateDeeplink()` — `GET /messages/rcs/deeplinks/{agent_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string (UUID) | Yes | RCS agent ID |
+| `phoneNumber` | string (E.164) | No | Phone number in E164 format (URL encoded) |
+| `body` | string | No | Pre-filled message body (URL encoded) |
 
 ```java
 import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkParams;
 import com.telnyx.sdk.models.messages.rcs.RcGenerateDeeplinkResponse;
 
-RcGenerateDeeplinkResponse response = client.messages().rcs().generateDeeplink("agent_id");
+RcGenerateDeeplinkResponse response = client.messages().rcs().generateDeeplink("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `url` (string)
+Key response fields: `response.data.url`
 
 ## List all RCS agents
 
-`GET /messaging/rcs/agents`
+`client.messaging().rcs().agents().list()` — `GET /messaging/rcs/agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.agents.AgentListPage;
@@ -105,39 +145,53 @@ import com.telnyx.sdk.models.messaging.rcs.agents.AgentListParams;
 AgentListPage page = client.messaging().rcs().agents().list();
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Retrieve an RCS agent
 
-`GET /messaging/rcs/agents/{id}`
+`client.messaging().rcs().agents().retrieve()` — `GET /messaging/rcs/agents/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | RCS agent ID |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.agents.AgentRetrieveParams;
 import com.telnyx.sdk.models.rcsagents.RcsAgentResponse;
 
-RcsAgentResponse rcsAgentResponse = client.messaging().rcs().agents().retrieve("id");
+RcsAgentResponse rcsAgentResponse = client.messaging().rcs().agents().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Modify an RCS agent
 
-`PATCH /messaging/rcs/agents/{id}`
+`client.messaging().rcs().agents().update()` — `PATCH /messaging/rcs/agents/{id}`
 
-Optional: `profile_id` (uuid), `webhook_failover_url` (url), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | RCS agent ID |
+| `webhookUrl` | string (URL) | No | URL to receive RCS events |
+| `webhookFailoverUrl` | string (URL) | No | Failover URL to receive RCS events |
+| `profileId` | string (UUID) | No | Messaging profile ID associated with the RCS Agent |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.agents.AgentUpdateParams;
 import com.telnyx.sdk.models.rcsagents.RcsAgentResponse;
 
-RcsAgentResponse rcsAgentResponse = client.messaging().rcs().agents().update("id");
+RcsAgentResponse rcsAgentResponse = client.messaging().rcs().agents().update("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.agent_id`
 
 ## Check RCS capabilities (batch)
 
-`POST /messaging/rcs/bulk_capabilities` — Required: `agent_id`, `phone_numbers`
+`client.messaging().rcs().listBulkCapabilities()` — `POST /messaging/rcs/bulk_capabilities`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string (UUID) | Yes | RCS Agent ID |
+| `phoneNumbers` | array[string] | Yes | List of phone numbers to check |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.RcListBulkCapabilitiesParams;
@@ -150,47 +204,61 @@ RcListBulkCapabilitiesParams params = RcListBulkCapabilitiesParams.builder()
 RcListBulkCapabilitiesResponse response = client.messaging().rcs().listBulkCapabilities(params);
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
+Key response fields: `response.data.phone_number, response.data.agent_id, response.data.agent_name`
 
 ## Check RCS capabilities
 
-`GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
+`client.messaging().rcs().retrieveCapabilities()` — `GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string (UUID) | Yes | RCS agent ID |
+| `phoneNumber` | string (E.164) | Yes | Phone number in E164 format |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.RcRetrieveCapabilitiesParams;
 import com.telnyx.sdk.models.messaging.rcs.RcRetrieveCapabilitiesResponse;
 
 RcRetrieveCapabilitiesParams params = RcRetrieveCapabilitiesParams.builder()
-    .agentId("agent_id")
-    .phoneNumber("phone_number")
+    .agentId("550e8400-e29b-41d4-a716-446655440000")
+    .phoneNumber("+13125550001")
     .build();
 RcRetrieveCapabilitiesResponse response = client.messaging().rcs().retrieveCapabilities(params);
 ```
 
-Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
+Key response fields: `response.data.phone_number, response.data.agent_id, response.data.agent_name`
 
 ## Add RCS test number
 
 Adds a test phone number to an RCS agent for testing purposes.
 
-`PUT /messaging/rcs/test_number_invite/{id}/{phone_number}`
+`client.messaging().rcs().inviteTestNumber()` — `PUT /messaging/rcs/test_number_invite/{id}/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | RCS agent ID |
+| `phoneNumber` | string (E.164) | Yes | Phone number in E164 format to invite for testing |
 
 ```java
 import com.telnyx.sdk.models.messaging.rcs.RcInviteTestNumberParams;
 import com.telnyx.sdk.models.messaging.rcs.RcInviteTestNumberResponse;
 
 RcInviteTestNumberParams params = RcInviteTestNumberParams.builder()
-    .id("id")
-    .phoneNumber("phone_number")
+    .id("550e8400-e29b-41d4-a716-446655440000")
+    .phoneNumber("+13125550001")
     .build();
 RcInviteTestNumberResponse response = client.messaging().rcs().inviteTestNumber(params);
 ```
 
-Returns: `agent_id` (string), `phone_number` (string), `record_type` (enum: rcs.test_number_invite), `status` (string)
+Key response fields: `response.data.status, response.data.phone_number, response.data.agent_id`
 
 ## List messaging hosted number orders
 
-`GET /messaging_hosted_number_orders`
+`client.messagingHostedNumberOrders().list()` — `GET /messaging_hosted_number_orders`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderListPage;
@@ -199,13 +267,16 @@ import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOr
 MessagingHostedNumberOrderListPage page = client.messagingHostedNumberOrders().list();
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Create a messaging hosted number order
 
-`POST /messaging_hosted_number_orders`
+`client.messagingHostedNumberOrders().create()` — `POST /messaging_hosted_number_orders`
 
-Optional: `messaging_profile_id` (string), `phone_numbers` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messagingProfileId` | string (UUID) | No | Automatically associate the number with this messaging profi... |
+| `phoneNumbers` | array[string] | No | Phone numbers to be used for hosted messaging. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateParams;
@@ -214,11 +285,15 @@ import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOr
 MessagingHostedNumberOrderCreateResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().create();
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Check hosted messaging eligibility
 
-`POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
+`client.messagingHostedNumberOrders().checkEligibility()` — `POST /messaging_hosted_number_orders/eligibility_numbers_check`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes | List of phone numbers to check eligibility |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCheckEligibilityParams;
@@ -230,109 +305,143 @@ MessagingHostedNumberOrderCheckEligibilityParams params = MessagingHostedNumberO
 MessagingHostedNumberOrderCheckEligibilityResponse response = client.messagingHostedNumberOrders().checkEligibility(params);
 ```
 
-Returns: `phone_numbers` (array[object])
+Key response fields: `response.data.phone_numbers`
 
 ## Retrieve a messaging hosted number order
 
-`GET /messaging_hosted_number_orders/{id}`
+`client.messagingHostedNumberOrders().retrieve()` — `GET /messaging_hosted_number_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveParams;
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderRetrieveResponse;
 
-MessagingHostedNumberOrderRetrieveResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().retrieve("id");
+MessagingHostedNumberOrderRetrieveResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Delete a messaging hosted number order
 
 Delete a messaging hosted number order and all associated phone numbers.
 
-`DELETE /messaging_hosted_number_orders/{id}`
+`client.messagingHostedNumberOrders().delete()` — `DELETE /messaging_hosted_number_orders/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the messaging hosted number order to delete. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteParams;
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderDeleteResponse;
 
-MessagingHostedNumberOrderDeleteResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().delete("id");
+MessagingHostedNumberOrderDeleteResponse messagingHostedNumberOrder = client.messagingHostedNumberOrders().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Upload hosted number document
 
-`POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+`client.messagingHostedNumberOrders().actions().uploadFile()` — `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileParams;
 import com.telnyx.sdk.models.messaginghostednumberorders.actions.ActionUploadFileResponse;
 
-ActionUploadFileResponse response = client.messagingHostedNumberOrders().actions().uploadFile("id");
+ActionUploadFileResponse response = client.messagingHostedNumberOrders().actions().uploadFile("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## Validate hosted number codes
 
 Validate the verification codes sent to the numbers of the hosted order. The verification codes must be created in the verification codes endpoint.
 
-`POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
+`client.messagingHostedNumberOrders().validateCodes()` — `POST /messaging_hosted_number_orders/{id}/validation_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verificationCodes` | array[object] | Yes |  |
+| `id` | string (UUID) | Yes | Order ID related to the validation codes. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesParams;
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderValidateCodesResponse;
 
 MessagingHostedNumberOrderValidateCodesParams params = MessagingHostedNumberOrderValidateCodesParams.builder()
-    .id("id")
+    .id("550e8400-e29b-41d4-a716-446655440000")
     .addVerificationCode(MessagingHostedNumberOrderValidateCodesParams.VerificationCode.builder()
         .code("code")
-        .phoneNumber("phone_number")
+        .phoneNumber("+13125550001")
         .build())
     .build();
 MessagingHostedNumberOrderValidateCodesResponse response = client.messagingHostedNumberOrders().validateCodes(params);
 ```
 
-Returns: `order_id` (uuid), `phone_numbers` (array[object])
+Key response fields: `response.data.order_id, response.data.phone_numbers`
 
 ## Create hosted number verification codes
 
 Create verification codes to validate numbers of the hosted order. The verification codes will be sent to the numbers of the hosted order.
 
-`POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
+`client.messagingHostedNumberOrders().createVerificationCodes()` — `POST /messaging_hosted_number_orders/{id}/verification_codes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumbers` | array[string] | Yes |  |
+| `verificationMethod` | enum (sms, call) | Yes |  |
+| `id` | string (UUID) | Yes | Order ID to have a verification code created. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesParams;
 import com.telnyx.sdk.models.messaginghostednumberorders.MessagingHostedNumberOrderCreateVerificationCodesResponse;
 
 MessagingHostedNumberOrderCreateVerificationCodesParams params = MessagingHostedNumberOrderCreateVerificationCodesParams.builder()
-    .id("id")
+    .id("550e8400-e29b-41d4-a716-446655440000")
     .addPhoneNumber("string")
     .verificationMethod(MessagingHostedNumberOrderCreateVerificationCodesParams.VerificationMethod.SMS)
     .build();
 MessagingHostedNumberOrderCreateVerificationCodesResponse response = client.messagingHostedNumberOrders().createVerificationCodes(params);
 ```
 
-Returns: `error` (string), `phone_number` (string), `type` (enum: sms, call), `verification_code_id` (uuid)
+Key response fields: `response.data.phone_number, response.data.type, response.data.error`
 
 ## Delete a messaging hosted number
 
-`DELETE /messaging_hosted_numbers/{id}`
+`client.messagingHostedNumbers().delete()` — `DELETE /messaging_hosted_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
 
 ```java
 import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteParams;
 import com.telnyx.sdk.models.messaginghostednumbers.MessagingHostedNumberDeleteResponse;
 
-MessagingHostedNumberDeleteResponse messagingHostedNumber = client.messagingHostedNumbers().delete("id");
+MessagingHostedNumberDeleteResponse messagingHostedNumber = client.messagingHostedNumbers().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
+Key response fields: `response.data.id, response.data.status, response.data.messaging_profile_id`
 
 ## List Verification Requests
 
 Get a list of previously-submitted tollfree verification requests
 
-`GET /messaging_tollfree/verification/requests`
+`client.messagingTollfree().verification().requests().list()` — `GET /messaging_tollfree/verification/requests`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | enum (Verified, Rejected, Waiting For Vendor, Waiting For Customer, Waiting For Telnyx, ...) | No | Tollfree verification status |
+| `dateStart` | string (date-time) | No |  |
+| `dateEnd` | string (date-time) | No |  |
+| ... | | | +2 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestListPage;
@@ -345,15 +454,38 @@ RequestListParams params = RequestListParams.builder()
 RequestListPage page = client.messagingTollfree().verification().requests().list(params);
 ```
 
-Returns: `records` (array[object]), `total_records` (integer)
+Key response fields: `response.data.records, response.data.total_records`
 
 ## Submit Verification Request
 
 Submit a new tollfree verification request
 
-`POST /messaging_tollfree/verification/requests` — Required: `businessName`, `corporateWebsite`, `businessAddr1`, `businessCity`, `businessState`, `businessZip`, `businessContactFirstName`, `businessContactLastName`, `businessContactEmail`, `businessContactPhone`, `messageVolume`, `phoneNumbers`, `useCase`, `useCaseSummary`, `productionMessageContent`, `optInWorkflow`, `optInWorkflowImageURLs`, `additionalInformation`
+`client.messagingTollfree().verification().requests().create()` — `POST /messaging_tollfree/verification/requests`
 
-Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegistrationCountry` (string | null), `businessRegistrationNumber` (string | null), `businessRegistrationType` (string | null), `campaignVerifyAuthorizationToken` (string | null), `doingBusinessAs` (string | null), `entityType` (object), `helpMessageResponse` (string | null), `isvReseller` (string | null), `optInConfirmationResponse` (string | null), `optInKeywords` (string | null), `privacyPolicyURL` (string | null), `termsAndConditionURL` (string | null), `webhookUrl` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `businessName` | string | Yes | Name of the business; there are no specific formatting requi... |
+| `corporateWebsite` | string | Yes | A URL, including the scheme, pointing to the corporate websi... |
+| `businessAddr1` | string | Yes | Line 1 of the business address |
+| `businessCity` | string | Yes | The city of the business address; the first letter should be... |
+| `businessState` | string | Yes | The full name of the state (not the 2 letter code) of the bu... |
+| `businessZip` | string | Yes | The ZIP code of the business address |
+| `businessContactFirstName` | string | Yes | First name of the business contact; there are no specific re... |
+| `businessContactLastName` | string | Yes | Last name of the business contact; there are no specific req... |
+| `businessContactEmail` | string | Yes | The email address of the business contact |
+| `businessContactPhone` | string | Yes | The phone number of the business contact in E.164 format |
+| `messageVolume` | object | Yes | Estimated monthly volume of messages from the given phone nu... |
+| `phoneNumbers` | array[object] | Yes | The phone numbers to request the verification of |
+| `useCase` | object | Yes | Machine-readable use-case for the phone numbers |
+| `useCaseSummary` | string | Yes | Human-readable summary of the desired use-case |
+| `productionMessageContent` | string | Yes | An example of a message that will be sent from the given pho... |
+| `optInWorkflow` | string | Yes | Human-readable description of how end users will opt into re... |
+| `optInWorkflowImageURLs` | array[object] | Yes | Images showing the opt-in workflow |
+| `additionalInformation` | string | Yes | Any additional information |
+| `businessAddr2` | string | No | Line 2 of the business address |
+| `isvReseller` | string | No | ISV name |
+| `webhookUrl` | string | No | URL that should receive webhooks relating to this verificati... |
+| ... | | | +12 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestCreateParams;
@@ -365,7 +497,7 @@ import com.telnyx.sdk.models.messagingtollfree.verification.requests.Verificatio
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.Volume;
 
 TfVerificationRequest params = TfVerificationRequest.builder()
-    .additionalInformation("additionalInformation")
+    .additionalInformation("Additional context for this request.")
     .businessAddr1("600 Congress Avenue")
     .businessCity("Austin")
     .businessContactEmail("email@example.com")
@@ -397,13 +529,17 @@ TfVerificationRequest params = TfVerificationRequest.builder()
 VerificationRequestEgress verificationRequestEgress = client.messagingTollfree().verification().requests().create(params);
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `termsAndConditionURL` (string), `useCase` (object), `useCaseSummary` (string), `verificationRequestId` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Get Verification Request
 
 Get a single verification request by its ID.
 
-`GET /messaging_tollfree/verification/requests/{id}`
+`client.messagingTollfree().verification().requests().retrieve()` — `GET /messaging_tollfree/verification/requests/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestRetrieveParams;
@@ -412,15 +548,39 @@ import com.telnyx.sdk.models.messagingtollfree.verification.requests.Verificatio
 VerificationRequestStatus verificationRequestStatus = client.messagingTollfree().verification().requests().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `createdAt` (date-time), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `reason` (string), `termsAndConditionURL` (string), `updatedAt` (date-time), `useCase` (object), `useCaseSummary` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Update Verification Request
 
 Update an existing tollfree verification request. This is particularly useful when there are pending customer actions to be taken.
 
-`PATCH /messaging_tollfree/verification/requests/{id}` — Required: `businessName`, `corporateWebsite`, `businessAddr1`, `businessCity`, `businessState`, `businessZip`, `businessContactFirstName`, `businessContactLastName`, `businessContactEmail`, `businessContactPhone`, `messageVolume`, `phoneNumbers`, `useCase`, `useCaseSummary`, `productionMessageContent`, `optInWorkflow`, `optInWorkflowImageURLs`, `additionalInformation`
+`client.messagingTollfree().verification().requests().update()` — `PATCH /messaging_tollfree/verification/requests/{id}`
 
-Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegistrationCountry` (string | null), `businessRegistrationNumber` (string | null), `businessRegistrationType` (string | null), `campaignVerifyAuthorizationToken` (string | null), `doingBusinessAs` (string | null), `entityType` (object), `helpMessageResponse` (string | null), `isvReseller` (string | null), `optInConfirmationResponse` (string | null), `optInKeywords` (string | null), `privacyPolicyURL` (string | null), `termsAndConditionURL` (string | null), `webhookUrl` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `businessName` | string | Yes | Name of the business; there are no specific formatting requi... |
+| `corporateWebsite` | string | Yes | A URL, including the scheme, pointing to the corporate websi... |
+| `businessAddr1` | string | Yes | Line 1 of the business address |
+| `businessCity` | string | Yes | The city of the business address; the first letter should be... |
+| `businessState` | string | Yes | The full name of the state (not the 2 letter code) of the bu... |
+| `businessZip` | string | Yes | The ZIP code of the business address |
+| `businessContactFirstName` | string | Yes | First name of the business contact; there are no specific re... |
+| `businessContactLastName` | string | Yes | Last name of the business contact; there are no specific req... |
+| `businessContactEmail` | string | Yes | The email address of the business contact |
+| `businessContactPhone` | string | Yes | The phone number of the business contact in E.164 format |
+| `messageVolume` | object | Yes | Estimated monthly volume of messages from the given phone nu... |
+| `phoneNumbers` | array[object] | Yes | The phone numbers to request the verification of |
+| `useCase` | object | Yes | Machine-readable use-case for the phone numbers |
+| `useCaseSummary` | string | Yes | Human-readable summary of the desired use-case |
+| `productionMessageContent` | string | Yes | An example of a message that will be sent from the given pho... |
+| `optInWorkflow` | string | Yes | Human-readable description of how end users will opt into re... |
+| `optInWorkflowImageURLs` | array[object] | Yes | Images showing the opt-in workflow |
+| `additionalInformation` | string | Yes | Any additional information |
+| `id` | string (UUID) | Yes |  |
+| `businessAddr2` | string | No | Line 2 of the business address |
+| `isvReseller` | string | No | ISV name |
+| `webhookUrl` | string | No | URL that should receive webhooks relating to this verificati... |
+| ... | | | +12 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestUpdateParams;
@@ -434,7 +594,7 @@ import com.telnyx.sdk.models.messagingtollfree.verification.requests.Volume;
 RequestUpdateParams params = RequestUpdateParams.builder()
     .id("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
     .tfVerificationRequest(TfVerificationRequest.builder()
-        .additionalInformation("additionalInformation")
+        .additionalInformation("Additional context for this request.")
         .businessAddr1("600 Congress Avenue")
         .businessCity("Austin")
         .businessContactEmail("email@example.com")
@@ -467,7 +627,7 @@ RequestUpdateParams params = RequestUpdateParams.builder()
 VerificationRequestEgress verificationRequestEgress = client.messagingTollfree().verification().requests().update(params);
 ```
 
-Returns: `additionalInformation` (string), `ageGatedContent` (boolean), `businessAddr1` (string), `businessAddr2` (string), `businessCity` (string), `businessContactEmail` (string), `businessContactFirstName` (string), `businessContactLastName` (string), `businessContactPhone` (string), `businessName` (string), `businessRegistrationCountry` (string), `businessRegistrationNumber` (string), `businessRegistrationType` (string), `businessState` (string), `businessZip` (string), `campaignVerifyAuthorizationToken` (string | null), `corporateWebsite` (string), `doingBusinessAs` (string), `entityType` (object), `helpMessageResponse` (string), `id` (uuid), `isvReseller` (string), `messageVolume` (object), `optInConfirmationResponse` (string), `optInKeywords` (string), `optInWorkflow` (string), `optInWorkflowImageURLs` (array[object]), `phoneNumbers` (array[object]), `privacyPolicyURL` (string), `productionMessageContent` (string), `termsAndConditionURL` (string), `useCase` (object), `useCaseSummary` (string), `verificationRequestId` (string), `verificationStatus` (object), `webhookUrl` (string)
+Key response fields: `response.data.id, response.data.additionalInformation, response.data.ageGatedContent`
 
 ## Delete Verification Request
 
@@ -477,7 +637,11 @@ A request may only be deleted when when the request is in the "rejected" state. 
 * `HTTP 400`: request exists but can't be deleted (i.e. not rejected)
 * `HTTP 404`: request unknown or already deleted
 
-`DELETE /messaging_tollfree/verification/requests/{id}`
+`client.messagingTollfree().verification().requests().delete()` — `DELETE /messaging_tollfree/verification/requests/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestDeleteParams;
@@ -489,7 +653,11 @@ client.messagingTollfree().verification().requests().delete("182bd5e5-6e1a-4fe4-
 
 Get the history of status changes for a verification request. Returns a paginated list of historical status changes including the reason for each change and when it occurred.
 
-`GET /messaging_tollfree/verification/requests/{id}/status_history`
+`client.messagingTollfree().verification().requests().retrieveStatusHistory()` — `GET /messaging_tollfree/verification/requests/{id}/status_history`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestRetrieveStatusHistoryParams;
@@ -503,11 +671,15 @@ RequestRetrieveStatusHistoryParams params = RequestRetrieveStatusHistoryParams.b
 RequestRetrieveStatusHistoryResponse response = client.messagingTollfree().verification().requests().retrieveStatusHistory(params);
 ```
 
-Returns: `records` (array[object]), `total_records` (integer)
+Key response fields: `response.data.records, response.data.total_records`
 
 ## List messaging URL domains
 
-`GET /messaging_url_domains`
+`client.messagingUrlDomains().list()` — `GET /messaging_url_domains`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.messagingurldomains.MessagingUrlDomainListPage;
@@ -516,4 +688,271 @@ import com.telnyx.sdk.models.messagingurldomains.MessagingUrlDomainListParams;
 MessagingUrlDomainListPage page = client.messagingUrlDomains().list();
 ```
 
-Returns: `id` (string), `record_type` (string), `url_domain` (string), `use_case` (string)
+Key response fields: `response.data.id, response.data.record_type, response.data.url_domain`
+
+---
+
+# Messaging Hosted (Java) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** Send an RCS message
+
+| Field | Type |
+|-------|------|
+| `body` | object |
+| `direction` | string |
+| `encoding` | string |
+| `from` | object |
+| `id` | string |
+| `messaging_profile_id` | string |
+| `organization_id` | string |
+| `received_at` | date-time |
+| `record_type` | string |
+| `to` | array[object] |
+| `type` | string |
+| `wait_seconds` | float |
+
+**Returned by:** Generate RCS deeplink
+
+| Field | Type |
+|-------|------|
+| `url` | string |
+
+**Returned by:** List all RCS agents, Retrieve an RCS agent, Modify an RCS agent
+
+| Field | Type |
+|-------|------|
+| `agent_id` | string |
+| `agent_name` | string |
+| `created_at` | date-time |
+| `enabled` | boolean |
+| `profile_id` | uuid |
+| `updated_at` | date-time |
+| `user_id` | string |
+| `webhook_failover_url` | url |
+| `webhook_url` | url |
+
+**Returned by:** Check RCS capabilities (batch), Check RCS capabilities
+
+| Field | Type |
+|-------|------|
+| `agent_id` | string |
+| `agent_name` | string |
+| `features` | array[string] |
+| `phone_number` | string |
+| `record_type` | enum: rcs.capabilities |
+
+**Returned by:** Add RCS test number
+
+| Field | Type |
+|-------|------|
+| `agent_id` | string |
+| `phone_number` | string |
+| `record_type` | enum: rcs.test_number_invite |
+| `status` | string |
+
+**Returned by:** List messaging hosted number orders, Create a messaging hosted number order, Retrieve a messaging hosted number order, Delete a messaging hosted number order, Upload hosted number document, Delete a messaging hosted number
+
+| Field | Type |
+|-------|------|
+| `id` | uuid |
+| `messaging_profile_id` | string \| null |
+| `phone_numbers` | array[object] |
+| `record_type` | string |
+| `status` | enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful |
+
+**Returned by:** Check hosted messaging eligibility
+
+| Field | Type |
+|-------|------|
+| `phone_numbers` | array[object] |
+
+**Returned by:** Validate hosted number codes
+
+| Field | Type |
+|-------|------|
+| `order_id` | uuid |
+| `phone_numbers` | array[object] |
+
+**Returned by:** Create hosted number verification codes
+
+| Field | Type |
+|-------|------|
+| `error` | string |
+| `phone_number` | string |
+| `type` | enum: sms, call |
+| `verification_code_id` | uuid |
+
+**Returned by:** List Verification Requests, Get Verification Request Status History
+
+| Field | Type |
+|-------|------|
+| `records` | array[object] |
+| `total_records` | integer |
+
+**Returned by:** Submit Verification Request, Update Verification Request
+
+| Field | Type |
+|-------|------|
+| `additionalInformation` | string |
+| `ageGatedContent` | boolean |
+| `businessAddr1` | string |
+| `businessAddr2` | string |
+| `businessCity` | string |
+| `businessContactEmail` | string |
+| `businessContactFirstName` | string |
+| `businessContactLastName` | string |
+| `businessContactPhone` | string |
+| `businessName` | string |
+| `businessRegistrationCountry` | string |
+| `businessRegistrationNumber` | string |
+| `businessRegistrationType` | string |
+| `businessState` | string |
+| `businessZip` | string |
+| `campaignVerifyAuthorizationToken` | string \| null |
+| `corporateWebsite` | string |
+| `doingBusinessAs` | string |
+| `entityType` | object |
+| `helpMessageResponse` | string |
+| `id` | uuid |
+| `isvReseller` | string |
+| `messageVolume` | object |
+| `optInConfirmationResponse` | string |
+| `optInKeywords` | string |
+| `optInWorkflow` | string |
+| `optInWorkflowImageURLs` | array[object] |
+| `phoneNumbers` | array[object] |
+| `privacyPolicyURL` | string |
+| `productionMessageContent` | string |
+| `termsAndConditionURL` | string |
+| `useCase` | object |
+| `useCaseSummary` | string |
+| `verificationRequestId` | string |
+| `verificationStatus` | object |
+| `webhookUrl` | string |
+
+**Returned by:** Get Verification Request
+
+| Field | Type |
+|-------|------|
+| `additionalInformation` | string |
+| `ageGatedContent` | boolean |
+| `businessAddr1` | string |
+| `businessAddr2` | string |
+| `businessCity` | string |
+| `businessContactEmail` | string |
+| `businessContactFirstName` | string |
+| `businessContactLastName` | string |
+| `businessContactPhone` | string |
+| `businessName` | string |
+| `businessRegistrationCountry` | string |
+| `businessRegistrationNumber` | string |
+| `businessRegistrationType` | string |
+| `businessState` | string |
+| `businessZip` | string |
+| `campaignVerifyAuthorizationToken` | string \| null |
+| `corporateWebsite` | string |
+| `createdAt` | date-time |
+| `doingBusinessAs` | string |
+| `entityType` | object |
+| `helpMessageResponse` | string |
+| `id` | uuid |
+| `isvReseller` | string |
+| `messageVolume` | object |
+| `optInConfirmationResponse` | string |
+| `optInKeywords` | string |
+| `optInWorkflow` | string |
+| `optInWorkflowImageURLs` | array[object] |
+| `phoneNumbers` | array[object] |
+| `privacyPolicyURL` | string |
+| `productionMessageContent` | string |
+| `reason` | string |
+| `termsAndConditionURL` | string |
+| `updatedAt` | date-time |
+| `useCase` | object |
+| `useCaseSummary` | string |
+| `verificationStatus` | object |
+| `webhookUrl` | string |
+
+**Returned by:** List messaging URL domains
+
+| Field | Type |
+|-------|------|
+| `id` | string |
+| `record_type` | string |
+| `url_domain` | string |
+| `use_case` | string |
+
+## Optional Parameters
+
+### Send an RCS message — `client.messages().rcs().send()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | enum (RCS) | Message type - must be set to "RCS" |
+| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `smsFallback` | object |  |
+| `mmsFallback` | object |  |
+
+### Modify an RCS agent — `client.messaging().rcs().agents().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `profileId` | string (UUID) | Messaging profile ID associated with the RCS Agent |
+| `webhookUrl` | string (URL) | URL to receive RCS events |
+| `webhookFailoverUrl` | string (URL) | Failover URL to receive RCS events |
+
+### Create a messaging hosted number order — `client.messagingHostedNumberOrders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `phoneNumbers` | array[string] | Phone numbers to be used for hosted messaging. |
+| `messagingProfileId` | string (UUID) | Automatically associate the number with this messaging profile ID when the or... |
+
+### Submit Verification Request — `client.messagingTollfree().verification().requests().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `businessAddr2` | string | Line 2 of the business address |
+| `isvReseller` | string | ISV name |
+| `webhookUrl` | string | URL that should receive webhooks relating to this verification request |
+| `businessRegistrationNumber` | string | Official business registration number (e.g., Employer Identification Number (... |
+| `businessRegistrationType` | string | Type of business registration being provided. |
+| `businessRegistrationCountry` | string | ISO 3166-1 alpha-2 country code of the issuing business authority. |
+| `doingBusinessAs` | string | Doing Business As (DBA) name if different from legal name |
+| `entityType` | object | Business entity classification. |
+| `optInConfirmationResponse` | string | Message sent to users confirming their opt-in to receive messages |
+| `helpMessageResponse` | string | The message returned when users text 'HELP' |
+| `privacyPolicyURL` | string | URL pointing to the business's privacy policy. |
+| `termsAndConditionURL` | string | URL pointing to the business's terms and conditions. |
+| `ageGatedContent` | boolean | Indicates if messaging content requires age gating (e.g., 18+). |
+| `optInKeywords` | string | Keywords used to collect and process consumer opt-ins |
+| `campaignVerifyAuthorizationToken` | string | Campaign Verify Authorization Token required for Political use case submissio... |
+
+### Update Verification Request — `client.messagingTollfree().verification().requests().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `businessAddr2` | string | Line 2 of the business address |
+| `isvReseller` | string | ISV name |
+| `webhookUrl` | string | URL that should receive webhooks relating to this verification request |
+| `businessRegistrationNumber` | string | Official business registration number (e.g., Employer Identification Number (... |
+| `businessRegistrationType` | string | Type of business registration being provided. |
+| `businessRegistrationCountry` | string | ISO 3166-1 alpha-2 country code of the issuing business authority. |
+| `doingBusinessAs` | string | Doing Business As (DBA) name if different from legal name |
+| `entityType` | object | Business entity classification. |
+| `optInConfirmationResponse` | string | Message sent to users confirming their opt-in to receive messages |
+| `helpMessageResponse` | string | The message returned when users text 'HELP' |
+| `privacyPolicyURL` | string | URL pointing to the business's privacy policy. |
+| `termsAndConditionURL` | string | URL pointing to the business's terms and conditions. |
+| `ageGatedContent` | boolean | Indicates if messaging content requires age gating (e.g., 18+). |
+| `optInKeywords` | string | Keywords used to collect and process consumer opt-ins |
+| `campaignVerifyAuthorizationToken` | string | Campaign Verify Authorization Token required for Political use case submissio... |

@@ -1,8 +1,7 @@
 ---
 name: telnyx-account-reports-javascript
 description: >-
-  Generate and retrieve usage reports for billing, analytics, and
-  reconciliation. This skill provides JavaScript SDK examples.
+  Usage reports for billing, analytics, and reconciliation.
 metadata:
   author: telnyx
   product: account-reports
@@ -13,6 +12,19 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Account Reports - JavaScript
+
+## Core Workflow
+
+### Steps
+
+1. **Generate usage report**: `client.reports.create({...: ...})`
+2. **Download CSV**: `client.csvDownloads.retrieve({id: ...})`
+
+### Common mistakes
+
+- Reports are generated asynchronously — poll the status until completed, then download
+
+**Related skills**: telnyx-account-javascript
 
 ## Installation
 
@@ -39,7 +51,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.reports.create(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -64,11 +76,18 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List call events
 
 Filters call events by given filter parameters. Events are ordered by `occurred_at`. If filter for `leg_id` or `application_session_id` is not present, it only filters events from the last 24 hours.
 
-`GET /call_events`
+`client.callEvents.list()` — `GET /call_events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -77,13 +96,16 @@ for await (const callEventListResponse of client.callEvents.list()) {
 }
 ```
 
-Returns: `call_leg_id` (string), `call_session_id` (string), `event_timestamp` (string), `metadata` (object), `name` (string), `record_type` (enum: call_event), `type` (enum: command, webhook)
+Key response fields: `response.data.name, response.data.type, response.data.call_leg_id`
 
 ## Create a ledger billing group report
 
-`POST /ledger_billing_group_reports`
+`client.ledgerBillingGroupReports.create()` — `POST /ledger_billing_group_reports`
 
-Optional: `month` (integer), `year` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `year` | integer | No | Year of the ledger billing group report |
+| `month` | integer | No | Month of the ledger billing group report |
 
 ```javascript
 const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.create({
@@ -94,11 +116,15 @@ const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.create({
 console.log(ledgerBillingGroupReport.data);
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (enum: ledger_billing_group_report), `report_url` (uri), `status` (enum: pending, complete, failed, deleted), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a ledger billing group report
 
-`GET /ledger_billing_group_reports/{id}`
+`client.ledgerBillingGroupReports.retrieve()` — `GET /ledger_billing_group_reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the ledger billing group report |
 
 ```javascript
 const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.retrieve(
@@ -108,13 +134,13 @@ const ledgerBillingGroupReport = await client.ledgerBillingGroupReports.retrieve
 console.log(ledgerBillingGroupReport.data);
 ```
 
-Returns: `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (enum: ledger_billing_group_report), `report_url` (uri), `status` (enum: pending, complete, failed, deleted), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get all MDR detailed report requests
 
 Retrieves all MDR detailed report requests for the authenticated user
 
-`GET /legacy/reporting/batch_detail_records/messaging`
+`client.legacy.reporting.batchDetailRecords.messaging.list()` — `GET /legacy/reporting/batch_detail_records/messaging`
 
 ```javascript
 const messagings = await client.legacy.reporting.batchDetailRecords.messaging.list();
@@ -122,15 +148,22 @@ const messagings = await client.legacy.reporting.batchDetailRecords.messaging.li
 console.log(messagings.data);
 ```
 
-Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a new MDR detailed report request
 
 Creates a new MDR detailed report request with the specified filters
 
-`POST /legacy/reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
+`client.legacy.reporting.batchDetailRecords.messaging.create()` — `POST /legacy/reporting/batch_detail_records/messaging`
 
-Optional: `connections` (array[integer]), `directions` (array[integer]), `filters` (array[object]), `include_message_body` (boolean), `managed_accounts` (array[string]), `profiles` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `timezone` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startTime` | string (date-time) | Yes | Start time in ISO format |
+| `endTime` | string (date-time) | Yes | End time in ISO format. |
+| `timezone` | string | No | Timezone for the report |
+| `directions` | array[integer] | No | List of directions to filter by (Inbound = 1, Outbound = 2) |
+| `recordTypes` | array[integer] | No | List of record types to filter by (Complete = 1, Incomplete ... |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const messaging = await client.legacy.reporting.batchDetailRecords.messaging.create({
@@ -141,13 +174,17 @@ const messaging = await client.legacy.reporting.batchDetailRecords.messaging.cre
 console.log(messaging.data);
 ```
 
-Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a specific MDR detailed report request
 
 Retrieves a specific MDR detailed report request by ID
 
-`GET /legacy/reporting/batch_detail_records/messaging/{id}`
+`client.legacy.reporting.batchDetailRecords.messaging.retrieve()` — `GET /legacy/reporting/batch_detail_records/messaging/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const messaging = await client.legacy.reporting.batchDetailRecords.messaging.retrieve(
@@ -157,13 +194,17 @@ const messaging = await client.legacy.reporting.batchDetailRecords.messaging.ret
 console.log(messaging.data);
 ```
 
-Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a MDR detailed report request
 
 Deletes a specific MDR detailed report request by ID
 
-`DELETE /legacy/reporting/batch_detail_records/messaging/{id}`
+`client.legacy.reporting.batchDetailRecords.messaging.delete()` — `DELETE /legacy/reporting/batch_detail_records/messaging/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const messaging = await client.legacy.reporting.batchDetailRecords.messaging.delete(
@@ -173,13 +214,13 @@ const messaging = await client.legacy.reporting.batchDetailRecords.messaging.del
 console.log(messaging.data);
 ```
 
-Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get all CDR report requests
 
 Retrieves all CDR report requests for the authenticated user
 
-`GET /legacy/reporting/batch_detail_records/voice`
+`client.legacy.reporting.batchDetailRecords.voice.list()` — `GET /legacy/reporting/batch_detail_records/voice`
 
 ```javascript
 const voices = await client.legacy.reporting.batchDetailRecords.voice.list();
@@ -187,15 +228,22 @@ const voices = await client.legacy.reporting.batchDetailRecords.voice.list();
 console.log(voices.data);
 ```
 
-Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a new CDR report request
 
 Creates a new CDR report request with the specified filters
 
-`POST /legacy/reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
+`client.legacy.reporting.batchDetailRecords.voice.create()` — `POST /legacy/reporting/batch_detail_records/voice`
 
-Optional: `call_types` (array[integer]), `connections` (array[integer]), `fields` (array[string]), `filters` (array[object]), `include_all_metadata` (boolean), `managed_accounts` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `source` (string), `timezone` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startTime` | string (date-time) | Yes | Start time in ISO format |
+| `endTime` | string (date-time) | Yes | End time in ISO format |
+| `timezone` | string | No | Timezone for the report |
+| `callTypes` | array[integer] | No | List of call types to filter by (Inbound = 1, Outbound = 2) |
+| `recordTypes` | array[integer] | No | List of record types to filter by (Complete = 1, Incomplete ... |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const voice = await client.legacy.reporting.batchDetailRecords.voice.create({
@@ -206,13 +254,13 @@ const voice = await client.legacy.reporting.batchDetailRecords.voice.create({
 console.log(voice.data);
 ```
 
-Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get available CDR report fields
 
 Retrieves all available fields that can be used in CDR reports
 
-`GET /legacy/reporting/batch_detail_records/voice/fields`
+`client.legacy.reporting.batchDetailRecords.voice.retrieveFields()` — `GET /legacy/reporting/batch_detail_records/voice/fields`
 
 ```javascript
 const response = await client.legacy.reporting.batchDetailRecords.voice.retrieveFields();
@@ -220,13 +268,17 @@ const response = await client.legacy.reporting.batchDetailRecords.voice.retrieve
 console.log(response.Billing);
 ```
 
-Returns: `Billing` (array[string]), `Interaction Data` (array[string]), `Number Information` (array[string]), `Telephony Data` (array[string])
+Key response fields: `response.data.Billing, response.data.Interaction Data, response.data.Number Information`
 
 ## Get a specific CDR report request
 
 Retrieves a specific CDR report request by ID
 
-`GET /legacy/reporting/batch_detail_records/voice/{id}`
+`client.legacy.reporting.batchDetailRecords.voice.retrieve()` — `GET /legacy/reporting/batch_detail_records/voice/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const voice = await client.legacy.reporting.batchDetailRecords.voice.retrieve(
@@ -236,13 +288,17 @@ const voice = await client.legacy.reporting.batchDetailRecords.voice.retrieve(
 console.log(voice.data);
 ```
 
-Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a CDR report request
 
 Deletes a specific CDR report request by ID
 
-`DELETE /legacy/reporting/batch_detail_records/voice/{id}`
+`client.legacy.reporting.batchDetailRecords.voice.delete()` — `DELETE /legacy/reporting/batch_detail_records/voice/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const voice = await client.legacy.reporting.batchDetailRecords.voice.delete(
@@ -252,13 +308,18 @@ const voice = await client.legacy.reporting.batchDetailRecords.voice.delete(
 console.log(voice.data);
 ```
 
-Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List MDR usage reports
 
 Fetch all previous requests for MDR usage reports.
 
-`GET /legacy/reporting/usage_reports/messaging`
+`client.legacy.reporting.usageReports.messaging.list()` — `GET /legacy/reporting/usage_reports/messaging`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | integer | No | Page number |
+| `perPage` | integer | No | Size of the page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -267,13 +328,13 @@ for await (const mdrUsageReportResponseLegacy of client.legacy.reporting.usageRe
 }
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a new legacy usage V2 MDR report request
 
 Creates a new legacy usage V2 MDR report request with the specified filters
 
-`POST /legacy/reporting/usage_reports/messaging`
+`client.legacy.reporting.usageReports.messaging.create()` — `POST /legacy/reporting/usage_reports/messaging`
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.create({
@@ -283,13 +344,17 @@ const messaging = await client.legacy.reporting.usageReports.messaging.create({
 console.log(messaging.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get an MDR usage report
 
 Fetch single MDR usage report by id.
 
-`GET /legacy/reporting/usage_reports/messaging/{id}`
+`client.legacy.reporting.usageReports.messaging.retrieve()` — `GET /legacy/reporting/usage_reports/messaging/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.retrieve(
@@ -299,13 +364,17 @@ const messaging = await client.legacy.reporting.usageReports.messaging.retrieve(
 console.log(messaging.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a V2 legacy usage MDR report request
 
 Deletes a specific V2 legacy usage MDR report request by ID
 
-`DELETE /legacy/reporting/usage_reports/messaging/{id}`
+`client.legacy.reporting.usageReports.messaging.delete()` — `DELETE /legacy/reporting/usage_reports/messaging/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const messaging = await client.legacy.reporting.usageReports.messaging.delete(
@@ -315,13 +384,13 @@ const messaging = await client.legacy.reporting.usageReports.messaging.delete(
 console.log(messaging.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List telco data usage reports
 
 Retrieve a paginated list of telco data usage reports
 
-`GET /legacy/reporting/usage_reports/number_lookup`
+`client.legacy.reporting.usageReports.numberLookup.list()` — `GET /legacy/reporting/usage_reports/number_lookup`
 
 ```javascript
 const numberLookups = await client.legacy.reporting.usageReports.numberLookup.list();
@@ -329,13 +398,13 @@ const numberLookups = await client.legacy.reporting.usageReports.numberLookup.li
 console.log(numberLookups.data);
 ```
 
-Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Submit telco data usage report
 
 Submit a new telco data usage report
 
-`POST /legacy/reporting/usage_reports/number_lookup`
+`client.legacy.reporting.usageReports.numberLookup.create()` — `POST /legacy/reporting/usage_reports/number_lookup`
 
 ```javascript
 const numberLookup = await client.legacy.reporting.usageReports.numberLookup.create();
@@ -343,37 +412,50 @@ const numberLookup = await client.legacy.reporting.usageReports.numberLookup.cre
 console.log(numberLookup.data);
 ```
 
-Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get telco data usage report by ID
 
 Retrieve a specific telco data usage report by its ID
 
-`GET /legacy/reporting/usage_reports/number_lookup/{id}`
+`client.legacy.reporting.usageReports.numberLookup.retrieve()` — `GET /legacy/reporting/usage_reports/number_lookup/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
-const numberLookup = await client.legacy.reporting.usageReports.numberLookup.retrieve('id');
+const numberLookup = await client.legacy.reporting.usageReports.numberLookup.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(numberLookup.data);
 ```
 
-Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete telco data usage report
 
 Delete a specific telco data usage report by its ID
 
-`DELETE /legacy/reporting/usage_reports/number_lookup/{id}`
+`client.legacy.reporting.usageReports.numberLookup.delete()` — `DELETE /legacy/reporting/usage_reports/number_lookup/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
-await client.legacy.reporting.usageReports.numberLookup.delete('id');
+await client.legacy.reporting.usageReports.numberLookup.delete('550e8400-e29b-41d4-a716-446655440000');
 ```
 
 ## List CDR usage reports
 
 Fetch all previous requests for cdr usage reports.
 
-`GET /legacy/reporting/usage_reports/voice`
+`client.legacy.reporting.usageReports.voice.list()` — `GET /legacy/reporting/usage_reports/voice`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | integer | No | Page number |
+| `perPage` | integer | No | Size of the page |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -382,13 +464,13 @@ for await (const cdrUsageReportResponseLegacy of client.legacy.reporting.usageRe
 }
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a new legacy usage V2 CDR report request
 
 Creates a new legacy usage V2 CDR report request with the specified filters
 
-`POST /legacy/reporting/usage_reports/voice`
+`client.legacy.reporting.usageReports.voice.create()` — `POST /legacy/reporting/usage_reports/voice`
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.create({
@@ -399,13 +481,17 @@ const voice = await client.legacy.reporting.usageReports.voice.create({
 console.log(voice.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a CDR usage report
 
 Fetch single cdr usage report by id.
 
-`GET /legacy/reporting/usage_reports/voice/{id}`
+`client.legacy.reporting.usageReports.voice.retrieve()` — `GET /legacy/reporting/usage_reports/voice/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.retrieve(
@@ -415,13 +501,17 @@ const voice = await client.legacy.reporting.usageReports.voice.retrieve(
 console.log(voice.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a V2 legacy usage CDR report request
 
 Deletes a specific V2 legacy usage CDR report request by ID
 
-`DELETE /legacy/reporting/usage_reports/voice/{id}`
+`client.legacy.reporting.usageReports.voice.delete()` — `DELETE /legacy/reporting/usage_reports/voice/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const voice = await client.legacy.reporting.usageReports.voice.delete(
@@ -431,11 +521,15 @@ const voice = await client.legacy.reporting.usageReports.voice.delete(
 console.log(voice.data);
 ```
 
-Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List CSV downloads
 
-`GET /phone_numbers/csv_downloads`
+`client.phoneNumbers.csvDownloads.list()` — `GET /phone_numbers/csv_downloads`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -444,11 +538,16 @@ for await (const csvDownload of client.phoneNumbers.csvDownloads.list()) {
 }
 ```
 
-Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
+Key response fields: `response.data.id, response.data.status, response.data.url`
 
 ## Create a CSV download
 
-`POST /phone_numbers/csv_downloads`
+`client.phoneNumbers.csvDownloads.create()` — `POST /phone_numbers/csv_downloads`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `csvFormat` | enum (V1, V2) | No | Which format to use when generating the CSV file. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 const csvDownload = await client.phoneNumbers.csvDownloads.create();
@@ -456,25 +555,35 @@ const csvDownload = await client.phoneNumbers.csvDownloads.create();
 console.log(csvDownload.data);
 ```
 
-Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
+Key response fields: `response.data.id, response.data.status, response.data.url`
 
 ## Retrieve a CSV download
 
-`GET /phone_numbers/csv_downloads/{id}`
+`client.phoneNumbers.csvDownloads.retrieve()` — `GET /phone_numbers/csv_downloads/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the CSV download. |
 
 ```javascript
-const csvDownload = await client.phoneNumbers.csvDownloads.retrieve('id');
+const csvDownload = await client.phoneNumbers.csvDownloads.retrieve('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(csvDownload.data);
 ```
 
-Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
+Key response fields: `response.data.id, response.data.status, response.data.url`
 
 ## Generates and fetches CDR Usage Reports
 
 Generate and fetch voice usage report synchronously. This endpoint will both generate and fetch the voice report over a specified time period. No polling is necessary but the response may take up to a couple of minutes.
 
-`GET /reports/cdr_usage_reports/sync`
+`client.reports.cdrUsageReports.fetchSync()` — `GET /reports/cdr_usage_reports/sync`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startDate` | string (date-time) | No |  |
+| `endDate` | string (date-time) | No |  |
+| `connections` | array[number] | No |  |
 
 ```javascript
 const response = await client.reports.cdrUsageReports.fetchSync({
@@ -485,13 +594,17 @@ const response = await client.reports.cdrUsageReports.fetchSync({
 console.log(response.data);
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, CONNECTION, TAG, BILLING_GROUP), `connections` (array[integer]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (enum: NO_BREAKDOWN, DID_VS_TOLL_FREE, COUNTRY, DID_VS_TOLL_FREE_PER_COUNTRY), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Fetch all Messaging usage reports
 
 Fetch all messaging usage reports. Usage reports are aggregated messaging data for specified time period and breakdown
 
-`GET /reports/mdr_usage_reports`
+`client.reports.mdrUsageReports.list()` — `GET /reports/mdr_usage_reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -500,13 +613,13 @@ for await (const mdrUsageReport of client.reports.mdrUsageReports.list()) {
 }
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections` (array[integer]), `created_at` (date-time), `end_date` (date-time), `id` (uuid), `profiles` (string), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create MDR Usage Report
 
 Submit request for new new messaging usage report. This endpoint will pull and aggregate messaging data in specified time period.
 
-`POST /reports/mdr_usage_reports`
+`client.reports.mdrUsageReports.create()` — `POST /reports/mdr_usage_reports`
 
 ```javascript
 const mdrUsageReport = await client.reports.mdrUsageReports.create({
@@ -518,13 +631,19 @@ const mdrUsageReport = await client.reports.mdrUsageReports.create({
 console.log(mdrUsageReport.data);
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections` (array[integer]), `created_at` (date-time), `end_date` (date-time), `id` (uuid), `profiles` (string), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Generate and fetch MDR Usage Report
 
 Generate and fetch messaging usage report synchronously. This endpoint will both generate and fetch the messaging report over a specified time period. No polling is necessary but the response may take up to a couple of minutes.
 
-`GET /reports/mdr_usage_reports/sync`
+`client.reports.mdrUsageReports.fetchSync()` — `GET /reports/mdr_usage_reports/sync`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startDate` | string (date-time) | No |  |
+| `endDate` | string (date-time) | No |  |
+| `profiles` | array[string] | No |  |
 
 ```javascript
 const response = await client.reports.mdrUsageReports.fetchSync({ aggregation_type: 'PROFILE' });
@@ -532,13 +651,17 @@ const response = await client.reports.mdrUsageReports.fetchSync({ aggregation_ty
 console.log(response.data);
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections` (array[integer]), `created_at` (date-time), `end_date` (date-time), `id` (uuid), `profiles` (string), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve messaging report
 
 Fetch a single messaging usage report by id
 
-`GET /reports/mdr_usage_reports/{id}`
+`client.reports.mdrUsageReports.retrieve()` — `GET /reports/mdr_usage_reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const mdrUsageReport = await client.reports.mdrUsageReports.retrieve(
@@ -548,13 +671,17 @@ const mdrUsageReport = await client.reports.mdrUsageReports.retrieve(
 console.log(mdrUsageReport.data);
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections` (array[integer]), `created_at` (date-time), `end_date` (date-time), `id` (uuid), `profiles` (string), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete MDR Usage Report
 
 Delete messaging usage report by id
 
-`DELETE /reports/mdr_usage_reports/{id}`
+`client.reports.mdrUsageReports.delete()` — `DELETE /reports/mdr_usage_reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```javascript
 const mdrUsageReport = await client.reports.mdrUsageReports.delete(
@@ -564,11 +691,18 @@ const mdrUsageReport = await client.reports.mdrUsageReports.delete(
 console.log(mdrUsageReport.data);
 ```
 
-Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections` (array[integer]), `created_at` (date-time), `end_date` (date-time), `id` (uuid), `profiles` (string), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Fetch all Mdr records
 
-`GET /reports/mdrs`
+`client.reports.listMdrs()` — `GET /reports/mdrs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `direction` | enum (INBOUND, OUTBOUND) | No | Direction (inbound or outbound) |
+| `status` | enum (GW_TIMEOUT, DELIVERED, DLR_UNCONFIRMED, DLR_TIMEOUT, RECEIVED, ...) | No | Message status |
+| `messageType` | enum (SMS, MMS) | No | Type of message |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.reports.listMdrs();
@@ -576,13 +710,20 @@ const response = await client.reports.listMdrs();
 console.log(response.data);
 ```
 
-Returns: `cld` (string), `cli` (string), `cost` (string), `created_at` (date-time), `currency` (enum: AUD, CAD, EUR, GBP, USD), `direction` (string), `id` (string), `message_type` (enum: SMS, MMS), `parts` (number), `profile_name` (string), `rate` (string), `record_type` (string), `status` (enum: GW_TIMEOUT, DELIVERED, DLR_UNCONFIRMED, DLR_TIMEOUT, RECEIVED, GW_REJECT, FAILED)
+Key response fields: `response.data.id, response.data.status, response.data.direction`
 
 ## Fetches all Wdr records
 
 Fetch all Wdr records
 
-`GET /reports/wdrs`
+`client.reports.listWdrs()` — `GET /reports/wdrs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `simGroupId` | string (UUID) | No | Sim group unique identifier |
+| `simCardId` | string (UUID) | No | Sim card unique identifier |
+| `startDate` | string | No | Start date |
+| ... | | | +9 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -591,13 +732,13 @@ for await (const reportListWdrsResponse of client.reports.listWdrs()) {
 }
 ```
 
-Returns: `cost` (object), `created_at` (date-time), `downlink_data` (object), `duration_seconds` (number), `id` (string), `imsi` (string), `mcc` (string), `mnc` (string), `phone_number` (string), `rate` (object), `record_type` (string), `sim_card_id` (string), `sim_group_id` (string), `sim_group_name` (string), `uplink_data` (object)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Get metadata overview
 
 Returns all available record types and supported query parameters for session analysis.
 
-`GET /session_analysis/metadata`
+`client.sessionAnalysis.metadata.retrieve()` — `GET /session_analysis/metadata`
 
 ```javascript
 const metadata = await client.sessionAnalysis.metadata.retrieve();
@@ -605,13 +746,17 @@ const metadata = await client.sessionAnalysis.metadata.retrieve();
 console.log(metadata.meta);
 ```
 
-Returns: `meta` (object), `query_parameters` (object), `record_types` (array[object])
+Key response fields: `response.data.meta, response.data.query_parameters, response.data.record_types`
 
 ## Get record type metadata
 
 Returns detailed metadata for a specific record type, including relationships and examples.
 
-`GET /session_analysis/metadata/{record_type}`
+`client.sessionAnalysis.metadata.retrieveRecordType()` — `GET /session_analysis/metadata/{record_type}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordType` | string | Yes | The record type identifier (e.g. |
 
 ```javascript
 const response = await client.sessionAnalysis.metadata.retrieveRecordType('record_type');
@@ -619,13 +764,22 @@ const response = await client.sessionAnalysis.metadata.retrieveRecordType('recor
 console.log(response.aliases);
 ```
 
-Returns: `aliases` (array[string]), `child_relationships` (array[object]), `event` (string), `examples` (object), `meta` (object), `parent_relationships` (array[object]), `product` (string), `record_type` (string)
+Key response fields: `response.data.aliases, response.data.child_relationships, response.data.event`
 
 ## Get session analysis
 
 Retrieves a full session analysis tree for a given event, including costs, child events, and product linkages.
 
-`GET /session_analysis/{record_type}/{event_id}`
+`client.sessionAnalysis.retrieve()` — `GET /session_analysis/{record_type}/{event_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recordType` | string | Yes | The record type identifier. |
+| `eventId` | string (UUID) | Yes | The event identifier (UUID). |
+| `expand` | enum (record, none) | No | Controls what data to expand on each event node. |
+| `includeChildren` | boolean | No | Whether to include child events in the response. |
+| `maxDepth` | integer | No | Maximum traversal depth for the event tree. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const sessionAnalysis = await client.sessionAnalysis.retrieve(
@@ -636,32 +790,44 @@ const sessionAnalysis = await client.sessionAnalysis.retrieve(
 console.log(sessionAnalysis.session_id);
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Key response fields: `response.data.status, response.data.created_at, response.data.completed_at`
 
 ## Get Telnyx product usage data (BETA)
 
 Get Telnyx usage data by product, broken out by the specified dimensions
 
-`GET /usage_reports`
+`client.usageReports.list()` — `GET /usage_reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `format` | enum (csv, json) | No | Specify the response format (csv or json). |
+| `startDate` | string | No | The start date for the time range you are interested in. |
+| `endDate` | string | No | The end date for the time range you are interested in. |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 // Automatically fetches more pages as needed.
 for await (const usageReportListResponse of client.usageReports.list({
   dimensions: ['string'],
   metrics: ['string'],
-  product: 'product',
+  product: 'wireless',
 })) {
   console.log(usageReportListResponse);
 }
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.data, response.data.meta`
 
 ## Get Usage Reports query options (BETA)
 
 Get the Usage Reports options for querying usage, including the products available and their respective metrics and dimensions
 
-`GET /usage_reports/options`
+`client.usageReports.getOptions()` — `GET /usage_reports/options`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `product` | string | No | Options (dimensions and metrics) for a given product. |
+| `authorizationBearer` | string | No | Authenticates the request with your Telnyx API V2 KEY |
 
 ```javascript
 const response = await client.usageReports.getOptions();
@@ -669,4 +835,86 @@ const response = await client.usageReports.getOptions();
 console.log(response.data);
 ```
 
-Returns: `product` (string), `product_dimensions` (array[string]), `product_metrics` (array[string]), `record_types` (array[object])
+Key response fields: `response.data.product, response.data.product_dimensions, response.data.product_metrics`
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
+`client.wireless.detailRecordsReports.list()` — `GET /wireless/detail_records_reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load. |
+| `page[size]` | integer | No | The size of the page. |
+
+```javascript
+const detailRecordsReports = await client.wireless.detailRecordsReports.list();
+
+console.log(detailRecordsReports.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`client.wireless.detailRecordsReports.create()` — `POST /wireless/detail_records_reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `startTime` | string | No | ISO 8601 formatted date-time indicating the start time. |
+| `endTime` | string | No | ISO 8601 formatted date-time indicating the end time. |
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.create();
+
+console.log(detailRecordsReport.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns one specific WDR report
+
+`client.wireless.detailRecordsReports.retrieve()` — `GET /wireless/detail_records_reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.retrieve(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(detailRecordsReport.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Deletes one specific WDR report.
+
+`client.wireless.detailRecordsReports.delete()` — `DELETE /wireless/detail_records_reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
+```javascript
+const detailRecordsReport = await client.wireless.detailRecordsReports.delete(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(detailRecordsReport.data);
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

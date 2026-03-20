@@ -1,8 +1,8 @@
 ---
 name: telnyx-porting-out-ruby
 description: >-
-  Manage port-out requests when numbers are being ported away from Telnyx. List,
-  view, and update port-out status. This skill provides Ruby SDK examples.
+  Manage port-out requests when numbers leave Telnyx. List, view, and update
+  status.
 metadata:
   author: telnyx
   product: porting-out
@@ -13,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Porting Out - Ruby
+
+## Core Workflow
+
+### Prerequisites
+
+1. Port-out requests are initiated by the GAINING carrier, not by you
+
+### Steps
+
+1. **List port-out requests**: `client.portouts.list()`
+2. **View details**: `client.portouts.retrieve(id: ...)`
+3. **Update status**: `client.portouts.update(id: ..., status: ...)`
+
+### Common mistakes
+
+- You cannot create port-out requests — they appear when another carrier requests your numbers
+- Respond promptly to port-out requests — regulatory deadlines apply
+
+**Related skills**: telnyx-numbers-ruby, telnyx-porting-in-ruby
 
 ## Installation
 
@@ -39,7 +58,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```ruby
 begin
-  result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
+  result = client.portouts.list(params)
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
 rescue Telnyx::Errors::RateLimitError
@@ -61,11 +80,18 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `.auto_paging_each` for automatic iteration: `page.auto_paging_each { |item| puts item.id }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List portout requests
 
 Returns the portout requests according to filters
 
-`GET /portouts`
+`client.portouts.list()` — `GET /portouts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```ruby
 page = client.portouts.list
@@ -73,13 +99,18 @@ page = client.portouts.list
 puts(page)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all port-out events
 
 Returns a list of all port-out events.
 
-`GET /portouts/events`
+`client.portouts.events.list()` — `GET /portouts/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```ruby
 page = client.portouts.events.list
@@ -87,13 +118,17 @@ page = client.portouts.events.list
 puts(page)
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Show a port-out event
 
 Show a specific port-out event.
 
-`GET /portouts/events/{id}`
+`client.portouts.events.retrieve()` — `GET /portouts/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```ruby
 event = client.portouts.events.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -101,13 +136,17 @@ event = client.portouts.events.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 puts(event)
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Republish a port-out event
 
 Republish a specific port-out event.
 
-`POST /portouts/events/{id}/republish`
+`client.portouts.events.republish()` — `POST /portouts/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```ruby
 result = client.portouts.events.republish("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -119,7 +158,12 @@ puts(result)
 
 Given a port-out ID, list rejection codes that are eligible for that port-out
 
-`GET /portouts/rejections/{portout_id}`
+`client.portouts.list_rejection_codes()` — `GET /portouts/rejections/{portout_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `portout_id` | string (UUID) | Yes | Identifies a port out order. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```ruby
 response = client.portouts.list_rejection_codes("329d6658-8f93-405d-862f-648776e8afd7")
@@ -127,13 +171,18 @@ response = client.portouts.list_rejection_codes("329d6658-8f93-405d-862f-648776e
 puts(response)
 ```
 
-Returns: `code` (integer), `description` (string), `reason_required` (boolean)
+Key response fields: `response.data.code, response.data.description, response.data.reason_required`
 
 ## List port-out related reports
 
 List the reports generated about port-out operations.
 
-`GET /portouts/reports`
+`client.portouts.reports.list()` — `GET /portouts/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```ruby
 page = client.portouts.reports.list
@@ -141,13 +190,13 @@ page = client.portouts.reports.list
 puts(page)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a port-out related report
 
 Generate reports about port-out operations.
 
-`POST /portouts/reports`
+`client.portouts.reports.create()` — `POST /portouts/reports`
 
 ```ruby
 report = client.portouts.reports.create(params: {filters: {}}, report_type: :export_portouts_csv)
@@ -155,13 +204,17 @@ report = client.portouts.reports.create(params: {filters: {}}, report_type: :exp
 puts(report)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /portouts/reports/{id}`
+`client.portouts.reports.retrieve()` — `GET /portouts/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a report. |
 
 ```ruby
 report = client.portouts.reports.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -169,13 +222,17 @@ report = client.portouts.reports.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e"
 puts(report)
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a portout request
 
 Returns the portout request based on the ID provided
 
-`GET /portouts/{id}`
+`client.portouts.retrieve()` — `GET /portouts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```ruby
 portout = client.portouts.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -183,13 +240,17 @@ portout = client.portouts.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 puts(portout)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all comments for a portout request
 
 Returns a list of comments for a portout request.
 
-`GET /portouts/{id}/comments`
+`client.portouts.comments.list()` — `GET /portouts/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```ruby
 comments = client.portouts.comments.list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -197,15 +258,18 @@ comments = client.portouts.comments.list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 puts(comments)
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment on a portout request
 
 Creates a comment on a portout request.
 
-`POST /portouts/{id}/comments`
+`client.portouts.comments.create()` — `POST /portouts/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `body` | string | No | Comment to post on this portout request |
 
 ```ruby
 comment = client.portouts.comments.create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -213,13 +277,17 @@ comment = client.portouts.comments.create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e"
 puts(comment)
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## List supporting documents on a portout request
 
 List every supporting documents for a portout request.
 
-`GET /portouts/{id}/supporting_documents`
+`client.portouts.supporting_documents.list()` — `GET /portouts/{id}/supporting_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```ruby
 supporting_documents = client.portouts.supporting_documents.list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -227,15 +295,18 @@ supporting_documents = client.portouts.supporting_documents.list("182bd5e5-6e1a-
 puts(supporting_documents)
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Create a list of supporting documents on a portout request
 
 Creates a list of supporting documents on a portout request.
 
-`POST /portouts/{id}/supporting_documents`
+`client.portouts.supporting_documents.create()` — `POST /portouts/{id}/supporting_documents`
 
-Optional: `documents` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `documents` | array[object] | No | List of supporting documents parameters |
 
 ```ruby
 supporting_document = client.portouts.supporting_documents.create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -243,15 +314,20 @@ supporting_document = client.portouts.supporting_documents.create("182bd5e5-6e1a
 puts(supporting_document)
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Update Status
 
 Authorize or reject portout request
 
-`PATCH /portouts/{id}/{status}` — Required: `reason`
+`client.portouts.update_status()` — `PATCH /portouts/{id}/{status}`
 
-Optional: `host_messaging` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reason` | string | Yes | Provide a reason if rejecting the port out request |
+| `id` | string (UUID) | Yes | Portout id |
+| `status` | enum (authorized, rejected-pending) | Yes | Updated portout status |
+| `host_messaging` | boolean | No | Indicates whether messaging services should be maintained wi... |
 
 ```ruby
 response = client.portouts.update_status(
@@ -263,4 +339,8 @@ response = client.portouts.update_status(
 puts(response)
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

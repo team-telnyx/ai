@@ -1,6 +1,6 @@
 <!-- SDK reference: telnyx-10dlc-python -->
 
-# Telnyx 10Dlc - Python
+# Telnyx 10DLC - Python
 
 ## Installation
 
@@ -30,11 +30,16 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    telnyx_brand = client.messaging_10dlc.brand.create(
+        country="US",
+        display_name="ABC Mobile",
+        email="support@example.com",
+        entity_type="PRIVATE_PROFIT",
+        vertical="TECHNOLOGY",
+    )
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
-    # 429: rate limited — wait and retry with exponential backoff
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
 except telnyx.APIStatusError as e:
@@ -51,633 +56,120 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
-## List Brands
+## Operational Caveats
 
-This endpoint is used to list all brands associated with your organization.
+- 10DLC is sequential: create the brand first, then submit the campaign, then attach messaging infrastructure such as the messaging profile.
+- Registration calls are not enough by themselves. Messaging cannot use the campaign until the assignment step completes successfully.
+- Treat registration status fields as part of the control flow. Do not assume the campaign is send-ready until the returned status fields confirm it.
 
-`GET /10dlc/brand`
+## Reference Use Rules
 
-```python
-page = client.messaging_10dlc.brand.list()
-page = page.records[0]
-print(page.identity_status)
-```
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
 
-## Create Brand
+## Core Tasks
 
-This endpoint is used to create a new brand. A brand is an entity created by The Campaign Registry (TCR) that represents an organization or a company. It is this entity that TCR created campaigns will be associated with.
+### Create a brand
 
-`POST /10dlc/brand` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
+Brand registration is the entrypoint for any US A2P 10DLC campaign flow.
 
-Optional: `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
+`client.messaging_10dlc.brand.create()` — `POST /10dlc/brand`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `entity_type` | object | Yes | Entity type behind the brand. |
+| `display_name` | string | Yes | Display name, marketing name, or DBA name of the brand. |
+| `country` | string | Yes | ISO2 2 characters country code. |
+| `email` | string | Yes | Valid email address of brand support contact. |
+| `vertical` | object | Yes | Vertical or industry segment of the brand. |
+| `company_name` | string | No | (Required for Non-profit/private/public) Legal company name. |
+| `first_name` | string | No | First name of business contact. |
+| `last_name` | string | No | Last name of business contact. |
+| ... | | | +16 optional params in the API Details section below |
 
 ```python
 telnyx_brand = client.messaging_10dlc.brand.create(
     country="US",
     display_name="ABC Mobile",
-    email="email",
+    email="support@example.com",
     entity_type="PRIVATE_PROFIT",
     vertical="TECHNOLOGY",
 )
 print(telnyx_brand.identity_status)
 ```
 
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID. This endpoint can be used after creating or revetting
-a brand. Possible values for `.category[].id`:
-
-* `TAX_ID` - Data mismatch related to tax id and its associated properties.
-
-`GET /10dlc/brand/feedback/{brandId}`
-
-```python
-response = client.messaging_10dlc.brand.get_feedback(
-    "brandId",
-)
-print(response.brand_id)
-```
-
-Returns: `brandId` (string), `category` (array[object])
-
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```python
-response = client.messaging_10dlc.brand.get_sms_otp_by_reference(
-    reference_id="OTP4B2001",
-)
-print(response.brand_id)
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Get Brand
-
-Retrieve a brand by `brandId`.
-
-`GET /10dlc/brand/{brandId}`
-
-```python
-brand = client.messaging_10dlc.brand.retrieve(
-    "brandId",
-)
-print(brand)
-```
-
-## Update Brand
-
-Update a brand's attributes by `brandId`.
-
-`PUT /10dlc/brand/{brandId}` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
-
-Optional: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-```python
-telnyx_brand = client.messaging_10dlc.brand.update(
-    brand_id="brandId",
-    country="US",
-    display_name="ABC Mobile",
-    email="email",
-    entity_type="PRIVATE_PROFIT",
-    vertical="TECHNOLOGY",
-)
-print(telnyx_brand.identity_status)
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Delete Brand
-
-Delete Brand. This endpoint is used to delete a brand. Note the brand cannot be deleted if it contains one or more active campaigns, the campaigns need to be inactive and at least 3 months old due to billing purposes.
-
-`DELETE /10dlc/brand/{brandId}`
-
-```python
-client.messaging_10dlc.brand.delete(
-    "brandId",
-)
-```
-
-## Resend brand 2FA email
-
-`POST /10dlc/brand/{brandId}/2faEmail`
-
-```python
-client.messaging_10dlc.brand.resend_2fa_email(
-    "brandId",
-)
-```
-
-## List External Vettings
-
-Get list of valid external vetting record for a given brand
-
-`GET /10dlc/brand/{brandId}/externalVetting`
-
-```python
-external_vettings = client.messaging_10dlc.brand.external_vetting.list(
-    "brandId",
-)
-print(external_vettings)
-```
-
-## Order Brand External Vetting
-
-Order new external vetting for a brand
-
-`POST /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingClass`
-
-```python
-response = client.messaging_10dlc.brand.external_vetting.order(
-    brand_id="brandId",
-    evp_id="evpId",
-    vetting_class="vettingClass",
-)
-print(response.create_date)
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Import External Vetting Record
-
-This operation can be used to import an external vetting record from a TCR-approved
-vetting provider. If the vetting provider confirms validity of the record, it will be
-saved with the brand and will be considered for future campaign qualification.
-
-`PUT /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingId`
-
-Optional: `vettingToken` (string)
-
-```python
-response = client.messaging_10dlc.brand.external_vetting.imports(
-    brand_id="brandId",
-    evp_id="evpId",
-    vetting_id="vettingId",
-)
-print(response.create_date)
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Revet Brand
-
-This operation allows you to revet the brand. However, revetting is allowed once after the successful brand registration and thereafter limited to once every 3 months.
-
-`PUT /10dlc/brand/{brandId}/revet`
-
-```python
-telnyx_brand = client.messaging_10dlc.brand.revet(
-    "brandId",
-)
-print(telnyx_brand.identity_status)
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand SMS OTP Status by Brand ID
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification using the Brand ID. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process by looking it up with the brand ID. The response includes delivery status, verification dates, and detailed delivery information.
-
-`GET /10dlc/brand/{brandId}/smsOtp`
-
-```python
-response = client.messaging_10dlc.brand.retrieve_sms_otp_status(
-    "4b20019b-043a-78f8-0657-b3be3f4b4002",
-)
-print(response.brand_id)
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Trigger Brand SMS OTP
-
-Trigger or re-trigger an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`POST /10dlc/brand/{brandId}/smsOtp` — Required: `pinSms`, `successSms`
-
-```python
-response = client.messaging_10dlc.brand.trigger_sms_otp(
-    brand_id="4b20019b-043a-78f8-0657-b3be3f4b4002",
-    pin_sms="Your PIN is @OTP_PIN@",
-    success_sms="Verification successful!",
-)
-print(response.brand_id)
-```
-
-Returns: `brandId` (string), `referenceId` (string)
-
-## Verify Brand SMS OTP
-
-Verify the SMS OTP (One-Time Password) for Sole Proprietor brand verification. **Verification Flow:**
-
-1. User receives OTP via SMS after triggering
-2.
-
-`PUT /10dlc/brand/{brandId}/smsOtp` — Required: `otpPin`
-
-```python
-client.messaging_10dlc.brand.verify_sms_otp(
-    brand_id="4b20019b-043a-78f8-0657-b3be3f4b4002",
-    otp_pin="123456",
-)
-```
-
-## List Campaigns
-
-Retrieve a list of campaigns associated with a supplied `brandId`.
-
-`GET /10dlc/campaign`
-
-```python
-page = client.messaging_10dlc.campaign.list(
-    brand_id="brandId",
-)
-page = page.records[0]
-print(page.age_gated)
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Accept Shared Campaign
-
-Manually accept a campaign shared with Telnyx
-
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
-
-```python
-response = client.messaging_10dlc.campaign.accept_sharing(
-    "C26F1KLZN",
-)
-print(response)
-```
-
-## Get Campaign Cost
-
-`GET /10dlc/campaign/usecase/cost`
-
-```python
-response = client.messaging_10dlc.campaign.usecase.get_cost(
-    usecase="usecase",
-)
-print(response.campaign_usecase)
-```
-
-Returns: `campaignUsecase` (string), `description` (string), `monthlyCost` (string), `upFrontCost` (string)
-
-## Get campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/campaign/{campaignId}`
-
-```python
-telnyx_campaign_csp = client.messaging_10dlc.campaign.retrieve(
-    "campaignId",
-)
-print(telnyx_campaign_csp.brand_id)
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update campaign
-
-Update a campaign's properties by `campaignId`. **Please note:** only sample messages are editable.
-
-`PUT /10dlc/campaign/{campaignId}`
-
-Optional: `autoRenewal` (boolean), `helpMessage` (string), `messageFlow` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```python
-telnyx_campaign_csp = client.messaging_10dlc.campaign.update(
-    campaign_id="campaignId",
-)
-print(telnyx_campaign_csp.brand_id)
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Deactivate campaign
-
-Terminate a campaign. Note that once deactivated, a campaign cannot be restored.
-
-`DELETE /10dlc/campaign/{campaignId}`
-
-```python
-response = client.messaging_10dlc.campaign.deactivate(
-    "campaignId",
-)
-print(response.time)
-```
-
-Returns: `message` (string), `record_type` (string), `time` (number)
-
-## Submit campaign appeal for manual review
-
-Submits an appeal for rejected native campaigns in TELNYX_FAILED or MNO_REJECTED status. The appeal is recorded for manual compliance team review and the campaign status is reset to TCR_ACCEPTED. Note: Appeal forwarding is handled manually to allow proper review before incurring upstream charges.
-
-`POST /10dlc/campaign/{campaignId}/appeal` — Required: `appeal_reason`
-
-```python
-response = client.messaging_10dlc.campaign.submit_appeal(
-    campaign_id="5eb13888-32b7-4cab-95e6-d834dde21d64",
-    appeal_reason="The website has been updated to include the required privacy policy and terms of service.",
-)
-print(response.appealed_at)
-```
-
-Returns: `appealed_at` (date-time)
-
-## Get Campaign Mno Metadata
-
-Get the campaign metadata for each MNO it was submitted to.
-
-`GET /10dlc/campaign/{campaignId}/mnoMetadata`
-
-```python
-response = client.messaging_10dlc.campaign.get_mno_metadata(
-    "campaignId",
-)
-print(response._10999)
-```
-
-Returns: `10999` (object)
-
-## Get campaign operation status
-
-Retrieve campaign's operation status at MNO level.
-
-`GET /10dlc/campaign/{campaignId}/operationStatus`
-
-```python
-response = client.messaging_10dlc.campaign.get_operation_status(
-    "campaignId",
-)
-print(response)
-```
-
-## Get OSR campaign attributes
-
-`GET /10dlc/campaign/{campaignId}/osr/attributes`
-
-```python
-response = client.messaging_10dlc.campaign.osr.get_attributes(
-    "campaignId",
-)
-print(response)
-```
-
-## Get Sharing Status
-
-`GET /10dlc/campaign/{campaignId}/sharing`
-
-```python
-response = client.messaging_10dlc.campaign.get_sharing_status(
-    "campaignId",
-)
-print(response.shared_by_me)
-```
-
-Returns: `sharedByMe` (object), `sharedWithMe` (object)
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign to is qualified for the desired use case of that campaign. **Please note:** After campaign creation, you'll only be able to edit the campaign's sample messages.
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyx_brand.brand_id`
+- `telnyx_brand.identity_status`
+- `telnyx_brand.status`
+- `telnyx_brand.display_name`
+- `telnyx_brand.state`
+- `telnyx_brand.alt_business_id`
+
+### Submit a campaign
+
+Campaign submission is the compliance-critical step that determines whether traffic can be provisioned.
+
+`client.messaging_10dlc.campaign_builder.submit()` — `POST /10dlc/campaignBuilder`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brand_id` | string (UUID) | Yes | Alphanumeric identifier of the brand associated with this ca... |
+| `description` | string | Yes | Summary description of this campaign. |
+| `usecase` | string | Yes | Campaign usecase. |
+| `age_gated` | boolean | No | Age gated message content in campaign. |
+| `auto_renewal` | boolean | No | Campaign subscription auto-renewal option. |
+| `direct_lending` | boolean | No | Direct lending or loan arrangement |
+| ... | | | +29 optional params in the API Details section below |
 
 ```python
 telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
-    brand_id="brandId",
-    description="description",
-    usecase="usecase",
+    brand_id="BXXXXXX",
+    description="Two-factor authentication messages",
+    usecase="2FA",
+    sample_messages=["Your verification code is {{code}}"],
 )
 print(telnyx_campaign_csp.brand_id)
 ```
 
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyx_campaign_csp.campaign_id`
+- `telnyx_campaign_csp.brand_id`
+- `telnyx_campaign_csp.campaign_status`
+- `telnyx_campaign_csp.submission_status`
+- `telnyx_campaign_csp.failure_reasons`
+- `telnyx_campaign_csp.status`
 
-## Qualify By Usecase
+### Assign a messaging profile to a campaign
 
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+Messaging profile assignment is the practical handoff from registration to send-ready messaging infrastructure.
 
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+`client.messaging_10dlc.phone_number_assignment_by_profile.assign()` — `POST /10dlc/phoneNumberAssignmentByProfile`
 
-```python
-response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase(
-    usecase="usecase",
-    brand_id="brandId",
-)
-print(response.annual_fee)
-```
-
-Returns: `annualFee` (number), `maxSubUsecases` (integer), `minSubUsecases` (integer), `mnoMetadata` (object), `monthlyFee` (number), `quarterlyFee` (number), `usecase` (string)
-
-## List shared partner campaigns
-
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
-
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted. In other words, shared but pending campaigns are currently omitted
-from the response from this endpoint.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
-
-```python
-page = client.messaging_10dlc.partner_campaigns.list_shared_by_me()
-page = page.records[0]
-print(page.brand_id)
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Sharing Status
-
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
-
-```python
-response = client.messaging_10dlc.partner_campaigns.retrieve_sharing_status(
-    "campaignId",
-)
-print(response)
-```
-
-## List Shared Campaigns
-
-Retrieve all partner campaigns you have shared to Telnyx in a paginated fashion. This endpoint is currently limited to only returning shared campaigns that Telnyx has accepted. In other words, shared but pending campaigns are currently omitted from the response from this endpoint.
-
-`GET /10dlc/partner_campaigns`
-
-```python
-page = client.messaging_10dlc.partner_campaigns.list()
-page = page.records[0]
-print(page.tcr_brand_id)
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Single Shared Campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/partner_campaigns/{campaignId}`
-
-```python
-telnyx_downstream_campaign = client.messaging_10dlc.partner_campaigns.retrieve(
-    "campaignId",
-)
-print(telnyx_downstream_campaign.tcr_brand_id)
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update Single Shared Campaign
-
-Update campaign details by `campaignId`. **Please note:** Only webhook urls are editable.
-
-`PATCH /10dlc/partner_campaigns/{campaignId}`
-
-Optional: `webhookFailoverURL` (string), `webhookURL` (string)
-
-```python
-telnyx_downstream_campaign = client.messaging_10dlc.partner_campaigns.update(
-    campaign_id="campaignId",
-)
-print(telnyx_downstream_campaign.tcr_brand_id)
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign. **Please note:** if you want to assign phone numbers to a campaign that you did not create with Telnyx 10DLC services, this endpoint allows that provided that you've shared the campaign with Telnyx. In this case, only provide the parameter, `tcrCampaignId`, and not `campaignId`.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messaging_profile_id` | string (UUID) | Yes | The ID of the messaging profile that you want to link to the... |
+| `campaign_id` | string (UUID) | Yes | The ID of the campaign you want to link to the specified mes... |
+| `tcr_campaign_id` | string (UUID) | No | The TCR ID of the shared campaign you want to link to the sp... |
 
 ```python
 response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
     messaging_profile_id="4001767e-ce0f-4cae-9d5f-0d5e636e7809",
+    campaign_id="CXXX001",
 )
 print(response.messaging_profile_id)
 ```
 
-Returns: `campaignId` (string), `messagingProfileId` (string), `taskId` (string), `tcrCampaignId` (string)
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```python
-response = client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status(
-    "taskId",
-)
-print(response.status)
-```
-
-Returns: `createdAt` (date-time), `status` (string), `taskId` (string), `updatedAt` (date-time)
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```python
-response = client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status(
-    task_id="taskId",
-)
-print(response.records)
-```
-
-Returns: `records` (array[object])
-
-## List phone number campaigns
-
-`GET /10dlc/phone_number_campaigns`
-
-```python
-page = client.messaging_10dlc.phone_number_campaigns.list()
-page = page.records[0]
-print(page.campaign_id)
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Create New Phone Number Campaign
-
-`POST /10dlc/phone_number_campaigns` — Required: `phoneNumber`, `campaignId`
-
-```python
-phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.create(
-    campaign_id="4b300178-131c-d902-d54e-72d90ba1620j",
-    phone_number="+18005550199",
-)
-print(phone_number_campaign.campaign_id)
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Get Single Phone Number Campaign
-
-Retrieve an individual phone number/campaign assignment by `phoneNumber`.
-
-`GET /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```python
-phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.retrieve(
-    "phoneNumber",
-)
-print(phone_number_campaign.campaign_id)
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Create New Phone Number Campaign
-
-`PUT /10dlc/phone_number_campaigns/{phoneNumber}` — Required: `phoneNumber`, `campaignId`
-
-```python
-phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.update(
-    campaign_phone_number="phoneNumber",
-    campaign_id="4b300178-131c-d902-d54e-72d90ba1620j",
-    phone_number="+18005550199",
-)
-print(phone_number_campaign.campaign_id)
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Delete Phone Number Campaign
-
-This endpoint allows you to remove a campaign assignment from the supplied `phoneNumber`.
-
-`DELETE /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```python
-phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.delete(
-    "phoneNumber",
-)
-print(phone_number_campaign.campaign_id)
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
+Primary response fields:
+- `response.messaging_profile_id`
+- `response.campaign_id`
+- `response.task_id`
+- `response.tcr_campaign_id`
 
 ---
-
-## Webhooks
 
 ### Webhook Verification
 
@@ -700,16 +192,11 @@ def handle_webhook():
     return "OK", 200
 ```
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+## Webhooks
 
-| Event | Description |
-|-------|-------------|
-| `campaignStatusUpdate` | Campaign Status Update |
+These webhook payload fields are inline because they are part of the primary integration path.
 
-### Webhook payload fields
-
-**`campaignStatusUpdate`**
+### Campaign Status Update
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -721,3 +208,206 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `type` | enum: TELNYX_EVENT, REGISTRATION, MNO_REVIEW, TELNYX_REVIEW, NUMBER_POOL_PROVISIONED, NUMBER_POOL_DEPROVISIONED, TCR_EVENT, VERIFIED |  |
 | `description` | string | Description of the event. |
 | `status` | enum: ACCEPTED, REJECTED, DORMANT, success, failed | The status of the campaign. |
+
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Get Brand
+
+Inspect the current state of an existing brand registration.
+
+`client.messaging_10dlc.brand.retrieve()` — `GET /10dlc/brand/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brand_id` | string (UUID) | Yes |  |
+
+```python
+brand = client.messaging_10dlc.brand.retrieve(
+    "brandId",
+)
+print(brand)
+```
+
+Primary response fields:
+- `brand.status`
+- `brand.state`
+- `brand.alt_business_id`
+- `brand.alt_business_id_type`
+- `brand.assigned_campaigns_count`
+- `brand.brand_id`
+
+### Qualify By Usecase
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase()` — `GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `usecase` | string | Yes |  |
+| `brand_id` | string (UUID) | Yes |  |
+
+```python
+response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase(
+    usecase="CUSTOMER_CARE",
+    brand_id="brandId",
+)
+print(response.annual_fee)
+```
+
+Primary response fields:
+- `response.annual_fee`
+- `response.max_sub_usecases`
+- `response.min_sub_usecases`
+- `response.mno_metadata`
+- `response.monthly_fee`
+- `response.quarterly_fee`
+
+### Create New Phone Number Campaign
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.messaging_10dlc.phone_number_campaigns.create()` — `POST /10dlc/phone_number_campaigns`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | The phone number you want to link to a specified campaign. |
+| `campaign_id` | string (UUID) | Yes | The ID of the campaign you want to link to the specified pho... |
+
+```python
+phone_number_campaign = client.messaging_10dlc.phone_number_campaigns.create(
+    campaign_id="4b300178-131c-d902-d54e-72d90ba1620j",
+    phone_number="+18005550199",
+)
+print(phone_number_campaign.campaign_id)
+```
+
+Primary response fields:
+- `phone_number_campaign.assignment_status`
+- `phone_number_campaign.brand_id`
+- `phone_number_campaign.campaign_id`
+- `phone_number_campaign.created_at`
+- `phone_number_campaign.failure_reasons`
+- `phone_number_campaign.phone_number`
+
+### Get campaign
+
+Inspect the current state of an existing campaign registration.
+
+`client.messaging_10dlc.campaign.retrieve()` — `GET /10dlc/campaign/{campaignId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `campaign_id` | string (UUID) | Yes |  |
+
+```python
+telnyx_campaign_csp = client.messaging_10dlc.campaign.retrieve(
+    "campaignId",
+)
+print(telnyx_campaign_csp.brand_id)
+```
+
+Primary response fields:
+- `telnyx_campaign_csp.status`
+- `telnyx_campaign_csp.age_gated`
+- `telnyx_campaign_csp.auto_renewal`
+- `telnyx_campaign_csp.billed_date`
+- `telnyx_campaign_csp.brand_display_name`
+- `telnyx_campaign_csp.brand_id`
+
+### List Brands
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.messaging_10dlc.brand.list()` — `GET /10dlc/brand`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
+| `page` | integer | No |  |
+| `records_per_page` | integer | No | number of records per page. |
+| ... | | | +6 optional params in the API Details section below |
+
+```python
+page = client.messaging_10dlc.brand.list()
+page = page.records[0]
+print(page.identity_status)
+```
+
+Primary response fields:
+- `page.page`
+- `page.records`
+- `page.total_records`
+
+### Get Brand Feedback By Id
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging_10dlc.brand.get_feedback()` — `GET /10dlc/brand/feedback/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brand_id` | string (UUID) | Yes |  |
+
+```python
+response = client.messaging_10dlc.brand.get_feedback(
+    "brandId",
+)
+print(response.brand_id)
+```
+
+Primary response fields:
+- `response.brand_id`
+- `response.category`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Get Brand SMS OTP Status | `client.messaging_10dlc.brand.get_sms_otp_by_reference()` | `GET /10dlc/brand/smsOtp/{referenceId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `reference_id` |
+| Update Brand | `client.messaging_10dlc.brand.update()` | `PUT /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `entity_type`, `display_name`, `country`, `email`, +2 more |
+| Delete Brand | `client.messaging_10dlc.brand.delete()` | `DELETE /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `brand_id` |
+| Resend brand 2FA email | `client.messaging_10dlc.brand.resend_2fa_email()` | `POST /10dlc/brand/{brandId}/2faEmail` | Create or provision an additional resource when the core tasks do not cover this flow. | `brand_id` |
+| List External Vettings | `client.messaging_10dlc.brand.external_vetting.list()` | `GET /10dlc/brand/{brandId}/externalVetting` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brand_id` |
+| Order Brand External Vetting | `client.messaging_10dlc.brand.external_vetting.order()` | `POST /10dlc/brand/{brandId}/externalVetting` | Create or provision an additional resource when the core tasks do not cover this flow. | `evp_id`, `vetting_class`, `brand_id` |
+| Import External Vetting Record | `client.messaging_10dlc.brand.external_vetting.imports()` | `PUT /10dlc/brand/{brandId}/externalVetting` | Modify an existing resource without recreating it. | `evp_id`, `vetting_id`, `brand_id` |
+| Revet Brand | `client.messaging_10dlc.brand.revet()` | `PUT /10dlc/brand/{brandId}/revet` | Modify an existing resource without recreating it. | `brand_id` |
+| Get Brand SMS OTP Status by Brand ID | `client.messaging_10dlc.brand.retrieve_sms_otp_status()` | `GET /10dlc/brand/{brandId}/smsOtp` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brand_id` |
+| Trigger Brand SMS OTP | `client.messaging_10dlc.brand.trigger_sms_otp()` | `POST /10dlc/brand/{brandId}/smsOtp` | Create or provision an additional resource when the core tasks do not cover this flow. | `pin_sms`, `success_sms`, `brand_id` |
+| Verify Brand SMS OTP | `client.messaging_10dlc.brand.verify_sms_otp()` | `PUT /10dlc/brand/{brandId}/smsOtp` | Modify an existing resource without recreating it. | `otp_pin`, `brand_id` |
+| List Campaigns | `client.messaging_10dlc.campaign.list()` | `GET /10dlc/campaign` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Accept Shared Campaign | `client.messaging_10dlc.campaign.accept_sharing()` | `POST /10dlc/campaign/acceptSharing/{campaignId}` | Create or provision an additional resource when the core tasks do not cover this flow. | `campaign_id` |
+| Get Campaign Cost | `client.messaging_10dlc.campaign.usecase.get_cost()` | `GET /10dlc/campaign/usecase/cost` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Update campaign | `client.messaging_10dlc.campaign.update()` | `PUT /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaign_id` |
+| Deactivate campaign | `client.messaging_10dlc.campaign.deactivate()` | `DELETE /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaign_id` |
+| Submit campaign appeal for manual review | `client.messaging_10dlc.campaign.submit_appeal()` | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appeal_reason`, `campaign_id` |
+| Get Campaign Mno Metadata | `client.messaging_10dlc.campaign.get_mno_metadata()` | `GET /10dlc/campaign/{campaignId}/mnoMetadata` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| Get campaign operation status | `client.messaging_10dlc.campaign.get_operation_status()` | `GET /10dlc/campaign/{campaignId}/operationStatus` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| Get OSR campaign attributes | `client.messaging_10dlc.campaign.osr.get_attributes()` | `GET /10dlc/campaign/{campaignId}/osr/attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| Get Sharing Status | `client.messaging_10dlc.campaign.get_sharing_status()` | `GET /10dlc/campaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| List shared partner campaigns | `client.messaging_10dlc.partner_campaigns.list_shared_by_me()` | `GET /10dlc/partnerCampaign/sharedByMe` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Sharing Status | `client.messaging_10dlc.partner_campaigns.retrieve_sharing_status()` | `GET /10dlc/partnerCampaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| List Shared Campaigns | `client.messaging_10dlc.partner_campaigns.list()` | `GET /10dlc/partner_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Shared Campaign | `client.messaging_10dlc.partner_campaigns.retrieve()` | `GET /10dlc/partner_campaigns/{campaignId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaign_id` |
+| Update Single Shared Campaign | `client.messaging_10dlc.partner_campaigns.update()` | `PATCH /10dlc/partner_campaigns/{campaignId}` | Modify an existing resource without recreating it. | `campaign_id` |
+| Get Assignment Task Status | `client.messaging_10dlc.phone_number_assignment_by_profile.retrieve_status()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `task_id` |
+| Get Phone Number Status | `client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `task_id` |
+| List phone number campaigns | `client.messaging_10dlc.phone_number_campaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phone_number` |
+| Create New Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
+| Delete Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phone_number` |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.

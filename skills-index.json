@@ -28,7 +28,9 @@
       "product": "account-access",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-account-access-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-account-access-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -37,7 +39,9 @@
       "product": "account",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-account-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-account-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -46,7 +50,9 @@
       "product": "account-management",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-account-management-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-account-management-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -55,7 +61,9 @@
       "product": "account-notifications",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-account-notifications-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-account-notifications-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -64,7 +72,9 @@
       "product": "account-reports",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-account-reports-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-account-reports-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -84,7 +94,9 @@
       "product": "ai-inference",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-ai-inference-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-ai-inference-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -93,7 +105,9 @@
       "product": "fax",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-fax-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-fax-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -102,7 +116,9 @@
       "product": "iot",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-iot-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-iot-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -122,7 +138,9 @@
       "product": "messaging-hosted",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-messaging-hosted-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-messaging-hosted-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -131,7 +149,9 @@
       "product": "messaging-profiles",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-messaging-profiles-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-messaging-profiles-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -140,7 +160,9 @@
       "product": "missions",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-missions-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-missions-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -149,7 +171,9 @@
       "product": "networking",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-networking-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-networking-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -158,7 +182,9 @@
       "product": "numbers-compliance",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-numbers-compliance-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-numbers-compliance-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -167,7 +193,9 @@
       "product": "numbers-config",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-numbers-config-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-numbers-config-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -187,7 +215,9 @@
       "product": "numbers-services",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-numbers-services-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-numbers-services-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -196,7 +226,9 @@
       "product": "oauth",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-oauth-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-oauth-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -205,7 +237,9 @@
       "product": "porting-in",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-porting-in-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-porting-in-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -214,7 +248,9 @@
       "product": "porting-out",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-porting-out-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-porting-out-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -223,7 +259,9 @@
       "product": "seti",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-seti-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-seti-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -232,7 +270,9 @@
       "product": "sip",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-sip-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-sip-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -241,7 +281,9 @@
       "product": "sip-integrations",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-sip-integrations-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-sip-integrations-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -250,7 +292,9 @@
       "product": "storage",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-storage-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-storage-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -259,7 +303,9 @@
       "product": "texml",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-texml-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-texml-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -268,7 +314,9 @@
       "product": "verify",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-verify-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-verify-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -277,7 +325,9 @@
       "product": "video",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-video-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-video-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -286,7 +336,9 @@
       "product": "voice-advanced",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-voice-advanced-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-advanced-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -295,7 +347,9 @@
       "product": "voice-conferencing",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-voice-conferencing-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-conferencing-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -315,7 +369,9 @@
       "product": "voice-gather",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-voice-gather-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-gather-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -324,7 +380,9 @@
       "product": "voice-media",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-voice-media-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-media-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -333,7 +391,9 @@
       "product": "voice-streaming",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-voice-streaming-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-voice-streaming-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -342,7 +402,9 @@
       "product": "webrtc",
       "language": "curl",
       "path": "./telnyx-curl/skills/telnyx-webrtc-curl/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-curl/skills/telnyx-webrtc-curl/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -362,7 +424,9 @@
       "product": "account-access",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-account-access-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-account-access-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -371,7 +435,9 @@
       "product": "account",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-account-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-account-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -380,7 +446,9 @@
       "product": "account-management",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-account-management-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-account-management-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -389,7 +457,9 @@
       "product": "account-notifications",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-account-notifications-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-account-notifications-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -398,7 +468,9 @@
       "product": "account-reports",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-account-reports-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-account-reports-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -418,7 +490,9 @@
       "product": "ai-inference",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-ai-inference-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-ai-inference-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -427,7 +501,9 @@
       "product": "fax",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-fax-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-fax-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -436,7 +512,9 @@
       "product": "iot",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-iot-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-iot-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -456,7 +534,9 @@
       "product": "messaging-hosted",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-messaging-hosted-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-messaging-hosted-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -465,7 +545,9 @@
       "product": "messaging-profiles",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-messaging-profiles-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-messaging-profiles-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -474,7 +556,9 @@
       "product": "missions",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-missions-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-missions-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -483,7 +567,9 @@
       "product": "networking",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-networking-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-networking-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -492,7 +578,9 @@
       "product": "numbers-compliance",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-numbers-compliance-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-numbers-compliance-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -501,7 +589,9 @@
       "product": "numbers-config",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-numbers-config-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-numbers-config-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -521,7 +611,9 @@
       "product": "numbers-services",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-numbers-services-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-numbers-services-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -530,7 +622,9 @@
       "product": "oauth",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-oauth-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-oauth-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -539,7 +633,9 @@
       "product": "porting-in",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-porting-in-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-porting-in-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -548,7 +644,9 @@
       "product": "porting-out",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-porting-out-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-porting-out-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -557,7 +655,9 @@
       "product": "seti",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-seti-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-seti-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -566,7 +666,9 @@
       "product": "sip",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-sip-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-sip-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -575,7 +677,9 @@
       "product": "sip-integrations",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-sip-integrations-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-sip-integrations-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -584,7 +688,9 @@
       "product": "storage",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-storage-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-storage-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -593,7 +699,9 @@
       "product": "texml",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-texml-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-texml-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -602,7 +710,9 @@
       "product": "verify",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-verify-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-verify-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -611,7 +721,9 @@
       "product": "video",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-video-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-video-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -620,7 +732,9 @@
       "product": "voice-advanced",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-voice-advanced-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-advanced-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -629,7 +743,9 @@
       "product": "voice-conferencing",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-voice-conferencing-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-conferencing-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -638,7 +754,9 @@
       "product": "voice-gather",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-voice-gather-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-gather-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -658,7 +776,9 @@
       "product": "voice-media",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-voice-media-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-media-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -667,7 +787,9 @@
       "product": "voice-streaming",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-voice-streaming-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-voice-streaming-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -676,7 +798,9 @@
       "product": "webrtc",
       "language": "go",
       "path": "./telnyx-go/skills/telnyx-webrtc-go/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-go/skills/telnyx-webrtc-go/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -696,7 +820,9 @@
       "product": "account-access",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-account-access-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-account-access-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -705,7 +831,9 @@
       "product": "account",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-account-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-account-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -714,7 +842,9 @@
       "product": "account-management",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-account-management-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-account-management-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -723,7 +853,9 @@
       "product": "account-notifications",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-account-notifications-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-account-notifications-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -732,7 +864,9 @@
       "product": "account-reports",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-account-reports-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-account-reports-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -752,7 +886,9 @@
       "product": "ai-inference",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-ai-inference-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-ai-inference-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -761,7 +897,9 @@
       "product": "fax",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-fax-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-fax-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -770,7 +908,9 @@
       "product": "iot",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-iot-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-iot-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -779,7 +919,9 @@
       "product": "messaging-hosted",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-messaging-hosted-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-messaging-hosted-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -799,7 +941,9 @@
       "product": "messaging-profiles",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-messaging-profiles-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-messaging-profiles-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -808,7 +952,9 @@
       "product": "missions",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-missions-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-missions-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -817,7 +963,9 @@
       "product": "networking",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-networking-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-networking-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -826,7 +974,9 @@
       "product": "numbers-compliance",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-numbers-compliance-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-numbers-compliance-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -835,7 +985,9 @@
       "product": "numbers-config",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-numbers-config-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-numbers-config-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -855,7 +1007,9 @@
       "product": "numbers-services",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-numbers-services-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-numbers-services-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -864,7 +1018,9 @@
       "product": "oauth",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-oauth-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-oauth-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -873,7 +1029,9 @@
       "product": "porting-in",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-porting-in-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-porting-in-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -882,7 +1040,9 @@
       "product": "porting-out",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-porting-out-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-porting-out-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -891,7 +1051,9 @@
       "product": "seti",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-seti-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-seti-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -900,7 +1062,9 @@
       "product": "sip-integrations",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-sip-integrations-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-sip-integrations-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -909,7 +1073,9 @@
       "product": "sip",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-sip-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-sip-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -918,7 +1084,9 @@
       "product": "storage",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-storage-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-storage-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -927,7 +1095,9 @@
       "product": "texml",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-texml-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-texml-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -936,7 +1106,9 @@
       "product": "verify",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-verify-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-verify-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -945,7 +1117,9 @@
       "product": "video",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-video-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-video-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -954,7 +1128,9 @@
       "product": "voice-advanced",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-voice-advanced-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-advanced-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -963,7 +1139,9 @@
       "product": "voice-conferencing",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-voice-conferencing-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-conferencing-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -972,7 +1150,9 @@
       "product": "voice-gather",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-voice-gather-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-gather-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -992,7 +1172,9 @@
       "product": "voice-media",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-voice-media-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-media-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1001,7 +1183,9 @@
       "product": "voice-streaming",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-voice-streaming-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-voice-streaming-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1010,7 +1194,9 @@
       "product": "webrtc",
       "language": "java",
       "path": "./telnyx-java/skills/telnyx-webrtc-java/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-java/skills/telnyx-webrtc-java/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1030,7 +1216,9 @@
       "product": "account-access",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-account-access-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-account-access-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1039,7 +1227,9 @@
       "product": "account",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-account-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-account-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1048,7 +1238,9 @@
       "product": "account-management",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-account-management-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-account-management-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1057,7 +1249,9 @@
       "product": "account-notifications",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-account-notifications-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-account-notifications-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1066,7 +1260,9 @@
       "product": "account-reports",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-account-reports-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-account-reports-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1086,7 +1282,9 @@
       "product": "ai-inference",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-ai-inference-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-ai-inference-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1095,7 +1293,9 @@
       "product": "fax",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-fax-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-fax-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1104,7 +1304,9 @@
       "product": "iot",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-iot-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-iot-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1113,7 +1315,9 @@
       "product": "messaging-hosted",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-messaging-hosted-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-messaging-hosted-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1133,7 +1337,9 @@
       "product": "messaging-profiles",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-messaging-profiles-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-messaging-profiles-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1142,7 +1348,9 @@
       "product": "missions",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-missions-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-missions-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1151,7 +1359,9 @@
       "product": "networking",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-networking-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-networking-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1160,7 +1370,9 @@
       "product": "numbers-compliance",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-numbers-compliance-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-numbers-compliance-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1169,7 +1381,9 @@
       "product": "numbers-config",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-numbers-config-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-numbers-config-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1189,7 +1403,9 @@
       "product": "numbers-services",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-numbers-services-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-numbers-services-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1198,7 +1414,9 @@
       "product": "oauth",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-oauth-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-oauth-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1207,7 +1425,9 @@
       "product": "porting-in",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-porting-in-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-porting-in-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1216,7 +1436,9 @@
       "product": "porting-out",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-porting-out-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-porting-out-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1225,7 +1447,9 @@
       "product": "seti",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-seti-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-seti-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1234,7 +1458,9 @@
       "product": "sip-integrations",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-sip-integrations-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-sip-integrations-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1243,7 +1469,9 @@
       "product": "sip",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-sip-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-sip-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1252,7 +1480,9 @@
       "product": "storage",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-storage-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-storage-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1261,7 +1491,9 @@
       "product": "texml",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-texml-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-texml-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1270,7 +1502,9 @@
       "product": "verify",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-verify-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-verify-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1279,7 +1513,9 @@
       "product": "video",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-video-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-video-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1288,7 +1524,9 @@
       "product": "voice-advanced",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-voice-advanced-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-advanced-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1297,7 +1535,9 @@
       "product": "voice-conferencing",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-voice-conferencing-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-conferencing-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1306,7 +1546,9 @@
       "product": "voice-gather",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-voice-gather-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-gather-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1326,7 +1568,9 @@
       "product": "voice-media",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-voice-media-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-media-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1335,7 +1579,9 @@
       "product": "voice-streaming",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-voice-streaming-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-voice-streaming-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1344,7 +1590,9 @@
       "product": "webrtc",
       "language": "javascript",
       "path": "./telnyx-javascript/skills/telnyx-webrtc-javascript/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-javascript/skills/telnyx-webrtc-javascript/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1364,7 +1612,9 @@
       "product": "account-access",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-account-access-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-account-access-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1373,7 +1623,9 @@
       "product": "account-management",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-account-management-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-account-management-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1382,7 +1634,9 @@
       "product": "account-notifications",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-account-notifications-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-account-notifications-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1391,7 +1645,9 @@
       "product": "account",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-account-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-account-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1400,7 +1656,9 @@
       "product": "account-reports",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-account-reports-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-account-reports-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1420,7 +1678,9 @@
       "product": "ai-inference",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-ai-inference-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-ai-inference-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1429,7 +1689,9 @@
       "product": "fax",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-fax-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-fax-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1438,7 +1700,9 @@
       "product": "iot",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-iot-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-iot-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1447,7 +1711,9 @@
       "product": "messaging-hosted",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-messaging-hosted-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-messaging-hosted-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1456,7 +1722,9 @@
       "product": "messaging-profiles",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-messaging-profiles-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-messaging-profiles-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1476,7 +1744,9 @@
       "product": "missions",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-missions-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-missions-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1485,7 +1755,9 @@
       "product": "networking",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-networking-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-networking-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1494,7 +1766,9 @@
       "product": "numbers-compliance",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-numbers-compliance-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-numbers-compliance-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1503,7 +1777,9 @@
       "product": "numbers-config",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-numbers-config-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-numbers-config-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1523,7 +1799,9 @@
       "product": "numbers-services",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-numbers-services-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-numbers-services-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1532,7 +1810,9 @@
       "product": "oauth",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-oauth-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-oauth-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1541,7 +1821,9 @@
       "product": "porting-in",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-porting-in-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-porting-in-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1550,7 +1832,9 @@
       "product": "porting-out",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-porting-out-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-porting-out-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1559,7 +1843,9 @@
       "product": "seti",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-seti-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-seti-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1568,7 +1854,9 @@
       "product": "sip-integrations",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-sip-integrations-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-sip-integrations-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1577,7 +1865,9 @@
       "product": "sip",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-sip-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-sip-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1586,7 +1876,9 @@
       "product": "storage",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-storage-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-storage-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1595,7 +1887,9 @@
       "product": "texml",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-texml-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-texml-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1604,7 +1898,9 @@
       "product": "verify",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-verify-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-verify-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1613,7 +1909,9 @@
       "product": "video",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-video-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-video-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1622,7 +1920,9 @@
       "product": "voice-advanced",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-voice-advanced-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-advanced-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1631,7 +1931,9 @@
       "product": "voice-conferencing",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-voice-conferencing-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-conferencing-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1640,7 +1942,9 @@
       "product": "voice-gather",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-voice-gather-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-gather-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1649,7 +1953,9 @@
       "product": "voice-media",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-voice-media-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-media-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1669,7 +1975,9 @@
       "product": "voice-streaming",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-voice-streaming-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-voice-streaming-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1678,7 +1986,9 @@
       "product": "webrtc",
       "language": "python",
       "path": "./telnyx-python/skills/telnyx-webrtc-python/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-python/skills/telnyx-webrtc-python/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1698,7 +2008,9 @@
       "product": "account-access",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-account-access-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-account-access-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1707,7 +2019,9 @@
       "product": "account-management",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-account-management-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-account-management-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1716,7 +2030,9 @@
       "product": "account-notifications",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-account-notifications-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-account-notifications-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1725,7 +2041,9 @@
       "product": "account-reports",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-account-reports-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-account-reports-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1734,7 +2052,9 @@
       "product": "account",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-account-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-account-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1754,7 +2074,9 @@
       "product": "ai-inference",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-ai-inference-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-ai-inference-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1763,7 +2085,9 @@
       "product": "fax",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-fax-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-fax-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1772,7 +2096,9 @@
       "product": "iot",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-iot-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-iot-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1781,7 +2107,9 @@
       "product": "messaging-hosted",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-messaging-hosted-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-messaging-hosted-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1790,7 +2118,9 @@
       "product": "messaging-profiles",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-messaging-profiles-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-messaging-profiles-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1810,7 +2140,9 @@
       "product": "missions",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-missions-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-missions-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1819,7 +2151,9 @@
       "product": "networking",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-networking-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-networking-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1828,7 +2162,9 @@
       "product": "numbers-compliance",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-numbers-compliance-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-numbers-compliance-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1837,7 +2173,9 @@
       "product": "numbers-config",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-numbers-config-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-numbers-config-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1857,7 +2195,9 @@
       "product": "numbers-services",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-numbers-services-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-numbers-services-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1866,7 +2206,9 @@
       "product": "oauth",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-oauth-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-oauth-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1875,7 +2217,9 @@
       "product": "porting-in",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-porting-in-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-porting-in-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1884,7 +2228,9 @@
       "product": "porting-out",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-porting-out-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-porting-out-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1893,7 +2239,9 @@
       "product": "seti",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-seti-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-seti-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1902,7 +2250,9 @@
       "product": "sip-integrations",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-sip-integrations-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-sip-integrations-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1911,7 +2261,9 @@
       "product": "sip",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-sip-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-sip-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1920,7 +2272,9 @@
       "product": "storage",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-storage-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-storage-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1929,7 +2283,9 @@
       "product": "texml",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-texml-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-texml-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1938,7 +2294,9 @@
       "product": "verify",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-verify-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-verify-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1947,7 +2305,9 @@
       "product": "video",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-video-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-video-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1956,7 +2316,9 @@
       "product": "voice-advanced",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-voice-advanced-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-advanced-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1965,7 +2327,9 @@
       "product": "voice-conferencing",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-voice-conferencing-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-conferencing-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1974,7 +2338,9 @@
       "product": "voice-gather",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-voice-gather-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-gather-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -1983,7 +2349,9 @@
       "product": "voice-media",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-voice-media-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-media-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -2003,7 +2371,9 @@
       "product": "voice-streaming",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-voice-streaming-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-voice-streaming-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {
@@ -2012,7 +2382,9 @@
       "product": "webrtc",
       "language": "ruby",
       "path": "./telnyx-ruby/skills/telnyx-webrtc-ruby/SKILL.md",
-      "references": [],
+      "references": [
+        "./telnyx-ruby/skills/telnyx-webrtc-ruby/references/api-details.md"
+      ],
       "format": "agent-skill-v1"
     },
     {

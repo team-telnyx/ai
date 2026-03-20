@@ -2,6 +2,25 @@
 
 # Telnyx Porting Out - JavaScript
 
+## Core Workflow
+
+### Prerequisites
+
+1. Port-out requests are initiated by the GAINING carrier, not by you
+
+### Steps
+
+1. **List port-out requests**: `client.portouts.list()`
+2. **View details**: `client.portouts.retrieve({id: ...})`
+3. **Update status**: `client.portouts.update({id: ..., status: ...})`
+
+### Common mistakes
+
+- You cannot create port-out requests — they appear when another carrier requests your numbers
+- Respond promptly to port-out requests — regulatory deadlines apply
+
+**Related skills**: telnyx-numbers-javascript, telnyx-porting-in-javascript
+
 ## Installation
 
 ```bash
@@ -27,7 +46,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```javascript
 try {
-  const result = await client.messages.send({ to: '+13125550001', from: '+13125550002', text: 'Hello' });
+  const result = await client.portouts.list(params);
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
@@ -52,11 +71,17 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## List portout requests
 
 Returns the portout requests according to filters
 
-`GET /portouts`
+`client.portouts.list()` — `GET /portouts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -65,13 +90,18 @@ for await (const portoutDetails of client.portouts.list()) {
 }
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all port-out events
 
 Returns a list of all port-out events.
 
-`GET /portouts/events`
+`client.portouts.events.list()` — `GET /portouts/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -80,13 +110,17 @@ for await (const eventListResponse of client.portouts.events.list()) {
 }
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Show a port-out event
 
 Show a specific port-out event.
 
-`GET /portouts/events/{id}`
+`client.portouts.events.retrieve()` — `GET /portouts/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```javascript
 const event = await client.portouts.events.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -94,13 +128,17 @@ const event = await client.portouts.events.retrieve('182bd5e5-6e1a-4fe4-a799-aa6
 console.log(event.data);
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Republish a port-out event
 
 Republish a specific port-out event.
 
-`POST /portouts/events/{id}/republish`
+`client.portouts.events.republish()` — `POST /portouts/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```javascript
 await client.portouts.events.republish('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -110,7 +148,12 @@ await client.portouts.events.republish('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 
 Given a port-out ID, list rejection codes that are eligible for that port-out
 
-`GET /portouts/rejections/{portout_id}`
+`client.portouts.listRejectionCodes()` — `GET /portouts/rejections/{portout_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `portoutId` | string (UUID) | Yes | Identifies a port out order. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 const response = await client.portouts.listRejectionCodes('329d6658-8f93-405d-862f-648776e8afd7');
@@ -118,13 +161,18 @@ const response = await client.portouts.listRejectionCodes('329d6658-8f93-405d-86
 console.log(response.data);
 ```
 
-Returns: `code` (integer), `description` (string), `reason_required` (boolean)
+Key response fields: `response.data.code, response.data.description, response.data.reason_required`
 
 ## List port-out related reports
 
 List the reports generated about port-out operations.
 
-`GET /portouts/reports`
+`client.portouts.reports.list()` — `GET /portouts/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -133,13 +181,13 @@ for await (const portoutReport of client.portouts.reports.list()) {
 }
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a port-out related report
 
 Generate reports about port-out operations.
 
-`POST /portouts/reports`
+`client.portouts.reports.create()` — `POST /portouts/reports`
 
 ```javascript
 const report = await client.portouts.reports.create({
@@ -150,13 +198,17 @@ const report = await client.portouts.reports.create({
 console.log(report.data);
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /portouts/reports/{id}`
+`client.portouts.reports.retrieve()` — `GET /portouts/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a report. |
 
 ```javascript
 const report = await client.portouts.reports.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -164,13 +216,17 @@ const report = await client.portouts.reports.retrieve('182bd5e5-6e1a-4fe4-a799-a
 console.log(report.data);
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a portout request
 
 Returns the portout request based on the ID provided
 
-`GET /portouts/{id}`
+`client.portouts.retrieve()` — `GET /portouts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```javascript
 const portout = await client.portouts.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -178,13 +234,17 @@ const portout = await client.portouts.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6a
 console.log(portout.data);
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all comments for a portout request
 
 Returns a list of comments for a portout request.
 
-`GET /portouts/{id}/comments`
+`client.portouts.comments.list()` — `GET /portouts/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```javascript
 const comments = await client.portouts.comments.list('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -192,15 +252,18 @@ const comments = await client.portouts.comments.list('182bd5e5-6e1a-4fe4-a799-aa
 console.log(comments.data);
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment on a portout request
 
 Creates a comment on a portout request.
 
-`POST /portouts/{id}/comments`
+`client.portouts.comments.create()` — `POST /portouts/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `body` | string | No | Comment to post on this portout request |
 
 ```javascript
 const comment = await client.portouts.comments.create('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
@@ -208,13 +271,17 @@ const comment = await client.portouts.comments.create('182bd5e5-6e1a-4fe4-a799-a
 console.log(comment.data);
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## List supporting documents on a portout request
 
 List every supporting documents for a portout request.
 
-`GET /portouts/{id}/supporting_documents`
+`client.portouts.supportingDocuments.list()` — `GET /portouts/{id}/supporting_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```javascript
 const supportingDocuments = await client.portouts.supportingDocuments.list(
@@ -224,15 +291,18 @@ const supportingDocuments = await client.portouts.supportingDocuments.list(
 console.log(supportingDocuments.data);
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Create a list of supporting documents on a portout request
 
 Creates a list of supporting documents on a portout request.
 
-`POST /portouts/{id}/supporting_documents`
+`client.portouts.supportingDocuments.create()` — `POST /portouts/{id}/supporting_documents`
 
-Optional: `documents` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `documents` | array[object] | No | List of supporting documents parameters |
 
 ```javascript
 const supportingDocument = await client.portouts.supportingDocuments.create(
@@ -242,15 +312,20 @@ const supportingDocument = await client.portouts.supportingDocuments.create(
 console.log(supportingDocument.data);
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Update Status
 
 Authorize or reject portout request
 
-`PATCH /portouts/{id}/{status}` — Required: `reason`
+`client.portouts.updateStatus()` — `PATCH /portouts/{id}/{status}`
 
-Optional: `host_messaging` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reason` | string | Yes | Provide a reason if rejecting the port out request |
+| `id` | string (UUID) | Yes | Portout id |
+| `status` | enum (authorized, rejected-pending) | Yes | Updated portout status |
+| `hostMessaging` | boolean | No | Indicates whether messaging services should be maintained wi... |
 
 ```javascript
 const response = await client.portouts.updateStatus('authorized', {
@@ -261,4 +336,127 @@ const response = await client.portouts.updateStatus('authorized', {
 console.log(response.data);
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
+
+---
+
+# Porting Out (JavaScript) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** List portout requests, Get a portout request, Update Status
+
+| Field | Type |
+|-------|------|
+| `already_ported` | boolean |
+| `authorized_name` | string |
+| `carrier_name` | string |
+| `city` | string |
+| `created_at` | string |
+| `current_carrier` | string |
+| `end_user_name` | string |
+| `foc_date` | string |
+| `host_messaging` | boolean |
+| `id` | string |
+| `inserted_at` | string |
+| `lsr` | array[string] |
+| `phone_numbers` | array[string] |
+| `pon` | string |
+| `reason` | string \| null |
+| `record_type` | string |
+| `rejection_code` | integer |
+| `requested_foc_date` | string |
+| `service_address` | string |
+| `spid` | string |
+| `state` | string |
+| `status` | enum: pending, authorized, ported, rejected, rejected-pending, canceled |
+| `support_key` | string |
+| `updated_at` | string |
+| `user_id` | uuid |
+| `vendor` | uuid |
+| `zip` | string |
+
+**Returned by:** List all port-out events, Show a port-out event
+
+| Field | Type |
+|-------|------|
+| `available_notification_methods` | array[string] |
+| `created_at` | date-time |
+| `event_type` | enum: portout.status_changed, portout.foc_date_changed, portout.new_comment |
+| `id` | uuid |
+| `payload` | object |
+| `payload_status` | enum: created, completed |
+| `portout_id` | uuid |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List eligible port-out rejection codes for a specific order
+
+| Field | Type |
+|-------|------|
+| `code` | integer |
+| `description` | string |
+| `reason_required` | boolean |
+
+**Returned by:** List port-out related reports, Create a port-out related report, Retrieve a report
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `document_id` | uuid |
+| `id` | uuid |
+| `params` | object |
+| `record_type` | string |
+| `report_type` | enum: export_portouts_csv |
+| `status` | enum: pending, completed |
+| `updated_at` | date-time |
+
+**Returned by:** List all comments for a portout request, Create a comment on a portout request
+
+| Field | Type |
+|-------|------|
+| `body` | string |
+| `created_at` | string |
+| `id` | string |
+| `portout_id` | string |
+| `record_type` | string |
+| `user_id` | string |
+
+**Returned by:** List supporting documents on a portout request, Create a list of supporting documents on a portout request
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `document_id` | uuid |
+| `id` | uuid |
+| `portout_id` | uuid |
+| `record_type` | string |
+| `type` | enum: loa, invoice |
+| `updated_at` | string |
+
+## Optional Parameters
+
+### Create a comment on a portout request — `client.portouts.comments.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `body` | string | Comment to post on this portout request |
+
+### Create a list of supporting documents on a portout request — `client.portouts.supportingDocuments.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `documents` | array[object] | List of supporting documents parameters |
+
+### Update Status — `client.portouts.updateStatus()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `hostMessaging` | boolean | Indicates whether messaging services should be maintained with Telnyx after t... |

@@ -1,8 +1,7 @@
 ---
 name: telnyx-seti-curl
 description: >-
-  Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
-  skill provides REST API (curl) examples.
+  SETI (Space Exploration Telecommunications Infrastructure) APIs.
 metadata:
   author: telnyx
   product: seti
@@ -57,9 +56,15 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Get Enum
 
 `GET /10dlc/enum/{endpoint}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `endpoint` | enum (mno, optionalAttributes, usecase, vertical, altBusinessIdType, ...) | Yes |  |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/10dlc/enum/{endpoint}"
@@ -71,8 +76,16 @@ Returns the results of the various black box tests
 
 `GET /seti/black_box_test_results`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/seti/black_box_test_results"
 ```
 
-Returns: `black_box_tests` (array[object]), `product` (string), `record_type` (string)
+Key response fields: `.data.black_box_tests, .data.product, .data.record_type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

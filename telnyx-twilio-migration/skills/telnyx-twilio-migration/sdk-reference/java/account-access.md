@@ -2,6 +2,20 @@
 
 # Telnyx Account Access - Java
 
+## Core Workflow
+
+### Steps
+
+1. **Manage addresses**: `client.addresses().create(params)`
+2. **Configure IP access**: `client.ipAddresses().create(params)`
+3. **Manage billing groups**: `client.billingGroups().create(params)`
+
+### Common mistakes
+
+- IP access restrictions apply to API and portal — ensure you don't lock yourself out
+
+**Related skills**: telnyx-account-java
+
 ## Installation
 
 ```text
@@ -9,11 +23,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -36,7 +50,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.addresses().list(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -56,9 +70,15 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## List all Access IP Addresses
 
-`GET /access_ip_address`
+`client.accessIpAddress().list()` — `GET /access_ip_address`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListPage;
@@ -67,57 +87,74 @@ import com.telnyx.sdk.models.accessipaddress.AccessIpAddressListParams;
 AccessIpAddressListPage page = client.accessIpAddress().list();
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create new Access IP Address
 
-`POST /access_ip_address` — Required: `ip_address`
+`client.accessIpAddress().create()` — `POST /access_ip_address`
 
-Optional: `description` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ipAddress` | string (IPv4/IPv6) | Yes |  |
+| `description` | string | No |  |
 
 ```java
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressCreateParams;
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
 
 AccessIpAddressCreateParams params = AccessIpAddressCreateParams.builder()
-    .ipAddress("ip_address")
+    .ipAddress("203.0.113.10")
     .build();
 AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().create(params);
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve an access IP address
 
-`GET /access_ip_address/{access_ip_address_id}`
+`client.accessIpAddress().retrieve()` — `GET /access_ip_address/{access_ip_address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accessIpAddressId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressRetrieveParams;
 
-AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().retrieve("access_ip_address_id");
+AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete access IP address
 
-`DELETE /access_ip_address/{access_ip_address_id}`
+`client.accessIpAddress().delete()` — `DELETE /access_ip_address/{access_ip_address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accessIpAddressId` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressDeleteParams;
 import com.telnyx.sdk.models.accessipaddress.AccessIpAddressResponse;
 
-AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().delete("access_ip_address_id");
+AccessIpAddressResponse accessIpAddressResponse = client.accessIpAddress().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all addresses
 
 Returns a list of your addresses.
 
-`GET /addresses`
+`client.addresses().list()` — `GET /addresses`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, first_name, last_name, business_name, street_address) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.addresses.AddressListPage;
@@ -126,15 +163,26 @@ import com.telnyx.sdk.models.addresses.AddressListParams;
 AddressListPage page = client.addresses().list();
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Creates an address
 
 Creates an address.
 
-`POST /addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+`client.addresses().create()` — `POST /addresses`
 
-Optional: `address_book` (boolean), `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `validate_address` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `firstName` | string | Yes | The first name associated with the address. |
+| `lastName` | string | Yes | The last name associated with the address. |
+| `businessName` | string | Yes | The business name associated with the address. |
+| `streetAddress` | string | Yes | The primary street address information about the address. |
+| `locality` | string | Yes | The locality of the address. |
+| `countryCode` | string (ISO 3166-1 alpha-2) | Yes | The two-character (ISO 3166-1 alpha-2) country code of the a... |
+| `customerReference` | string | No | A customer reference string for customer look ups. |
+| `phoneNumber` | string (E.164) | No | The phone number associated with the address. |
+| `extendedAddress` | string | No | Additional street address information about the address such... |
+| ... | | | +6 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.addresses.AddressCreateParams;
@@ -151,15 +199,22 @@ AddressCreateParams params = AddressCreateParams.builder()
 AddressCreateResponse address = client.addresses().create(params);
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Validate an address
 
 Validates an address for emergency services.
 
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+`client.addresses().actions().validate()` — `POST /addresses/actions/validate`
 
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `streetAddress` | string | Yes | The primary street address information about the address. |
+| `postalCode` | string | Yes | The postal code of the address. |
+| `countryCode` | string (ISO 3166-1 alpha-2) | Yes | The two-character (ISO 3166-1 alpha-2) country code of the a... |
+| `extendedAddress` | string | No | Additional street address information about the address such... |
+| `locality` | string | No | The locality of the address. |
+| `administrativeArea` | string | No | The locality of the address. |
 
 ```java
 import com.telnyx.sdk.models.addresses.actions.ActionValidateParams;
@@ -173,43 +228,54 @@ ActionValidateParams params = ActionValidateParams.builder()
 ActionValidateResponse response = client.addresses().actions().validate(params);
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Key response fields: `response.data.errors, response.data.record_type, response.data.result`
 
 ## Retrieve an address
 
 Retrieves the details of an existing address.
 
-`GET /addresses/{id}`
+`client.addresses().retrieve()` — `GET /addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | address ID |
 
 ```java
 import com.telnyx.sdk.models.addresses.AddressRetrieveParams;
 import com.telnyx.sdk.models.addresses.AddressRetrieveResponse;
 
-AddressRetrieveResponse address = client.addresses().retrieve("id");
+AddressRetrieveResponse address = client.addresses().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Deletes an address
 
 Deletes an existing address.
 
-`DELETE /addresses/{id}`
+`client.addresses().delete()` — `DELETE /addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | address ID |
 
 ```java
 import com.telnyx.sdk.models.addresses.AddressDeleteParams;
 import com.telnyx.sdk.models.addresses.AddressDeleteResponse;
 
-AddressDeleteResponse address = client.addresses().delete("id");
+AddressDeleteResponse address = client.addresses().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Accepts this address suggestion as a new emergency address for Operator Connect and finishes the uploads of the numbers associated with it to Microsoft.
 
-`POST /addresses/{id}/actions/accept_suggestions`
+`client.addresses().actions().acceptSuggestions()` — `POST /addresses/{id}/actions/accept_suggestions`
 
-Optional: `id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The UUID of the address that should be accepted. |
+| `id` | string (UUID) | No | The ID of the address. |
 
 ```java
 import com.telnyx.sdk.models.addresses.actions.ActionAcceptSuggestionsParams;
@@ -218,13 +284,18 @@ import com.telnyx.sdk.models.addresses.actions.ActionAcceptSuggestionsResponse;
 ActionAcceptSuggestionsResponse response = client.addresses().actions().acceptSuggestions("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `accepted` (boolean), `id` (uuid), `record_type` (enum: address_suggestion)
+Key response fields: `response.data.id, response.data.accepted, response.data.record_type`
 
 ## List all SSO authentication providers
 
 Returns a list of your SSO authentication providers.
 
-`GET /authentication_providers`
+`client.authenticationProviders().list()` — `GET /authentication_providers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (name, -name, short_name, -short_name, active, ...) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderListPage;
@@ -233,15 +304,21 @@ import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderListP
 AuthenticationProviderListPage page = client.authenticationProviders().list();
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Creates an authentication provider
 
 Creates an authentication provider.
 
-`POST /authentication_providers` — Required: `name`, `short_name`, `settings`
+`client.authenticationProviders().create()` — `POST /authentication_providers`
 
-Optional: `active` (boolean), `settings_url` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | The name associated with the authentication provider. |
+| `shortName` | string | Yes | The short name associated with the authentication provider. |
+| `settings` | object | Yes | The settings associated with the authentication provider. |
+| `active` | boolean | No | The active status of the authentication provider |
+| `settingsUrl` | string (URL) | No | The URL for the identity provider metadata file to populate ... |
 
 ```java
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderCreateParams;
@@ -260,58 +337,76 @@ AuthenticationProviderCreateParams params = AuthenticationProviderCreateParams.b
 AuthenticationProviderCreateResponse authenticationProvider = client.authenticationProviders().create(params);
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve an authentication provider
 
 Retrieves the details of an existing authentication provider.
 
-`GET /authentication_providers/{id}`
+`client.authenticationProviders().retrieve()` — `GET /authentication_providers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | authentication provider ID |
 
 ```java
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderRetrieveParams;
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderRetrieveResponse;
 
-AuthenticationProviderRetrieveResponse authenticationProvider = client.authenticationProviders().retrieve("id");
+AuthenticationProviderRetrieveResponse authenticationProvider = client.authenticationProviders().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update an authentication provider
 
 Updates settings of an existing authentication provider.
 
-`PATCH /authentication_providers/{id}`
+`client.authenticationProviders().update()` — `PATCH /authentication_providers/{id}`
 
-Optional: `active` (boolean), `name` (string), `settings` (object), `settings_url` (uri), `short_name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `name` | string | No | The name associated with the authentication provider. |
+| `shortName` | string | No | The short name associated with the authentication provider. |
+| `active` | boolean | No | The active status of the authentication provider |
+| ... | | | +2 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderUpdateParams;
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderUpdateResponse;
 
-AuthenticationProviderUpdateResponse authenticationProvider = client.authenticationProviders().update("id");
+AuthenticationProviderUpdateResponse authenticationProvider = client.authenticationProviders().update("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Deletes an authentication provider
 
 Deletes an existing authentication provider.
 
-`DELETE /authentication_providers/{id}`
+`client.authenticationProviders().delete()` — `DELETE /authentication_providers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | authentication provider ID |
 
 ```java
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderDeleteParams;
 import com.telnyx.sdk.models.authenticationproviders.AuthenticationProviderDeleteResponse;
 
-AuthenticationProviderDeleteResponse authenticationProvider = client.authenticationProviders().delete("id");
+AuthenticationProviderDeleteResponse authenticationProvider = client.authenticationProviders().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List all billing groups
 
-`GET /billing_groups`
+`client.billingGroups().list()` — `GET /billing_groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.billinggroups.BillingGroupListPage;
@@ -320,13 +415,15 @@ import com.telnyx.sdk.models.billinggroups.BillingGroupListParams;
 BillingGroupListPage page = client.billingGroups().list();
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a billing group
 
-`POST /billing_groups`
+`client.billingGroups().create()` — `POST /billing_groups`
 
-Optional: `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | No | A name for the billing group |
 
 ```java
 import com.telnyx.sdk.models.billinggroups.BillingGroupCreateParams;
@@ -335,11 +432,15 @@ import com.telnyx.sdk.models.billinggroups.BillingGroupCreateResponse;
 BillingGroupCreateResponse billingGroup = client.billingGroups().create();
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get a billing group
 
-`GET /billing_groups/{id}`
+`client.billingGroups().retrieve()` — `GET /billing_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the billing group |
 
 ```java
 import com.telnyx.sdk.models.billinggroups.BillingGroupRetrieveParams;
@@ -348,13 +449,16 @@ import com.telnyx.sdk.models.billinggroups.BillingGroupRetrieveResponse;
 BillingGroupRetrieveResponse billingGroup = client.billingGroups().retrieve("f5586561-8ff0-4291-a0ac-84fe544797bd");
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a billing group
 
-`PATCH /billing_groups/{id}`
+`client.billingGroups().update()` — `PATCH /billing_groups/{id}`
 
-Optional: `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the billing group |
+| `name` | string | No | A name for the billing group |
 
 ```java
 import com.telnyx.sdk.models.billinggroups.BillingGroupUpdateParams;
@@ -363,11 +467,15 @@ import com.telnyx.sdk.models.billinggroups.BillingGroupUpdateResponse;
 BillingGroupUpdateResponse billingGroup = client.billingGroups().update("f5586561-8ff0-4291-a0ac-84fe544797bd");
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a billing group
 
-`DELETE /billing_groups/{id}`
+`client.billingGroups().delete()` — `DELETE /billing_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The id of the billing group |
 
 ```java
 import com.telnyx.sdk.models.billinggroups.BillingGroupDeleteParams;
@@ -376,13 +484,18 @@ import com.telnyx.sdk.models.billinggroups.BillingGroupDeleteResponse;
 BillingGroupDeleteResponse billingGroup = client.billingGroups().delete("f5586561-8ff0-4291-a0ac-84fe544797bd");
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List integration secrets
 
 Retrieve a list of all integration secrets configured by the user.
 
-`GET /integration_secrets`
+`client.integrationSecrets().list()` — `GET /integration_secrets`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.integrationsecrets.IntegrationSecretListPage;
@@ -391,15 +504,21 @@ import com.telnyx.sdk.models.integrationsecrets.IntegrationSecretListParams;
 IntegrationSecretListPage page = client.integrationSecrets().list();
 ```
 
-Returns: `created_at` (date-time), `id` (string), `identifier` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a secret
 
 Create a new secret with an associated identifier that can be used to securely integrate with other services.
 
-`POST /integration_secrets` — Required: `identifier`, `type`
+`client.integrationSecrets().create()` — `POST /integration_secrets`
 
-Optional: `password` (string), `token` (string), `username` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `identifier` | string | Yes | The unique identifier of the secret. |
+| `type` | enum (bearer, basic) | Yes | The type of secret. |
+| `token` | string | No | The token for the secret. |
+| `username` | string | No | The username for the secret. |
+| `password` | string | No | The password for the secret. |
 
 ```java
 import com.telnyx.sdk.models.integrationsecrets.IntegrationSecretCreateParams;
@@ -412,28 +531,213 @@ IntegrationSecretCreateParams params = IntegrationSecretCreateParams.builder()
 IntegrationSecretCreateResponse integrationSecret = client.integrationSecrets().create(params);
 ```
 
-Returns: `created_at` (date-time), `id` (string), `identifier` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an integration secret
 
 Delete an integration secret given its ID.
 
-`DELETE /integration_secrets/{id}`
+`client.integrationSecrets().delete()` — `DELETE /integration_secrets/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.integrationsecrets.IntegrationSecretDeleteParams;
 
-client.integrationSecrets().delete("id");
+client.integrationSecrets().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 ## Create an Access Token.
 
 Create an Access Token (JWT) for the credential.
 
-`POST /telephony_credentials/{id}/token`
+`client.telephonyCredentials().createToken()` — `POST /telephony_credentials/{id}/token`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```java
 import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialCreateTokenParams;
 
-String response = client.telephonyCredentials().createToken("id");
+String response = client.telephonyCredentials().createToken("550e8400-e29b-41d4-a716-446655440000");
 ```
+
+---
+
+# Account Access (Java) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** List all Access IP Addresses, Create new Access IP Address, Retrieve an access IP address, Delete access IP address
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `description` | string |
+| `id` | string |
+| `ip_address` | string |
+| `source` | string |
+| `status` | enum: pending, added |
+| `updated_at` | date-time |
+| `user_id` | string |
+
+**Returned by:** List all addresses, Creates an address, Retrieve an address, Deletes an address
+
+| Field | Type |
+|-------|------|
+| `address_book` | boolean |
+| `administrative_area` | string |
+| `borough` | string |
+| `business_name` | string |
+| `country_code` | string |
+| `created_at` | string |
+| `customer_reference` | string |
+| `extended_address` | string |
+| `first_name` | string |
+| `id` | string |
+| `last_name` | string |
+| `locality` | string |
+| `neighborhood` | string |
+| `phone_number` | string |
+| `postal_code` | string |
+| `record_type` | string |
+| `street_address` | string |
+| `updated_at` | string |
+| `validate_address` | boolean |
+
+**Returned by:** Validate an address
+
+| Field | Type |
+|-------|------|
+| `errors` | array[object] |
+| `record_type` | string |
+| `result` | enum: valid, invalid |
+| `suggested` | object |
+
+**Returned by:** Accepts this address suggestion as a new emergency address for Operator Connect and finishes the uploads of the numbers associated with it to Microsoft.
+
+| Field | Type |
+|-------|------|
+| `accepted` | boolean |
+| `id` | uuid |
+| `record_type` | enum: address_suggestion |
+
+**Returned by:** List all SSO authentication providers, Creates an authentication provider, Retrieve an authentication provider, Update an authentication provider, Deletes an authentication provider
+
+| Field | Type |
+|-------|------|
+| `activated_at` | date-time |
+| `active` | boolean |
+| `created_at` | date-time |
+| `id` | uuid |
+| `name` | string |
+| `organization_id` | uuid |
+| `record_type` | string |
+| `settings` | object |
+| `short_name` | string |
+| `updated_at` | date-time |
+
+**Returned by:** List all billing groups, Create a billing group, Get a billing group, Update a billing group, Delete a billing group
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `deleted_at` | date-time |
+| `id` | uuid |
+| `name` | string |
+| `organization_id` | uuid |
+| `record_type` | enum: billing_group |
+| `updated_at` | date-time |
+
+**Returned by:** List integration secrets, Create a secret
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `id` | string |
+| `identifier` | string |
+| `record_type` | string |
+| `updated_at` | date-time |
+
+## Optional Parameters
+
+### Create new Access IP Address — `client.accessIpAddress().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `description` | string |  |
+
+### Creates an address — `client.addresses().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `customerReference` | string | A customer reference string for customer look ups. |
+| `phoneNumber` | string (E.164) | The phone number associated with the address. |
+| `extendedAddress` | string | Additional street address information about the address such as, but not limi... |
+| `administrativeArea` | string | The locality of the address. |
+| `neighborhood` | string | The neighborhood of the address. |
+| `borough` | string | The borough of the address. |
+| `postalCode` | string | The postal code of the address. |
+| `addressBook` | boolean | Indicates whether or not the address should be considered part of your list o... |
+| `validateAddress` | boolean | Indicates whether or not the address should be validated for emergency use up... |
+
+### Validate an address — `client.addresses().actions().validate()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `extendedAddress` | string | Additional street address information about the address such as, but not limi... |
+| `locality` | string | The locality of the address. |
+| `administrativeArea` | string | The locality of the address. |
+
+### Accepts this address suggestion as a new emergency address for Operator Connect and finishes the uploads of the numbers associated with it to Microsoft. — `client.addresses().actions().acceptSuggestions()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) | The ID of the address. |
+
+### Creates an authentication provider — `client.authenticationProviders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `active` | boolean | The active status of the authentication provider |
+| `settingsUrl` | string (URL) | The URL for the identity provider metadata file to populate the settings auto... |
+
+### Update an authentication provider — `client.authenticationProviders().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | The name associated with the authentication provider. |
+| `shortName` | string | The short name associated with the authentication provider. |
+| `active` | boolean | The active status of the authentication provider |
+| `settings` | object | The settings associated with the authentication provider. |
+| `settingsUrl` | string (URL) | The URL for the identity provider metadata file to populate the settings auto... |
+
+### Create a billing group — `client.billingGroups().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | A name for the billing group |
+
+### Update a billing group — `client.billingGroups().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | A name for the billing group |
+
+### Create a secret — `client.integrationSecrets().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `token` | string | The token for the secret. |
+| `username` | string | The username for the secret. |
+| `password` | string | The password for the secret. |

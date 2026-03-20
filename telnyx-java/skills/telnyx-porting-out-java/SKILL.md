@@ -1,8 +1,8 @@
 ---
 name: telnyx-porting-out-java
 description: >-
-  Manage port-out requests when numbers are being ported away from Telnyx. List,
-  view, and update port-out status. This skill provides Java SDK examples.
+  Manage port-out requests when numbers leave Telnyx. List, view, and update
+  status.
 metadata:
   author: telnyx
   product: porting-out
@@ -14,6 +14,25 @@ metadata:
 
 # Telnyx Porting Out - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Port-out requests are initiated by the GAINING carrier, not by you
+
+### Steps
+
+1. **List port-out requests**: `client.portouts().list(params)`
+2. **View details**: `client.portouts().retrieve(params)`
+3. **Update status**: `client.portouts().update(params)`
+
+### Common mistakes
+
+- You cannot create port-out requests — they appear when another carrier requests your numbers
+- Respond promptly to port-out requests — regulatory deadlines apply
+
+**Related skills**: telnyx-numbers-java, telnyx-porting-in-java
+
 ## Installation
 
 ```text
@@ -21,11 +40,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -48,7 +67,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.portouts().list(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -68,11 +87,18 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List portout requests
 
 Returns the portout requests according to filters
 
-`GET /portouts`
+`client.portouts().list()` — `GET /portouts`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.portouts.PortoutListPage;
@@ -81,13 +107,18 @@ import com.telnyx.sdk.models.portouts.PortoutListParams;
 PortoutListPage page = client.portouts().list();
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all port-out events
 
 Returns a list of all port-out events.
 
-`GET /portouts/events`
+`client.portouts().events().list()` — `GET /portouts/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.portouts.events.EventListPage;
@@ -96,13 +127,17 @@ import com.telnyx.sdk.models.portouts.events.EventListParams;
 EventListPage page = client.portouts().events().list();
 ```
 
-Returns: `data` (array[object]), `meta` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Show a port-out event
 
 Show a specific port-out event.
 
-`GET /portouts/events/{id}`
+`client.portouts().events().retrieve()` — `GET /portouts/events/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```java
 import com.telnyx.sdk.models.portouts.events.EventRetrieveParams;
@@ -111,13 +146,17 @@ import com.telnyx.sdk.models.portouts.events.EventRetrieveResponse;
 EventRetrieveResponse event = client.portouts().events().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `data` (object)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Republish a port-out event
 
 Republish a specific port-out event.
 
-`POST /portouts/events/{id}/republish`
+`client.portouts().events().republish()` — `POST /portouts/events/{id}/republish`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the port-out event. |
 
 ```java
 import com.telnyx.sdk.models.portouts.events.EventRepublishParams;
@@ -129,7 +168,12 @@ client.portouts().events().republish("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 
 Given a port-out ID, list rejection codes that are eligible for that port-out
 
-`GET /portouts/rejections/{portout_id}`
+`client.portouts().listRejectionCodes()` — `GET /portouts/rejections/{portout_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `portoutId` | string (UUID) | Yes | Identifies a port out order. |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.portouts.PortoutListRejectionCodesParams;
@@ -138,13 +182,18 @@ import com.telnyx.sdk.models.portouts.PortoutListRejectionCodesResponse;
 PortoutListRejectionCodesResponse response = client.portouts().listRejectionCodes("329d6658-8f93-405d-862f-648776e8afd7");
 ```
 
-Returns: `code` (integer), `description` (string), `reason_required` (boolean)
+Key response fields: `response.data.code, response.data.description, response.data.reason_required`
 
 ## List port-out related reports
 
 List the reports generated about port-out operations.
 
-`GET /portouts/reports`
+`client.portouts().reports().list()` — `GET /portouts/reports`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.portouts.reports.ReportListPage;
@@ -153,13 +202,13 @@ import com.telnyx.sdk.models.portouts.reports.ReportListParams;
 ReportListPage page = client.portouts().reports().list();
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a port-out related report
 
 Generate reports about port-out operations.
 
-`POST /portouts/reports`
+`client.portouts().reports().create()` — `POST /portouts/reports`
 
 ```java
 import com.telnyx.sdk.models.portouts.reports.ExportPortoutsCsvReport;
@@ -175,13 +224,17 @@ ReportCreateParams params = ReportCreateParams.builder()
 ReportCreateResponse report = client.portouts().reports().create(params);
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a report
 
 Retrieve a specific report generated.
 
-`GET /portouts/reports/{id}`
+`client.portouts().reports().retrieve()` — `GET /portouts/reports/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies a report. |
 
 ```java
 import com.telnyx.sdk.models.portouts.reports.ReportRetrieveParams;
@@ -190,13 +243,17 @@ import com.telnyx.sdk.models.portouts.reports.ReportRetrieveResponse;
 ReportRetrieveResponse report = client.portouts().reports().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (object), `record_type` (string), `report_type` (enum: export_portouts_csv), `status` (enum: pending, completed), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a portout request
 
 Returns the portout request based on the ID provided
 
-`GET /portouts/{id}`
+`client.portouts().retrieve()` — `GET /portouts/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```java
 import com.telnyx.sdk.models.portouts.PortoutRetrieveParams;
@@ -205,13 +262,17 @@ import com.telnyx.sdk.models.portouts.PortoutRetrieveResponse;
 PortoutRetrieveResponse portout = client.portouts().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
 
 ## List all comments for a portout request
 
 Returns a list of comments for a portout request.
 
-`GET /portouts/{id}/comments`
+`client.portouts().comments().list()` — `GET /portouts/{id}/comments`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```java
 import com.telnyx.sdk.models.portouts.comments.CommentListParams;
@@ -220,15 +281,18 @@ import com.telnyx.sdk.models.portouts.comments.CommentListResponse;
 CommentListResponse comments = client.portouts().comments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## Create a comment on a portout request
 
 Creates a comment on a portout request.
 
-`POST /portouts/{id}/comments`
+`client.portouts().comments().create()` — `POST /portouts/{id}/comments`
 
-Optional: `body` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `body` | string | No | Comment to post on this portout request |
 
 ```java
 import com.telnyx.sdk.models.portouts.comments.CommentCreateParams;
@@ -237,13 +301,17 @@ import com.telnyx.sdk.models.portouts.comments.CommentCreateResponse;
 CommentCreateResponse comment = client.portouts().comments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (string), `record_type` (string), `user_id` (string)
+Key response fields: `response.data.id, response.data.body, response.data.created_at`
 
 ## List supporting documents on a portout request
 
 List every supporting documents for a portout request.
 
-`GET /portouts/{id}/supporting_documents`
+`client.portouts().supportingDocuments().list()` — `GET /portouts/{id}/supporting_documents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
 
 ```java
 import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentListParams;
@@ -252,15 +320,18 @@ import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentList
 SupportingDocumentListResponse supportingDocuments = client.portouts().supportingDocuments().list("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Create a list of supporting documents on a portout request
 
 Creates a list of supporting documents on a portout request.
 
-`POST /portouts/{id}/supporting_documents`
+`client.portouts().supportingDocuments().create()` — `POST /portouts/{id}/supporting_documents`
 
-Optional: `documents` (array[object])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Portout id |
+| `documents` | array[object] | No | List of supporting documents parameters |
 
 ```java
 import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCreateParams;
@@ -269,15 +340,20 @@ import com.telnyx.sdk.models.portouts.supportingdocuments.SupportingDocumentCrea
 SupportingDocumentCreateResponse supportingDocument = client.portouts().supportingDocuments().create("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` (uuid), `record_type` (string), `type` (enum: loa, invoice), `updated_at` (string)
+Key response fields: `response.data.id, response.data.type, response.data.created_at`
 
 ## Update Status
 
 Authorize or reject portout request
 
-`PATCH /portouts/{id}/{status}` — Required: `reason`
+`client.portouts().updateStatus()` — `PATCH /portouts/{id}/{status}`
 
-Optional: `host_messaging` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reason` | string | Yes | Provide a reason if rejecting the port out request |
+| `id` | string (UUID) | Yes | Portout id |
+| `status` | enum (authorized, rejected-pending) | Yes | Updated portout status |
+| `hostMessaging` | boolean | No | Indicates whether messaging services should be maintained wi... |
 
 ```java
 import com.telnyx.sdk.models.portouts.PortoutUpdateStatusParams;
@@ -291,4 +367,8 @@ PortoutUpdateStatusParams params = PortoutUpdateStatusParams.builder()
 PortoutUpdateStatusResponse response = client.portouts().updateStatus(params);
 ```
 
-Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` (string), `city` (string), `created_at` (string), `current_carrier` (string), `end_user_name` (string), `foc_date` (string), `host_messaging` (boolean), `id` (string), `inserted_at` (string), `lsr` (array[string]), `phone_numbers` (array[string]), `pon` (string), `reason` (string | null), `record_type` (string), `rejection_code` (integer), `requested_foc_date` (string), `service_address` (string), `spid` (string), `state` (string), `status` (enum: pending, authorized, ported, rejected, rejected-pending, canceled), `support_key` (string), `updated_at` (string), `user_id` (uuid), `vendor` (uuid), `zip` (string)
+Key response fields: `response.data.id, response.data.status, response.data.state`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

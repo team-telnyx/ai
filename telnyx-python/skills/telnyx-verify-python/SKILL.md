@@ -1,9 +1,8 @@
 ---
 name: telnyx-verify-python
 description: >-
-  Look up phone number information (carrier, type, caller name) and verify users
-  via SMS/voice OTP. Use for phone verification and data enrichment. This skill
-  provides Python SDK examples.
+  Phone verification via SMS/voice/flashcall OTP and number lookup (carrier,
+  type, caller name).
 metadata:
   author: telnyx
   product: verify
@@ -14,6 +13,38 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Verify - Python
+
+## Core Workflow
+
+### Prerequisites
+
+1. Create a Verify Profile with channel settings (SMS, Call, Flashcall, RCS, DTMF)
+
+### Steps
+
+1. **Create profile**: `client.verify_profiles.create(name=..., default_timeout_secs=...)`
+2. **Trigger verification**: `client.verifications.trigger_sms(phone_number=..., verify_profile_id=...)`
+3. **User receives code**: `Via SMS, call, flashcall, RCS, or DTMF`
+4. **Submit code**: `client.verifications.by_phone_number.actions.verify(phone_number=..., code=..., verify_profile_id=...)`
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Default, widest reach | SMS verification |
+| Landlines or accessibility | Voice call verification |
+| Frictionless mobile (code in caller ID) | Flashcall verification |
+| Ownership confirmation without code entry | DTMF Confirm |
+| Rich mobile UX with SMS fallback | RCS verification |
+
+### Common mistakes
+
+- NEVER use non-E.164 phone numbers — returns 400 Bad Request
+- NEVER reuse expired verification IDs — must re-trigger verification
+- For DTMF Confirm: result is ONLY delivered via webhook — configure your webhook endpoint in the Verify Profile settings. No verify webhooks are documented in this skill; handle the verify.dtmf_confirm event manually
+- When verifying by ID, you MUST pass the code parameter — omitting it will not validate the user's input
+
+**Related skills**: telnyx-messaging-python, telnyx-voice-python
 
 ## Installation
 
@@ -43,7 +74,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.verifications.trigger_sms(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -65,37 +96,38 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
-## Lookup phone number data
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
 
-Returns information about the provided phone number.
+## Trigger SMS verification
 
-`GET /number_lookup/{phone_number}`
+`client.verifications.trigger_sms()` — `POST /verifications/sms`
 
-```python
-number_lookup = client.number_lookup.retrieve(
-    phone_number="+18665552368",
-)
-print(number_lookup.data)
-```
-
-Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `fraud` (string | null), `national_format` (string), `phone_number` (string), `portability` (object), `record_type` (string)
-
-## List verifications by phone number
-
-`GET /verifications/by_phone_number/{phone_number}`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | +E164 formatted phone number. |
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `timeout_secs` | integer | No | The number of seconds the verification code is valid for. |
+| `custom_code` | string | No | Send a self-generated numeric code to the end-user |
 
 ```python
-by_phone_numbers = client.verifications.by_phone_number.list(
-    "+13035551234",
+create_verification_response = client.verifications.trigger_sms(
+    phone_number="+13035551234",
+    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
 )
-print(by_phone_numbers.data)
+print(create_verification_response.data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Verify verification code by phone number
 
-`POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
+`client.verifications.by_phone_number.actions.verify()` — `POST /verifications/by_phone_number/{phone_number}/actions/verify`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | string | Yes | This is the code the user submits for verification. |
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `phone_number` | string (E.164) | Yes | +E164 formatted phone number. |
 
 ```python
 verify_verification_code_response = client.verifications.by_phone_number.actions.verify(
@@ -106,13 +138,42 @@ verify_verification_code_response = client.verifications.by_phone_number.actions
 print(verify_verification_code_response.data)
 ```
 
-Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
+Key response fields: `response.data.phone_number, response.data.response_code`
+
+## Create a Verify profile
+
+Creates a new Verify profile to associate verifications with.
+
+`client.verify_profiles.create()` — `POST /verify_profiles`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes |  |
+| `webhook_url` | string (URL) | No |  |
+| `webhook_failover_url` | string (URL) | No |  |
+| `sms` | object | No |  |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
+
+```python
+verify_profile_data = client.verify_profiles.create(
+    name="Test Profile",
+)
+print(verify_profile_data.data)
+```
+
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Trigger Call verification
 
-`POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
+`client.verifications.trigger_call()` — `POST /verifications/call`
 
-Optional: `custom_code` (string | null), `extension` (string | null), `timeout_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | +E164 formatted phone number. |
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `timeout_secs` | integer | No | The number of seconds the verification code is valid for. |
+| `custom_code` | string | No | Send a self-generated numeric code to the end-user |
+| `extension` | string | No | Optional extension to dial after call is answered using DTMF... |
 
 ```python
 create_verification_response = client.verifications.trigger_call(
@@ -122,13 +183,54 @@ create_verification_response = client.verifications.trigger_call(
 print(create_verification_response.data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
+
+## Lookup phone number data
+
+Returns information about the provided phone number.
+
+`client.number_lookup.retrieve()` — `GET /number_lookup/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | The phone number to be looked up |
+| `type_` | enum (carrier, caller-name) | No | Specifies the type of number lookup to be performed |
+
+```python
+number_lookup = client.number_lookup.retrieve(
+    phone_number="+18665552368",
+)
+print(number_lookup.data)
+```
+
+Key response fields: `response.data.phone_number, response.data.caller_name, response.data.carrier`
+
+## List verifications by phone number
+
+`client.verifications.by_phone_number.list()` — `GET /verifications/by_phone_number/{phone_number}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | +E164 formatted phone number. |
+
+```python
+by_phone_numbers = client.verifications.by_phone_number.list(
+    "+13035551234",
+)
+print(by_phone_numbers.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Trigger Flash call verification
 
-`POST /verifications/flashcall` — Required: `phone_number`, `verify_profile_id`
+`client.verifications.trigger_flashcall()` — `POST /verifications/flashcall`
 
-Optional: `timeout_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | string (E.164) | Yes | +E164 formatted phone number. |
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the associated Verify profile. |
+| `timeout_secs` | integer | No | The number of seconds the verification code is valid for. |
 
 ```python
 create_verification_response = client.verifications.trigger_flashcall(
@@ -138,27 +240,15 @@ create_verification_response = client.verifications.trigger_flashcall(
 print(create_verification_response.data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
-
-## Trigger SMS verification
-
-`POST /verifications/sms` — Required: `phone_number`, `verify_profile_id`
-
-Optional: `custom_code` (string | null), `timeout_secs` (integer)
-
-```python
-create_verification_response = client.verifications.trigger_sms(
-    phone_number="+13035551234",
-    verify_profile_id="12ade33a-21c0-473b-b055-b3c836e1c292",
-)
-print(create_verification_response.data)
-```
-
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Retrieve verification
 
-`GET /verifications/{verification_id}`
+`client.verifications.retrieve()` — `GET /verifications/{verification_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verification_id` | string (UUID) | Yes | The identifier of the verification to retrieve. |
 
 ```python
 verification = client.verifications.retrieve(
@@ -167,28 +257,38 @@ verification = client.verifications.retrieve(
 print(verification.data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Key response fields: `response.data.id, response.data.status, response.data.phone_number`
 
 ## Verify verification code by ID
 
-`POST /verifications/{verification_id}/actions/verify`
+`client.verifications.actions.verify()` — `POST /verifications/{verification_id}/actions/verify`
 
-Optional: `code` (string), `status` (enum: accepted, rejected)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verification_id` | string (UUID) | Yes | The identifier of the verification to retrieve. |
+| `status` | enum (accepted, rejected) | No | Identifies if the verification code has been accepted or rej... |
+| `code` | string | No | This is the code the user submits for verification. |
 
 ```python
 verify_verification_code_response = client.verifications.actions.verify(
     verification_id="12ade33a-21c0-473b-b055-b3c836e1c292",
+    code="12345",
 )
 print(verify_verification_code_response.data)
 ```
 
-Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
+Key response fields: `response.data.phone_number, response.data.response_code`
 
 ## List all Verify profiles
 
 Gets a paginated list of Verify profiles.
 
-`GET /verify_profiles`
+`client.verify_profiles.list()` — `GET /verify_profiles`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.verify_profiles.list()
@@ -196,43 +296,30 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
-
-## Create a Verify profile
-
-Creates a new Verify profile to associate verifications with.
-
-`POST /verify_profiles` — Required: `name`
-
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
-
-```python
-verify_profile_data = client.verify_profiles.create(
-    name="Test Profile",
-)
-print(verify_profile_data.data)
-```
-
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve Verify profile message templates
 
 List all Verify profile message templates.
 
-`GET /verify_profiles/templates`
+`client.verify_profiles.retrieve_templates()` — `GET /verify_profiles/templates`
 
 ```python
 response = client.verify_profiles.retrieve_templates()
 print(response.data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Create message template
 
 Create a new Verify profile message template.
 
-`POST /verify_profiles/templates` — Required: `text`
+`client.verify_profiles.create_template()` — `POST /verify_profiles/templates`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `text` | string | Yes | The text content of the message template. |
 
 ```python
 message_template = client.verify_profiles.create_template(
@@ -241,13 +328,18 @@ message_template = client.verify_profiles.create_template(
 print(message_template.data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Update message template
 
 Update an existing Verify profile message template.
 
-`PATCH /verify_profiles/templates/{template_id}` — Required: `text`
+`client.verify_profiles.update_template()` — `PATCH /verify_profiles/templates/{template_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `text` | string | Yes | The text content of the message template. |
+| `template_id` | string (UUID) | Yes | The identifier of the message template to update. |
 
 ```python
 message_template = client.verify_profiles.update_template(
@@ -257,13 +349,17 @@ message_template = client.verify_profiles.update_template(
 print(message_template.data)
 ```
 
-Returns: `id` (uuid), `text` (string)
+Key response fields: `response.data.id, response.data.text`
 
 ## Retrieve Verify profile
 
 Gets a single Verify profile.
 
-`GET /verify_profiles/{verify_profile_id}`
+`client.verify_profiles.retrieve()` — `GET /verify_profiles/{verify_profile_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the Verify profile to retrieve. |
 
 ```python
 verify_profile_data = client.verify_profiles.retrieve(
@@ -272,13 +368,19 @@ verify_profile_data = client.verify_profiles.retrieve(
 print(verify_profile_data.data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update Verify profile
 
-`PATCH /verify_profiles/{verify_profile_id}`
+`client.verify_profiles.update()` — `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the Verify profile to update. |
+| `webhook_url` | string (URL) | No |  |
+| `webhook_failover_url` | string (URL) | No |  |
+| `name` | string | No |  |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 verify_profile_data = client.verify_profiles.update(
@@ -287,11 +389,15 @@ verify_profile_data = client.verify_profiles.update(
 print(verify_profile_data.data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete Verify profile
 
-`DELETE /verify_profiles/{verify_profile_id}`
+`client.verify_profiles.delete()` — `DELETE /verify_profiles/{verify_profile_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verify_profile_id` | string (UUID) | Yes | The identifier of the Verify profile to delete. |
 
 ```python
 verify_profile_data = client.verify_profiles.delete(
@@ -300,4 +406,8 @@ verify_profile_data = client.verify_profiles.delete(
 print(verify_profile_data.data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

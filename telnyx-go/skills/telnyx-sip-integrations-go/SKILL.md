@@ -1,8 +1,8 @@
 ---
 name: telnyx-sip-integrations-go
 description: >-
-  Manage call recordings, media storage, Dialogflow integration, and external
-  connections for SIP trunking. This skill provides Go SDK examples.
+  Call recordings, media storage, Dialogflow integration, and external
+  connections for SIP trunking.
 metadata:
   author: telnyx
   product: sip-integrations
@@ -13,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Sip Integrations - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. SIP connection configured (see telnyx-sip-go)
+
+### Steps
+
+1. **List call recordings**: `client.CallRecordings.List(ctx, params)`
+2. **Download recording**: `client.CallRecordings.Retrieve(ctx, params)`
+3. **Upload media**: `client.MediaStorage.Create(ctx, params)`
+
+### Common mistakes
+
+- Call recordings require recording to be enabled on the connection or via call control commands
+- Recording files are temporary — download and store them in your own storage
+
+**Related skills**: telnyx-sip-go, telnyx-voice-go
 
 ## Installation
 
@@ -47,7 +66,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.CallRecordings.List(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -74,31 +93,41 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Retrieve a stored credential
 
 Returns the information about custom storage credentials.
 
-`GET /custom_storage_credentials/{connection_id}`
+`client.CustomStorageCredentials.Get()` — `GET /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```go
-	customStorageCredential, err := client.CustomStorageCredentials.Get(context.TODO(), "connection_id")
+	customStorageCredential, err := client.CustomStorageCredentials.Get(context.Background(), "connection_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", customStorageCredential.ConnectionID)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Create a custom storage credential
 
 Creates a custom storage credentials configuration.
 
-`POST /custom_storage_credentials/{connection_id}`
+`client.CustomStorageCredentials.New()` — `POST /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```go
 	customStorageCredential, err := client.CustomStorageCredentials.New(
-		context.TODO(),
+		context.Background(),
 		"connection_id",
 		telnyx.CustomStorageCredentialNewParams{
 			CustomStorageConfiguration: telnyx.CustomStorageConfigurationParam{
@@ -112,22 +141,26 @@ Creates a custom storage credentials configuration.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", customStorageCredential.ConnectionID)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Update a stored credential
 
 Updates a stored custom credentials configuration.
 
-`PUT /custom_storage_credentials/{connection_id}`
+`client.CustomStorageCredentials.Update()` — `PUT /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```go
 	customStorageCredential, err := client.CustomStorageCredentials.Update(
-		context.TODO(),
+		context.Background(),
 		"connection_id",
 		telnyx.CustomStorageCredentialUpdateParams{
 			CustomStorageConfiguration: telnyx.CustomStorageConfigurationParam{
@@ -141,23 +174,27 @@ Updates a stored custom credentials configuration.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", customStorageCredential.ConnectionID)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Key response fields: `response.data.backend, response.data.configuration`
 
 ## Delete a stored credential
 
 Deletes a stored custom credentials configuration.
 
-`DELETE /custom_storage_credentials/{connection_id}`
+`client.CustomStorageCredentials.Delete()` — `DELETE /custom_storage_credentials/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control, TeXM... |
 
 ```go
-	err := client.CustomStorageCredentials.Delete(context.TODO(), "connection_id")
+	err := client.CustomStorageCredentials.Delete(context.Background(), "connection_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -165,27 +202,35 @@ Deletes a stored custom credentials configuration.
 
 Return details of the Dialogflow connection associated with the given CallControl connection.
 
-`GET /dialogflow_connections/{connection_id}`
+`client.DialogflowConnections.Get()` — `GET /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```go
-	dialogflowConnection, err := client.DialogflowConnections.Get(context.TODO(), "connection_id")
+	dialogflowConnection, err := client.DialogflowConnections.Get(context.Background(), "connection_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", dialogflowConnection.Data)
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Create a Dialogflow Connection
 
 Save Dialogflow Credentiails to Telnyx, so it can be used with other Telnyx services.
 
-`POST /dialogflow_connections/{connection_id}`
+`client.DialogflowConnections.New()` — `POST /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```go
 	dialogflowConnection, err := client.DialogflowConnections.New(
-		context.TODO(),
+		context.Background(),
 		"connection_id",
 		telnyx.DialogflowConnectionNewParams{
 			ServiceAccount: map[string]any{
@@ -203,22 +248,26 @@ Save Dialogflow Credentiails to Telnyx, so it can be used with other Telnyx serv
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", dialogflowConnection.Data)
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Update stored Dialogflow Connection
 
 Updates a stored Dialogflow Connection.
 
-`PUT /dialogflow_connections/{connection_id}`
+`client.DialogflowConnections.Update()` — `PUT /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```go
 	dialogflowConnection, err := client.DialogflowConnections.Update(
-		context.TODO(),
+		context.Background(),
 		"connection_id",
 		telnyx.DialogflowConnectionUpdateParams{
 			ServiceAccount: map[string]any{
@@ -236,23 +285,27 @@ Updates a stored Dialogflow Connection.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", dialogflowConnection.Data)
 ```
 
-Returns: `connection_id` (string), `conversation_profile_id` (string), `environment` (string), `record_type` (string), `service_account` (string)
+Key response fields: `response.data.connection_id, response.data.conversation_profile_id, response.data.environment`
 
 ## Delete stored Dialogflow Connection
 
 Deletes a stored Dialogflow Connection.
 
-`DELETE /dialogflow_connections/{connection_id}`
+`client.DialogflowConnections.Delete()` — `DELETE /dialogflow_connections/{connection_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectionId` | string (UUID) | Yes | Uniquely identifies a Telnyx application (Call Control). |
 
 ```go
-	err := client.DialogflowConnections.Delete(context.TODO(), "connection_id")
+	err := client.DialogflowConnections.Delete(context.Background(), "connection_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -260,114 +313,150 @@ Deletes a stored Dialogflow Connection.
 
 This endpoint returns a list of your External Connections inside the 'data' attribute of the response. External Connections are used by Telnyx customers to seamless configure SIP trunking integrations with Telnyx Partners, through External Voice Integrations in Mission Control Portal.
 
-`GET /external_connections`
+`client.ExternalConnections.List()` — `GET /external_connections`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Filter parameter for external connections (deepObject style)... |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.ExternalConnections.List(context.TODO(), telnyx.ExternalConnectionListParams{})
+	page, err := client.ExternalConnections.List(context.Background(), telnyx.ExternalConnectionListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Creates an External Connection
 
 Creates a new External Connection based on the parameters sent in the request. The external_sip_connection and outbound voice profile id are required. Once created, you can assign phone numbers to your application using the `/phone_numbers` endpoint.
 
-`POST /external_connections` — Required: `external_sip_connection`, `outbound`
+`client.ExternalConnections.New()` — `POST /external_connections`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ExternalSipConnection` | enum (zoom) | Yes | The service that will be consuming this connection. |
+| `Outbound` | object | Yes |  |
+| `Tags` | array[string] | No | Tags associated with the connection. |
+| `Active` | boolean | No | Specifies whether the connection can be used. |
+| `WebhookEventUrl` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	externalConnection, err := client.ExternalConnections.New(context.TODO(), telnyx.ExternalConnectionNewParams{
+	externalConnection, err := client.ExternalConnections.New(context.Background(), telnyx.ExternalConnectionNewParams{
 		ExternalSipConnection: telnyx.ExternalConnectionNewParamsExternalSipConnectionZoom,
 		Outbound:              telnyx.ExternalConnectionNewParamsOutbound{},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", externalConnection.Data)
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all log messages
 
 Retrieve a list of log messages for all external connections associated with your account.
 
-`GET /external_connections/log_messages`
+`client.ExternalConnections.LogMessages.List()` — `GET /external_connections/log_messages`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Filter parameter for log messages (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.ExternalConnections.LogMessages.List(context.TODO(), telnyx.ExternalConnectionLogMessageListParams{})
+	page, err := client.ExternalConnections.LogMessages.List(context.Background(), telnyx.ExternalConnectionLogMessageListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `log_messages` (array[object]), `meta` (object)
+Key response fields: `response.data.log_messages, response.data.meta`
 
 ## Retrieve a log message
 
 Retrieve a log message for an external connection associated with your account.
 
-`GET /external_connections/log_messages/{id}`
+`client.ExternalConnections.LogMessages.Get()` — `GET /external_connections/log_messages/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	logMessage, err := client.ExternalConnections.LogMessages.Get(context.TODO(), "1293384261075731499")
+	logMessage, err := client.ExternalConnections.LogMessages.Get(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", logMessage.LogMessages)
 ```
 
-Returns: `log_messages` (array[object])
+Key response fields: `response.data.log_messages`
 
 ## Dismiss a log message
 
 Dismiss a log message for an external connection associated with your account.
 
-`DELETE /external_connections/log_messages/{id}`
+`client.ExternalConnections.LogMessages.Dismiss()` — `DELETE /external_connections/log_messages/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	response, err := client.ExternalConnections.LogMessages.Dismiss(context.TODO(), "1293384261075731499")
+	response, err := client.ExternalConnections.LogMessages.Dismiss(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Success)
 ```
 
-Returns: `success` (boolean)
+Key response fields: `response.data.success`
 
 ## Retrieve an External Connection
 
 Return the details of an existing External Connection inside the 'data' attribute of the response.
 
-`GET /external_connections/{id}`
+`client.ExternalConnections.Get()` — `GET /external_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	externalConnection, err := client.ExternalConnections.Get(context.TODO(), "1293384261075731499")
+	externalConnection, err := client.ExternalConnections.Get(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", externalConnection.Data)
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update an External Connection
 
 Updates settings of an existing External Connection based on the parameters of the request.
 
-`PATCH /external_connections/{id}` — Required: `outbound`
+`client.ExternalConnections.Update()` — `PATCH /external_connections/{id}`
 
-Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Outbound` | object | Yes |  |
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Tags` | array[string] | No | Tags associated with the connection. |
+| `Active` | boolean | No | Specifies whether the connection can be used. |
+| `WebhookEventUrl` | string (URL) | No | The URL where webhooks related to this connection will be se... |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	externalConnection, err := client.ExternalConnections.Update(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionUpdateParams{
 			Outbound: telnyx.ExternalConnectionUpdateParamsOutbound{
@@ -376,78 +465,98 @@ Optional: `active` (boolean), `inbound` (object), `tags` (array[string]), `webho
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", externalConnection.Data)
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Deletes an External Connection
 
 Permanently deletes an External Connection. Deletion may be prevented if the application is in use by phone numbers, is active, or if it is an Operator Connect connection. To remove an Operator Connect integration please contact Telnyx support.
 
-`DELETE /external_connections/{id}`
+`client.ExternalConnections.Delete()` — `DELETE /external_connections/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	externalConnection, err := client.ExternalConnections.Delete(context.TODO(), "1293384261075731499")
+	externalConnection, err := client.ExternalConnections.Delete(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", externalConnection.Data)
 ```
 
-Returns: `active` (boolean), `created_at` (string), `credential_active` (boolean), `external_sip_connection` (enum: zoom, operator_connect), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## List all civic addresses and locations
 
 Returns the civic addresses and locations from Microsoft Teams.
 
-`GET /external_connections/{id}/civic_addresses`
+`client.ExternalConnections.CivicAddresses.List()` — `GET /external_connections/{id}/civic_addresses`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Filter` | object | No | Filter parameter for civic addresses (deepObject style). |
 
 ```go
 	civicAddresses, err := client.ExternalConnections.CivicAddresses.List(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionCivicAddressListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", civicAddresses.Data)
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `response.data.id, response.data.city_or_town, response.data.city_or_town_alias`
 
 ## Retrieve a Civic Address
 
 Return the details of an existing Civic Address with its Locations inside the 'data' attribute of the response.
 
-`GET /external_connections/{id}/civic_addresses/{address_id}`
+`client.ExternalConnections.CivicAddresses.Get()` — `GET /external_connections/{id}/civic_addresses/{address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `AddressId` | string (UUID) | Yes | Identifies a civic address or a location. |
 
 ```go
 	civicAddress, err := client.ExternalConnections.CivicAddresses.Get(
-		context.TODO(),
+		context.Background(),
 		"318fb664-d341-44d2-8405-e6bfb9ced6d9",
 		telnyx.ExternalConnectionCivicAddressGetParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", civicAddress.Data)
 ```
 
-Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
+Key response fields: `response.data.id, response.data.city_or_town, response.data.city_or_town_alias`
 
 ## Update a location's static emergency address
 
-`PATCH /external_connections/{id}/locations/{location_id}` — Required: `static_emergency_address_id`
+`client.ExternalConnections.UpdateLocation()` — `PATCH /external_connections/{id}/locations/{location_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `StaticEmergencyAddressId` | string (UUID) | Yes | A new static emergency address ID to update the location wit... |
+| `Id` | string (UUID) | Yes | The ID of the external connection |
+| `LocationId` | string (UUID) | Yes | The ID of the location to update |
 
 ```go
 	response, err := client.ExternalConnections.UpdateLocation(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.ExternalConnectionUpdateLocationParams{
 			ID:                       "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -455,325 +564,402 @@ Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` 
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `accepted_address_suggestions` (boolean), `location_id` (uuid), `static_emergency_address_id` (uuid)
+Key response fields: `response.data.accepted_address_suggestions, response.data.location_id, response.data.static_emergency_address_id`
 
 ## List all phone numbers
 
 Returns a list of all active phone numbers associated with the given external connection.
 
-`GET /external_connections/{id}/phone_numbers`
+`client.ExternalConnections.PhoneNumbers.List()` — `GET /external_connections/{id}/phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Filter` | object | No | Filter parameter for phone numbers (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.ExternalConnections.PhoneNumbers.List(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionPhoneNumberListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## Retrieve a phone number
 
 Return the details of a phone number associated with the given external connection.
 
-`GET /external_connections/{id}/phone_numbers/{phone_number_id}`
+`client.ExternalConnections.PhoneNumbers.Get()` — `GET /external_connections/{id}/phone_numbers/{phone_number_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `PhoneNumberId` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
 
 ```go
 	phoneNumber, err := client.ExternalConnections.PhoneNumbers.Get(
-		context.TODO(),
+		context.Background(),
 		"1234567889",
 		telnyx.ExternalConnectionPhoneNumberGetParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumber.Data)
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## Update a phone number
 
 Asynchronously update settings of the phone number associated with the given external connection.
 
-`PATCH /external_connections/{id}/phone_numbers/{phone_number_id}`
+`client.ExternalConnections.PhoneNumbers.Update()` — `PATCH /external_connections/{id}/phone_numbers/{phone_number_id}`
 
-Optional: `location_id` (uuid)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `PhoneNumberId` | string (UUID) | Yes | A phone number's ID via the Telnyx API |
+| `LocationId` | string (UUID) | No | Identifies the location to assign the phone number to. |
 
 ```go
 	phoneNumber, err := client.ExternalConnections.PhoneNumbers.Update(
-		context.TODO(),
+		context.Background(),
 		"1234567889",
 		telnyx.ExternalConnectionPhoneNumberUpdateParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", phoneNumber.Data)
 ```
 
-Returns: `acquired_capabilities` (array[string]), `civic_address_id` (uuid), `displayed_country_code` (string), `location_id` (uuid), `number_id` (string), `telephone_number` (string), `ticket_id` (uuid)
+Key response fields: `response.data.acquired_capabilities, response.data.civic_address_id, response.data.displayed_country_code`
 
 ## List all Releases
 
 Returns a list of your Releases for the given external connection. These are automatically created when you change the `connection_id` of a phone number that is currently on Microsoft Teams.
 
-`GET /external_connections/{id}/releases`
+`client.ExternalConnections.Releases.List()` — `GET /external_connections/{id}/releases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Filter` | object | No | Filter parameter for releases (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.ExternalConnections.Releases.List(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionReleaseListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.error_message`
 
 ## Retrieve a Release request
 
 Return the details of a Release request and its phone numbers.
 
-`GET /external_connections/{id}/releases/{release_id}`
+`client.ExternalConnections.Releases.Get()` — `GET /external_connections/{id}/releases/{release_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `ReleaseId` | string (UUID) | Yes | Identifies a Release request |
 
 ```go
 	release, err := client.ExternalConnections.Releases.Get(
-		context.TODO(),
+		context.Background(),
 		"7b6a6449-b055-45a6-81f6-f6f0dffa4cc6",
 		telnyx.ExternalConnectionReleaseGetParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", release.Data)
 ```
 
-Returns: `created_at` (string), `error_message` (string), `status` (enum: pending_upload, pending, in_progress, complete, failed, expired, unknown), `telephone_numbers` (array[object]), `tenant_id` (uuid), `ticket_id` (uuid)
+Key response fields: `response.data.status, response.data.created_at, response.data.error_message`
 
 ## List all Upload requests
 
 Returns a list of your Upload requests for the given external connection.
 
-`GET /external_connections/{id}/uploads`
+`client.ExternalConnections.Uploads.List()` — `GET /external_connections/{id}/uploads`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Filter` | object | No | Filter parameter for uploads (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
 	page, err := client.ExternalConnections.Uploads.List(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionUploadListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## Creates an Upload request
 
 Creates a new Upload request to Microsoft teams with the included phone numbers. Only one of civic_address_id or location_id must be provided, not both. The maximum allowed phone numbers for the numbers_ids array is 1000.
 
-`POST /external_connections/{id}/uploads` — Required: `number_ids`
+`client.ExternalConnections.Uploads.New()` — `POST /external_connections/{id}/uploads`
 
-Optional: `additional_usages` (array[string]), `civic_address_id` (uuid), `location_id` (uuid), `usage` (enum: calling_user_assignment, first_party_app_assignment)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `NumberIds` | array[string] | Yes |  |
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Usage` | enum (calling_user_assignment, first_party_app_assignment) | No | The use case of the upload request. |
+| `LocationId` | string (UUID) | No | Identifies the location to assign all phone numbers to. |
+| `CivicAddressId` | string (UUID) | No | Identifies the civic address to assign all phone numbers to. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	upload, err := client.ExternalConnections.Uploads.New(
-		context.TODO(),
+		context.Background(),
 		"1293384261075731499",
 		telnyx.ExternalConnectionUploadNewParams{
 			NumberIDs: []string{"3920457616934164700", "3920457616934164701", "3920457616934164702", "3920457616934164703"},
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", upload.TicketID)
 ```
 
-Returns: `success` (boolean), `ticket_id` (uuid)
+Key response fields: `response.data.success, response.data.ticket_id`
 
 ## Refresh the status of all Upload requests
 
 Forces a recheck of the status of all pending Upload requests for the given external connection in the background.
 
-`POST /external_connections/{id}/uploads/refresh`
+`client.ExternalConnections.Uploads.RefreshStatus()` — `POST /external_connections/{id}/uploads/refresh`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	response, err := client.ExternalConnections.Uploads.RefreshStatus(context.TODO(), "1293384261075731499")
+	response, err := client.ExternalConnections.Uploads.RefreshStatus(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Success)
 ```
 
-Returns: `success` (boolean)
+Key response fields: `response.data.success`
 
 ## Get the count of pending upload requests
 
 Returns the count of all pending upload requests for the given external connection.
 
-`GET /external_connections/{id}/uploads/status`
+`client.ExternalConnections.Uploads.PendingCount()` — `GET /external_connections/{id}/uploads/status`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	response, err := client.ExternalConnections.Uploads.PendingCount(context.TODO(), "1293384261075731499")
+	response, err := client.ExternalConnections.Uploads.PendingCount(context.Background(), "1293384261075731499")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `pending_numbers_count` (integer), `pending_orders_count` (integer)
+Key response fields: `response.data.pending_numbers_count, response.data.pending_orders_count`
 
 ## Retrieve an Upload request
 
 Return the details of an Upload request and its phone numbers.
 
-`GET /external_connections/{id}/uploads/{ticket_id}`
+`client.ExternalConnections.Uploads.Get()` — `GET /external_connections/{id}/uploads/{ticket_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `TicketId` | string (UUID) | Yes | Identifies an Upload request |
 
 ```go
 	upload, err := client.ExternalConnections.Uploads.Get(
-		context.TODO(),
+		context.Background(),
 		"7b6a6449-b055-45a6-81f6-f6f0dffa4cc6",
 		telnyx.ExternalConnectionUploadGetParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", upload.Data)
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## Retry an Upload request
 
 If there were any errors during the upload process, this endpoint will retry the upload request. In some cases this will reattempt the existing upload request, in other cases it may create a new upload request. Please check the ticket_id in the response to determine if a new upload request was created.
 
-`POST /external_connections/{id}/uploads/{ticket_id}/retry`
+`client.ExternalConnections.Uploads.Retry()` — `POST /external_connections/{id}/uploads/{ticket_id}/retry`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `TicketId` | string (UUID) | Yes | Identifies an Upload request |
 
 ```go
 	response, err := client.ExternalConnections.Uploads.Retry(
-		context.TODO(),
+		context.Background(),
 		"7b6a6449-b055-45a6-81f6-f6f0dffa4cc6",
 		telnyx.ExternalConnectionUploadRetryParams{
 			ID: "1293384261075731499",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `available_usages` (array[string]), `error_code` (string), `error_message` (string), `location_id` (uuid), `status` (enum: pending_upload, pending, in_progress, partial_success, success, error), `tenant_id` (uuid), `ticket_id` (uuid), `tn_upload_entries` (array[object])
+Key response fields: `response.data.status, response.data.available_usages, response.data.error_code`
 
 ## List uploaded media
 
 Returns a list of stored media files.
 
-`GET /media`
+`client.Media.List()` — `GET /media`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	media, err := client.Media.List(context.TODO(), telnyx.MediaListParams{})
+	media, err := client.Media.List(context.Background(), telnyx.MediaListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", media.Data)
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Upload media
 
 Upload media file to Telnyx so it can be used with other Telnyx services
 
-`POST /media` — Required: `media_url`
+`client.Media.Upload()` — `POST /media`
 
-Optional: `media_name` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MediaUrl` | string (URL) | Yes | The URL where the media to be stored in Telnyx network is cu... |
+| `TtlSecs` | integer | No | The number of seconds after which the media resource will be... |
+| `MediaName` | string | No | The unique identifier of a file. |
 
 ```go
-	response, err := client.Media.Upload(context.TODO(), telnyx.MediaUploadParams{
+	response, err := client.Media.Upload(context.Background(), telnyx.MediaUploadParams{
 		MediaURL: "http://www.example.com/audio.mp3",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Retrieve stored media
 
 Returns the information about a stored media file.
 
-`GET /media/{media_name}`
+`client.Media.Get()` — `GET /media/{media_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```go
-	media, err := client.Media.Get(context.TODO(), "media_name")
+	media, err := client.Media.Get(context.Background(), "media_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", media.Data)
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Update stored media
 
 Updates a stored media file.
 
-`PUT /media/{media_name}`
+`client.Media.Update()` — `PUT /media/{media_name}`
 
-Optional: `media_url` (string), `ttl_secs` (integer)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MediaName` | string | Yes | Uniquely identifies a media resource. |
+| `MediaUrl` | string (URL) | No | The URL where the media to be stored in Telnyx network is cu... |
+| `TtlSecs` | integer | No | The number of seconds after which the media resource will be... |
 
 ```go
 	media, err := client.Media.Update(
-		context.TODO(),
+		context.Background(),
 		"media_name",
 		telnyx.MediaUpdateParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", media.Data)
 ```
 
-Returns: `content_type` (string), `created_at` (string), `expires_at` (string), `media_name` (string), `updated_at` (string)
+Key response fields: `response.data.created_at, response.data.updated_at, response.data.content_type`
 
 ## Deletes stored media
 
 Deletes a stored media file.
 
-`DELETE /media/{media_name}`
+`client.Media.Delete()` — `DELETE /media/{media_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```go
-	err := client.Media.Delete(context.TODO(), "media_name")
+	err := client.Media.Delete(context.Background(), "media_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -781,12 +967,16 @@ Deletes a stored media file.
 
 Downloads a stored media file.
 
-`GET /media/{media_name}/download`
+`client.Media.Download()` — `GET /media/{media_name}/download`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MediaName` | string | Yes | Uniquely identifies a media resource. |
 
 ```go
-	response, err := client.Media.Download(context.TODO(), "media_name")
+	response, err := client.Media.Download(context.Background(), "media_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -795,174 +985,211 @@ Downloads a stored media file.
 
 This endpoint will make an asynchronous request to refresh the Operator Connect integration with Microsoft Teams for the current user. This will create new external connections on the user's account if needed, and/or report the integration results as [log messages](https://developers.telnyx.com/api-reference/external-connections/list-all-log-messages#list-all-log-messages).
 
-`POST /operator_connect/actions/refresh`
+`client.OperatorConnect.Actions.Refresh()` — `POST /operator_connect/actions/refresh`
 
 ```go
-	response, err := client.OperatorConnect.Actions.Refresh(context.TODO())
+	response, err := client.OperatorConnect.Actions.Refresh(context.Background())
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Message)
 ```
 
-Returns: `message` (string), `success` (boolean)
+Key response fields: `response.data.message, response.data.success`
 
 ## List all recording transcriptions
 
 Returns a list of your recording transcriptions.
 
-`GET /recording_transcriptions`
+`client.RecordingTranscriptions.List()` — `GET /recording_transcriptions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Filter recording transcriptions by various attributes. |
 
 ```go
-	recordingTranscriptions, err := client.RecordingTranscriptions.List(context.TODO())
+	page, err := client.RecordingTranscriptions.List(context.Background(), telnyx.RecordingTranscriptionListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
-	fmt.Printf("%+v\n", recordingTranscriptions.Data)
+	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve a recording transcription
 
 Retrieves the details of an existing recording transcription.
 
-`GET /recording_transcriptions/{recording_transcription_id}`
+`client.RecordingTranscriptions.Get()` — `GET /recording_transcriptions/{recording_transcription_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `RecordingTranscriptionId` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
 
 ```go
-	recordingTranscription, err := client.RecordingTranscriptions.Get(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	recordingTranscription, err := client.RecordingTranscriptions.Get(context.Background(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", recordingTranscription.Data)
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a recording transcription
 
 Permanently deletes a recording transcription.
 
-`DELETE /recording_transcriptions/{recording_transcription_id}`
+`client.RecordingTranscriptions.Delete()` — `DELETE /recording_transcriptions/{recording_transcription_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `RecordingTranscriptionId` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
 
 ```go
-	recordingTranscription, err := client.RecordingTranscriptions.Delete(context.TODO(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	recordingTranscription, err := client.RecordingTranscriptions.Delete(context.Background(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", recordingTranscription.Data)
 ```
 
-Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `record_type` (enum: recording_transcription), `recording_id` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all call recordings
 
 Returns a list of your call recordings.
 
-`GET /recordings`
+`client.Recordings.List()` — `GET /recordings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Filter recordings by various attributes. |
 
 ```go
-	page, err := client.Recordings.List(context.TODO(), telnyx.RecordingListParams{})
+	page, err := client.Recordings.List(context.Background(), telnyx.RecordingListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Delete a list of call recordings
 
 Permanently deletes a list of call recordings.
 
-`POST /recordings/actions/delete`
+`client.Recordings.Actions.Delete()` — `POST /recordings/actions/delete`
 
 ```go
-	err := client.Recordings.Actions.Delete(context.TODO(), telnyx.RecordingActionDeleteParams{
+	action, err := client.Recordings.Actions.Delete(context.Background(), telnyx.RecordingActionDeleteParams{
 		IDs: []string{"428c31b6-7af4-4bcb-b7f5-5013ef9657c1", "428c31b6-7af4-4bcb-b7f5-5013ef9657c2"},
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
+	fmt.Printf("%+v\n", action.Status)
 ```
+
+Key response fields: `response.data.status`
 
 ## Retrieve a call recording
 
 Retrieves the details of an existing call recording.
 
-`GET /recordings/{recording_id}`
+`client.Recordings.Get()` — `GET /recordings/{recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `RecordingId` | string (UUID) | Yes | Uniquely identifies the recording by id. |
 
 ```go
-	recording, err := client.Recordings.Get(context.TODO(), "recording_id")
+	recording, err := client.Recordings.Get(context.Background(), "recording_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", recording.Data)
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Delete a call recording
 
 Permanently deletes a call recording.
 
-`DELETE /recordings/{recording_id}`
+`client.Recordings.Delete()` — `DELETE /recordings/{recording_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `RecordingId` | string (UUID) | Yes | Uniquely identifies the recording by id. |
 
 ```go
-	recording, err := client.Recordings.Delete(context.TODO(), "recording_id")
+	recording, err := client.Recordings.Delete(context.Background(), "recording_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", recording.Data)
 ```
 
-Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (string), `channels` (enum: single, dual), `conference_id` (string), `created_at` (string), `download_urls` (object), `duration_millis` (int32), `id` (string), `record_type` (enum: recording), `recording_ended_at` (string), `recording_started_at` (string), `source` (enum: conference, call), `status` (enum: completed), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Create a SIPREC connector
 
 Creates a new SIPREC connector configuration.
 
-`POST /siprec_connectors`
+`client.SiprecConnectors.New()` — `POST /siprec_connectors`
 
 ```go
-	siprecConnector, err := client.SiprecConnectors.New(context.TODO(), telnyx.SiprecConnectorNewParams{
+	siprecConnector, err := client.SiprecConnectors.New(context.Background(), telnyx.SiprecConnectorNewParams{
 		Host: "siprec.telnyx.com",
 		Name: "my-siprec-connector",
 		Port: 5060,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", siprecConnector.Data)
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Retrieve a SIPREC connector
 
 Returns details of a stored SIPREC connector.
 
-`GET /siprec_connectors/{connector_name}`
+`client.SiprecConnectors.Get()` — `GET /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```go
-	siprecConnector, err := client.SiprecConnectors.Get(context.TODO(), "connector_name")
+	siprecConnector, err := client.SiprecConnectors.Get(context.Background(), "connector_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", siprecConnector.Data)
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update a SIPREC connector
 
 Updates a stored SIPREC connector configuration.
 
-`PUT /siprec_connectors/{connector_name}`
+`client.SiprecConnectors.Update()` — `PUT /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```go
 	siprecConnector, err := client.SiprecConnectors.Update(
-		context.TODO(),
+		context.Background(),
 		"connector_name",
 		telnyx.SiprecConnectorUpdateParams{
 			Host: "siprec.telnyx.com",
@@ -971,22 +1198,30 @@ Updates a stored SIPREC connector configuration.
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", siprecConnector.Data)
 ```
 
-Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name` (string), `port` (integer), `record_type` (string), `updated_at` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete a SIPREC connector
 
 Deletes a stored SIPREC connector.
 
-`DELETE /siprec_connectors/{connector_name}`
+`client.SiprecConnectors.Delete()` — `DELETE /siprec_connectors/{connector_name}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ConnectorName` | string | Yes | Uniquely identifies a SIPREC connector. |
 
 ```go
-	err := client.SiprecConnectors.Delete(context.TODO(), "connector_name")
+	err := client.SiprecConnectors.Delete(context.Background(), "connector_name")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

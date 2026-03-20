@@ -35,7 +35,11 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+response, err := client.Messages.Send(context.Background(), telnyx.MessageSendParams{
+		To: "+18445550001",
+		From: "+18005550101",
+		Text: "Hello from Telnyx!",
+	})
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -43,7 +47,6 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -63,538 +66,96 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
-## List alphanumeric sender IDs
+## Operational Caveats
 
-List all alphanumeric sender IDs for the authenticated user.
+- The sending number must already be assigned to the correct messaging profile before you send traffic from it.
+- US A2P long-code traffic must complete 10DLC registration before production sending or carriers will block or heavily filter messages.
+- Delivery webhooks are asynchronous. Treat the send response as acceptance of the request, not final carrier delivery.
 
-`GET /alphanumeric_sender_ids`
+## Reference Use Rules
 
-```go
-	page, err := client.AlphanumericSenderIDs.List(context.TODO(), telnyx.AlphanumericSenderIDListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
 
-## Create an alphanumeric sender ID
+## Core Tasks
 
-Create a new alphanumeric sender ID associated with a messaging profile.
+### Send an SMS
 
-`POST /alphanumeric_sender_ids` — Required: `alphanumeric_sender_id`, `messaging_profile_id`
+Primary outbound messaging flow. Agents need exact request fields and delivery-related response fields.
 
-Optional: `us_long_code_fallback` (string)
+`client.Messages.Send()` — `POST /messages`
 
-```go
-	alphanumericSenderID, err := client.AlphanumericSenderIDs.New(context.TODO(), telnyx.AlphanumericSenderIDNewParams{
-		AlphanumericSenderID: "MyCompany",
-		MessagingProfileID:   "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", alphanumericSenderID.Data)
-```
-
-Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
-
-## Retrieve an alphanumeric sender ID
-
-Retrieve a specific alphanumeric sender ID.
-
-`GET /alphanumeric_sender_ids/{id}`
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `From` | string (E.164) | Yes | Sending address (+E.164 formatted phone number, alphanumeric... |
+| `Text` | string | Yes | Message body (i.e., content) as a non-empty string. |
+| `MessagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| ... | | | +7 optional params in the API Details section below |
 
 ```go
-	alphanumericSenderID, err := client.AlphanumericSenderIDs.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", alphanumericSenderID.Data)
-```
-
-Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
-
-## Delete an alphanumeric sender ID
-
-Delete an alphanumeric sender ID and disassociate it from its messaging profile.
-
-`DELETE /alphanumeric_sender_ids/{id}`
-
-```go
-	alphanumericSenderID, err := client.AlphanumericSenderIDs.Delete(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", alphanumericSenderID.Data)
-```
-
-Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
-
-## Send a message
-
-Send a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool. This endpoint allows you to send a message with any messaging resource. Current messaging resources include: long-code, short-code, number-pool, and
-alphanumeric-sender-id.
-
-`POST /messages` — Required: `to`
-
-Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.Send(context.TODO(), telnyx.MessageSendParams{
+	response, err := client.Messages.Send(context.Background(), telnyx.MessageSendParams{
 		To: "+18445550001",
+		From: "+18005550101",
+		Text: "Hello from Telnyx!",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Text`
+- `response.Data.SentAt`
+- `response.Data.Errors`
 
-## Send a message using an alphanumeric sender ID
+### Send an SMS with an alphanumeric sender ID
 
-Send an SMS message using an alphanumeric sender ID. This is SMS only.
+Common sender variant that requires different request shape.
 
-`POST /messages/alphanumeric_sender_id` — Required: `from`, `to`, `text`, `messaging_profile_id`
+`client.Messages.SendWithAlphanumericSender()` — `POST /messages/alphanumeric_sender_id`
 
-Optional: `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `From` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `Text` | string | Yes | The message body. |
+| `MessagingProfileId` | string (UUID) | Yes | The messaging profile ID to use. |
+| `WebhookUrl` | string (URL) | No | Callback URL for delivery status updates. |
+| `WebhookFailoverUrl` | string (URL) | No | Failover callback URL for delivery status updates. |
+| `UseProfileWebhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
 
 ```go
-	response, err := client.Messages.SendWithAlphanumericSender(context.TODO(), telnyx.MessageSendWithAlphanumericSenderParams{
+	response, err := client.Messages.SendWithAlphanumericSender(context.Background(), telnyx.MessageSendWithAlphanumericSenderParams{
 		From:               "MyCompany",
 		MessagingProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		Text:               "text",
-		To:                 "+E.164",
+		Text: "Hello from Telnyx!",
+		To: "+13125550001",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Retrieve group MMS messages
-
-Retrieve all messages in a group MMS conversation by the group message ID.
-
-`GET /messages/group/{message_id}`
-
-```go
-	response, err := client.Messages.GetGroupMessages(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Send a group MMS message
-
-`POST /messages/group_mms` — Required: `from`, `to`
-
-Optional: `media_urls` (array[string]), `subject` (string), `text` (string), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendGroupMms(context.TODO(), telnyx.MessageSendGroupMmsParams{
-		From: "+13125551234",
-		To:   []string{"+18655551234", "+14155551234"},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Send a long code message
-
-`POST /messages/long_code` — Required: `from`, `to`
-
-Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendLongCode(context.TODO(), telnyx.MessageSendLongCodeParams{
-		From: "+18445550001",
-		To:   "+13125550002",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Send a message using number pool
-
-`POST /messages/number_pool` — Required: `to`, `messaging_profile_id`
-
-Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendNumberPool(context.TODO(), telnyx.MessageSendNumberPoolParams{
-		MessagingProfileID: "abc85f64-5717-4562-b3fc-2c9600000000",
-		To:                 "+13125550002",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Schedule a message
-
-Schedule a message with a Phone Number, Alphanumeric Sender ID, Short Code or Number Pool. This endpoint allows you to schedule a message with any messaging resource. Current messaging resources include: long-code, short-code, number-pool, and
-alphanumeric-sender-id.
-
-`POST /messages/schedule` — Required: `to`
-
-Optional: `auto_detect` (boolean), `from` (string), `media_urls` (array[string]), `messaging_profile_id` (string), `send_at` (date-time), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.Schedule(context.TODO(), telnyx.MessageScheduleParams{
-		To: "+18445550001",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Send a short code message
-
-`POST /messages/short_code` — Required: `from`, `to`
-
-Optional: `auto_detect` (boolean), `encoding` (enum: auto, gsm7, ucs2), `media_urls` (array[string]), `subject` (string), `text` (string), `type` (enum: SMS, MMS), `use_profile_webhooks` (boolean), `webhook_failover_url` (url), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendShortCode(context.TODO(), telnyx.MessageSendShortCodeParams{
-		From: "+18445550001",
-		To:   "+18445550001",
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `wait_seconds` (float), `webhook_failover_url` (url), `webhook_url` (url)
-
-## Send a WhatsApp message
-
-`POST /messages/whatsapp` — Required: `from`, `to`, `whatsapp_message`
-
-Optional: `type` (enum: WHATSAPP), `webhook_url` (url)
-
-```go
-	response, err := client.Messages.SendWhatsapp(context.TODO(), telnyx.MessageSendWhatsappParams{
-		From:            "+13125551234",
-		To:              "+13125551234",
-		WhatsappMessage: telnyx.WhatsappMessageContentParam{},
-	})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `body` (object), `direction` (string), `encoding` (string), `from` (object), `id` (string), `messaging_profile_id` (string), `organization_id` (string), `received_at` (date-time), `record_type` (string), `to` (array[object]), `type` (string), `wait_seconds` (float)
-
-## Retrieve a message
-
-Note: This API endpoint can only retrieve messages that are no older than 10 days since their creation. If you require messages older than this, please generate an [MDR report.](https://developers.telnyx.com/api-reference/mdr-usage-reports/create-mdr-usage-report)
-
-`GET /messages/{id}`
-
-```go
-	message, err := client.Messages.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", message.Data)
-```
-
-Returns: `data` (object)
-
-## Cancel a scheduled message
-
-Cancel a scheduled message that has not yet been sent. Only messages with `status=scheduled` and `send_at` more than a minute from now can be cancelled.
-
-`DELETE /messages/{id}`
-
-```go
-	response, err := client.Messages.CancelScheduled(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.ID)
-```
-
-Returns: `cc` (array[object]), `completed_at` (date-time), `cost` (object | null), `cost_breakdown` (object | null), `direction` (enum: outbound), `encoding` (string), `errors` (array[object]), `from` (object), `id` (uuid), `media` (array[object]), `messaging_profile_id` (string), `organization_id` (uuid), `parts` (integer), `received_at` (date-time), `record_type` (enum: message), `sent_at` (date-time), `smart_encoding_applied` (boolean), `subject` (string | null), `tags` (array[string]), `tcr_campaign_billable` (boolean), `tcr_campaign_id` (string | null), `tcr_campaign_registered` (string | null), `text` (string), `to` (array[object]), `type` (enum: SMS, MMS), `valid_until` (date-time), `webhook_failover_url` (url), `webhook_url` (url)
-
-## List messaging hosted numbers
-
-List all hosted numbers associated with the authenticated user.
-
-`GET /messaging_hosted_numbers`
-
-```go
-	page, err := client.MessagingHostedNumbers.List(context.TODO(), telnyx.MessagingHostedNumberListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
-
-## Retrieve a messaging hosted number
-
-Retrieve a specific messaging hosted number by its ID or phone number.
-
-`GET /messaging_hosted_numbers/{id}`
-
-```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Get(context.TODO(), "id")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumber.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
-
-## Update a messaging hosted number
-
-Update the messaging settings for a hosted number.
-
-`PATCH /messaging_hosted_numbers/{id}`
-
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
-
-```go
-	messagingHostedNumber, err := client.MessagingHostedNumbers.Update(
-		context.TODO(),
-		"id",
-		telnyx.MessagingHostedNumberUpdateParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingHostedNumber.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
-
-## List opt-outs
-
-Retrieve a list of opt-out blocks.
-
-`GET /messaging_optouts`
-
-```go
-	page, err := client.MessagingOptouts.List(context.TODO(), telnyx.MessagingOptoutListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `created_at` (date-time), `from` (string), `keyword` (string | null), `messaging_profile_id` (string | null), `to` (string)
-
-## List high-level messaging profile metrics
-
-List high-level metrics for all messaging profiles belonging to the authenticated user.
-
-`GET /messaging_profile_metrics`
-
-```go
-	messagingProfileMetrics, err := client.MessagingProfileMetrics.List(context.TODO(), telnyx.MessagingProfileMetricListParams{})
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", messagingProfileMetrics.Data)
-```
-
-Returns: `data` (array[object]), `meta` (object)
-
-## Regenerate messaging profile secret
-
-Regenerate the v1 secret for a messaging profile.
-
-`POST /messaging_profiles/{id}/actions/regenerate_secret`
-
-```go
-	response, err := client.MessagingProfiles.Actions.RegenerateSecret(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `health_webhook_url` (url), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `organization_id` (string), `record_type` (enum: messaging_profile), `redaction_enabled` (boolean), `redaction_level` (integer), `resource_group_id` (string | null), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
-
-## List alphanumeric sender IDs for a messaging profile
-
-List all alphanumeric sender IDs associated with a specific messaging profile.
-
-`GET /messaging_profiles/{id}/alphanumeric_sender_ids`
-
-```go
-	page, err := client.MessagingProfiles.ListAlphanumericSenderIDs(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileListAlphanumericSenderIDsParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `alphanumeric_sender_id` (string), `id` (uuid), `messaging_profile_id` (uuid), `organization_id` (string), `record_type` (enum: alphanumeric_sender_id), `us_long_code_fallback` (string)
-
-## Get detailed messaging profile metrics
-
-Get detailed metrics for a specific messaging profile, broken down by time interval.
-
-`GET /messaging_profiles/{id}/metrics`
-
-```go
-	response, err := client.MessagingProfiles.GetMetrics(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileGetMetricsParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `data` (object)
-
-## List Auto-Response Settings
-
-`GET /messaging_profiles/{profile_id}/autoresp_configs`
-
-```go
-	autorespConfigs, err := client.MessagingProfiles.AutorespConfigs.List(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileAutorespConfigListParams{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", autorespConfigs.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
-
-## Create auto-response setting
-
-`POST /messaging_profiles/{profile_id}/autoresp_configs` — Required: `op`, `keywords`, `country_code`
-
-Optional: `resp_text` (string)
-
-```go
-	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.New(
-		context.TODO(),
-		"profile_id",
-		telnyx.MessagingProfileAutorespConfigNewParams{
-			AutoRespConfigCreate: telnyx.AutoRespConfigCreateParam{
-				CountryCode: "US",
-				Keywords:    []string{"keyword1", "keyword2"},
-				Op:          telnyx.AutoRespConfigCreateOpStart,
-			},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
-
-## Get Auto-Response Setting
-
-`GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
-
-```go
-	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.Get(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileAutorespConfigGetParams{
-			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
-
-## Update Auto-Response Setting
-
-`PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` — Required: `op`, `keywords`, `country_code`
-
-Optional: `resp_text` (string)
-
-```go
-	autoRespConfigResponse, err := client.MessagingProfiles.AutorespConfigs.Update(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileAutorespConfigUpdateParams{
-			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-			AutoRespConfigCreate: telnyx.AutoRespConfigCreateParam{
-				CountryCode: "US",
-				Keywords:    []string{"keyword1", "keyword2"},
-				Op:          telnyx.AutoRespConfigCreateOpStart,
-			},
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", autoRespConfigResponse.Data)
-```
-
-Returns: `country_code` (string), `created_at` (date-time), `id` (string), `keywords` (array[string]), `op` (enum: start, stop, info), `resp_text` (string), `updated_at` (date-time)
-
-## Delete Auto-Response Setting
-
-`DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}`
-
-```go
-	autorespConfig, err := client.MessagingProfiles.AutorespConfigs.Delete(
-		context.TODO(),
-		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		telnyx.MessagingProfileAutorespConfigDeleteParams{
-			ProfileID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-		},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-	fmt.Printf("%+v\n", autorespConfig)
-```
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Text`
+- `response.Data.SentAt`
+- `response.Data.Errors`
 
 ---
-
-## Webhooks
 
 ### Webhook Verification
 
@@ -616,97 +177,289 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+## Webhooks
 
-| Event | Description |
-|-------|-------------|
-| `deliveryUpdate` | Delivery Update |
-| `inboundMessage` | Inbound Message |
-| `replacedLinkClick` | Replaced Link Click |
+These webhook payload fields are inline because they are part of the primary integration path.
 
-### Webhook payload fields
-
-**`deliveryUpdate`**
+### Delivery Update
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.id` | uuid | Identifies the type of resource. |
 | `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
-| `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
-| `data.payload.record_type` | enum: message | Identifies the type of the resource. |
-| `data.payload.direction` | enum: outbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
-| `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
-| `data.payload.organization_id` | uuid | The id of the organization the messaging profile belongs to. |
 | `data.payload.to` | array[object] |  |
-| `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.subject` | string | null | Subject of multimedia message |
-| `data.payload.media` | array[object] |  |
-| `data.payload.webhook_url` | url | The URL where webhooks related to this message will be sent. |
-| `data.payload.webhook_failover_url` | url | The failover URL where webhooks related to this message will be sent if sending to the primary URL fails. |
-| `data.payload.encoding` | string | Encoding scheme used for the message body. |
-| `data.payload.parts` | integer | Number of parts into which the message's body must be split. |
-| `data.payload.tags` | array[string] | Tags associated with the resource. |
-| `data.payload.cost` | object | null |  |
-| `data.payload.cost_breakdown` | object | null | Detailed breakdown of the message cost components. |
-| `data.payload.tcr_campaign_id` | string | null | The Campaign Registry (TCR) campaign ID associated with the message. |
-| `data.payload.tcr_campaign_billable` | boolean | Indicates whether the TCR campaign is billable. |
-| `data.payload.tcr_campaign_registered` | string | null | The registration status of the TCR campaign. |
-| `data.payload.received_at` | date-time | ISO 8601 formatted date indicating when the message request was received. |
 | `data.payload.sent_at` | date-time | ISO 8601 formatted date indicating when the message was sent. |
 | `data.payload.completed_at` | date-time | ISO 8601 formatted date indicating when the message was finalized. |
-| `data.payload.valid_until` | date-time | Message must be out of the queue by this time or else it will be discarded and marked as 'sending_failed'. |
-| `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses. |
-| `data.payload.smart_encoding_applied` | boolean | Indicates whether smart encoding was applied to this message. |
-| `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
-| `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
-| `meta.delivered_to` | url | The webhook URL the event was delivered to. |
+| `data.payload.cost` | object \| null |  |
+| `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirm... |
 
-**`inboundMessage`**
+### Inbound Message
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.id` | uuid | Identifies the type of resource. |
 | `data.event_type` | enum: message.received | The type of event being delivered. |
-| `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
-| `data.payload.record_type` | enum: message | Identifies the type of the resource. |
-| `data.payload.direction` | enum: inbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
-| `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
-| `data.payload.organization_id` | string | Unique identifier for a messaging profile. |
+| `data.payload.direction` | enum: inbound | The direction of the message. |
 | `data.payload.to` | array[object] |  |
-| `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.subject` | string | null | Message subject. |
+| `data.payload.type` | enum: SMS, MMS | The type of message. |
 | `data.payload.media` | array[object] |  |
-| `data.payload.webhook_url` | url | The URL where webhooks related to this message will be sent. |
-| `data.payload.webhook_failover_url` | url | The failover URL where webhooks related to this message will be sent if sending to the primary URL fails. |
-| `data.payload.encoding` | string | Encoding scheme used for the message body. |
-| `data.payload.parts` | integer | Number of parts into which the message's body must be split. |
-| `data.payload.tags` | array[string] | Tags associated with the resource. |
-| `data.payload.cost` | object | null |  |
-| `data.payload.cost_breakdown` | object | null | Detailed breakdown of the message cost components. |
-| `data.payload.tcr_campaign_id` | string | null | The Campaign Registry (TCR) campaign ID associated with the message. |
-| `data.payload.tcr_campaign_billable` | boolean | Indicates whether the TCR campaign is billable. |
-| `data.payload.tcr_campaign_registered` | string | null | The registration status of the TCR campaign. |
-| `data.payload.received_at` | date-time | ISO 8601 formatted date indicating when the message request was received. |
-| `data.payload.sent_at` | date-time | Not used for inbound messages. |
-| `data.payload.completed_at` | date-time | Not used for inbound messages. |
-| `data.payload.valid_until` | date-time | Not used for inbound messages. |
-| `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses. |
+| `data.record_type` | enum: event | Identifies the type of the resource. |
 
-**`replacedLinkClick`**
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | string | Identifies the type of the resource. |
-| `data.url` | string | The original link that was sent in the message. |
-| `data.to` | string | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or short code). |
-| `data.message_id` | uuid | The message ID associated with the clicked link. |
-| `data.time_clicked` | date-time | ISO 8601 formatted date indicating when the message request was received. |
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Send a group MMS message
+
+Send one MMS payload to multiple recipients.
+
+`client.Messages.SendGroupMms()` — `POST /messages/group_mms`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `From` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
+| `To` | array[object] | Yes | A list of destinations. |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| ... | | | +3 optional params in the API Details section below |
+
+```go
+	response, err := client.Messages.SendGroupMms(context.Background(), telnyx.MessageSendGroupMmsParams{
+		From: "+13125551234",
+		To:   []string{"+18655551234", "+14155551234"},
+		Text: "Hello from Telnyx!",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Text`
+
+### Send a long code message
+
+Force a long-code sending path instead of the generic send endpoint.
+
+`client.Messages.SendLongCode()` — `POST /messages/long_code`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `From` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| ... | | | +6 optional params in the API Details section below |
+
+```go
+	response, err := client.Messages.SendLongCode(context.Background(), telnyx.MessageSendLongCodeParams{
+		From: "+18445550001",
+		To:   "+13125550002",
+		Text: "Hello from Telnyx!",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Text`
+
+### Send a message using number pool
+
+Let a messaging profile or number pool choose the sender for you.
+
+`client.Messages.SendNumberPool()` — `POST /messages/number_pool`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MessagingProfileId` | string (UUID) | Yes | Unique identifier for a messaging profile. |
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| ... | | | +6 optional params in the API Details section below |
+
+```go
+	response, err := client.Messages.SendNumberPool(context.Background(), telnyx.MessageSendNumberPoolParams{
+		MessagingProfileID: "abc85f64-5717-4562-b3fc-2c9600000000",
+		To:                 "+13125550002",
+		Text: "Hello from Telnyx!",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Text`
+
+### Send a short code message
+
+Force a short-code sending path when the sender must be a short code.
+
+`client.Messages.SendShortCode()` — `POST /messages/short_code`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `From` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| ... | | | +6 optional params in the API Details section below |
+
+```go
+	response, err := client.Messages.SendShortCode(context.Background(), telnyx.MessageSendShortCodeParams{
+		From: "+18445550001",
+		To:   "+18445550001",
+		Text: "Hello from Telnyx!",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Text`
+
+### Schedule a message
+
+Queue a message for future delivery instead of sending immediately.
+
+`client.Messages.Schedule()` — `POST /messages/schedule`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
+| `MessagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
+| `MediaUrls` | array[string] | No | A list of media URLs. |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| ... | | | +8 optional params in the API Details section below |
+
+```go
+	response, err := client.Messages.Schedule(context.Background(), telnyx.MessageScheduleParams{
+		To: "+18445550001",
+		From: "+18005550101",
+		Text: "Appointment reminder",
+		SendAt: "2025-07-01T15:00:00Z",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Text`
+
+### Send a WhatsApp message
+
+Send WhatsApp traffic instead of SMS/MMS.
+
+`client.Messages.SendWhatsapp()` — `POST /messages/whatsapp`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `From` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
+| `To` | string (E.164) | Yes | Phone number in +E.164 format |
+| `WhatsappMessage` | object | Yes |  |
+| `Type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
+| `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+
+```go
+	response, err := client.Messages.SendWhatsapp(context.Background(), telnyx.MessageSendWhatsappParams{
+		From:            "+13125551234",
+		To:              "+13125551234",
+		WhatsappMessage: telnyx.WhatsappMessageContentParam{},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Primary response fields:
+- `response.Data.ID`
+- `response.Data.To`
+- `response.Data.From`
+- `response.Data.Type`
+- `response.Data.Direction`
+- `response.Data.Body`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Retrieve a message | `client.Messages.Get()` | `GET /messages/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Cancel a scheduled message | `client.Messages.CancelScheduled()` | `DELETE /messages/{id}` | Remove, detach, or clean up an existing resource. | `Id` |
+| List alphanumeric sender IDs | `client.AlphanumericSenderIDs.List()` | `GET /alphanumeric_sender_ids` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create an alphanumeric sender ID | `client.AlphanumericSenderIDs.New()` | `POST /alphanumeric_sender_ids` | Create or provision an additional resource when the core tasks do not cover this flow. | `AlphanumericSenderId`, `MessagingProfileId` |
+| Retrieve an alphanumeric sender ID | `client.AlphanumericSenderIDs.Get()` | `GET /alphanumeric_sender_ids/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Delete an alphanumeric sender ID | `client.AlphanumericSenderIDs.Delete()` | `DELETE /alphanumeric_sender_ids/{id}` | Remove, detach, or clean up an existing resource. | `Id` |
+| Retrieve group MMS messages | `client.Messages.GetGroupMessages()` | `GET /messages/group/{message_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `MessageId` |
+| List messaging hosted numbers | `client.MessagingHostedNumbers.List()` | `GET /messaging_hosted_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Retrieve a messaging hosted number | `client.MessagingHostedNumbers.Get()` | `GET /messaging_hosted_numbers/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Update a messaging hosted number | `client.MessagingHostedNumbers.Update()` | `PATCH /messaging_hosted_numbers/{id}` | Modify an existing resource without recreating it. | `Id` |
+| List opt-outs | `client.MessagingOptouts.List()` | `GET /messaging_optouts` | Inspect available resources or choose an existing resource before mutating it. | None |
+| List high-level messaging profile metrics | `client.MessagingProfileMetrics.List()` | `GET /messaging_profile_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Regenerate messaging profile secret | `client.MessagingProfiles.Actions.RegenerateSecret()` | `POST /messaging_profiles/{id}/actions/regenerate_secret` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `Id` |
+| List alphanumeric sender IDs for a messaging profile | `client.MessagingProfiles.ListAlphanumericSenderIDs()` | `GET /messaging_profiles/{id}/alphanumeric_sender_ids` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| Get detailed messaging profile metrics | `client.MessagingProfiles.GetMetrics()` | `GET /messaging_profiles/{id}/metrics` | Fetch the current state before updating, deleting, or making control-flow decisions. | `Id` |
+| List Auto-Response Settings | `client.MessagingProfiles.AutorespConfigs.List()` | `GET /messaging_profiles/{profile_id}/autoresp_configs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `ProfileId` |
+| Create auto-response setting | `client.MessagingProfiles.AutorespConfigs.New()` | `POST /messaging_profiles/{profile_id}/autoresp_configs` | Create or provision an additional resource when the core tasks do not cover this flow. | `Op`, `Keywords`, `CountryCode`, `ProfileId` |
+| Get Auto-Response Setting | `client.MessagingProfiles.AutorespConfigs.Get()` | `GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `ProfileId`, `AutorespCfgId` |
+| Update Auto-Response Setting | `client.MessagingProfiles.AutorespConfigs.Update()` | `PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Modify an existing resource without recreating it. | `Op`, `Keywords`, `CountryCode`, `ProfileId`, +1 more |
+| Delete Auto-Response Setting | `client.MessagingProfiles.AutorespConfigs.Delete()` | `DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Remove, detach, or clean up an existing resource. | `ProfileId`, `AutorespCfgId` |
+
+### Other Webhook Events
+
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `replacedLinkClick` | `message.link_click` | Replaced Link Click |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.

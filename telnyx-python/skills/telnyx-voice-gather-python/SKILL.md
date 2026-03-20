@@ -1,9 +1,8 @@
 ---
 name: telnyx-voice-gather-python
 description: >-
-  Collect DTMF input and speech from callers using standard gather or AI-powered
-  gather. Build interactive voice menus and AI voice assistants. This skill
-  provides Python SDK examples.
+  Collect DTMF and speech input from callers. Standard gather and AI-powered
+  gather for voice menus.
 metadata:
   author: telnyx
   product: voice-gather
@@ -14,6 +13,29 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Voice Gather - Python
+
+## Core Workflow
+
+### Prerequisites
+
+1. Active call via Call Control API (see telnyx-voice-python)
+2. Call must be answered before issuing gather commands
+
+### Steps
+
+1. **Gather DTMF**: `client.calls.actions.gather(call_control_id=..., minimum_digits=..., maximum_digits=...)`
+2. **Gather with audio prompt**: `client.calls.actions.gather_using_audio(call_control_id=..., audio_url=...)`
+3. **Gather with TTS prompt**: `client.calls.actions.gather_using_speak(call_control_id=..., payload=..., voice=...)`
+4. **Handle result**: `call.gather.ended webhook — digits in data.payload.digits`
+
+### Common mistakes
+
+- NEVER issue gather before the call is answered — will fail silently
+- Gather results arrive via call.gather.ended webhook — NOT in the API response
+- Set inter_digit_timeout_millis to control how long to wait between digits (default varies)
+- For AI-powered gather, results arrive via call.ai_gather.ended webhook
+
+**Related skills**: telnyx-voice-python, telnyx-voice-media-python
 
 ## Installation
 
@@ -43,7 +65,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.calls.actions.gather(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -60,107 +82,101 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
-## Add messages to AI Assistant
-
-Add messages to the conversation started by an AI assistant on the call.
-
-`POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
-
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
-
-```python
-response = client.calls.actions.add_ai_assistant_messages(
-    call_control_id="call_control_id",
-)
-print(response.data)
-```
-
-Returns: `result` (string)
-
-## Start AI Assistant
-
-Start an AI assistant on the call. **Expected Webhooks:**
-
-- `call.conversation.ended`
-- `call.conversation_insights.generated`
-
-`POST /calls/{call_control_id}/actions/ai_assistant_start`
-
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `transcription` (object), `voice` (string), `voice_settings` (object)
-
-```python
-response = client.calls.actions.start_ai_assistant(
-    call_control_id="call_control_id",
-)
-print(response.data)
-```
-
-Returns: `conversation_id` (uuid), `result` (string)
-
-## Stop AI Assistant
-
-Stop an AI assistant on the call.
-
-`POST /calls/{call_control_id}/actions/ai_assistant_stop`
-
-Optional: `client_state` (string), `command_id` (string)
-
-```python
-response = client.calls.actions.stop_ai_assistant(
-    call_control_id="call_control_id",
-)
-print(response.data)
-```
-
-Returns: `result` (string)
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
 
 ## Gather
 
 Gather DTMF signals to build interactive menus. You can pass a list of valid digits. The `Answer` command must be issued before the `gather` command.
 
-`POST /calls/{call_control_id}/actions/gather`
+`client.calls.actions.gather()` — `POST /calls/{call_control_id}/actions/gather`
 
-Optional: `client_state` (string), `command_id` (string), `gather_id` (string), `initial_timeout_millis` (int32), `inter_digit_timeout_millis` (int32), `maximum_digits` (int32), `minimum_digits` (int32), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `gather_id` | string (UUID) | No | An id that will be sent back in the corresponding `call.gath... |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.gather(
-    call_control_id="call_control_id",
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
+    minimum_digits=1,
+    maximum_digits=4,
 )
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
-## Gather stop
+## Gather using audio
 
-Stop current gather. **Expected Webhooks:**
+Play an audio file on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_audio_url', which will be played back at the beginning of each prompt. Playback will be interrupted when a DTMF signal is received.
 
-- `call.gather.ended`
+`client.calls.actions.gather_using_audio()` — `POST /calls/{call_control_id}/actions/gather_using_audio`
 
-`POST /calls/{call_control_id}/actions/gather_stop`
-
-Optional: `client_state` (string), `command_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `audio_url` | string (URL) | No | The URL of a file to be played back at the beginning of each... |
+| ... | | | +10 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
-response = client.calls.actions.stop_gather(
-    call_control_id="call_control_id",
+response = client.calls.actions.gather_using_audio(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
 )
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
+
+## Gather using speak
+
+Convert text to speech and play it on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_payload', which will be played back at the beginning of each prompt. Speech will be interrupted when a DTMF signal is received.
+
+`client.calls.actions.gather_using_speak()` — `POST /calls/{call_control_id}/actions/gather_using_speak`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `payload` | string | Yes | The text or SSML to be converted into speech. |
+| `voice` | string | Yes | Specifies the voice used in speech synthesis. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `payload_type` | enum (text, ssml) | No | The type of the provided payload. |
+| `service_level` | enum (basic, premium) | No | This parameter impacts speech quality, language options and ... |
+| ... | | | +11 optional params in [references/api-details.md](references/api-details.md) |
+
+```python
+response = client.calls.actions.gather_using_speak(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
+    payload="say this on call",
+    voice="male",
+)
+print(response.data)
+```
+
+Key response fields: `response.data.result`
 
 ## Gather using AI
 
 Gather parameters defined in the request payload using a voice assistant. You can pass parameters described as a JSON Schema object and the voice assistant will attempt to gather these informations.
 
-`POST /calls/{call_control_id}/actions/gather_using_ai` — Required: `parameters`
+`client.calls.actions.gather_using_ai()` — `POST /calls/{call_control_id}/actions/gather_using_ai`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `gather_ended_speech` (string), `greeting` (string), `interruption_settings` (object), `language` (object), `message_history` (array[object]), `send_message_history_updates` (boolean), `send_partial_results` (boolean), `transcription` (object), `user_response_timeout_ms` (integer), `voice` (string), `voice_settings` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `parameters` | object | Yes | The parameters described as a JSON Schema object that needs ... |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `assistant` | object | No | Assistant configuration including choice of LLM, custom inst... |
+| ... | | | +11 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.gather_using_ai(
-    call_control_id="call_control_id",
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
     parameters={
         "properties": "bar",
         "required": "bar",
@@ -170,43 +186,99 @@ response = client.calls.actions.gather_using_ai(
 print(response.data)
 ```
 
-Returns: `conversation_id` (uuid), `result` (string)
+Key response fields: `response.data.conversation_id, response.data.result`
 
-## Gather using audio
+## Gather stop
 
-Play an audio file on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_audio_url', which will be played back at the beginning of each prompt. Playback will be interrupted when a DTMF signal is received.
+Stop current gather. **Expected Webhooks:**
 
-`POST /calls/{call_control_id}/actions/gather_using_audio`
+- `call.gather.ended`
 
-Optional: `audio_url` (string), `client_state` (string), `command_id` (string), `inter_digit_timeout_millis` (int32), `invalid_audio_url` (string), `invalid_media_name` (string), `maximum_digits` (int32), `maximum_tries` (int32), `media_name` (string), `minimum_digits` (int32), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string)
+`client.calls.actions.stop_gather()` — `POST /calls/{call_control_id}/actions/gather_stop`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```python
-response = client.calls.actions.gather_using_audio(
-    call_control_id="call_control_id",
+response = client.calls.actions.stop_gather(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
 )
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
-## Gather using speak
+## Add messages to AI Assistant
 
-Convert text to speech and play it on the call until the required DTMF signals are gathered to build interactive menus. You can pass a list of valid digits along with an 'invalid_payload', which will be played back at the beginning of each prompt. Speech will be interrupted when a DTMF signal is received.
+Add messages to the conversation started by an AI assistant on the call.
 
-`POST /calls/{call_control_id}/actions/gather_using_speak` — Required: `voice`, `payload`
+`client.calls.actions.add_ai_assistant_messages()` — `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `inter_digit_timeout_millis` (int32), `invalid_payload` (string), `language` (enum: arb, cmn-CN, cy-GB, da-DK, de-DE, en-AU, en-GB, en-GB-WLS, en-IN, en-US, es-ES, es-MX, es-US, fr-CA, fr-FR, hi-IN, is-IS, it-IT, ja-JP, ko-KR, nb-NO, nl-NL, pl-PL, pt-BR, pt-PT, ro-RO, ru-RU, sv-SE, tr-TR), `maximum_digits` (int32), `maximum_tries` (int32), `minimum_digits` (int32), `payload_type` (enum: text, ssml), `service_level` (enum: basic, premium), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string), `voice_settings` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `messages` | array[object] | No | The messages to add to the conversation. |
 
 ```python
-response = client.calls.actions.gather_using_speak(
-    call_control_id="call_control_id",
-    payload="say this on call",
-    voice="male",
+response = client.calls.actions.add_ai_assistant_messages(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
 )
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
+
+## Start AI Assistant
+
+Start an AI assistant on the call. **Expected Webhooks:**
+
+- `call.conversation.ended`
+- `call.conversation_insights.generated`
+
+`client.calls.actions.start_ai_assistant()` — `POST /calls/{call_control_id}/actions/ai_assistant_start`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `assistant` | object | No | AI Assistant configuration |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
+
+```python
+response = client.calls.actions.start_ai_assistant(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
+)
+print(response.data)
+```
+
+Key response fields: `response.data.conversation_id, response.data.result`
+
+## Stop AI Assistant
+
+Stop an AI assistant on the call.
+
+`client.calls.actions.stop_ai_assistant()` — `POST /calls/{call_control_id}/actions/ai_assistant_stop`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+
+```python
+response = client.calls.actions.stop_ai_assistant(
+    call_control_id="550e8400-e29b-41d4-a716-446655440000",
+)
+print(response.data)
+```
+
+Key response fields: `response.data.result`
 
 ---
 
@@ -236,83 +308,15 @@ def handle_webhook():
 The following webhook events are sent to your configured webhook URL.
 All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
 
-| Event | Description |
-|-------|-------------|
-| `CallAIGatherEnded` | Call AI Gather Ended |
-| `CallAIGatherMessageHistoryUpdated` | Call AI Gather Message History Updated |
-| `CallAIGatherPartialResults` | Call AI Gather Partial Results |
-| `callGatherEnded` | Call Gather Ended |
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `CallAIGatherEnded` | `call.ai_gather.ended` | Call AI Gather Ended |
+| `CallAIGatherMessageHistoryUpdated` | `call.ai.gather.message.history.updated` | Call AI Gather Message History Updated |
+| `CallAIGatherPartialResults` | `call.ai.gather.partial.results` | Call AI Gather Partial Results |
+| `callGatherEnded` | `call.gather.ended` | Call Gather Ended |
 
-### Webhook payload fields
+Webhook payload field definitions are in [references/api-details.md](references/api-details.md).
 
-**`CallAIGatherEnded`**
+---
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.ai_gather.ended | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Telnyx connection ID used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.message_history` | array[object] | The history of the messages exchanged during the AI gather |
-| `data.payload.result` | object | The result of the AI gather, its type depends of the `parameters` provided in the command |
-| `data.payload.status` | enum: valid, invalid | Reflects how command ended. |
-
-**`CallAIGatherMessageHistoryUpdated`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.ai_gather.message_history_updated | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Telnyx connection ID used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.message_history` | array[object] | The history of the messages exchanged during the AI gather |
-
-**`CallAIGatherPartialResults`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.ai_gather.partial_results | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Telnyx connection ID used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.message_history` | array[object] | The history of the messages exchanged during the AI gather |
-| `data.payload.partial_results` | object | The partial result of the AI gather, its type depends of the `parameters` provided in the command |
-
-**`callGatherEnded`**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `data.record_type` | enum: event | Identifies the type of the resource. |
-| `data.event_type` | enum: call.gather.ended | The type of event being delivered. |
-| `data.id` | uuid | Identifies the type of resource. |
-| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
-| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
-| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
-| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
-| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
-| `data.payload.client_state` | string | State received from a command. |
-| `data.payload.from` | string | Number or SIP URI placing the call. |
-| `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.digits` | string | The received DTMF digit or symbol. |
-| `data.payload.status` | enum: valid, invalid, call_hangup, cancelled, cancelled_amd, timeout | Reflects how command ended. |
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**
