@@ -1,9 +1,8 @@
 ---
 name: telnyx-numbers-config-curl
 description: >-
-  Configure phone number settings including caller ID, call forwarding,
-  messaging enablement, and connection assignments. This skill provides REST API
-  (curl) examples.
+  Phone number config: caller ID, call forwarding, messaging enablement,
+  connection assignments.
 metadata:
   author: telnyx
   product: numbers-config
@@ -14,6 +13,25 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Numbers Config - curl
+
+## Core Workflow
+
+### Prerequisites
+
+1. Phone number must be ordered first (see telnyx-numbers-curl)
+
+### Steps
+
+1. **List your numbers**
+2. **Update voice settings**
+3. **Update messaging settings**
+
+### Common mistakes
+
+- Use phone_numbers.voice.update() for voice/connection settings and phone_numbers.messaging.update() for messaging/profile settings — they are SEPARATE endpoints
+- Bulk operations are available for updating many numbers at once — see bulk_phone_number_operations endpoints
+
+**Related skills**: telnyx-numbers-curl, telnyx-messaging-profiles-curl, telnyx-voice-curl
 
 ## Installation
 
@@ -37,10 +55,10 @@ or authentication errors (401). Always handle errors in production code:
 ```bash
 # Check HTTP status code in response
 response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
+  -d '{"key": "value"}')
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
@@ -63,11 +81,17 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List endpoints return paginated results. Use `page[number]` and `page[size]` query parameters to navigate pages. Check `meta.total_pages` in the response.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Bulk update phone number profiles
 
-`POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
+`POST /messaging_numbers_bulk_updates`
 
-Optional: `assign_only` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messaging_profile_id` | string (UUID) | Yes | Configure the messaging profile these phone numbers are assi... |
+| `numbers` | array[string] | Yes | The list of phone numbers to update. |
+| `assign_only` | boolean | No | If true, only assign numbers to the profile without changing... |
 
 ```bash
 curl \
@@ -75,61 +99,84 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "messaging_profile_id": "string",
+  "messaging_profile_id": "550e8400-e29b-41d4-a716-446655440000",
   "numbers": [
-    "string"
+    "+13125550001"
   ]
 }' \
   "https://api.telnyx.com/v2/messaging_numbers_bulk_updates"
 ```
 
-Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+Key response fields: `.data.failed, .data.order_id, .data.pending`
 
 ## Retrieve bulk update status
 
 `GET /messaging_numbers_bulk_updates/{order_id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `order_id` | string (UUID) | Yes | Order ID to verify bulk update status. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messaging_numbers_bulk_updates/{order_id}"
 ```
 
-Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
+Key response fields: `.data.failed, .data.order_id, .data.pending`
 
 ## List mobile phone numbers with messaging settings
 
 `GET /mobile_phone_numbers/messaging`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/mobile_phone_numbers/messaging"
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+Key response fields: `.data.id, .data.phone_number, .data.type`
 
 ## Retrieve a mobile phone number with messaging settings
 
 `GET /mobile_phone_numbers/{id}/messaging`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/mobile_phone_numbers/{id}/messaging"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/mobile_phone_numbers/550e8400-e29b-41d4-a716-446655440000/messaging"
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+Key response fields: `.data.id, .data.phone_number, .data.type`
 
 ## List phone numbers
 
 `GET /phone_numbers`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `handle_messaging_profile_error` | enum (true, false) | No | Although it is an infrequent occurrence, due to the highly d... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers?sort=connection_name&handle_messaging_profile_error=false"
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Verify ownership of phone numbers
 
 Verifies ownership of the provided phone numbers and returns a mapping of numbers to their IDs, plus a list of numbers not found in the account.
 
-`POST /phone_numbers/actions/verify_ownership` — Required: `phone_numbers`
+`POST /phone_numbers/actions/verify_ownership`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | Yes | Array of phone numbers to verify ownership for |
 
 ```bash
 curl \
@@ -144,23 +191,33 @@ curl \
   "https://api.telnyx.com/v2/phone_numbers/actions/verify_ownership"
 ```
 
-Returns: `found` (array[object]), `not_found` (array[string]), `record_type` (string)
+Key response fields: `.data.found, .data.not_found, .data.record_type`
 
 ## Lists the phone numbers jobs
 
 `GET /phone_numbers/jobs`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/jobs?sort=created_at"
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Delete a batch of numbers
 
 Creates a new background job to delete a batch of numbers. At most one thousand numbers can be updated per API call.
 
-`POST /phone_numbers/jobs/delete_phone_numbers` — Required: `phone_numbers`
+`POST /phone_numbers/jobs/delete_phone_numbers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | Yes |  |
 
 ```bash
 curl \
@@ -169,21 +226,25 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "phone_numbers": [
-    "string"
+    "+13125550001"
   ]
 }' \
   "https://api.telnyx.com/v2/phone_numbers/jobs/delete_phone_numbers"
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Update the emergency settings from a batch of numbers
 
 Creates a background job to update the emergency settings of a collection of phone numbers. At most one thousand numbers can be updated per API call.
 
-`POST /phone_numbers/jobs/update_emergency_settings` — Required: `emergency_enabled`, `phone_numbers`
+`POST /phone_numbers/jobs/update_emergency_settings`
 
-Optional: `emergency_address_id` (string | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | Yes |  |
+| `emergency_enabled` | boolean | Yes | Indicates whether to enable or disable emergency services on... |
+| `emergency_address_id` | string (UUID) | No | Identifies the address to be used with emergency services. |
 
 ```bash
 curl \
@@ -192,22 +253,28 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "phone_numbers": [
-    "string"
+    "+13125550001"
   ],
   "emergency_enabled": true
 }' \
   "https://api.telnyx.com/v2/phone_numbers/jobs/update_emergency_settings"
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Update a batch of numbers
 
 Creates a new background job to update a batch of numbers. At most one thousand numbers can be updated per API call. At least one of the updateable fields must be submitted.
 
-`POST /phone_numbers/jobs/update_phone_numbers` — Required: `phone_numbers`
+`POST /phone_numbers/jobs/update_phone_numbers`
 
-Optional: `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `tags` (array[string]), `voice` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_numbers` | array[string] | Yes | Array of phone number ids and/or phone numbers in E164 forma... |
+| `tags` | array[string] | No | A list of user-assigned tags to help organize phone numbers. |
+| `connection_id` | string (UUID) | No | Identifies the connection associated with the phone number. |
+| `billing_group_id` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -216,60 +283,44 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "phone_numbers": [
-    "string"
-  ],
-  "customer_reference": "MY REF 001",
-  "voice": {
-    "tech_prefix_enabled": true,
-    "translated_number": "+13035559999",
-    "caller_id_name_enabled": true,
-    "call_forwarding": {
-      "call_forwarding_enabled": true,
-      "forwards_to": "+13035559123",
-      "forwarding_type": "always"
-    },
-    "cnam_listing": {
-      "cnam_listing_enabled": true,
-      "cnam_listing_details": "example"
-    },
-    "usage_payment_method": "pay-per-minute",
-    "media_features": {
-      "rtp_auto_adjust_enabled": true,
-      "accept_any_rtp_packets_enabled": true,
-      "t38_fax_gateway_enabled": true
-    },
-    "call_recording": {
-      "inbound_call_recording_enabled": true,
-      "inbound_call_recording_format": "wav",
-      "inbound_call_recording_channels": "single"
-    },
-    "inbound_call_screening": "disabled"
-  }
+    "+13125550001"
+  ]
 }' \
   "https://api.telnyx.com/v2/phone_numbers/jobs/update_phone_numbers"
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## Retrieve a phone numbers job
 
 `GET /phone_numbers/jobs/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the Phone Numbers Job. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/jobs/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/jobs/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.type`
 
 ## List phone numbers with messaging settings
 
 `GET /phone_numbers/messaging`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[type]` | enum (tollfree, longcode, shortcode) | No | Filter by phone number type. |
+| `sort[phone_number]` | enum (asc, desc) | No | Sort by phone number. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/messaging"
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `.data.id, .data.phone_number, .data.type`
 
 ## Slim List phone numbers
 
@@ -277,55 +328,78 @@ List phone numbers, This endpoint is a lighter version of the /phone_numbers end
 
 `GET /phone_numbers/slim`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `include_connection` | boolean | No | Include the connection associated with the phone number. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/slim?sort=connection_name"
 ```
 
-Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `country_iso_alpha2` (string), `created_at` (string), `customer_reference` (string), `emergency_address_id` (string), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## List phone numbers with voice settings
 
 `GET /phone_numbers/voice`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (purchased_at, phone_number, connection_name, usage_payment_method) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/voice?sort=connection_name"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `.data.id, .data.phone_number, .data.connection_id`
 
 ## Retrieve a phone number
 
 `GET /phone_numbers/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/1293384261075731499"
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Update a phone number
 
 `PATCH /phone_numbers/{id}`
 
-Optional: `address_id` (string), `billing_group_id` (string), `connection_id` (string), `customer_reference` (string), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | A list of user-assigned tags to help organize phone numbers. |
+| `connection_id` | string (UUID) | No | Identifies the connection associated with the phone number. |
+| `billing_group_id` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "hd_voice_enabled": true,
-  "customer_reference": "MY REF 001"
-}' \
   "https://api.telnyx.com/v2/phone_numbers/1293384261075731499"
 ```
 
-Returns: `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Delete a phone number
 
 `DELETE /phone_numbers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -334,11 +408,16 @@ curl \
   "https://api.telnyx.com/v2/phone_numbers/1293384261075731499"
 ```
 
-Returns: `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `connection_name` (string), `created_at` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `emergency_address_id` (string), `emergency_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `messaging_profile_id` (string), `messaging_profile_name` (string), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Change the bundle status for a phone number (set to being in a bundle or remove from a bundle)
 
-`PATCH /phone_numbers/{id}/actions/bundle_status_change` — Required: `bundle_id`
+`PATCH /phone_numbers/{id}/actions/bundle_status_change`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `bundle_id` | string (UUID) | Yes | The new bundle_id setting for the number. |
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -346,16 +425,22 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "bundle_id": "string"
+  "bundle_id": "550e8400-e29b-41d4-a716-446655440000"
 }' \
   "https://api.telnyx.com/v2/phone_numbers/1293384261075731499/actions/bundle_status_change"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `.data.id, .data.phone_number, .data.connection_id`
 
 ## Enable emergency for a phone number
 
-`POST /phone_numbers/{id}/actions/enable_emergency` — Required: `emergency_enabled`, `emergency_address_id`
+`POST /phone_numbers/{id}/actions/enable_emergency`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `emergency_enabled` | boolean | Yes | Indicates whether to enable emergency services on this numbe... |
+| `emergency_address_id` | string (UUID) | Yes | Identifies the address to be used with emergency services. |
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```bash
 curl \
@@ -364,121 +449,137 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "emergency_enabled": true,
-  "emergency_address_id": "string"
+  "emergency_address_id": "550e8400-e29b-41d4-a716-446655440000"
 }' \
   "https://api.telnyx.com/v2/phone_numbers/1293384261075731499/actions/enable_emergency"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `.data.id, .data.phone_number, .data.connection_id`
 
 ## Retrieve a phone number with messaging settings
 
 `GET /phone_numbers/{id}/messaging`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the type of resource. |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/{id}/messaging"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/550e8400-e29b-41d4-a716-446655440000/messaging"
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `.data.id, .data.phone_number, .data.type`
 
 ## Update the messaging profile and/or messaging product of a phone number
 
 `PATCH /phone_numbers/{id}/messaging`
 
-Optional: `messaging_product` (string), `messaging_profile_id` (string), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The phone number to update. |
+| `messaging_profile_id` | string (UUID) | No | Configure the messaging profile this phone number is assigne... |
+| `tags` | array[string] | No | Tags to set on this phone number. |
+| `messaging_product` | string | No | Configure the messaging product for this number:
+
+* Omit thi... |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "messaging_product": "P2P"
-}' \
-  "https://api.telnyx.com/v2/phone_numbers/{id}/messaging"
+  "https://api.telnyx.com/v2/phone_numbers/550e8400-e29b-41d4-a716-446655440000/messaging"
 ```
 
-Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
+Key response fields: `.data.id, .data.phone_number, .data.type`
 
 ## Retrieve a phone number with voice settings
 
 `GET /phone_numbers/{id}/voice`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/1293384261075731499/voice"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `.data.id, .data.phone_number, .data.connection_id`
 
 ## Update a phone number with voice settings
 
 `PATCH /phone_numbers/{id}/voice`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `usage_payment_method` | enum (pay-per-minute, channel) | No | Controls whether a number is billed per minute or uses your ... |
+| `inbound_call_screening` | enum (disabled, reject_calls, flag_calls) | No | The inbound_call_screening setting is a phone number configu... |
+| `tech_prefix_enabled` | boolean | No | Controls whether a tech prefix is enabled for this phone num... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "call_forwarding": {
-    "call_forwarding_enabled": true,
-    "forwards_to": "+13035559123",
-    "forwarding_type": "always"
-  },
-  "cnam_listing": {
-    "cnam_listing_enabled": true,
-    "cnam_listing_details": "example"
-  },
-  "media_features": {
-    "rtp_auto_adjust_enabled": true,
-    "accept_any_rtp_packets_enabled": true,
-    "t38_fax_gateway_enabled": true
-  },
-  "call_recording": {
-    "inbound_call_recording_enabled": true,
-    "inbound_call_recording_format": "wav",
-    "inbound_call_recording_channels": "single"
-  }
-}' \
   "https://api.telnyx.com/v2/phone_numbers/1293384261075731499/voice"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
+Key response fields: `.data.id, .data.phone_number, .data.connection_id`
 
 ## List Mobile Phone Numbers
 
 `GET /v2/mobile_phone_numbers`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | The page number to load |
+| `page[size]` | integer | No | The size of the page |
+
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_phone_numbers"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Retrieve a Mobile Phone Number
 
 `GET /v2/mobile_phone_numbers/{id}`
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile phone number |
+
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_phone_numbers/{id}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_phone_numbers/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.phone_number`
 
 ## Update a Mobile Phone Number
 
 `PATCH /v2/mobile_phone_numbers/{id}`
 
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `customer_reference` (string | null), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The ID of the mobile phone number |
+| `connection_id` | string (UUID) | No |  |
+| `tags` | array[string] | No |  |
+| `inbound_call_screening` | enum (disabled, reject_calls, flag_calls) | No |  |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/v2/mobile_phone_numbers/{id}"
+  "https://api.telnyx.com/v2/v2/mobile_phone_numbers/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+Key response fields: `.data.id, .data.status, .data.phone_number`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

@@ -1,8 +1,7 @@
 ---
 name: telnyx-oauth-ruby
 description: >-
-  Implement OAuth 2.0 authentication flows for Telnyx API access. This skill
-  provides Ruby SDK examples.
+  OAuth 2.0 authentication flows for Telnyx API access.
 metadata:
   author: telnyx
   product: oauth
@@ -13,6 +12,24 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Oauth - Ruby
+
+## Core Workflow
+
+### Prerequisites
+
+1. Create an OAuth client in the Telnyx Portal
+
+### Steps
+
+1. **Create OAuth client**: `client.oauth.clients.create(...: ...)`
+2. **Get access token**: `POST /oauth/token with client_id and client_secret`
+
+### Common mistakes
+
+- OAuth tokens are short-lived — implement token refresh logic
+- Use OAuth for third-party integrations; use API keys for your own services
+
+**Related skills**: telnyx-account-access-ruby
 
 ## Installation
 
@@ -39,7 +56,7 @@ or authentication errors (401). Always handle errors in production code:
 
 ```ruby
 begin
-  result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
+  result = client.oauth.clients.create(params)
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
 rescue Telnyx::Errors::RateLimitError
@@ -61,11 +78,13 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `.auto_paging_each` for automatic iteration: `page.auto_paging_each { |item| puts item.id }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Authorization server metadata
 
 OAuth 2.0 Authorization Server Metadata (RFC 8414)
 
-`GET /.well-known/oauth-authorization-server`
+`client.well_known.retrieve_authorization_server_metadata()` — `GET /.well-known/oauth-authorization-server`
 
 ```ruby
 response = client.well_known.retrieve_authorization_server_metadata
@@ -73,13 +92,13 @@ response = client.well_known.retrieve_authorization_server_metadata
 puts(response)
 ```
 
-Returns: `authorization_endpoint` (uri), `code_challenge_methods_supported` (array[string]), `grant_types_supported` (array[string]), `introspection_endpoint` (uri), `issuer` (uri), `jwks_uri` (uri), `registration_endpoint` (uri), `response_types_supported` (array[string]), `scopes_supported` (array[string]), `token_endpoint` (uri), `token_endpoint_auth_methods_supported` (array[string])
+Key response fields: `response.data.authorization_endpoint, response.data.code_challenge_methods_supported, response.data.grant_types_supported`
 
 ## Protected resource metadata
 
 OAuth 2.0 Protected Resource Metadata for resource discovery
 
-`GET /.well-known/oauth-protected-resource`
+`client.well_known.retrieve_protected_resource_metadata()` — `GET /.well-known/oauth-protected-resource`
 
 ```ruby
 response = client.well_known.retrieve_protected_resource_metadata
@@ -87,17 +106,24 @@ response = client.well_known.retrieve_protected_resource_metadata
 puts(response)
 ```
 
-Returns: `authorization_servers` (array[string]), `resource` (uri)
+Key response fields: `response.data.authorization_servers, response.data.resource`
 
 ## OAuth authorization endpoint
 
 OAuth 2.0 authorization endpoint for the authorization code flow
 
-`GET /oauth/authorize`
+`client.oauth.retrieve_authorize()` — `GET /oauth/authorize`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code_challenge_method` | enum (plain, S256) | No | PKCE code challenge method |
+| `scope` | string | No | Space-separated list of requested scopes |
+| `state` | string | No | State parameter for CSRF protection |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 result = client.oauth.retrieve_authorize(
-  client_id: "client_id",
+  client_id: "550e8400-e29b-41d4-a716-446655440000",
   redirect_uri: "https://example.com",
   response_type: :code
 )
@@ -109,7 +135,11 @@ puts(result)
 
 Retrieve details about an OAuth consent token
 
-`GET /oauth/consent/{consent_token}`
+`client.oauth.retrieve()` — `GET /oauth/consent/{consent_token}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `consent_token` | string | Yes | OAuth consent token |
 
 ```ruby
 oauth = client.oauth.retrieve("consent_token")
@@ -117,41 +147,50 @@ oauth = client.oauth.retrieve("consent_token")
 puts(oauth)
 ```
 
-Returns: `client_id` (string), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uri` (uri), `requested_scopes` (array[object]), `tos_uri` (uri), `verified` (boolean)
+Key response fields: `response.data.name, response.data.client_id, response.data.logo_uri`
 
 ## Create OAuth grant
 
 Create an OAuth authorization grant
 
-`POST /oauth/grants` — Required: `allowed`, `consent_token`
+`client.oauth.grants()` — `POST /oauth/grants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `allowed` | boolean | Yes | Whether the grant is allowed |
+| `consent_token` | string | Yes | Consent token |
 
 ```ruby
-response = client.oauth.grants(allowed: true, consent_token: "consent_token")
+response = client.oauth.grants(allowed: true, consent_token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example")
 
 puts(response)
 ```
 
-Returns: `redirect_uri` (uri)
+Key response fields: `response.data.redirect_uri`
 
 ## Token introspection
 
 Introspect an OAuth access token to check its validity and metadata
 
-`POST /oauth/introspect` — Required: `token`
+`client.oauth.introspect()` — `POST /oauth/introspect`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token` | string | Yes | The token to introspect |
 
 ```ruby
-response = client.oauth.introspect(token: "token")
+response = client.oauth.introspect(token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example")
 
 puts(response)
 ```
 
-Returns: `active` (boolean), `aud` (string), `client_id` (string), `exp` (integer), `iat` (integer), `iss` (string), `scope` (string)
+Key response fields: `response.data.active, response.data.aud, response.data.client_id`
 
 ## JSON Web Key Set
 
 Retrieve the JSON Web Key Set for token verification
 
-`GET /oauth/jwks`
+`client.oauth.retrieve_jwks()` — `GET /oauth/jwks`
 
 ```ruby
 response = client.oauth.retrieve_jwks
@@ -159,15 +198,20 @@ response = client.oauth.retrieve_jwks
 puts(response)
 ```
 
-Returns: `keys` (array[object])
+Key response fields: `response.data.keys`
 
 ## Dynamic client registration
 
 Register a new OAuth client dynamically (RFC 7591)
 
-`POST /oauth/register`
+`client.oauth.register()` — `POST /oauth/register`
 
-Optional: `client_name` (string), `grant_types` (array[string]), `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `response_types` (array[string]), `scope` (string), `token_endpoint_auth_method` (enum: none, client_secret_basic, client_secret_post), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token_endpoint_auth_method` | enum (none, client_secret_basic, client_secret_post) | No | Authentication method for the token endpoint |
+| `redirect_uris` | array[string] | No | Array of redirection URI strings for use in redirect-based f... |
+| `client_name` | string | No | Human-readable string name of the client to be presented to ... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.oauth.register
@@ -175,15 +219,21 @@ response = client.oauth.register
 puts(response)
 ```
 
-Returns: `client_id` (string), `client_id_issued_at` (integer), `client_name` (string), `client_secret` (string), `grant_types` (array[string]), `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `response_types` (array[string]), `scope` (string), `token_endpoint_auth_method` (string), `tos_uri` (uri)
+Key response fields: `response.data.client_id, response.data.client_id_issued_at, response.data.client_name`
 
 ## OAuth token endpoint
 
 Exchange authorization code, client credentials, or refresh token for access token
 
-`POST /oauth/token` — Required: `grant_type`
+`client.oauth.token()` — `POST /oauth/token`
 
-Optional: `client_id` (string), `client_secret` (string), `code` (string), `code_verifier` (string), `redirect_uri` (uri), `refresh_token` (string), `scope` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `grant_type` | enum (client_credentials, authorization_code, refresh_token) | Yes | OAuth 2.0 grant type |
+| `client_id` | string (UUID) | No | OAuth client ID (if not using HTTP Basic auth) |
+| `scope` | string | No | Space-separated list of requested scopes (for client_credent... |
+| `code` | string | No | Authorization code (for authorization_code flow) |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.oauth.token(grant_type: :client_credentials)
@@ -191,13 +241,20 @@ response = client.oauth.token(grant_type: :client_credentials)
 puts(response)
 ```
 
-Returns: `access_token` (string), `expires_in` (integer), `refresh_token` (string), `scope` (string), `token_type` (enum: Bearer)
+Key response fields: `response.data.access_token, response.data.expires_in, response.data.refresh_token`
 
 ## List OAuth clients
 
 Retrieve a paginated list of OAuth clients for the authenticated user
 
-`GET /oauth_clients`
+`client.oauth_clients.list()` — `GET /oauth_clients`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter[client_type]` | enum (confidential, public) | No | Filter by client type |
+| `filter[allowed_grant_types][contains]` | enum (client_credentials, authorization_code, refresh_token) | No | Filter by allowed grant type |
+| `page[size]` | integer | No | Number of results per page |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 page = client.oauth_clients.list
@@ -205,15 +262,24 @@ page = client.oauth_clients.list
 puts(page)
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Create OAuth client
 
 Create a new OAuth client
 
-`POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+`client.oauth_clients.create()` — `POST /oauth_clients`
 
-Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | The name of the OAuth client |
+| `allowed_scopes` | array[string] | Yes | List of allowed OAuth scopes |
+| `client_type` | enum (public, confidential) | Yes | OAuth client type |
+| `allowed_grant_types` | array[string] | Yes | List of allowed OAuth grant types |
+| `require_pkce` | boolean | No | Whether PKCE (Proof Key for Code Exchange) is required for t... |
+| `redirect_uris` | array[string] | No | List of redirect URIs (required for authorization_code flow) |
+| `logo_uri` | string (URL) | No | URL of the client logo |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 oauth_client = client.oauth_clients.create(
@@ -226,13 +292,17 @@ oauth_client = client.oauth_clients.create(
 puts(oauth_client)
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Get OAuth client
 
 Retrieve a single OAuth client by ID
 
-`GET /oauth_clients/{id}`
+`client.oauth_clients.retrieve()` — `GET /oauth_clients/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
 
 ```ruby
 oauth_client = client.oauth_clients.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -240,15 +310,21 @@ oauth_client = client.oauth_clients.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab2
 puts(oauth_client)
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update OAuth client
 
 Update an existing OAuth client
 
-`PUT /oauth_clients/{id}`
+`client.oauth_clients.update()` — `PUT /oauth_clients/{id}`
 
-Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
+| `name` | string | No | The name of the OAuth client |
+| `allowed_scopes` | array[string] | No | List of allowed OAuth scopes |
+| `require_pkce` | boolean | No | Whether PKCE (Proof Key for Code Exchange) is required for t... |
+| ... | | | +5 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 oauth_client = client.oauth_clients.update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -256,13 +332,17 @@ oauth_client = client.oauth_clients.update("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e
 puts(oauth_client)
 ```
 
-Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete OAuth client
 
 Delete an OAuth client
 
-`DELETE /oauth_clients/{id}`
+`client.oauth_clients.delete()` — `DELETE /oauth_clients/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth client ID |
 
 ```ruby
 result = client.oauth_clients.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -274,7 +354,12 @@ puts(result)
 
 Retrieve a paginated list of OAuth grants for the authenticated user
 
-`GET /oauth_grants`
+`client.oauth_grants.list()` — `GET /oauth_grants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[size]` | integer | No | Number of results per page |
+| `page[number]` | integer | No | Page number |
 
 ```ruby
 page = client.oauth_grants.list
@@ -282,13 +367,17 @@ page = client.oauth_grants.list
 puts(page)
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
 
 ## Get OAuth grant
 
 Retrieve a single OAuth grant by ID
 
-`GET /oauth_grants/{id}`
+`client.oauth_grants.retrieve()` — `GET /oauth_grants/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth grant ID |
 
 ```ruby
 oauth_grant = client.oauth_grants.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -296,13 +385,17 @@ oauth_grant = client.oauth_grants.retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e
 puts(oauth_grant)
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
 
 ## Revoke OAuth grant
 
 Revoke an OAuth grant
 
-`DELETE /oauth_grants/{id}`
+`client.oauth_grants.delete()` — `DELETE /oauth_grants/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | OAuth grant ID |
 
 ```ruby
 oauth_grant = client.oauth_grants.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -310,4 +403,8 @@ oauth_grant = client.oauth_grants.delete("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 puts(oauth_grant)
 ```
 
-Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+Key response fields: `response.data.id, response.data.created_at, response.data.client_id`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

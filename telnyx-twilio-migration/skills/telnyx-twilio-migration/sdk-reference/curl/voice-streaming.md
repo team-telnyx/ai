@@ -2,6 +2,27 @@
 
 # Telnyx Voice Streaming - curl
 
+## Core Workflow
+
+### Prerequisites
+
+1. Active call via Call Control API (see telnyx-voice-curl)
+2. WebSocket server ready to receive audio stream (for streaming)
+
+### Steps
+
+1. **Start streaming**
+2. **Start transcription**
+3. **Start fork**
+
+### Common mistakes
+
+- stream_url must be a WebSocket URL (wss://) — HTTP URLs will fail
+- Transcription events arrive via call.transcription webhook — not in the API response
+- VOICE IS EVENT-DRIVEN: all streaming commands return immediately, data arrives via WebSocket or webhooks
+
+**Related skills**: telnyx-voice-curl, telnyx-voice-media-curl
+
 ## Installation
 
 ```text
@@ -24,10 +45,10 @@ or authentication errors (401). Always handle errors in production code:
 ```bash
 # Check HTTP status code in response
 response=$(curl -s -w "\n%{http_code}" \
-  -X POST "https://api.telnyx.com/v2/messages" \
+  -X POST "https://api.telnyx.com/v2/{endpoint}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"to": "+13125550001", "from": "+13125550002", "text": "Hello"}')
+  -d '{"key": "value"}')
 
 http_code=$(echo "$response" | tail -1)
 body=$(echo "$response" | sed '$d')
@@ -45,64 +66,20 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
-## Forking start
-
-Call forking allows you to stream the media from a call to a specific target in realtime. This stream can be used to enable realtime audio analysis to support a 
-variety of use cases, including fraud detection, or the creation of AI-generated audio responses. Requests must specify either the `target` attribute or the `rx` and `tx` attributes.
-
-`POST /calls/{call_control_id}/actions/fork_start`
-
-Optional: `client_state` (string), `command_id` (string), `rx` (string), `stream_type` (enum: decrypted), `tx` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "rx": "udp:192.0.2.1:9000",
-  "stream_type": "decrypted",
-  "tx": "udp:192.0.2.1:9001",
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/fork_start"
-```
-
-Returns: `result` (string)
-
-## Forking stop
-
-Stop forking a call. **Expected Webhooks:**
-
-- `call.fork.stopped`
-
-`POST /calls/{call_control_id}/actions/fork_stop`
-
-Optional: `client_state` (string), `command_id` (string), `stream_type` (enum: raw, decrypted)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901",
-  "stream_type": "decrypted"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/fork_stop"
-```
-
-Returns: `result` (string)
-
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## Streaming start
 
 Start streaming the media from a call to a specific WebSocket address or Dialogflow connection in near-realtime. Audio will be delivered as base64-encoded RTP payload (raw audio), wrapped in JSON payloads. Please find more details about media streaming messages specification under the [link](https://developers.telnyx.com/docs/voice/programmable-voice/media-streaming).
 
 `POST /calls/{call_control_id}/actions/streaming_start`
 
-Optional: `client_state` (string), `command_id` (string), `custom_parameters` (array[object]), `dialogflow_config` (object), `enable_dialogflow` (boolean), `stream_auth_token` (string), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_sampling_rate` (enum: 8000, 16000, 22050, 24000, 48000), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `stream_track` | enum (inbound_track, outbound_track, both_tracks) | No | Specifies which track should be streamed. |
+| `stream_codec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | No | Specifies the codec to be used for the streamed audio. |
+| ... | | | +10 optional params in the API Details section below |
 
 ```bash
 curl \
@@ -110,32 +87,12 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "stream_url": "wss://www.example.com/websocket",
-  "stream_track": "both_tracks",
-  "stream_codec": "PCMA",
-  "stream_bidirectional_mode": "rtp",
-  "stream_bidirectional_codec": "G722",
-  "stream_bidirectional_target_legs": "both",
-  "stream_bidirectional_sampling_rate": 16000,
-  "enable_dialogflow": true,
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901",
-  "custom_parameters": [
-    {
-      "name": "param1",
-      "value": "value1"
-    },
-    {
-      "name": "param2",
-      "value": "value2"
-    }
-  ],
-  "stream_auth_token": "your-auth-token"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/streaming_start"
+      "stream_url": "wss://example.com/audio-stream"
+  }' \
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/streaming_start"
 ```
 
-Returns: `result` (string)
+Key response fields: `.data.result`
 
 ## Streaming stop
 
@@ -145,22 +102,22 @@ Stop streaming a call to a WebSocket. **Expected Webhooks:**
 
 `POST /calls/{call_control_id}/actions/streaming_stop`
 
-Optional: `client_state` (string), `command_id` (string), `stream_id` (uuid)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `stream_id` | string (UUID) | No | Identifies the stream. |
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901",
-  "stream_id": "1edb94f9-7ef0-4150-b502-e0ebadfd9491"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/streaming_stop"
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/streaming_stop"
 ```
 
-Returns: `result` (string)
+Key response fields: `.data.result`
 
 ## Transcription start
 
@@ -170,23 +127,23 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `transcription_engine` | enum (Google, Telnyx, Deepgram, Azure, A, ...) | No | Engine to use for speech recognition. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| ... | | | +2 optional params in the API Details section below |
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "transcription_engine": "Google",
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "transcription_tracks": "both",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/transcription_start"
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/transcription_start"
 ```
 
-Returns: `result` (string)
+Key response fields: `.data.result`
 
 ## Transcription stop
 
@@ -194,21 +151,71 @@ Stop real-time transcription.
 
 `POST /calls/{call_control_id}/actions/transcription_stop`
 
-Optional: `client_state` (string), `command_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-  "client_state": "aGF2ZSBhIG5pY2UgZGF5ID1d",
-  "command_id": "891510ac-f3e4-11e8-af5b-de00688a4901"
-}' \
-  "https://api.telnyx.com/v2/calls/{call_control_id}/actions/transcription_stop"
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/transcription_stop"
 ```
 
-Returns: `result` (string)
+Key response fields: `.data.result`
+
+## Forking start
+
+Call forking allows you to stream the media from a call to a specific target in realtime. This stream can be used to enable realtime audio analysis to support a 
+variety of use cases, including fraud detection, or the creation of AI-generated audio responses. Requests must specify either the `target` attribute or the `rx` and `tx` attributes.
+
+`POST /calls/{call_control_id}/actions/fork_start`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `stream_type` | enum (decrypted) | No | Optionally specify a media type to stream. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| ... | | | +2 optional params in the API Details section below |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/fork_start"
+```
+
+Key response fields: `.data.result`
+
+## Forking stop
+
+Stop forking a call. **Expected Webhooks:**
+
+- `call.fork.stopped`
+
+`POST /calls/{call_control_id}/actions/fork_stop`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `stream_type` | enum (raw, decrypted) | No | Optionally specify a `stream_type`. |
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/calls/v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ/actions/fork_stop"
+```
+
+Key response fields: `.data.result`
 
 ---
 
@@ -234,18 +241,103 @@ and `telnyx-timestamp` headers. Always verify signatures in production:
 The following webhook events are sent to your configured webhook URL.
 All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
 
-| Event | Description |
-|-------|-------------|
-| `callForkStarted` | Call Fork Started |
-| `callForkStopped` | Call Fork Stopped |
-| `callStreamingFailed` | Call Streaming Failed |
-| `callStreamingStarted` | Call Streaming Started |
-| `callStreamingStopped` | Call Streaming Stopped |
-| `transcription` | Transcription |
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `callForkStarted` | `call.fork.started` | Call Fork Started |
+| `callForkStopped` | `call.fork.stopped` | Call Fork Stopped |
+| `callStreamingFailed` | `call.streaming.failed` | Call Streaming Failed |
+| `callStreamingStarted` | `call.streaming.started` | Call Streaming Started |
+| `callStreamingStopped` | `call.streaming.stopped` | Call Streaming Stopped |
+| `transcription` | `transcription` | Transcription |
 
-### Webhook payload fields
+Webhook payload field definitions are in the API Details section below.
 
-**`callForkStarted`**
+---
+
+# Voice Streaming (curl) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+- [Webhook Payload Fields](#webhook-payload-fields)
+
+## Response Schemas
+
+**Returned by:** Forking start, Forking stop, Streaming start, Streaming stop, Transcription start, Transcription stop
+
+| Field | Type |
+|-------|------|
+| `result` | string |
+
+## Optional Parameters
+
+### Forking start
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `rx` | string | The network target, , where the call's incoming RTP media packets should be f... |
+| `stream_type` | enum (decrypted) | Optionally specify a media type to stream. |
+| `tx` | string | The network target, , where the call's outgoing RTP media packets should be f... |
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+
+### Forking stop
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+| `stream_type` | enum (raw, decrypted) | Optionally specify a `stream_type`. |
+
+### Streaming start
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `stream_url` | string (URL) | The destination WebSocket address where the stream is going to be delivered. |
+| `stream_track` | enum (inbound_track, outbound_track, both_tracks) | Specifies which track should be streamed. |
+| `stream_codec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Specifies the codec to be used for the streamed audio. |
+| `stream_bidirectional_mode` | enum (mp3, rtp) | Configures method of bidirectional streaming (mp3, rtp). |
+| `stream_bidirectional_codec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
+| `stream_bidirectional_target_legs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
+| `stream_bidirectional_sampling_rate` | enum (8000, 16000, 22050, 24000, 48000) | Audio sampling rate. |
+| `enable_dialogflow` | boolean | Enables Dialogflow for the current call. |
+| `dialogflow_config` | object |  |
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+| `custom_parameters` | array[object] | Custom parameters to be sent as part of the WebSocket connection. |
+| `stream_auth_token` | string | An authentication token to be sent as part of the WebSocket connection. |
+
+### Streaming stop
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+| `stream_id` | string (UUID) | Identifies the stream. |
+
+### Transcription start
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `transcription_engine` | enum (Google, Telnyx, Deepgram, Azure, A, ...) | Engine to use for speech recognition. |
+| `transcription_engine_config` | object |  |
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `transcription_tracks` | string | Indicates which leg of the call will be transcribed. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+
+### Transcription stop
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
+
+## Webhook Payload Fields
+
+### `callForkStarted`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -260,7 +352,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_type` | enum: decrypted | Type of media streamed. |
 
-**`callForkStopped`**
+### `callForkStopped`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -275,7 +367,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_type` | enum: decrypted | Type of media streamed. |
 
-**`callStreamingFailed`**
+### `callStreamingFailed`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -292,7 +384,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.stream_id` | uuid | Identifies the streaming. |
 | `data.payload.stream_type` | enum: websocket, dialogflow | The type of stream connection the stream is performing. |
 
-**`callStreamingStarted`**
+### `callStreamingStarted`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -307,7 +399,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_url` | string | Destination WebSocket address where the stream is going to be delivered. |
 
-**`callStreamingStopped`**
+### `callStreamingStopped`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -322,7 +414,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.stream_url` | string | Destination WebSocket address where the stream is going to be delivered. |
 
-**`transcription`**
+### `transcription`
 
 | Field | Type | Description |
 |-------|------|-------------|

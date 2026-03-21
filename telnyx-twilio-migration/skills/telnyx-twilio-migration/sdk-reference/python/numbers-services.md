@@ -2,6 +2,23 @@
 
 # Telnyx Numbers Services - Python
 
+## Core Workflow
+
+### Prerequisites
+
+1. Phone number must be ordered first (see telnyx-numbers-python)
+
+### Steps
+
+1. **Set up voicemail**: `client.voicemail.create(phone_number_id=...)`
+2. **Configure E911**: `client.dynamic_emergency_endpoints.create(...)`
+
+### Common mistakes
+
+- E911 addresses must be validated — invalid addresses will cause regulatory issues
+
+**Related skills**: telnyx-numbers-python, telnyx-numbers-config-python
+
 ## Installation
 
 ```bash
@@ -30,7 +47,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.voicemail.create(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -51,11 +68,16 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
 ## List your voice channels for non-US zones
 
 Returns the non-US voice channels for your account. voice channels allow you to use Channel Billing for calls to your Telnyx phone numbers. Please check the Telnyx Support Articles section for full information and examples of how to utilize Channel Billing.
 
-`GET /channel_zones`
+`client.channel_zones.list()` — `GET /channel_zones`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.channel_zones.list()
@@ -63,29 +85,38 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `channels` (int64), `countries` (array[string]), `created_at` (string), `id` (string), `name` (string), `record_type` (enum: channel_zone), `updated_at` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update voice channels for non-US Zones
 
 Update the number of Voice Channels for the Non-US Zones. This allows your account to handle multiple simultaneous inbound calls to Non-US numbers. Use this endpoint to increase or decrease your capacity based on expected call volume.
 
-`PUT /channel_zones/{channel_zone_id}` — Required: `channels`
+`client.channel_zones.update()` — `PUT /channel_zones/{channel_zone_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channels` | integer | Yes | The number of reserved channels |
 
 ```python
 channel_zone = client.channel_zones.update(
-    channel_zone_id="channel_zone_id",
+    channel_zone_id="550e8400-e29b-41d4-a716-446655440000",
     channels=0,
 )
 print(channel_zone.id)
 ```
 
-Returns: `channels` (int64), `countries` (array[string]), `created_at` (string), `id` (string), `name` (string), `record_type` (enum: channel_zone), `updated_at` (string)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List dynamic emergency addresses
 
 Returns the dynamic emergency addresses according to filters
 
-`GET /dynamic_emergency_addresses`
+`client.dynamic_emergency_addresses.list()` — `GET /dynamic_emergency_addresses`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```python
 page = client.dynamic_emergency_addresses.list()
@@ -93,15 +124,26 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a dynamic emergency address.
 
 Creates a dynamic emergency address.
 
-`POST /dynamic_emergency_addresses` — Required: `house_number`, `street_name`, `locality`, `administrative_area`, `postal_code`, `country_code`
+`client.dynamic_emergency_addresses.create()` — `POST /dynamic_emergency_addresses`
 
-Optional: `created_at` (string), `extended_address` (string), `house_suffix` (string), `id` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `house_number` | string | Yes |  |
+| `street_name` | string | Yes |  |
+| `locality` | string | Yes |  |
+| `administrative_area` | string | Yes |  |
+| `postal_code` | string | Yes |  |
+| `country_code` | enum (US, CA, PR) | Yes |  |
+| `sip_geolocation_id` | string (UUID) | No | Unique location reference string to be used in SIP INVITE fr... |
+| `status` | enum (pending, activated, rejected) | No | Status of dynamic emergency address |
+| `id` | string (UUID) | No |  |
+| ... | | | +8 optional params in the API Details section below |
 
 ```python
 dynamic_emergency_address = client.dynamic_emergency_addresses.create(
@@ -115,13 +157,17 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.create(
 print(dynamic_emergency_address.data)
 ```
 
-Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a dynamic emergency address
 
 Returns the dynamic emergency address based on the ID provided
 
-`GET /dynamic_emergency_addresses/{id}`
+`client.dynamic_emergency_addresses.retrieve()` — `GET /dynamic_emergency_addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Dynamic Emergency Address id |
 
 ```python
 dynamic_emergency_address = client.dynamic_emergency_addresses.retrieve(
@@ -130,13 +176,17 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.retrieve(
 print(dynamic_emergency_address.data)
 ```
 
-Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a dynamic emergency address
 
 Deletes the dynamic emergency address based on the ID provided
 
-`DELETE /dynamic_emergency_addresses/{id}`
+`client.dynamic_emergency_addresses.delete()` — `DELETE /dynamic_emergency_addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Dynamic Emergency Address id |
 
 ```python
 dynamic_emergency_address = client.dynamic_emergency_addresses.delete(
@@ -145,13 +195,18 @@ dynamic_emergency_address = client.dynamic_emergency_addresses.delete(
 print(dynamic_emergency_address.data)
 ```
 
-Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `created_at` (string), `extended_address` (string), `house_number` (string), `house_suffix` (string), `id` (string), `locality` (string), `postal_code` (string), `record_type` (string), `sip_geolocation_id` (string), `status` (enum: pending, activated, rejected), `street_name` (string), `street_post_directional` (string), `street_pre_directional` (string), `street_suffix` (string), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List dynamic emergency endpoints
 
 Returns the dynamic emergency endpoints according to filters
 
-`GET /dynamic_emergency_endpoints`
+`client.dynamic_emergency_endpoints.list()` — `GET /dynamic_emergency_endpoints`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```python
 page = client.dynamic_emergency_endpoints.list()
@@ -159,15 +214,23 @@ page = page.data[0]
 print(page.dynamic_emergency_address_id)
 ```
 
-Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create a dynamic emergency endpoint.
 
 Creates a dynamic emergency endpoints.
 
-`POST /dynamic_emergency_endpoints` — Required: `dynamic_emergency_address_id`, `callback_number`, `caller_name`
+`client.dynamic_emergency_endpoints.create()` — `POST /dynamic_emergency_endpoints`
 
-Optional: `created_at` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `dynamic_emergency_address_id` | string (UUID) | Yes | An id of a currently active dynamic emergency location. |
+| `callback_number` | string | Yes |  |
+| `caller_name` | string | Yes |  |
+| `status` | enum (pending, activated, rejected) | No | Status of dynamic emergency address |
+| `sip_from_id` | string (UUID) | No |  |
+| `id` | string (UUID) | No |  |
+| ... | | | +3 optional params in the API Details section below |
 
 ```python
 dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.create(
@@ -178,13 +241,17 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.create(
 print(dynamic_emergency_endpoint.data)
 ```
 
-Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Get a dynamic emergency endpoint
 
 Returns the dynamic emergency endpoint based on the ID provided
 
-`GET /dynamic_emergency_endpoints/{id}`
+`client.dynamic_emergency_endpoints.retrieve()` — `GET /dynamic_emergency_endpoints/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Dynamic Emergency Endpoint id |
 
 ```python
 dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.retrieve(
@@ -193,13 +260,17 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.retrieve(
 print(dynamic_emergency_endpoint.data)
 ```
 
-Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete a dynamic emergency endpoint
 
 Deletes the dynamic emergency endpoint based on the ID provided
 
-`DELETE /dynamic_emergency_endpoints/{id}`
+`client.dynamic_emergency_endpoints.delete()` — `DELETE /dynamic_emergency_endpoints/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Dynamic Emergency Endpoint id |
 
 ```python
 dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.delete(
@@ -208,26 +279,30 @@ dynamic_emergency_endpoint = client.dynamic_emergency_endpoints.delete(
 print(dynamic_emergency_endpoint.data)
 ```
 
-Returns: `callback_number` (string), `caller_name` (string), `created_at` (string), `dynamic_emergency_address_id` (string), `id` (string), `record_type` (string), `sip_from_id` (string), `status` (enum: pending, activated, rejected), `updated_at` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List your voice channels for US Zone
 
 Returns the US Zone voice channels for your account. voice channels allows you to use Channel Billing for calls to your Telnyx phone numbers. Please check the Telnyx Support Articles section for full information and examples of how to utilize Channel Billing.
 
-`GET /inbound_channels`
+`client.inbound_channels.list()` — `GET /inbound_channels`
 
 ```python
 inbound_channels = client.inbound_channels.list()
 print(inbound_channels.data)
 ```
 
-Returns: `channels` (integer), `record_type` (string)
+Key response fields: `response.data.channels, response.data.record_type`
 
 ## Update voice channels for US Zone
 
 Update the number of Voice Channels for the US Zone. This allows your account to handle multiple simultaneous inbound calls to US numbers. Use this endpoint to increase or decrease your capacity based on expected call volume.
 
-`PATCH /inbound_channels` — Required: `channels`
+`client.inbound_channels.update()` — `PATCH /inbound_channels`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channels` | integer | Yes | The new number of concurrent channels for the account |
 
 ```python
 inbound_channel = client.inbound_channels.update(
@@ -236,26 +311,30 @@ inbound_channel = client.inbound_channels.update(
 print(inbound_channel.data)
 ```
 
-Returns: `channels` (integer), `record_type` (string)
+Key response fields: `response.data.channels, response.data.record_type`
 
 ## List All Numbers using Channel Billing
 
 Retrieve a list of all phone numbers using Channel Billing, grouped by Zone.
 
-`GET /list`
+`client.list.retrieve_all()` — `GET /list`
 
 ```python
 response = client.list.retrieve_all()
 print(response.data)
 ```
 
-Returns: `number_of_channels` (integer), `numbers` (array[object]), `zone_id` (string), `zone_name` (string)
+Key response fields: `response.data.number_of_channels, response.data.numbers, response.data.zone_id`
 
 ## List Numbers using Channel Billing for a specific Zone
 
 Retrieve a list of phone numbers using Channel Billing for a specific Zone.
 
-`GET /list/{channel_zone_id}`
+`client.list.retrieve_by_zone()` — `GET /list/{channel_zone_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channel_zone_id` | string (UUID) | Yes | Channel zone identifier |
 
 ```python
 response = client.list.retrieve_by_zone(
@@ -264,13 +343,13 @@ response = client.list.retrieve_by_zone(
 print(response.data)
 ```
 
-Returns: `number_of_channels` (integer), `numbers` (array[object]), `zone_id` (string), `zone_name` (string)
+Key response fields: `response.data.number_of_channels, response.data.numbers, response.data.zone_id`
 
 ## Get voicemail
 
 Returns the voicemail settings for a phone number
 
-`GET /phone_numbers/{phone_number_id}/voicemail`
+`client.phone_numbers.voicemail.retrieve()` — `GET /phone_numbers/{phone_number_id}/voicemail`
 
 ```python
 voicemail = client.phone_numbers.voicemail.retrieve(
@@ -279,15 +358,18 @@ voicemail = client.phone_numbers.voicemail.retrieve(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Key response fields: `response.data.enabled, response.data.pin`
 
 ## Create voicemail
 
 Create voicemail settings for a phone number
 
-`POST /phone_numbers/{phone_number_id}/voicemail`
+`client.phone_numbers.voicemail.create()` — `POST /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `pin` | string | No | The pin used for voicemail |
+| `enabled` | boolean | No | Whether voicemail is enabled. |
 
 ```python
 voicemail = client.phone_numbers.voicemail.create(
@@ -296,15 +378,18 @@ voicemail = client.phone_numbers.voicemail.create(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Key response fields: `response.data.enabled, response.data.pin`
 
 ## Update voicemail
 
 Update voicemail settings for a phone number
 
-`PATCH /phone_numbers/{phone_number_id}/voicemail`
+`client.phone_numbers.voicemail.update()` — `PATCH /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `pin` | string | No | The pin used for voicemail |
+| `enabled` | boolean | No | Whether voicemail is enabled. |
 
 ```python
 voicemail = client.phone_numbers.voicemail.update(
@@ -313,4 +398,131 @@ voicemail = client.phone_numbers.voicemail.update(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Key response fields: `response.data.enabled, response.data.pin`
+
+---
+
+# Numbers Services (Python) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+
+## Response Schemas
+
+**Returned by:** List your voice channels for non-US zones, Update voice channels for non-US Zones
+
+| Field | Type |
+|-------|------|
+| `channels` | int64 |
+| `countries` | array[string] |
+| `created_at` | string |
+| `id` | string |
+| `name` | string |
+| `record_type` | enum: channel_zone |
+| `updated_at` | string |
+
+**Returned by:** List dynamic emergency addresses, Create a dynamic emergency address., Get a dynamic emergency address, Delete a dynamic emergency address
+
+| Field | Type |
+|-------|------|
+| `administrative_area` | string |
+| `country_code` | enum: US, CA, PR |
+| `created_at` | string |
+| `extended_address` | string |
+| `house_number` | string |
+| `house_suffix` | string |
+| `id` | string |
+| `locality` | string |
+| `postal_code` | string |
+| `record_type` | string |
+| `sip_geolocation_id` | string |
+| `status` | enum: pending, activated, rejected |
+| `street_name` | string |
+| `street_post_directional` | string |
+| `street_pre_directional` | string |
+| `street_suffix` | string |
+| `updated_at` | string |
+
+**Returned by:** List dynamic emergency endpoints, Create a dynamic emergency endpoint., Get a dynamic emergency endpoint, Delete a dynamic emergency endpoint
+
+| Field | Type |
+|-------|------|
+| `callback_number` | string |
+| `caller_name` | string |
+| `created_at` | string |
+| `dynamic_emergency_address_id` | string |
+| `id` | string |
+| `record_type` | string |
+| `sip_from_id` | string |
+| `status` | enum: pending, activated, rejected |
+| `updated_at` | string |
+
+**Returned by:** List your voice channels for US Zone, Update voice channels for US Zone
+
+| Field | Type |
+|-------|------|
+| `channels` | integer |
+| `record_type` | string |
+
+**Returned by:** List All Numbers using Channel Billing, List Numbers using Channel Billing for a specific Zone
+
+| Field | Type |
+|-------|------|
+| `number_of_channels` | integer |
+| `numbers` | array[object] |
+| `zone_id` | string |
+| `zone_name` | string |
+
+**Returned by:** Get voicemail, Create voicemail, Update voicemail
+
+| Field | Type |
+|-------|------|
+| `enabled` | boolean |
+| `pin` | string |
+
+## Optional Parameters
+
+### Create a dynamic emergency address. — `client.dynamic_emergency_addresses.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `record_type` | string | Identifies the type of the resource. |
+| `sip_geolocation_id` | string (UUID) | Unique location reference string to be used in SIP INVITE from / p-asserted h... |
+| `status` | enum (pending, activated, rejected) | Status of dynamic emergency address |
+| `house_suffix` | string |  |
+| `street_pre_directional` | string |  |
+| `street_suffix` | string |  |
+| `street_post_directional` | string |  |
+| `extended_address` | string |  |
+| `created_at` | string | ISO 8601 formatted date of when the resource was created |
+| `updated_at` | string | ISO 8601 formatted date of when the resource was last updated |
+
+### Create a dynamic emergency endpoint. — `client.dynamic_emergency_endpoints.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `record_type` | string | Identifies the type of the resource. |
+| `status` | enum (pending, activated, rejected) | Status of dynamic emergency address |
+| `sip_from_id` | string (UUID) |  |
+| `created_at` | string | ISO 8601 formatted date of when the resource was created |
+| `updated_at` | string | ISO 8601 formatted date of when the resource was last updated |
+
+### Create voicemail — `client.phone_numbers.voicemail.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pin` | string | The pin used for voicemail |
+| `enabled` | boolean | Whether voicemail is enabled. |
+
+### Update voicemail — `client.phone_numbers.voicemail.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pin` | string | The pin used for voicemail |
+| `enabled` | boolean | Whether voicemail is enabled. |

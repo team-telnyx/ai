@@ -1,8 +1,7 @@
 ---
 name: telnyx-seti-java
 description: >-
-  Access SETI (Space Exploration Telecommunications Infrastructure) APIs. This
-  skill provides Java SDK examples.
+  SETI (Space Exploration Telecommunications Infrastructure) APIs.
 metadata:
   author: telnyx
   product: seti
@@ -21,11 +20,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -64,9 +63,15 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `404` resource not found, `422` validation error (check field formats),
 `429` rate limited (retry with exponential backoff).
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## Get Enum
 
-`GET /10dlc/enum/{endpoint}`
+`client.messaging10dlc().getEnum()` — `GET /10dlc/enum/{endpoint}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `endpoint` | enum (mno, optionalAttributes, usecase, vertical, altBusinessIdType, ...) | Yes |  |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.Messaging10dlcGetEnumParams;
@@ -79,7 +84,11 @@ Messaging10dlcGetEnumResponse response = client.messaging10dlc().getEnum(Messagi
 
 Returns the results of the various black box tests
 
-`GET /seti/black_box_test_results`
+`client.seti().retrieveBlackBoxTestResults()` — `GET /seti/black_box_test_results`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```java
 import com.telnyx.sdk.models.seti.SetiRetrieveBlackBoxTestResultsParams;
@@ -88,4 +97,8 @@ import com.telnyx.sdk.models.seti.SetiRetrieveBlackBoxTestResultsResponse;
 SetiRetrieveBlackBoxTestResultsResponse response = client.seti().retrieveBlackBoxTestResults();
 ```
 
-Returns: `black_box_tests` (array[object]), `product` (string), `record_type` (string)
+Key response fields: `response.data.black_box_tests, response.data.product, response.data.record_type`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

@@ -1,9 +1,8 @@
 ---
 name: telnyx-texml-java
 description: >-
-  Build voice applications using TeXML markup language (TwiML-compatible).
-  Manage applications, calls, conferences, recordings, queues, and streams. This
-  skill provides Java SDK examples.
+  TeXML (TwiML-compatible) voice applications. Manage apps, calls, conferences,
+  recordings, queues, and streams.
 metadata:
   author: telnyx
   product: texml
@@ -15,6 +14,38 @@ metadata:
 
 # Telnyx Texml - Java
 
+## Core Workflow
+
+### Prerequisites
+
+1. Buy a phone number with voice capability (see telnyx-numbers-java)
+2. Create a TeXML Application with primary webhook URL (where Telnyx fetches XML instructions)
+3. Host TeXML XML instructions at an accessible URL (TeXML Bin or any public URL)
+4. Assign the phone number to the TeXML Application
+
+### Steps
+
+1. **Create TeXML app**: `client.texmlApplications().create(params)`
+2. **Author XML instructions**: `<Response><Say>Hello!</Say><Hangup/></Response>`
+3. **Assign number**: `client.phoneNumbers().update(params)`
+4. **Handle inbound calls**: `Telnyx fetches XML from your webhook URL`
+
+### Which approach to use?
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Declarative XML call flows, Twilio/TwiML migration | TeXML (this skill) |
+| Programmatic event-driven call control | Call Control API (see telnyx-voice-java) |
+| LLM-powered voice agents | AI Assistants (see telnyx-ai-assistants-java) |
+
+### Common mistakes
+
+- ALWAYS end XML flows with <Hangup/> — omitting it causes dead silence with no termination
+- ALWAYS configure a failover webhook URL — if primary is unreachable, call drops immediately
+- NEVER use unreachable webhook URLs — TeXML fetches instructions from the URL on every call
+
+**Related skills**: telnyx-voice-java, telnyx-ai-assistants-java, telnyx-numbers-java
+
 ## Installation
 
 ```text
@@ -22,11 +53,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>5.2.1</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:5.2.1")
 ```
 
 ## Setup
@@ -49,7 +80,7 @@ or authentication errors (401). Always handle errors in production code:
 import com.telnyx.sdk.errors.TelnyxServiceException;
 
 try {
-    var result = client.messages().send(params);
+    var result = client.texmlApplications().create(params);
 } catch (TelnyxServiceException e) {
     System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
     if (e.statusCode() == 422) {
@@ -69,631 +100,22 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
-## Fetch multiple call resources
-
-Returns multiple call resources for an account. This endpoint is eventually consistent.
-
-`GET /texml/Accounts/{account_sid}/Calls`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveCallsParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveCallsResponse;
-
-CallRetrieveCallsResponse response = client.texml().accounts().calls().retrieveCalls("account_sid");
-```
-
-Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
-
-## Initiate an outbound call
-
-Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
-
-`POST /texml/Accounts/{account_sid}/Calls` — Required: `To`, `From`, `ApplicationSid`
-
-Optional: `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `CancelPlaybackOnDetectMessageEnd` (boolean), `CancelPlaybackOnMachineDetection` (boolean), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular), `FallbackUrl` (string), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (enum: initiated, ringing, answered, completed), `StatusCallbackMethod` (enum: GET, POST), `SuperviseCallSid` (string), `SupervisingRole` (enum: barge, whisper, monitor), `Texml` (string), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim), `Url` (string), `UrlMethod` (enum: GET, POST)
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallCallsParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallCallsResponse;
-
-CallCallsParams params = CallCallsParams.builder()
-    .accountSid("account_sid")
-    .applicationSid("example-app-sid")
-    .from("+13120001234")
-    .to("+13121230000")
-    .build();
-CallCallsResponse response = client.texml().accounts().calls().calls(params);
-```
-
-Returns: `from` (string), `status` (string), `to` (string)
-
-## Fetch a call
-
-Returns an individual call identified by its CallSid. This endpoint is eventually consistent.
-
-`GET /texml/Accounts/{account_sid}/Calls/{call_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveResponse;
-
-CallRetrieveParams params = CallRetrieveParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .build();
-CallRetrieveResponse call = client.texml().accounts().calls().retrieve(params);
-```
-
-Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
-
-## Update call
-
-Update TeXML call. Please note that the keys present in the payload MUST BE formatted in CamelCase as specified in the example.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallUpdateParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallUpdateResponse;
-import com.telnyx.sdk.models.texml.accounts.calls.UpdateCall;
-
-CallUpdateParams params = CallUpdateParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .updateCall(UpdateCall.builder().build())
-    .build();
-CallUpdateResponse call = client.texml().accounts().calls().update(params);
-```
-
-Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
-
-## Fetch recordings for a call
-
-Returns recordings for a call identified by call_sid.
-
-`GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRetrieveRecordingsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRetrieveRecordingsJsonResponse;
-
-RecordingsJsonRetrieveRecordingsJsonParams params = RecordingsJsonRetrieveRecordingsJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .build();
-RecordingsJsonRetrieveRecordingsJsonResponse response = client.texml().accounts().calls().recordingsJson().retrieveRecordingsJson(params);
-```
-
-Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
-
-## Request recording for a call
-
-Starts recording with specified parameters for call identified by call_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRecordingsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRecordingsJsonResponse;
-
-RecordingsJsonRecordingsJsonParams params = RecordingsJsonRecordingsJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .build();
-RecordingsJsonRecordingsJsonResponse response = client.texml().accounts().calls().recordingsJson().recordingsJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `price` (string | null), `price_unit` (string | null), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
-
-## Update recording on a call
-
-Updates recording resource for particular call.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings/{recording_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.recordings.RecordingRecordingSidJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.recordings.RecordingRecordingSidJsonResponse;
-
-RecordingRecordingSidJsonParams params = RecordingRecordingSidJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-RecordingRecordingSidJsonResponse response = client.texml().accounts().calls().recordings().recordingSidJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `price` (string | null), `price_unit` (string | null), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
-
-## Request siprec session for a call
-
-Starts siprec session with specified parameters for call identified by call_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallSiprecJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallSiprecJsonResponse;
-
-CallSiprecJsonParams params = CallSiprecJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .build();
-CallSiprecJsonResponse response = client.texml().accounts().calls().siprecJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `date_created` (string), `date_updated` (string), `error_code` (string), `sid` (string), `start_time` (string), `status` (enum: in-progress, stopped), `track` (enum: both_tracks, inbound_track, outbound_track), `uri` (string)
-
-## Updates siprec session for a call
-
-Updates siprec session identified by siprec_sid.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec/{siprec_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.siprec.SiprecSiprecSidJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.siprec.SiprecSiprecSidJsonResponse;
-
-SiprecSiprecSidJsonParams params = SiprecSiprecSidJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .siprecSid("siprec_sid")
-    .build();
-SiprecSiprecSidJsonResponse response = client.texml().accounts().calls().siprec().siprecSidJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `date_updated` (string), `error_code` (string), `sid` (string), `status` (enum: in-progress, stopped), `uri` (string)
-
-## Start streaming media from a call.
-
-Starts streaming media from a call to a specific WebSocket address.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.CallStreamsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.CallStreamsJsonResponse;
-
-CallStreamsJsonParams params = CallStreamsJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .build();
-CallStreamsJsonResponse response = client.texml().accounts().calls().streamsJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `name` (string), `sid` (string), `status` (enum: in-progress), `uri` (string)
-
-## Update streaming on a call
-
-Updates streaming resource for particular call.
-
-`POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams/{streaming_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.calls.streams.StreamStreamingSidJsonParams;
-import com.telnyx.sdk.models.texml.accounts.calls.streams.StreamStreamingSidJsonResponse;
-
-StreamStreamingSidJsonParams params = StreamStreamingSidJsonParams.builder()
-    .accountSid("account_sid")
-    .callSid("call_sid")
-    .streamingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-StreamStreamingSidJsonResponse response = client.texml().accounts().calls().streams().streamingSidJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `sid` (string), `status` (enum: stopped), `uri` (string)
-
-## List conference resources
-
-Lists conference resources.
-
-`GET /texml/Accounts/{account_sid}/Conferences`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveConferencesParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveConferencesResponse;
-
-ConferenceRetrieveConferencesResponse response = client.texml().accounts().conferences().retrieveConferences("account_sid");
-```
-
-Returns: `conferences` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
-
-## Fetch a conference resource
-
-Returns a conference resource.
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveResponse;
-
-ConferenceRetrieveParams params = ConferenceRetrieveParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ConferenceRetrieveResponse conference = client.texml().accounts().conferences().retrieve(params);
-```
-
-Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
-
-## Update a conference resource
-
-Updates a conference resource.
-
-`POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceUpdateParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceUpdateResponse;
-
-ConferenceUpdateParams params = ConferenceUpdateParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ConferenceUpdateResponse conference = client.texml().accounts().conferences().update(params);
-```
-
-Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
-
-## List conference participants
-
-Lists conference participants
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParticipantsParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParticipantsResponse;
-
-ParticipantRetrieveParticipantsParams params = ParticipantRetrieveParticipantsParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ParticipantRetrieveParticipantsResponse response = client.texml().accounts().conferences().participants().retrieveParticipants(params);
-```
-
-Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `start` (integer), `uri` (string)
-
-## Dial a new conference participant
-
-Dials a new conference participant
-
-`POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantParticipantsParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantParticipantsResponse;
-
-ParticipantParticipantsParams params = ParticipantParticipantsParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ParticipantParticipantsResponse response = client.texml().accounts().conferences().participants().participants(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `coaching` (boolean), `coaching_call_sid` (string), `conference_sid` (uuid), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
-
-## Get conference participant resource
-
-Gets conference participant resource
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveResponse;
-
-ParticipantRetrieveParams params = ParticipantRetrieveParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .callSidOrParticipantLabel("call_sid_or_participant_label")
-    .build();
-ParticipantRetrieveResponse participant = client.texml().accounts().conferences().participants().retrieve(params);
-```
-
-Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
-
-## Update a conference participant
-
-Updates a conference participant
-
-`POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantUpdateParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantUpdateResponse;
-
-ParticipantUpdateParams params = ParticipantUpdateParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .callSidOrParticipantLabel("call_sid_or_participant_label")
-    .build();
-ParticipantUpdateResponse participant = client.texml().accounts().conferences().participants().update(params);
-```
-
-Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
-
-## Delete a conference participant
-
-Deletes a conference participant
-
-`DELETE /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantDeleteParams;
-
-ParticipantDeleteParams params = ParticipantDeleteParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .callSidOrParticipantLabel("call_sid_or_participant_label")
-    .build();
-client.texml().accounts().conferences().participants().delete(params);
-```
-
-## List conference recordings
-
-Lists conference recordings
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsResponse;
-
-ConferenceRetrieveRecordingsParams params = ConferenceRetrieveRecordingsParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ConferenceRetrieveRecordingsResponse response = client.texml().accounts().conferences().retrieveRecordings(params);
-```
-
-Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `recordings` (array[object]), `start` (integer), `uri` (string)
-
-## Fetch recordings for a conference
-
-Returns recordings for a conference identified by conference_sid.
-
-`GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsJsonResponse;
-
-ConferenceRetrieveRecordingsJsonParams params = ConferenceRetrieveRecordingsJsonParams.builder()
-    .accountSid("account_sid")
-    .conferenceSid("conference_sid")
-    .build();
-ConferenceRetrieveRecordingsJsonResponse response = client.texml().accounts().conferences().retrieveRecordingsJson(params);
-```
-
-Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
-
-## List queue resources
-
-Lists queue resources.
-
-`GET /texml/Accounts/{account_sid}/Queues`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.queues.QueueListPage;
-import com.telnyx.sdk.models.texml.accounts.queues.QueueListParams;
-
-QueueListPage page = client.texml().accounts().queues().list("account_sid");
-```
-
-Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `queues` (array[object]), `start` (integer), `uri` (string)
-
-## Create a new queue
-
-Creates a new queue resource.
-
-`POST /texml/Accounts/{account_sid}/Queues`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.queues.QueueCreateParams;
-import com.telnyx.sdk.models.texml.accounts.queues.QueueCreateResponse;
-
-QueueCreateResponse queue = client.texml().accounts().queues().create("account_sid");
-```
-
-Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
-
-## Fetch a queue resource
-
-Returns a queue resource.
-
-`GET /texml/Accounts/{account_sid}/Queues/{queue_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.queues.QueueRetrieveParams;
-import com.telnyx.sdk.models.texml.accounts.queues.QueueRetrieveResponse;
-
-QueueRetrieveParams params = QueueRetrieveParams.builder()
-    .accountSid("account_sid")
-    .queueSid("queue_sid")
-    .build();
-QueueRetrieveResponse queue = client.texml().accounts().queues().retrieve(params);
-```
-
-Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
-
-## Update a queue resource
-
-Updates a queue resource.
-
-`POST /texml/Accounts/{account_sid}/Queues/{queue_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.queues.QueueUpdateParams;
-import com.telnyx.sdk.models.texml.accounts.queues.QueueUpdateResponse;
-
-QueueUpdateParams params = QueueUpdateParams.builder()
-    .accountSid("account_sid")
-    .queueSid("queue_sid")
-    .build();
-QueueUpdateResponse queue = client.texml().accounts().queues().update(params);
-```
-
-Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
-
-## Delete a queue resource
-
-Delete a queue resource.
-
-`DELETE /texml/Accounts/{account_sid}/Queues/{queue_sid}`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.queues.QueueDeleteParams;
-
-QueueDeleteParams params = QueueDeleteParams.builder()
-    .accountSid("account_sid")
-    .queueSid("queue_sid")
-    .build();
-client.texml().accounts().queues().delete(params);
-```
-
-## Fetch multiple recording resources
-
-Returns multiple recording resources for an account.
-
-`GET /texml/Accounts/{account_sid}/Recordings.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.AccountRetrieveRecordingsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.AccountRetrieveRecordingsJsonResponse;
-
-AccountRetrieveRecordingsJsonResponse response = client.texml().accounts().retrieveRecordingsJson("account_sid");
-```
-
-Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
-
-## Fetch recording resource
-
-Returns recording resource identified by recording id.
-
-`GET /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.TexmlGetCallRecordingResponseBody;
-import com.telnyx.sdk.models.texml.accounts.recordings.json.JsonRetrieveRecordingSidJsonParams;
-
-JsonRetrieveRecordingSidJsonParams params = JsonRetrieveRecordingSidJsonParams.builder()
-    .accountSid("account_sid")
-    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-TexmlGetCallRecordingResponseBody texmlGetCallRecordingResponseBody = client.texml().accounts().recordings().json().retrieveRecordingSidJson(params);
-```
-
-Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `media_url` (uri), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `status` (enum: in-progress, completed, paused, stopped), `subresources_uris` (object), `uri` (string)
-
-## Delete recording resource
-
-Deletes recording resource identified by recording id.
-
-`DELETE /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.recordings.json.JsonDeleteRecordingSidJsonParams;
-
-JsonDeleteRecordingSidJsonParams params = JsonDeleteRecordingSidJsonParams.builder()
-    .accountSid("account_sid")
-    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-client.texml().accounts().recordings().json().deleteRecordingSidJson(params);
-```
-
-## List recording transcriptions
-
-Returns multiple recording transcription resources for an account.
-
-`GET /texml/Accounts/{account_sid}/Transcriptions.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.AccountRetrieveTranscriptionsJsonParams;
-import com.telnyx.sdk.models.texml.accounts.AccountRetrieveTranscriptionsJsonResponse;
-
-AccountRetrieveTranscriptionsJsonResponse response = client.texml().accounts().retrieveTranscriptionsJson("account_sid");
-```
-
-Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `start` (integer), `transcriptions` (array[object]), `uri` (string)
-
-## Fetch a recording transcription resource
-
-Returns the recording transcription resource identified by its ID.
-
-`GET /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonRetrieveRecordingTranscriptionSidJsonParams;
-import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonRetrieveRecordingTranscriptionSidJsonResponse;
-
-JsonRetrieveRecordingTranscriptionSidJsonParams params = JsonRetrieveRecordingTranscriptionSidJsonParams.builder()
-    .accountSid("account_sid")
-    .recordingTranscriptionSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-JsonRetrieveRecordingTranscriptionSidJsonResponse response = client.texml().accounts().transcriptions().json().retrieveRecordingTranscriptionSidJson(params);
-```
-
-Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `recording_sid` (string), `sid` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `uri` (string)
-
-## Delete a recording transcription
-
-Permanently deletes a recording transcription.
-
-`DELETE /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json`
-
-```java
-import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonDeleteRecordingTranscriptionSidJsonParams;
-
-JsonDeleteRecordingTranscriptionSidJsonParams params = JsonDeleteRecordingTranscriptionSidJsonParams.builder()
-    .accountSid("account_sid")
-    .recordingTranscriptionSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
-    .build();
-client.texml().accounts().transcriptions().json().deleteRecordingTranscriptionSidJson(params);
-```
-
-## Create a TeXML secret
-
-Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML. In your TeXML you will be able to use your secret name, and this name will be replaced by the actual secret value when processing the TeXML on Telnyx side. The secrets are not visible in any logs.
-
-`POST /texml/secrets` — Required: `name`, `value`
-
-```java
-import com.telnyx.sdk.models.texml.TexmlSecretsParams;
-import com.telnyx.sdk.models.texml.TexmlSecretsResponse;
-
-TexmlSecretsParams params = TexmlSecretsParams.builder()
-    .name("My Secret Name")
-    .value("My Secret Value")
-    .build();
-TexmlSecretsResponse response = client.texml().secrets(params);
-```
-
-Returns: `name` (string), `value` (enum: REDACTED)
-
-## List all TeXML Applications
-
-Returns a list of your TeXML Applications.
-
-`GET /texml_applications`
-
-```java
-import com.telnyx.sdk.models.texmlapplications.TexmlApplicationListPage;
-import com.telnyx.sdk.models.texmlapplications.TexmlApplicationListParams;
-
-TexmlApplicationListPage page = client.texmlApplications().list();
-```
-
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
 
 ## Creates a TeXML Application
 
 Creates a TeXML Application.
 
-`POST /texml_applications` — Required: `friendly_name`, `voice_url`
+`client.texmlApplications().create()` — `POST /texml_applications`
 
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum: get, post)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `friendlyName` | string | Yes | A user-assigned name to help manage the application. |
+| `voiceUrl` | string (URL) | Yes | URL to which Telnyx will deliver your XML Translator webhook... |
+| `tags` | array[string] | No | Tags associated with the Texml Application. |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| ... | | | +10 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.texmlapplications.TexmlApplicationCreateParams;
@@ -706,13 +128,827 @@ TexmlApplicationCreateParams params = TexmlApplicationCreateParams.builder()
 TexmlApplicationCreateResponse texmlApplication = client.texmlApplications().create(params);
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+## Initiate an outbound call
+
+Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
+
+`client.texml().accounts().calls().calls()` — `POST /texml/Accounts/{account_sid}/Calls`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `ApplicationSid` | string | Yes | The ID of the TeXML Application. |
+| `To` | string (E.164) | Yes | The phone number of the called party. |
+| `From` | string (E.164) | Yes | The phone number of the party that initiated the call. |
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `UrlMethod` | enum (GET, POST) | No | HTTP request type used for `Url`. |
+| `StatusCallbackMethod` | enum (GET, POST) | No | HTTP request type used for `StatusCallback`. |
+| `StatusCallbackEvent` | enum (initiated, ringing, answered, completed) | No | The call events for which Telnyx should send a webhook. |
+| ... | | | +34 optional params in [references/api-details.md](references/api-details.md) |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallCallsParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallCallsResponse;
+
+CallCallsParams params = CallCallsParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .applicationSid("example-app-sid")
+    .from("+13120001234")
+    .to("+13121230000")
+    .build();
+CallCallsResponse response = client.texml().accounts().calls().calls(params);
+```
+
+Key response fields: `response.data.status, response.data.to, response.data.from`
+
+## Fetch a call
+
+Returns an individual call identified by its CallSid. This endpoint is eventually consistent.
+
+`client.texml().accounts().calls().retrieve()` — `GET /texml/Accounts/{account_sid}/Calls/{call_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveResponse;
+
+CallRetrieveParams params = CallRetrieveParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+CallRetrieveResponse call = client.texml().accounts().calls().retrieve(params);
+```
+
+Key response fields: `response.data.status, response.data.to, response.data.from`
+
+## Update call
+
+Update TeXML call. Please note that the keys present in the payload MUST BE formatted in CamelCase as specified in the example.
+
+`client.texml().accounts().calls().update()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallUpdateParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallUpdateResponse;
+import com.telnyx.sdk.models.texml.accounts.calls.UpdateCall;
+
+CallUpdateParams params = CallUpdateParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .updateCall(UpdateCall.builder().build())
+    .build();
+CallUpdateResponse call = client.texml().accounts().calls().update(params);
+```
+
+Key response fields: `response.data.status, response.data.to, response.data.from`
+
+## List conference resources
+
+Lists conference resources.
+
+`client.texml().accounts().conferences().retrieveConferences()` — `GET /texml/Accounts/{account_sid}/Conferences`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `Status` | enum (init, in-progress, completed) | No | Filters conferences by status. |
+| `Page` | integer | No | The number of the page to be displayed, zero-indexed, should... |
+| `PageSize` | integer | No | The number of records to be displayed on a page |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveConferencesParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveConferencesResponse;
+
+ConferenceRetrieveConferencesResponse response = client.texml().accounts().conferences().retrieveConferences("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.conferences, response.data.end, response.data.first_page_uri`
+
+## Fetch multiple call resources
+
+Returns multiple call resources for an account. This endpoint is eventually consistent.
+
+`client.texml().accounts().calls().retrieveCalls()` — `GET /texml/Accounts/{account_sid}/Calls`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `Status` | enum (canceled, completed, failed, busy, no-answer) | No | Filters calls by status. |
+| `Page` | integer | No | The number of the page to be displayed, zero-indexed, should... |
+| `PageSize` | integer | No | The number of records to be displayed on a page |
+| ... | | | +9 optional params in [references/api-details.md](references/api-details.md) |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveCallsParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallRetrieveCallsResponse;
+
+CallRetrieveCallsResponse response = client.texml().accounts().calls().retrieveCalls("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.calls, response.data.end, response.data.first_page_uri`
+
+## Fetch recordings for a call
+
+Returns recordings for a call identified by call_sid.
+
+`client.texml().accounts().calls().recordingsJson().retrieveRecordingsJson()` — `GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRetrieveRecordingsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRetrieveRecordingsJsonResponse;
+
+RecordingsJsonRetrieveRecordingsJsonParams params = RecordingsJsonRetrieveRecordingsJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+RecordingsJsonRetrieveRecordingsJsonResponse response = client.texml().accounts().calls().recordingsJson().retrieveRecordingsJson(params);
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Request recording for a call
+
+Starts recording with specified parameters for call identified by call_sid.
+
+`client.texml().accounts().calls().recordingsJson().recordingsJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRecordingsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.recordingsjson.RecordingsJsonRecordingsJsonResponse;
+
+RecordingsJsonRecordingsJsonParams params = RecordingsJsonRecordingsJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+RecordingsJsonRecordingsJsonResponse response = client.texml().accounts().calls().recordingsJson().recordingsJson(params);
+```
+
+Key response fields: `response.data.account_sid, response.data.call_sid, response.data.channels`
+
+## Update recording on a call
+
+Updates recording resource for particular call.
+
+`client.texml().accounts().calls().recordings().recordingSidJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings/{recording_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+| `recordingSid` | string (UUID) | Yes | Uniquely identifies the recording by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.recordings.RecordingRecordingSidJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.recordings.RecordingRecordingSidJsonResponse;
+
+RecordingRecordingSidJsonParams params = RecordingRecordingSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+RecordingRecordingSidJsonResponse response = client.texml().accounts().calls().recordings().recordingSidJson(params);
+```
+
+Key response fields: `response.data.account_sid, response.data.call_sid, response.data.channels`
+
+## Request siprec session for a call
+
+Starts siprec session with specified parameters for call identified by call_sid.
+
+`client.texml().accounts().calls().siprecJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallSiprecJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallSiprecJsonResponse;
+
+CallSiprecJsonParams params = CallSiprecJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+CallSiprecJsonResponse response = client.texml().accounts().calls().siprecJson(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.call_sid`
+
+## Updates siprec session for a call
+
+Updates siprec session identified by siprec_sid.
+
+`client.texml().accounts().calls().siprec().siprecSidJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec/{siprec_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+| `siprecSid` | string (UUID) | Yes | The SiprecSid that uniquely identifies the Sip Recording. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.siprec.SiprecSiprecSidJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.siprec.SiprecSiprecSidJsonResponse;
+
+SiprecSiprecSidJsonParams params = SiprecSiprecSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .siprecSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+SiprecSiprecSidJsonResponse response = client.texml().accounts().calls().siprec().siprecSidJson(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.call_sid`
+
+## Start streaming media from a call.
+
+Starts streaming media from a call to a specific WebSocket address.
+
+`client.texml().accounts().calls().streamsJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.CallStreamsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.CallStreamsJsonResponse;
+
+CallStreamsJsonParams params = CallStreamsJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+CallStreamsJsonResponse response = client.texml().accounts().calls().streamsJson(params);
+```
+
+Key response fields: `response.data.status, response.data.name, response.data.account_sid`
+
+## Update streaming on a call
+
+Updates streaming resource for particular call.
+
+`client.texml().accounts().calls().streams().streamingSidJson()` — `POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams/{streaming_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `callSid` | string (UUID) | Yes | The CallSid that identifies the call to update. |
+| `streamingSid` | string (UUID) | Yes | Uniquely identifies the streaming by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.calls.streams.StreamStreamingSidJsonParams;
+import com.telnyx.sdk.models.texml.accounts.calls.streams.StreamStreamingSidJsonResponse;
+
+StreamStreamingSidJsonParams params = StreamStreamingSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSid("550e8400-e29b-41d4-a716-446655440000")
+    .streamingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+StreamStreamingSidJsonResponse response = client.texml().accounts().calls().streams().streamingSidJson(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.call_sid`
+
+## Fetch a conference resource
+
+Returns a conference resource.
+
+`client.texml().accounts().conferences().retrieve()` — `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveResponse;
+
+ConferenceRetrieveParams params = ConferenceRetrieveParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ConferenceRetrieveResponse conference = client.texml().accounts().conferences().retrieve(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.api_version`
+
+## Update a conference resource
+
+Updates a conference resource.
+
+`client.texml().accounts().conferences().update()` — `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceUpdateParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceUpdateResponse;
+
+ConferenceUpdateParams params = ConferenceUpdateParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ConferenceUpdateResponse conference = client.texml().accounts().conferences().update(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.api_version`
+
+## List conference participants
+
+Lists conference participants
+
+`client.texml().accounts().conferences().participants().retrieveParticipants()` — `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParticipantsParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParticipantsResponse;
+
+ParticipantRetrieveParticipantsParams params = ParticipantRetrieveParticipantsParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ParticipantRetrieveParticipantsResponse response = client.texml().accounts().conferences().participants().retrieveParticipants(params);
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Dial a new conference participant
+
+Dials a new conference participant
+
+`client.texml().accounts().conferences().participants().participants()` — `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantParticipantsParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantParticipantsResponse;
+
+ParticipantParticipantsParams params = ParticipantParticipantsParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ParticipantParticipantsResponse response = client.texml().accounts().conferences().participants().participants(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.call_sid`
+
+## Get conference participant resource
+
+Gets conference participant resource
+
+`client.texml().accounts().conferences().participants().retrieve()` — `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+| `callSidOrParticipantLabel` | string | Yes | CallSid or Label of the Participant to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantRetrieveResponse;
+
+ParticipantRetrieveParams params = ParticipantRetrieveParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSidOrParticipantLabel("participant-1")
+    .build();
+ParticipantRetrieveResponse participant = client.texml().accounts().conferences().participants().retrieve(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.api_version`
+
+## Update a conference participant
+
+Updates a conference participant
+
+`client.texml().accounts().conferences().participants().update()` — `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+| `callSidOrParticipantLabel` | string | Yes | CallSid or Label of the Participant to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantUpdateParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantUpdateResponse;
+
+ParticipantUpdateParams params = ParticipantUpdateParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSidOrParticipantLabel("participant-1")
+    .build();
+ParticipantUpdateResponse participant = client.texml().accounts().conferences().participants().update(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.api_version`
+
+## Delete a conference participant
+
+Deletes a conference participant
+
+`client.texml().accounts().conferences().participants().delete()` — `DELETE /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+| `callSidOrParticipantLabel` | string | Yes | CallSid or Label of the Participant to update. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.participants.ParticipantDeleteParams;
+
+ParticipantDeleteParams params = ParticipantDeleteParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .callSidOrParticipantLabel("participant-1")
+    .build();
+client.texml().accounts().conferences().participants().delete(params);
+```
+
+## List conference recordings
+
+Lists conference recordings
+
+`client.texml().accounts().conferences().retrieveRecordings()` — `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsResponse;
+
+ConferenceRetrieveRecordingsParams params = ConferenceRetrieveRecordingsParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ConferenceRetrieveRecordingsResponse response = client.texml().accounts().conferences().retrieveRecordings(params);
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Fetch recordings for a conference
+
+Returns recordings for a conference identified by conference_sid.
+
+`client.texml().accounts().conferences().retrieveRecordingsJson()` — `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `conferenceSid` | string (UUID) | Yes | The ConferenceSid that uniquely identifies a conference. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.conferences.ConferenceRetrieveRecordingsJsonResponse;
+
+ConferenceRetrieveRecordingsJsonParams params = ConferenceRetrieveRecordingsJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .conferenceSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+ConferenceRetrieveRecordingsJsonResponse response = client.texml().accounts().conferences().retrieveRecordingsJson(params);
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## List queue resources
+
+Lists queue resources.
+
+`client.texml().accounts().queues().list()` — `GET /texml/Accounts/{account_sid}/Queues`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `Page` | integer | No | The number of the page to be displayed, zero-indexed, should... |
+| `PageSize` | integer | No | The number of records to be displayed on a page |
+| `PageToken` | string | No | Used to request the next page of results. |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.queues.QueueListPage;
+import com.telnyx.sdk.models.texml.accounts.queues.QueueListParams;
+
+QueueListPage page = client.texml().accounts().queues().list("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Create a new queue
+
+Creates a new queue resource.
+
+`client.texml().accounts().queues().create()` — `POST /texml/Accounts/{account_sid}/Queues`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.queues.QueueCreateParams;
+import com.telnyx.sdk.models.texml.accounts.queues.QueueCreateResponse;
+
+QueueCreateResponse queue = client.texml().accounts().queues().create("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.account_sid, response.data.average_wait_time, response.data.current_size`
+
+## Fetch a queue resource
+
+Returns a queue resource.
+
+`client.texml().accounts().queues().retrieve()` — `GET /texml/Accounts/{account_sid}/Queues/{queue_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `queueSid` | string (UUID) | Yes | The QueueSid that identifies the call queue. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.queues.QueueRetrieveParams;
+import com.telnyx.sdk.models.texml.accounts.queues.QueueRetrieveResponse;
+
+QueueRetrieveParams params = QueueRetrieveParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .queueSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+QueueRetrieveResponse queue = client.texml().accounts().queues().retrieve(params);
+```
+
+Key response fields: `response.data.account_sid, response.data.average_wait_time, response.data.current_size`
+
+## Update a queue resource
+
+Updates a queue resource.
+
+`client.texml().accounts().queues().update()` — `POST /texml/Accounts/{account_sid}/Queues/{queue_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `queueSid` | string (UUID) | Yes | The QueueSid that identifies the call queue. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.queues.QueueUpdateParams;
+import com.telnyx.sdk.models.texml.accounts.queues.QueueUpdateResponse;
+
+QueueUpdateParams params = QueueUpdateParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .queueSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+QueueUpdateResponse queue = client.texml().accounts().queues().update(params);
+```
+
+Key response fields: `response.data.account_sid, response.data.average_wait_time, response.data.current_size`
+
+## Delete a queue resource
+
+Delete a queue resource.
+
+`client.texml().accounts().queues().delete()` — `DELETE /texml/Accounts/{account_sid}/Queues/{queue_sid}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `queueSid` | string (UUID) | Yes | The QueueSid that identifies the call queue. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.queues.QueueDeleteParams;
+
+QueueDeleteParams params = QueueDeleteParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .queueSid("550e8400-e29b-41d4-a716-446655440000")
+    .build();
+client.texml().accounts().queues().delete(params);
+```
+
+## Fetch multiple recording resources
+
+Returns multiple recording resources for an account.
+
+`client.texml().accounts().retrieveRecordingsJson()` — `GET /texml/Accounts/{account_sid}/Recordings.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `Page` | integer | No | The number of the page to be displayed, zero-indexed, should... |
+| `PageSize` | integer | No | The number of records to be displayed on a page |
+| `DateCreated` | string (date-time) | No | Filters recording by the creation date. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.AccountRetrieveRecordingsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.AccountRetrieveRecordingsJsonResponse;
+
+AccountRetrieveRecordingsJsonResponse response = client.texml().accounts().retrieveRecordingsJson("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Fetch recording resource
+
+Returns recording resource identified by recording id.
+
+`client.texml().accounts().recordings().json().retrieveRecordingSidJson()` — `GET /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `recordingSid` | string (UUID) | Yes | Uniquely identifies the recording by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.TexmlGetCallRecordingResponseBody;
+import com.telnyx.sdk.models.texml.accounts.recordings.json.JsonRetrieveRecordingSidJsonParams;
+
+JsonRetrieveRecordingSidJsonParams params = JsonRetrieveRecordingSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+TexmlGetCallRecordingResponseBody texmlGetCallRecordingResponseBody = client.texml().accounts().recordings().json().retrieveRecordingSidJson(params);
+```
+
+Key response fields: `response.data.status, response.data.media_url, response.data.account_sid`
+
+## Delete recording resource
+
+Deletes recording resource identified by recording id.
+
+`client.texml().accounts().recordings().json().deleteRecordingSidJson()` — `DELETE /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `recordingSid` | string (UUID) | Yes | Uniquely identifies the recording by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.recordings.json.JsonDeleteRecordingSidJsonParams;
+
+JsonDeleteRecordingSidJsonParams params = JsonDeleteRecordingSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .recordingSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+client.texml().accounts().recordings().json().deleteRecordingSidJson(params);
+```
+
+## List recording transcriptions
+
+Returns multiple recording transcription resources for an account.
+
+`client.texml().accounts().retrieveTranscriptionsJson()` — `GET /texml/Accounts/{account_sid}/Transcriptions.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `PageToken` | string | No | Used to request the next page of results. |
+| `PageSize` | integer | No | The number of records to be displayed on a page |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.AccountRetrieveTranscriptionsJsonParams;
+import com.telnyx.sdk.models.texml.accounts.AccountRetrieveTranscriptionsJsonResponse;
+
+AccountRetrieveTranscriptionsJsonResponse response = client.texml().accounts().retrieveTranscriptionsJson("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Key response fields: `response.data.end, response.data.first_page_uri, response.data.next_page_uri`
+
+## Fetch a recording transcription resource
+
+Returns the recording transcription resource identified by its ID.
+
+`client.texml().accounts().transcriptions().json().retrieveRecordingTranscriptionSidJson()` — `GET /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `recordingTranscriptionSid` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonRetrieveRecordingTranscriptionSidJsonParams;
+import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonRetrieveRecordingTranscriptionSidJsonResponse;
+
+JsonRetrieveRecordingTranscriptionSidJsonParams params = JsonRetrieveRecordingTranscriptionSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .recordingTranscriptionSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+JsonRetrieveRecordingTranscriptionSidJsonResponse response = client.texml().accounts().transcriptions().json().retrieveRecordingTranscriptionSidJson(params);
+```
+
+Key response fields: `response.data.status, response.data.account_sid, response.data.api_version`
+
+## Delete a recording transcription
+
+Permanently deletes a recording transcription.
+
+`client.texml().accounts().transcriptions().json().deleteRecordingTranscriptionSidJson()` — `DELETE /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `accountSid` | string (UUID) | Yes | The id of the account the resource belongs to. |
+| `recordingTranscriptionSid` | string (UUID) | Yes | Uniquely identifies the recording transcription by id. |
+
+```java
+import com.telnyx.sdk.models.texml.accounts.transcriptions.json.JsonDeleteRecordingTranscriptionSidJsonParams;
+
+JsonDeleteRecordingTranscriptionSidJsonParams params = JsonDeleteRecordingTranscriptionSidJsonParams.builder()
+    .accountSid("550e8400-e29b-41d4-a716-446655440000")
+    .recordingTranscriptionSid("6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+    .build();
+client.texml().accounts().transcriptions().json().deleteRecordingTranscriptionSidJson(params);
+```
+
+## Create a TeXML secret
+
+Create a TeXML secret which can be later used as a Dynamic Parameter for TeXML when using Mustache Templates in your TeXML. In your TeXML you will be able to use your secret name, and this name will be replaced by the actual secret value when processing the TeXML on Telnyx side. The secrets are not visible in any logs.
+
+`client.texml().secrets()` — `POST /texml/secrets`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | Name used as a reference for the secret, if the name already... |
+| `value` | string | Yes | Secret value which will be used when rendering the TeXML tem... |
+
+```java
+import com.telnyx.sdk.models.texml.TexmlSecretsParams;
+import com.telnyx.sdk.models.texml.TexmlSecretsResponse;
+
+TexmlSecretsParams params = TexmlSecretsParams.builder()
+    .name("My Secret Name")
+    .value("My Secret Value")
+    .build();
+TexmlSecretsResponse response = client.texml().secrets(params);
+```
+
+Key response fields: `response.data.name, response.data.value`
+
+## List all TeXML Applications
+
+Returns a list of your TeXML Applications.
+
+`client.texmlApplications().list()` — `GET /texml_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, friendly_name, active) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+
+```java
+import com.telnyx.sdk.models.texmlapplications.TexmlApplicationListPage;
+import com.telnyx.sdk.models.texmlapplications.TexmlApplicationListParams;
+
+TexmlApplicationListPage page = client.texmlApplications().list();
+```
+
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Retrieve a TeXML Application
 
 Retrieves the details of an existing TeXML Application.
 
-`GET /texml_applications/{id}`
+`client.texmlApplications().retrieve()` — `GET /texml_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```java
 import com.telnyx.sdk.models.texmlapplications.TexmlApplicationRetrieveParams;
@@ -721,15 +957,23 @@ import com.telnyx.sdk.models.texmlapplications.TexmlApplicationRetrieveResponse;
 TexmlApplicationRetrieveResponse texmlApplication = client.texmlApplications().retrieve("1293384261075731499");
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update a TeXML Application
 
 Updates settings of an existing TeXML Application.
 
-`PATCH /texml_applications/{id}` — Required: `friendly_name`, `voice_url`
+`client.texmlApplications().update()` — `PATCH /texml_applications/{id}`
 
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `inbound` (object), `outbound` (object), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `voice_fallback_url` (uri), `voice_method` (enum: get, post)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `friendlyName` | string | Yes | A user-assigned name to help manage the application. |
+| `voiceUrl` | string (URL) | Yes | URL to which Telnyx will deliver your XML Translator webhook... |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags associated with the Texml Application. |
+| `anchorsiteOverride` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `dtmfType` | enum (RFC 2833, Inband, SIP INFO) | No | Sets the type of DTMF digits sent from Telnyx to this Connec... |
+| ... | | | +10 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.texmlapplications.TexmlApplicationUpdateParams;
@@ -743,13 +987,17 @@ TexmlApplicationUpdateParams params = TexmlApplicationUpdateParams.builder()
 TexmlApplicationUpdateResponse texmlApplication = client.texmlApplications().update(params);
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Deletes a TeXML Application
 
 Deletes a TeXML Application.
 
-`DELETE /texml_applications/{id}`
+`client.texmlApplications().delete()` — `DELETE /texml_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```java
 import com.telnyx.sdk.models.texmlapplications.TexmlApplicationDeleteParams;
@@ -758,4 +1006,8 @@ import com.telnyx.sdk.models.texmlapplications.TexmlApplicationDeleteResponse;
 TexmlApplicationDeleteResponse texmlApplication = client.texmlApplications().delete("1293384261075731499");
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `call_cost_in_webhooks` (boolean), `created_at` (string), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `first_command_timeout` (boolean), `first_command_timeout_secs` (integer), `friendly_name` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `status_callback` (uri), `status_callback_method` (enum: get, post), `tags` (array[string]), `updated_at` (string), `voice_fallback_url` (uri), `voice_method` (enum: get, post), `voice_url` (uri)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

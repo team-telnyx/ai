@@ -1,9 +1,8 @@
 ---
 name: telnyx-missions-go
 description: >-
-  Create and manage Telnyx Missions — automated workflows, tasks, and
-  sub-resources for AI-driven telecom operations. This skill provides Go SDK
-  examples.
+  Telnyx Missions: automated workflows, tasks, and sub-resources for AI-driven
+  operations.
 metadata:
   author: telnyx
   product: missions
@@ -14,6 +13,24 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Missions - Go
+
+## Core Workflow
+
+### Prerequisites
+
+1. No special setup required — just a Telnyx API key
+
+### Steps
+
+1. **Create mission**: `client.Missions.Create(ctx, params)`
+2. **Add tasks**: `client.MissionTasks.Create(ctx, params)`
+3. **Monitor progress**: `client.Missions.Retrieve(ctx, params)`
+
+### Common mistakes
+
+- Missions orchestrate multi-step AI workflows — each task runs independently
+
+**Related skills**: telnyx-ai-assistants-go, telnyx-ai-inference-go
 
 ## Installation
 
@@ -48,7 +65,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Missions.Create(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -75,122 +92,161 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List missions
 
 List all missions for the organization
 
-`GET /ai/missions`
+`client.AI.Missions.List()` — `GET /ai/missions`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page[number]` | integer | No | Page number (1-based) |
+| `Page[size]` | integer | No | Number of items per page |
 
 ```go
-	page, err := client.AI.Missions.List(context.TODO(), telnyx.AIMissionListParams{})
+	page, err := client.AI.Missions.List(context.Background(), telnyx.AIMissionListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Create mission
 
 Create a new mission definition
 
-`POST /ai/missions` — Required: `name`
+`client.AI.Missions.New()` — `POST /ai/missions`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | Yes |  |
+| `ExecutionMode` | enum (external, managed) | No |  |
+| `Description` | string | No |  |
+| `Model` | string | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	mission, err := client.AI.Missions.New(context.TODO(), telnyx.AIMissionNewParams{
-		Name: "name",
+	mission, err := client.AI.Missions.New(context.Background(), telnyx.AIMissionNewParams{
+		Name: "my-resource",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", mission.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## List recent events
 
 List recent events across all missions
 
-`GET /ai/missions/events`
+`client.AI.Missions.ListEvents()` — `GET /ai/missions/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Type` | string | No |  |
+| `Page[number]` | integer | No | Page number (1-based) |
+| `Page[size]` | integer | No | Number of items per page |
 
 ```go
-	page, err := client.AI.Missions.ListEvents(context.TODO(), telnyx.AIMissionListEventsParams{})
+	page, err := client.AI.Missions.ListEvents(context.Background(), telnyx.AIMissionListEventsParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## List recent runs
 
 List recent runs across all missions
 
-`GET /ai/missions/runs`
+`client.AI.Missions.Runs.ListRuns()` — `GET /ai/missions/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Status` | string | No |  |
+| `Page[number]` | integer | No | Page number (1-based) |
+| `Page[size]` | integer | No | Number of items per page |
 
 ```go
-	page, err := client.AI.Missions.Runs.ListRuns(context.TODO(), telnyx.AIMissionRunListRunsParams{})
+	page, err := client.AI.Missions.Runs.ListRuns(context.Background(), telnyx.AIMissionRunListRunsParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get mission
 
 Get a mission by ID (includes tools, knowledge_bases, mcp_servers)
 
-`GET /ai/missions/{mission_id}`
+`client.AI.Missions.Get()` — `GET /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	mission, err := client.AI.Missions.Get(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	mission, err := client.AI.Missions.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", mission.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Update mission
 
 Update a mission definition
 
-`PUT /ai/missions/{mission_id}`
+`client.AI.Missions.UpdateMission()` — `PUT /ai/missions/{mission_id}`
 
-Optional: `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `model` (string), `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `ExecutionMode` | enum (external, managed) | No |  |
+| `Name` | string | No |  |
+| `Description` | string | No |  |
+| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.AI.Missions.UpdateMission(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionUpdateMissionParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `execution_mode` (enum: external, managed), `instructions` (string), `metadata` (object), `mission_id` (uuid), `model` (string), `name` (string), `updated_at` (date-time)
+Key response fields: `response.data.name, response.data.created_at, response.data.updated_at`
 
 ## Delete mission
 
 Delete a mission
 
-`DELETE /ai/missions/{mission_id}`
+`client.AI.Missions.DeleteMission()` — `DELETE /ai/missions/{mission_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	err := client.AI.Missions.DeleteMission(context.TODO(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
+	err := client.AI.Missions.DeleteMission(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -198,12 +254,16 @@ Delete a mission
 
 Clone an existing mission
 
-`POST /ai/missions/{mission_id}/clone`
+`client.AI.Missions.CloneMission()` — `POST /ai/missions/{mission_id}/clone`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.CloneMission(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.CloneMission(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -212,12 +272,16 @@ Clone an existing mission
 
 List all knowledge bases for a mission
 
-`GET /ai/missions/{mission_id}/knowledge-bases`
+`client.AI.Missions.KnowledgeBases.ListKnowledgeBases()` — `GET /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.KnowledgeBases.ListKnowledgeBases(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.KnowledgeBases.ListKnowledgeBases(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -226,12 +290,16 @@ List all knowledge bases for a mission
 
 Create a new knowledge base for a mission
 
-`POST /ai/missions/{mission_id}/knowledge-bases`
+`client.AI.Missions.KnowledgeBases.NewKnowledgeBase()` — `POST /ai/missions/{mission_id}/knowledge-bases`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.KnowledgeBases.NewKnowledgeBase(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.KnowledgeBases.NewKnowledgeBase(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -240,18 +308,23 @@ Create a new knowledge base for a mission
 
 Get a specific knowledge base by ID
 
-`GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.AI.Missions.KnowledgeBases.GetKnowledgeBase()` — `GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `KnowledgeBaseId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.KnowledgeBases.GetKnowledgeBase(
-		context.TODO(),
+		context.Background(),
 		"knowledge_base_id",
 		telnyx.AIMissionKnowledgeBaseGetKnowledgeBaseParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -260,18 +333,23 @@ Get a specific knowledge base by ID
 
 Update a knowledge base definition
 
-`PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.AI.Missions.KnowledgeBases.UpdateKnowledgeBase()` — `PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `KnowledgeBaseId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.KnowledgeBases.UpdateKnowledgeBase(
-		context.TODO(),
+		context.Background(),
 		"knowledge_base_id",
 		telnyx.AIMissionKnowledgeBaseUpdateKnowledgeBaseParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -280,18 +358,23 @@ Update a knowledge base definition
 
 Delete a knowledge base from a mission
 
-`DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+`client.AI.Missions.KnowledgeBases.DeleteKnowledgeBase()` — `DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `KnowledgeBaseId` | string (UUID) | Yes |  |
 
 ```go
 	err := client.AI.Missions.KnowledgeBases.DeleteKnowledgeBase(
-		context.TODO(),
+		context.Background(),
 		"knowledge_base_id",
 		telnyx.AIMissionKnowledgeBaseDeleteKnowledgeBaseParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -299,12 +382,16 @@ Delete a knowledge base from a mission
 
 List all MCP servers for a mission
 
-`GET /ai/missions/{mission_id}/mcp-servers`
+`client.AI.Missions.McpServers.ListMcpServers()` — `GET /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.McpServers.ListMcpServers(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.McpServers.ListMcpServers(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -313,12 +400,16 @@ List all MCP servers for a mission
 
 Create a new MCP server for a mission
 
-`POST /ai/missions/{mission_id}/mcp-servers`
+`client.AI.Missions.McpServers.NewMcpServer()` — `POST /ai/missions/{mission_id}/mcp-servers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.McpServers.NewMcpServer(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.McpServers.NewMcpServer(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -327,18 +418,23 @@ Create a new MCP server for a mission
 
 Get a specific MCP server by ID
 
-`GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.AI.Missions.McpServers.GetMcpServer()` — `GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `McpServerId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.McpServers.GetMcpServer(
-		context.TODO(),
+		context.Background(),
 		"mcp_server_id",
 		telnyx.AIMissionMcpServerGetMcpServerParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -347,18 +443,23 @@ Get a specific MCP server by ID
 
 Update an MCP server definition
 
-`PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.AI.Missions.McpServers.UpdateMcpServer()` — `PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `McpServerId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.McpServers.UpdateMcpServer(
-		context.TODO(),
+		context.Background(),
 		"mcp_server_id",
 		telnyx.AIMissionMcpServerUpdateMcpServerParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -367,18 +468,23 @@ Update an MCP server definition
 
 Delete an MCP server from a mission
 
-`DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+`client.AI.Missions.McpServers.DeleteMcpServer()` — `DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `McpServerId` | string (UUID) | Yes |  |
 
 ```go
 	err := client.AI.Missions.McpServers.DeleteMcpServer(
-		context.TODO(),
+		context.Background(),
 		"mcp_server_id",
 		telnyx.AIMissionMcpServerDeleteMcpServerParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -386,169 +492,221 @@ Delete an MCP server from a mission
 
 List all runs for a specific mission
 
-`GET /ai/missions/{mission_id}/runs`
+`client.AI.Missions.Runs.List()` — `GET /ai/missions/{mission_id}/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `Status` | string | No |  |
+| `Page[number]` | integer | No | Page number (1-based) |
+| `Page[size]` | integer | No | Number of items per page |
 
 ```go
 	page, err := client.AI.Missions.Runs.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunListParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Start a run
 
 Start a new run for a mission
 
-`POST /ai/missions/{mission_id}/runs`
+`client.AI.Missions.Runs.New()` — `POST /ai/missions/{mission_id}/runs`
 
-Optional: `input` (object), `metadata` (object)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `Input` | object | No |  |
+| `Metadata` | object | No |  |
 
 ```go
 	run, err := client.AI.Missions.Runs.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunNewParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", run.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get run details
 
 Get details of a specific run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}`
+`client.AI.Missions.Runs.Get()` — `GET /ai/missions/{mission_id}/runs/{run_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	run, err := client.AI.Missions.Runs.Get(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunGetParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", run.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Update run
 
 Update run status and/or result
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}`
+`client.AI.Missions.Runs.Update()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}`
 
-Optional: `error` (string), `metadata` (object), `result_payload` (object), `result_summary` (string), `status` (enum: pending, running, paused, succeeded, failed, cancelled)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `Status` | enum (pending, running, paused, succeeded, failed, ...) | No |  |
+| `ResultSummary` | string | No |  |
+| `ResultPayload` | object | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	run, err := client.AI.Missions.Runs.Update(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunUpdateParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", run.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Cancel run
 
 Cancel a running or paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+`client.AI.Missions.Runs.CancelRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.CancelRun(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunCancelRunParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List events
 
 List events for a run (paginated)
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events`
+`client.AI.Missions.Runs.Events.List()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `Type` | string | No |  |
+| `StepId` | string (UUID) | No |  |
+| `AgentId` | string (UUID) | No |  |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	page, err := client.AI.Missions.Runs.Events.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunEventListParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Log event
 
 Log an event for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/events` — Required: `type`, `summary`
+`client.AI.Missions.Runs.Events.Log()` — `POST /ai/missions/{mission_id}/runs/{run_id}/events`
 
-Optional: `agent_id` (string), `idempotency_key` (string), `payload` (object), `step_id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Type` | enum (status_change, step_started, step_completed, step_failed, tool_call, ...) | Yes |  |
+| `Summary` | string | Yes |  |
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `StepId` | string (UUID) | No |  |
+| `AgentId` | string (UUID) | No |  |
+| `Payload` | object | No |  |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.AI.Missions.Runs.Events.Log(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunEventLogParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-			Summary:   "summary",
+			Summary: "Brief task summary",
 			Type:      telnyx.AIMissionRunEventLogParamsTypeStatusChange,
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Get event details
 
 Get details of a specific event
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+`client.AI.Missions.Runs.Events.GetEventDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `EventId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.Events.GetEventDetails(
-		context.TODO(),
+		context.Background(),
 		"event_id",
 		telnyx.AIMissionRunEventGetEventDetailsParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -556,120 +714,148 @@ Get details of a specific event
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `payload` (object), `run_id` (string), `step_id` (string), `summary` (string), `timestamp` (date-time), `type` (enum: status_change, step_started, step_completed, step_failed, tool_call, tool_result, message, error, custom)
+Key response fields: `response.data.type, response.data.agent_id, response.data.event_id`
 
 ## Pause run
 
 Pause a running run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+`client.AI.Missions.Runs.PauseRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/pause`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.PauseRun(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunPauseRunParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## Get plan
 
 Get the plan (all steps) for a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+`client.AI.Missions.Runs.Plan.Get()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	plan, err := client.AI.Missions.Runs.Plan.Get(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunPlanGetParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", plan.Data)
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Create initial plan
 
 Create the initial plan for a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan` — Required: `steps`
+`client.AI.Missions.Runs.Plan.New()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Steps` | array[object] | Yes |  |
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	plan, err := client.AI.Missions.Runs.Plan.New(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunPlanNewParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 			Steps: []telnyx.AIMissionRunPlanNewParamsStep{{
 				Description: "description",
 				Sequence:    0,
-				StepID:      "step_id",
+				StepID: "550e8400-e29b-41d4-a716-446655440000",
 			}},
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", plan.Data)
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Add step(s) to plan
 
 Add one or more steps to an existing plan
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps` — Required: `steps`
+`client.AI.Missions.Runs.Plan.AddStepsToPlan()` — `POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Steps` | array[object] | Yes |  |
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.Plan.AddStepsToPlan(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunPlanAddStepsToPlanParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 			Steps: []telnyx.AIMissionRunPlanAddStepsToPlanParamsStep{{
 				Description: "description",
 				Sequence:    0,
-				StepID:      "step_id",
+				StepID: "550e8400-e29b-41d4-a716-446655440000",
 			}},
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Get step details
 
 Get details of a specific plan step
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.AI.Missions.Runs.Plan.GetStepDetails()` — `GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `StepId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.Plan.GetStepDetails(
-		context.TODO(),
+		context.Background(),
 		"step_id",
 		telnyx.AIMissionRunPlanGetStepDetailsParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -677,24 +863,30 @@ Get details of a specific plan step
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Update step status
 
 Update the status of a plan step
 
-`PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
+`client.AI.Missions.Runs.Plan.UpdateStep()` — `PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
 
-Optional: `metadata` (object), `status` (enum: pending, in_progress, completed, skipped, failed)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `StepId` | string (UUID) | Yes |  |
+| `Status` | enum (pending, in_progress, completed, skipped, failed) | No |  |
+| `Metadata` | object | No |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.Plan.UpdateStep(
-		context.TODO(),
+		context.Background(),
 		"step_id",
 		telnyx.AIMissionRunPlanUpdateStepParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -702,89 +894,111 @@ Optional: `metadata` (object), `status` (enum: pending, in_progress, completed, 
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `completed_at` (date-time), `description` (string), `metadata` (object), `parent_step_id` (string), `run_id` (uuid), `sequence` (integer), `started_at` (date-time), `status` (enum: pending, in_progress, completed, skipped, failed), `step_id` (string)
+Key response fields: `response.data.status, response.data.completed_at, response.data.description`
 
 ## Resume run
 
 Resume a paused run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+`client.AI.Missions.Runs.ResumeRun()` — `POST /ai/missions/{mission_id}/runs/{run_id}/resume`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.ResumeRun(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunResumeRunParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadata` (object), `mission_id` (uuid), `result_payload` (object), `result_summary` (string), `run_id` (uuid), `started_at` (date-time), `status` (enum: pending, running, paused, succeeded, failed, cancelled), `updated_at` (date-time)
+Key response fields: `response.data.status, response.data.updated_at, response.data.error`
 
 ## List linked Telnyx agents
 
 List all Telnyx agents linked to a run
 
-`GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+`client.AI.Missions.Runs.TelnyxAgents.List()` — `GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	telnyxAgents, err := client.AI.Missions.Runs.TelnyxAgents.List(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunTelnyxAgentListParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", telnyxAgents.Data)
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Link Telnyx agent to run
 
 Link a Telnyx AI agent (voice/messaging) to a run
 
-`POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents` — Required: `telnyx_agent_id`
+`client.AI.Missions.Runs.TelnyxAgents.Link()` — `POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `TelnyxAgentId` | string (UUID) | Yes | The Telnyx AI agent ID to link |
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Runs.TelnyxAgents.Link(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AIMissionRunTelnyxAgentLinkParams{
 			MissionID:     "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-			TelnyxAgentID: "telnyx_agent_id",
+			TelnyxAgentID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
+Key response fields: `response.data.created_at, response.data.run_id, response.data.telnyx_agent_id`
 
 ## Unlink Telnyx agent
 
 Unlink a Telnyx agent from a run
 
-`DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+`client.AI.Missions.Runs.TelnyxAgents.Unlink()` — `DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `RunId` | string (UUID) | Yes |  |
+| `TelnyxAgentId` | string (UUID) | Yes |  |
 
 ```go
 	err := client.AI.Missions.Runs.TelnyxAgents.Unlink(
-		context.TODO(),
+		context.Background(),
 		"telnyx_agent_id",
 		telnyx.AIMissionRunTelnyxAgentUnlinkParams{
 			MissionID: "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
@@ -792,7 +1006,7 @@ Unlink a Telnyx agent from a run
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -800,12 +1014,16 @@ Unlink a Telnyx agent from a run
 
 List all tools for a mission
 
-`GET /ai/missions/{mission_id}/tools`
+`client.AI.Missions.Tools.ListTools()` — `GET /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.Tools.ListTools(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.Tools.ListTools(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -814,12 +1032,16 @@ List all tools for a mission
 
 Create a new tool for a mission
 
-`POST /ai/missions/{mission_id}/tools`
+`client.AI.Missions.Tools.NewTool()` — `POST /ai/missions/{mission_id}/tools`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
 
 ```go
-	response, err := client.AI.Missions.Tools.NewTool(context.TODO(), "mission_id")
+	response, err := client.AI.Missions.Tools.NewTool(context.Background(), "mission_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -828,18 +1050,23 @@ Create a new tool for a mission
 
 Get a specific tool by ID
 
-`GET /ai/missions/{mission_id}/tools/{tool_id}`
+`client.AI.Missions.Tools.GetTool()` — `GET /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `ToolId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Tools.GetTool(
-		context.TODO(),
+		context.Background(),
 		"tool_id",
 		telnyx.AIMissionToolGetToolParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -848,18 +1075,23 @@ Get a specific tool by ID
 
 Update a tool definition
 
-`PUT /ai/missions/{mission_id}/tools/{tool_id}`
+`client.AI.Missions.Tools.UpdateTool()` — `PUT /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `ToolId` | string (UUID) | Yes |  |
 
 ```go
 	response, err := client.AI.Missions.Tools.UpdateTool(
-		context.TODO(),
+		context.Background(),
 		"tool_id",
 		telnyx.AIMissionToolUpdateToolParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
@@ -868,17 +1100,26 @@ Update a tool definition
 
 Delete a tool from a mission
 
-`DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+`client.AI.Missions.Tools.DeleteTool()` — `DELETE /ai/missions/{mission_id}/tools/{tool_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `MissionId` | string (UUID) | Yes |  |
+| `ToolId` | string (UUID) | Yes |  |
 
 ```go
 	err := client.AI.Missions.Tools.DeleteTool(
-		context.TODO(),
+		context.Background(),
 		"tool_id",
 		telnyx.AIMissionToolDeleteToolParams{
-			MissionID: "mission_id",
+			MissionID: "550e8400-e29b-41d4-a716-446655440000",
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

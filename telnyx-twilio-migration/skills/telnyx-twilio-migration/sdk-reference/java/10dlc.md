@@ -1,6 +1,6 @@
 <!-- SDK reference: telnyx-10dlc-java -->
 
-# Telnyx 10Dlc - Java
+# Telnyx 10DLC - Java
 
 ## Installation
 
@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx-java</artifactId>
-    <version>6.26.0</version>
+    <version>6.29.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:6.26.0")
+implementation("com.telnyx.sdk:telnyx-java:6.29.0")
 ```
 
 ## Setup
@@ -33,19 +33,18 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```java
-import com.telnyx.sdk.errors.TelnyxServiceException;
-
-try {
-    var result = client.messages().send(params);
-} catch (TelnyxServiceException e) {
-    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
-    if (e.statusCode() == 422) {
-        System.err.println("Validation error — check required fields and formats");
-    } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
-        Thread.sleep(1000);
-    }
-}
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandCreateParams;
+import com.telnyx.sdk.models.messaging10dlc.brand.EntityType;
+import com.telnyx.sdk.models.messaging10dlc.brand.TelnyxBrand;
+import com.telnyx.sdk.models.messaging10dlc.brand.Vertical;
+BrandCreateParams params = BrandCreateParams.builder()
+    .country("US")
+    .displayName("ABC Mobile")
+    .email("support@example.com")
+    .entityType(EntityType.PRIVATE_PROFIT)
+    .vertical(Vertical.TECHNOLOGY)
+    .build();
+TelnyxBrand telnyxBrand = client.messaging10dlc().brand().create(params);
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -56,28 +55,39 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
-## List Brands
+## Operational Caveats
 
-This endpoint is used to list all brands associated with your organization.
+- 10DLC is sequential: create the brand first, then submit the campaign, then attach messaging infrastructure such as the messaging profile.
+- Registration calls are not enough by themselves. Messaging cannot use the campaign until the assignment step completes successfully.
+- Treat registration status fields as part of the control flow. Do not assume the campaign is send-ready until the returned status fields confirm it.
 
-`GET /10dlc/brand`
+## Reference Use Rules
 
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandListPage;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandListParams;
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-BrandListPage page = client.messaging10dlc().brand().list();
-```
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
 
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
+## Core Tasks
 
-## Create Brand
+### Create a brand
 
-This endpoint is used to create a new brand. A brand is an entity created by The Campaign Registry (TCR) that represents an organization or a company. It is this entity that TCR created campaigns will be associated with.
+Brand registration is the entrypoint for any US A2P 10DLC campaign flow.
 
-`POST /10dlc/brand` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
+`client.messaging10dlc().brand().create()` — `POST /10dlc/brand`
 
-Optional: `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `entityType` | object | Yes | Entity type behind the brand. |
+| `displayName` | string | Yes | Display name, marketing name, or DBA name of the brand. |
+| `country` | string | Yes | ISO2 2 characters country code. |
+| `email` | string | Yes | Valid email address of brand support contact. |
+| `vertical` | object | Yes | Vertical or industry segment of the brand. |
+| `companyName` | string | No | (Required for Non-profit/private/public) Legal company name. |
+| `firstName` | string | No | First name of business contact. |
+| `lastName` | string | No | Last name of business contact. |
+| ... | | | +16 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.brand.BrandCreateParams;
@@ -88,526 +98,69 @@ import com.telnyx.sdk.models.messaging10dlc.brand.Vertical;
 BrandCreateParams params = BrandCreateParams.builder()
     .country("US")
     .displayName("ABC Mobile")
-    .email("email")
+    .email("support@example.com")
     .entityType(EntityType.PRIVATE_PROFIT)
     .vertical(Vertical.TECHNOLOGY)
     .build();
 TelnyxBrand telnyxBrand = client.messaging10dlc().brand().create(params);
 ```
 
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand Feedback By Id
-
-Get feedback about a brand by ID. This endpoint can be used after creating or revetting
-a brand. Possible values for `.category[].id`:
-
-* `TAX_ID` - Data mismatch related to tax id and its associated properties.
-
-`GET /10dlc/brand/feedback/{brandId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackResponse;
-
-BrandGetFeedbackResponse response = client.messaging10dlc().brand().getFeedback("brandId");
-```
-
-Returns: `brandId` (string), `category` (array[object])
-
-## Get Brand SMS OTP Status
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process.
-
-`GET /10dlc/brand/smsOtp/{referenceId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetSmsOtpByReferenceResponse;
-
-BrandGetSmsOtpByReferenceResponse response = client.messaging10dlc().brand().getSmsOtpByReference("OTP4B2001");
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Get Brand
-
-Retrieve a brand by `brandId`.
-
-`GET /10dlc/brand/{brandId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveResponse;
-
-BrandRetrieveResponse brand = client.messaging10dlc().brand().retrieve("brandId");
-```
-
-## Update Brand
-
-Update a brand's attributes by `brandId`.
-
-`PUT /10dlc/brand/{brandId}` — Required: `entityType`, `displayName`, `country`, `email`, `vertical`
-
-Optional: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `businessContactEmail` (string), `city` (string), `companyName` (string), `ein` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `phone` (string), `postalCode` (string), `state` (string), `stockExchange` (object), `stockSymbol` (string), `street` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandUpdateParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.EntityType;
-import com.telnyx.sdk.models.messaging10dlc.brand.TelnyxBrand;
-import com.telnyx.sdk.models.messaging10dlc.brand.Vertical;
-
-BrandUpdateParams params = BrandUpdateParams.builder()
-    .brandId("brandId")
-    .country("US")
-    .displayName("ABC Mobile")
-    .email("email")
-    .entityType(EntityType.PRIVATE_PROFIT)
-    .vertical(Vertical.TECHNOLOGY)
-    .build();
-TelnyxBrand telnyxBrand = client.messaging10dlc().brand().update(params);
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Delete Brand
-
-Delete Brand. This endpoint is used to delete a brand. Note the brand cannot be deleted if it contains one or more active campaigns, the campaigns need to be inactive and at least 3 months old due to billing purposes.
-
-`DELETE /10dlc/brand/{brandId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandDeleteParams;
-
-client.messaging10dlc().brand().delete("brandId");
-```
-
-## Resend brand 2FA email
-
-`POST /10dlc/brand/{brandId}/2faEmail`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandResend2faEmailParams;
-
-client.messaging10dlc().brand().resend2faEmail("brandId");
-```
-
-## List External Vettings
-
-Get list of valid external vetting record for a given brand
-
-`GET /10dlc/brand/{brandId}/externalVetting`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingListParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingListResponse;
-
-List<ExternalVettingListResponse> externalVettings = client.messaging10dlc().brand().externalVetting().list("brandId");
-```
-
-## Order Brand External Vetting
-
-Order new external vetting for a brand
-
-`POST /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingClass`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingOrderParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingOrderResponse;
-
-ExternalVettingOrderParams params = ExternalVettingOrderParams.builder()
-    .brandId("brandId")
-    .evpId("evpId")
-    .vettingClass("vettingClass")
-    .build();
-ExternalVettingOrderResponse response = client.messaging10dlc().brand().externalVetting().order(params);
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Import External Vetting Record
-
-This operation can be used to import an external vetting record from a TCR-approved
-vetting provider. If the vetting provider confirms validity of the record, it will be
-saved with the brand and will be considered for future campaign qualification.
-
-`PUT /10dlc/brand/{brandId}/externalVetting` — Required: `evpId`, `vettingId`
-
-Optional: `vettingToken` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingImportsParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.externalvetting.ExternalVettingImportsResponse;
-
-ExternalVettingImportsParams params = ExternalVettingImportsParams.builder()
-    .brandId("brandId")
-    .evpId("evpId")
-    .vettingId("vettingId")
-    .build();
-ExternalVettingImportsResponse response = client.messaging10dlc().brand().externalVetting().imports(params);
-```
-
-Returns: `createDate` (string), `evpId` (string), `vettedDate` (string), `vettingClass` (string), `vettingId` (string), `vettingScore` (integer), `vettingToken` (string)
-
-## Revet Brand
-
-This operation allows you to revet the brand. However, revetting is allowed once after the successful brand registration and thereafter limited to once every 3 months.
-
-`PUT /10dlc/brand/{brandId}/revet`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandRevetParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.TelnyxBrand;
-
-TelnyxBrand telnyxBrand = client.messaging10dlc().brand().revet("brandId");
-```
-
-Returns: `altBusinessId` (string), `altBusinessIdType` (enum: NONE, DUNS, GIIN, LEI), `brandId` (string), `brandRelationship` (object), `businessContactEmail` (string), `city` (string), `companyName` (string), `country` (string), `createdAt` (string), `cspId` (string), `displayName` (string), `ein` (string), `email` (string), `entityType` (object), `failureReasons` (string), `firstName` (string), `identityStatus` (enum: VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED), `ipAddress` (string), `isReseller` (boolean), `lastName` (string), `mobilePhone` (string), `mock` (boolean), `optionalAttributes` (object), `phone` (string), `postalCode` (string), `referenceId` (string), `state` (string), `status` (enum: OK, REGISTRATION_PENDING, REGISTRATION_FAILED), `stockExchange` (object), `stockSymbol` (string), `street` (string), `tcrBrandId` (string), `universalEin` (string), `updatedAt` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string), `website` (string)
-
-## Get Brand SMS OTP Status by Brand ID
-
-Query the status of an SMS OTP (One-Time Password) for Sole Proprietor brand verification using the Brand ID. This endpoint allows you to check the delivery and verification status of an OTP sent during the Sole Proprietor brand verification process by looking it up with the brand ID. The response includes delivery status, verification dates, and detailed delivery information.
-
-`GET /10dlc/brand/{brandId}/smsOtp`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveSmsOtpStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveSmsOtpStatusResponse;
-
-BrandRetrieveSmsOtpStatusResponse response = client.messaging10dlc().brand().retrieveSmsOtpStatus("4b20019b-043a-78f8-0657-b3be3f4b4002");
-```
-
-Returns: `brandId` (string), `deliveryStatus` (string), `deliveryStatusDate` (date-time), `deliveryStatusDetails` (string), `mobilePhone` (string), `referenceId` (string), `requestDate` (date-time), `verifyDate` (date-time)
-
-## Trigger Brand SMS OTP
-
-Trigger or re-trigger an SMS OTP (One-Time Password) for Sole Proprietor brand verification.
-
-`POST /10dlc/brand/{brandId}/smsOtp` — Required: `pinSms`, `successSms`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandTriggerSmsOtpParams;
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandTriggerSmsOtpResponse;
-
-BrandTriggerSmsOtpParams params = BrandTriggerSmsOtpParams.builder()
-    .brandId("4b20019b-043a-78f8-0657-b3be3f4b4002")
-    .pinSms("Your PIN is @OTP_PIN@")
-    .successSms("Verification successful!")
-    .build();
-BrandTriggerSmsOtpResponse response = client.messaging10dlc().brand().triggerSmsOtp(params);
-```
-
-Returns: `brandId` (string), `referenceId` (string)
-
-## Verify Brand SMS OTP
-
-Verify the SMS OTP (One-Time Password) for Sole Proprietor brand verification. **Verification Flow:**
-
-1. User receives OTP via SMS after triggering
-2.
-
-`PUT /10dlc/brand/{brandId}/smsOtp` — Required: `otpPin`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.brand.BrandVerifySmsOtpParams;
-
-BrandVerifySmsOtpParams params = BrandVerifySmsOtpParams.builder()
-    .brandId("4b20019b-043a-78f8-0657-b3be3f4b4002")
-    .otpPin("123456")
-    .build();
-client.messaging10dlc().brand().verifySmsOtp(params);
-```
-
-## List Campaigns
-
-Retrieve a list of campaigns associated with a supplied `brandId`.
-
-`GET /10dlc/campaign`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignListPage;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignListParams;
-
-CampaignListParams params = CampaignListParams.builder()
-    .brandId("brandId")
-    .build();
-CampaignListPage page = client.messaging10dlc().campaign().list(params);
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Accept Shared Campaign
-
-Manually accept a campaign shared with Telnyx
-
-`POST /10dlc/campaign/acceptSharing/{campaignId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignAcceptSharingResponse;
-
-CampaignAcceptSharingResponse response = client.messaging10dlc().campaign().acceptSharing("C26F1KLZN");
-```
-
-## Get Campaign Cost
-
-`GET /10dlc/campaign/usecase/cost`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.usecase.UsecaseGetCostResponse;
-
-UsecaseGetCostParams params = UsecaseGetCostParams.builder()
-    .usecase("usecase")
-    .build();
-UsecaseGetCostResponse response = client.messaging10dlc().campaign().usecase().getCost(params);
-```
-
-Returns: `campaignUsecase` (string), `description` (string), `monthlyCost` (string), `upFrontCost` (string)
-
-## Get campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/campaign/{campaignId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignRetrieveParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
-
-TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaign().retrieve("campaignId");
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update campaign
-
-Update a campaign's properties by `campaignId`. **Please note:** only sample messages are editable.
-
-`PUT /10dlc/campaign/{campaignId}`
-
-Optional: `autoRenewal` (boolean), `helpMessage` (string), `messageFlow` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignUpdateParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
-
-TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaign().update("campaignId");
-```
-
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Deactivate campaign
-
-Terminate a campaign. Note that once deactivated, a campaign cannot be restored.
-
-`DELETE /10dlc/campaign/{campaignId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignDeactivateParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignDeactivateResponse;
-
-CampaignDeactivateResponse response = client.messaging10dlc().campaign().deactivate("campaignId");
-```
-
-Returns: `message` (string), `record_type` (string), `time` (number)
-
-## Submit campaign appeal for manual review
-
-Submits an appeal for rejected native campaigns in TELNYX_FAILED or MNO_REJECTED status. The appeal is recorded for manual compliance team review and the campaign status is reset to TCR_ACCEPTED. Note: Appeal forwarding is handled manually to allow proper review before incurring upstream charges.
-
-`POST /10dlc/campaign/{campaignId}/appeal` — Required: `appeal_reason`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignSubmitAppealParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignSubmitAppealResponse;
-
-CampaignSubmitAppealParams params = CampaignSubmitAppealParams.builder()
-    .campaignId("5eb13888-32b7-4cab-95e6-d834dde21d64")
-    .appealReason("The website has been updated to include the required privacy policy and terms of service.")
-    .build();
-CampaignSubmitAppealResponse response = client.messaging10dlc().campaign().submitAppeal(params);
-```
-
-Returns: `appealed_at` (date-time)
-
-## Get Campaign Mno Metadata
-
-Get the campaign metadata for each MNO it was submitted to.
-
-`GET /10dlc/campaign/{campaignId}/mnoMetadata`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetMnoMetadataParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetMnoMetadataResponse;
-
-CampaignGetMnoMetadataResponse response = client.messaging10dlc().campaign().getMnoMetadata("campaignId");
-```
-
-Returns: `10999` (object)
-
-## Get campaign operation status
-
-Retrieve campaign's operation status at MNO level.
-
-`GET /10dlc/campaign/{campaignId}/operationStatus`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetOperationStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetOperationStatusResponse;
-
-CampaignGetOperationStatusResponse response = client.messaging10dlc().campaign().getOperationStatus("campaignId");
-```
-
-## Get OSR campaign attributes
-
-`GET /10dlc/campaign/{campaignId}/osr/attributes`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.osr.OsrGetAttributesParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.osr.OsrGetAttributesResponse;
-
-OsrGetAttributesResponse response = client.messaging10dlc().campaign().osr().getAttributes("campaignId");
-```
-
-## Get Sharing Status
-
-`GET /10dlc/campaign/{campaignId}/sharing`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetSharingStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignGetSharingStatusResponse;
-
-CampaignGetSharingStatusResponse response = client.messaging10dlc().campaign().getSharingStatus("campaignId");
-```
-
-Returns: `sharedByMe` (object), `sharedWithMe` (object)
-
-## Submit Campaign
-
-Before creating a campaign, use the [Qualify By Usecase endpoint](https://developers.telnyx.com/api-reference/campaign/qualify-by-usecase) to ensure that the brand you want to assign a new campaign to is qualified for the desired use case of that campaign. **Please note:** After campaign creation, you'll only be able to edit the campaign's sample messages.
-
-`POST /10dlc/campaignBuilder` — Required: `brandId`, `description`, `usecase`
-
-Optional: `ageGated` (boolean), `autoRenewal` (boolean), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `helpKeywords` (string), `helpMessage` (string), `messageFlow` (string), `mnoIds` (array[integer]), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tag` (array[string]), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyxBrand.brandId`
+- `telnyxBrand.identityStatus`
+- `telnyxBrand.status`
+- `telnyxBrand.displayName`
+- `telnyxBrand.state`
+- `telnyxBrand.altBusinessId`
+
+### Submit a campaign
+
+Campaign submission is the compliance-critical step that determines whether traffic can be provisioned.
+
+`client.messaging10dlc().campaignBuilder().submit()` — `POST /10dlc/campaignBuilder`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes | Alphanumeric identifier of the brand associated with this ca... |
+| `description` | string | Yes | Summary description of this campaign. |
+| `usecase` | string | Yes | Campaign usecase. |
+| `ageGated` | boolean | No | Age gated message content in campaign. |
+| `autoRenewal` | boolean | No | Campaign subscription auto-renewal option. |
+| `directLending` | boolean | No | Direct lending or loan arrangement |
+| ... | | | +29 optional params in the API Details section below |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
 import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.CampaignBuilderSubmitParams;
 
 CampaignBuilderSubmitParams params = CampaignBuilderSubmitParams.builder()
-    .brandId("brandId")
-    .description("description")
-    .usecase("usecase")
+    .brandId("BXXXXXX")
+    .description("Two-factor authentication messages")
+    .usecase("2FA")
+    .sampleMessages(java.util.List.of("Your verification code is {{code}}"))
     .build();
 TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaignBuilder().submit(params);
 ```
 
-Returns: `ageGated` (boolean), `autoRenewal` (boolean), `billedDate` (string), `brandDisplayName` (string), `brandId` (string), `campaignId` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createDate` (string), `cspId` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isTMobileNumberPoolingEnabled` (boolean), `isTMobileRegistered` (boolean), `isTMobileSuspended` (boolean), `messageFlow` (string), `mock` (boolean), `nextRenewalOrExpirationDate` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `referenceId` (string), `resellerId` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `status` (string), `subUsecases` (array[string]), `submissionStatus` (enum: CREATED, FAILED, PENDING), `subscriberHelp` (boolean), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `usecase` (string), `vertical` (string), `webhookFailoverURL` (string), `webhookURL` (string)
+Primary response fields:
+- `telnyxCampaignCsp.campaignId`
+- `telnyxCampaignCsp.brandId`
+- `telnyxCampaignCsp.campaignStatus`
+- `telnyxCampaignCsp.submissionStatus`
+- `telnyxCampaignCsp.failureReasons`
+- `telnyxCampaignCsp.status`
 
-## Qualify By Usecase
+### Assign a messaging profile to a campaign
 
-This endpoint allows you to see whether or not the supplied brand is suitable for your desired campaign use case.
+Messaging profile assignment is the practical handoff from registration to send-ready messaging infrastructure.
 
-`GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+`client.messaging10dlc().phoneNumberAssignmentByProfile().assign()` — `POST /10dlc/phoneNumberAssignmentByProfile`
 
-```java
-import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseParams;
-import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseResponse;
-
-BrandQualifyByUsecaseParams params = BrandQualifyByUsecaseParams.builder()
-    .brandId("brandId")
-    .usecase("usecase")
-    .build();
-BrandQualifyByUsecaseResponse response = client.messaging10dlc().campaignBuilder().brand().qualifyByUsecase(params);
-```
-
-Returns: `annualFee` (number), `maxSubUsecases` (integer), `minSubUsecases` (integer), `mnoMetadata` (object), `monthlyFee` (number), `quarterlyFee` (number), `usecase` (string)
-
-## List shared partner campaigns
-
-Get all partner campaigns you have shared to Telnyx in a paginated fashion
-
-This endpoint is currently limited to only returning shared campaigns that Telnyx
-has accepted. In other words, shared but pending campaigns are currently omitted
-from the response from this endpoint.
-
-`GET /10dlc/partnerCampaign/sharedByMe`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMePage;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListSharedByMeParams;
-
-PartnerCampaignListSharedByMePage page = client.messaging10dlc().partnerCampaigns().listSharedByMe();
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Sharing Status
-
-`GET /10dlc/partnerCampaign/{campaignId}/sharing`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveSharingStatusResponse;
-
-PartnerCampaignRetrieveSharingStatusResponse response = client.messaging10dlc().partnerCampaigns().retrieveSharingStatus("campaignId");
-```
-
-## List Shared Campaigns
-
-Retrieve all partner campaigns you have shared to Telnyx in a paginated fashion. This endpoint is currently limited to only returning shared campaigns that Telnyx has accepted. In other words, shared but pending campaigns are currently omitted from the response from this endpoint.
-
-`GET /10dlc/partner_campaigns`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListPage;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignListParams;
-
-PartnerCampaignListPage page = client.messaging10dlc().partnerCampaigns().list();
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Get Single Shared Campaign
-
-Retrieve campaign details by `campaignId`.
-
-`GET /10dlc/partner_campaigns/{campaignId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignRetrieveParams;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.TelnyxDownstreamCampaign;
-
-TelnyxDownstreamCampaign telnyxDownstreamCampaign = client.messaging10dlc().partnerCampaigns().retrieve("campaignId");
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Update Single Shared Campaign
-
-Update campaign details by `campaignId`. **Please note:** Only webhook urls are editable.
-
-`PATCH /10dlc/partner_campaigns/{campaignId}`
-
-Optional: `webhookFailoverURL` (string), `webhookURL` (string)
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.PartnerCampaignUpdateParams;
-import com.telnyx.sdk.models.messaging10dlc.partnercampaigns.TelnyxDownstreamCampaign;
-
-TelnyxDownstreamCampaign telnyxDownstreamCampaign = client.messaging10dlc().partnerCampaigns().update("campaignId");
-```
-
-Returns: `ageGated` (boolean), `assignedPhoneNumbersCount` (number), `brandDisplayName` (string), `campaignStatus` (enum: TCR_PENDING, TCR_SUSPENDED, TCR_EXPIRED, TCR_ACCEPTED, TCR_FAILED, TELNYX_ACCEPTED, TELNYX_FAILED, MNO_PENDING, MNO_ACCEPTED, MNO_REJECTED, MNO_PROVISIONED, MNO_PROVISIONING_FAILED), `createdAt` (string), `description` (string), `directLending` (boolean), `embeddedLink` (boolean), `embeddedLinkSample` (string), `embeddedPhone` (boolean), `failureReasons` (string), `helpKeywords` (string), `helpMessage` (string), `isNumberPoolingEnabled` (boolean), `messageFlow` (string), `numberPool` (boolean), `optinKeywords` (string), `optinMessage` (string), `optoutKeywords` (string), `optoutMessage` (string), `privacyPolicyLink` (string), `sample1` (string), `sample2` (string), `sample3` (string), `sample4` (string), `sample5` (string), `subUsecases` (array[string]), `subscriberOptin` (boolean), `subscriberOptout` (boolean), `tcrBrandId` (string), `tcrCampaignId` (string), `termsAndConditions` (boolean), `termsAndConditionsLink` (string), `updatedAt` (string), `usecase` (string), `webhookFailoverURL` (string), `webhookURL` (string)
-
-## Assign Messaging Profile To Campaign
-
-This endpoint allows you to link all phone numbers associated with a Messaging Profile to a campaign. **Please note:** if you want to assign phone numbers to a campaign that you did not create with Telnyx 10DLC services, this endpoint allows that provided that you've shared the campaign with Telnyx. In this case, only provide the parameter, `tcrCampaignId`, and not `campaignId`.
-
-`POST /10dlc/phoneNumberAssignmentByProfile` — Required: `messagingProfileId`
-
-Optional: `campaignId` (string), `tcrCampaignId` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `messagingProfileId` | string (UUID) | Yes | The ID of the messaging profile that you want to link to the... |
+| `campaignId` | string (UUID) | Yes | The ID of the campaign you want to link to the specified mes... |
+| `tcrCampaignId` | string (UUID) | No | The TCR ID of the shared campaign you want to link to the sp... |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileAssignParams;
@@ -615,127 +168,18 @@ import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.Phone
 
 PhoneNumberAssignmentByProfileAssignParams params = PhoneNumberAssignmentByProfileAssignParams.builder()
     .messagingProfileId("4001767e-ce0f-4cae-9d5f-0d5e636e7809")
+    .campaignId("CXXX001")
     .build();
 PhoneNumberAssignmentByProfileAssignResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().assign(params);
 ```
 
-Returns: `campaignId` (string), `messagingProfileId` (string), `taskId` (string), `tcrCampaignId` (string)
-
-## Get Assignment Task Status
-
-Check the status of the task associated with assigning all phone numbers on a messaging profile to a campaign by `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileRetrieveStatusResponse;
-
-PhoneNumberAssignmentByProfileRetrieveStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().retrieveStatus("taskId");
-```
-
-Returns: `createdAt` (date-time), `status` (string), `taskId` (string), `updatedAt` (date-time)
-
-## Get Phone Number Status
-
-Check the status of the individual phone number/campaign assignments associated with the supplied `taskId`.
-
-`GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusParams;
-import com.telnyx.sdk.models.messaging10dlc.phonenumberassignmentbyprofile.PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse;
-
-PhoneNumberAssignmentByProfileListPhoneNumberStatusResponse response = client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus("taskId");
-```
-
-Returns: `records` (array[object])
-
-## List phone number campaigns
-
-`GET /10dlc/phone_number_campaigns`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignListPage;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignListParams;
-
-PhoneNumberCampaignListPage page = client.messaging10dlc().phoneNumberCampaigns().list();
-```
-
-Returns: `page` (integer), `records` (array[object]), `totalRecords` (integer)
-
-## Create New Phone Number Campaign
-
-`POST /10dlc/phone_number_campaigns` — Required: `phoneNumber`, `campaignId`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreate;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreateParams;
-
-PhoneNumberCampaignCreate params = PhoneNumberCampaignCreate.builder()
-    .campaignId("4b300178-131c-d902-d54e-72d90ba1620j")
-    .phoneNumber("+18005550199")
-    .build();
-PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().create(params);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Get Single Phone Number Campaign
-
-Retrieve an individual phone number/campaign assignment by `phoneNumber`.
-
-`GET /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignRetrieveParams;
-
-PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().retrieve("phoneNumber");
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Create New Phone Number Campaign
-
-`PUT /10dlc/phone_number_campaigns/{phoneNumber}` — Required: `phoneNumber`, `campaignId`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreate;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignUpdateParams;
-
-PhoneNumberCampaignUpdateParams params = PhoneNumberCampaignUpdateParams.builder()
-    .campaignPhoneNumber("phoneNumber")
-    .phoneNumberCampaignCreate(PhoneNumberCampaignCreate.builder()
-        .campaignId("4b300178-131c-d902-d54e-72d90ba1620j")
-        .phoneNumber("+18005550199")
-        .build())
-    .build();
-PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().update(params);
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
-
-## Delete Phone Number Campaign
-
-This endpoint allows you to remove a campaign assignment from the supplied `phoneNumber`.
-
-`DELETE /10dlc/phone_number_campaigns/{phoneNumber}`
-
-```java
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignDeleteParams;
-
-PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().delete("phoneNumber");
-```
-
-Returns: `assignmentStatus` (enum: FAILED_ASSIGNMENT, PENDING_ASSIGNMENT, ASSIGNED, PENDING_UNASSIGNMENT, FAILED_UNASSIGNMENT), `brandId` (string), `campaignId` (string), `createdAt` (string), `failureReasons` (string), `phoneNumber` (string), `tcrBrandId` (string), `tcrCampaignId` (string), `telnyxCampaignId` (string), `updatedAt` (string)
+Primary response fields:
+- `response.messagingProfileId`
+- `response.campaignId`
+- `response.taskId`
+- `response.tcrCampaignId`
 
 ---
-
-## Webhooks
 
 ### Webhook Verification
 
@@ -771,16 +215,11 @@ public ResponseEntity<String> handleWebhook(
 }
 ```
 
-The following webhook events are sent to your configured webhook URL.
-All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
+## Webhooks
 
-| Event | Description |
-|-------|-------------|
-| `campaignStatusUpdate` | Campaign Status Update |
+These webhook payload fields are inline because they are part of the primary integration path.
 
-### Webhook payload fields
-
-**`campaignStatusUpdate`**
+### Campaign Status Update
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -792,3 +231,214 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `type` | enum: TELNYX_EVENT, REGISTRATION, MNO_REVIEW, TELNYX_REVIEW, NUMBER_POOL_PROVISIONED, NUMBER_POOL_DEPROVISIONED, TCR_EVENT, VERIFIED |  |
 | `description` | string | Description of the event. |
 | `status` | enum: ACCEPTED, REJECTED, DORMANT, success, failed | The status of the campaign. |
+
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Get Brand
+
+Inspect the current state of an existing brand registration.
+
+`client.messaging10dlc().brand().retrieve()` — `GET /10dlc/brand/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes |  |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveParams;
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveResponse;
+
+BrandRetrieveResponse brand = client.messaging10dlc().brand().retrieve("BXXX001");
+```
+
+Primary response fields:
+- `brand.status`
+- `brand.state`
+- `brand.altBusinessId`
+- `brand.altBusinessIdType`
+- `brand.assignedCampaignsCount`
+- `brand.brandId`
+
+### Qualify By Usecase
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging10dlc().campaignBuilder().brand().qualifyByUsecase()` — `GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `usecase` | string | Yes |  |
+| `brandId` | string (UUID) | Yes |  |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseParams;
+import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseResponse;
+
+BrandQualifyByUsecaseParams params = BrandQualifyByUsecaseParams.builder()
+    .brandId("BXXX001")
+    .usecase("CUSTOMER_CARE")
+    .build();
+BrandQualifyByUsecaseResponse response = client.messaging10dlc().campaignBuilder().brand().qualifyByUsecase(params);
+```
+
+Primary response fields:
+- `response.annualFee`
+- `response.maxSubUsecases`
+- `response.minSubUsecases`
+- `response.mnoMetadata`
+- `response.monthlyFee`
+- `response.quarterlyFee`
+
+### Create New Phone Number Campaign
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.messaging10dlc().phoneNumberCampaigns().create()` — `POST /10dlc/phone_number_campaigns`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phoneNumber` | string (E.164) | Yes | The phone number you want to link to a specified campaign. |
+| `campaignId` | string (UUID) | Yes | The ID of the campaign you want to link to the specified pho... |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
+import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreate;
+import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreateParams;
+
+PhoneNumberCampaignCreate params = PhoneNumberCampaignCreate.builder()
+    .campaignId("4b300178-131c-d902-d54e-72d90ba1620j")
+    .phoneNumber("+18005550199")
+    .build();
+PhoneNumberCampaign phoneNumberCampaign = client.messaging10dlc().phoneNumberCampaigns().create(params);
+```
+
+Primary response fields:
+- `phoneNumberCampaign.assignmentStatus`
+- `phoneNumberCampaign.brandId`
+- `phoneNumberCampaign.campaignId`
+- `phoneNumberCampaign.createdAt`
+- `phoneNumberCampaign.failureReasons`
+- `phoneNumberCampaign.phoneNumber`
+
+### Get campaign
+
+Inspect the current state of an existing campaign registration.
+
+`client.messaging10dlc().campaign().retrieve()` — `GET /10dlc/campaign/{campaignId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `campaignId` | string (UUID) | Yes |  |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignRetrieveParams;
+import com.telnyx.sdk.models.messaging10dlc.campaign.TelnyxCampaignCsp;
+
+TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaign().retrieve("CXXX001");
+```
+
+Primary response fields:
+- `telnyxCampaignCsp.status`
+- `telnyxCampaignCsp.ageGated`
+- `telnyxCampaignCsp.autoRenewal`
+- `telnyxCampaignCsp.billedDate`
+- `telnyxCampaignCsp.brandDisplayName`
+- `telnyxCampaignCsp.brandId`
+
+### List Brands
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.messaging10dlc().brand().list()` — `GET /10dlc/brand`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
+| `page` | integer | No |  |
+| `recordsPerPage` | integer | No | number of records per page. |
+| ... | | | +6 optional params in the API Details section below |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandListPage;
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandListParams;
+
+BrandListPage page = client.messaging10dlc().brand().list();
+```
+
+Primary response fields:
+- `page.page`
+- `page.records`
+- `page.totalRecords`
+
+### Get Brand Feedback By Id
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.messaging10dlc().brand().getFeedback()` — `GET /10dlc/brand/feedback/{brandId}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `brandId` | string (UUID) | Yes |  |
+
+```java
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackParams;
+import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackResponse;
+
+BrandGetFeedbackResponse response = client.messaging10dlc().brand().getFeedback("BXXX001");
+```
+
+Primary response fields:
+- `response.brandId`
+- `response.category`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Get Brand SMS OTP Status | `client.messaging10dlc().brand().getSmsOtpByReference()` | `GET /10dlc/brand/smsOtp/{referenceId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `referenceId` |
+| Update Brand | `client.messaging10dlc().brand().update()` | `PUT /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `entityType`, `displayName`, `country`, `email`, +2 more |
+| Delete Brand | `client.messaging10dlc().brand().delete()` | `DELETE /10dlc/brand/{brandId}` | Inspect the current state of an existing brand registration. | `brandId` |
+| Resend brand 2FA email | `client.messaging10dlc().brand().resend2faEmail()` | `POST /10dlc/brand/{brandId}/2faEmail` | Create or provision an additional resource when the core tasks do not cover this flow. | `brandId` |
+| List External Vettings | `client.messaging10dlc().brand().externalVetting().list()` | `GET /10dlc/brand/{brandId}/externalVetting` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
+| Order Brand External Vetting | `client.messaging10dlc().brand().externalVetting().order()` | `POST /10dlc/brand/{brandId}/externalVetting` | Create or provision an additional resource when the core tasks do not cover this flow. | `evpId`, `vettingClass`, `brandId` |
+| Import External Vetting Record | `client.messaging10dlc().brand().externalVetting().imports()` | `PUT /10dlc/brand/{brandId}/externalVetting` | Modify an existing resource without recreating it. | `evpId`, `vettingId`, `brandId` |
+| Revet Brand | `client.messaging10dlc().brand().revet()` | `PUT /10dlc/brand/{brandId}/revet` | Modify an existing resource without recreating it. | `brandId` |
+| Get Brand SMS OTP Status by Brand ID | `client.messaging10dlc().brand().retrieveSmsOtpStatus()` | `GET /10dlc/brand/{brandId}/smsOtp` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
+| Trigger Brand SMS OTP | `client.messaging10dlc().brand().triggerSmsOtp()` | `POST /10dlc/brand/{brandId}/smsOtp` | Create or provision an additional resource when the core tasks do not cover this flow. | `pinSms`, `successSms`, `brandId` |
+| Verify Brand SMS OTP | `client.messaging10dlc().brand().verifySmsOtp()` | `PUT /10dlc/brand/{brandId}/smsOtp` | Modify an existing resource without recreating it. | `otpPin`, `brandId` |
+| List Campaigns | `client.messaging10dlc().campaign().list()` | `GET /10dlc/campaign` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Accept Shared Campaign | `client.messaging10dlc().campaign().acceptSharing()` | `POST /10dlc/campaign/acceptSharing/{campaignId}` | Create or provision an additional resource when the core tasks do not cover this flow. | `campaignId` |
+| Get Campaign Cost | `client.messaging10dlc().campaign().usecase().getCost()` | `GET /10dlc/campaign/usecase/cost` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Update campaign | `client.messaging10dlc().campaign().update()` | `PUT /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
+| Deactivate campaign | `client.messaging10dlc().campaign().deactivate()` | `DELETE /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
+| Submit campaign appeal for manual review | `client.messaging10dlc().campaign().submitAppeal()` | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appealReason`, `campaignId` |
+| Get Campaign Mno Metadata | `client.messaging10dlc().campaign().getMnoMetadata()` | `GET /10dlc/campaign/{campaignId}/mnoMetadata` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get campaign operation status | `client.messaging10dlc().campaign().getOperationStatus()` | `GET /10dlc/campaign/{campaignId}/operationStatus` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get OSR campaign attributes | `client.messaging10dlc().campaign().osr().getAttributes()` | `GET /10dlc/campaign/{campaignId}/osr/attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get Sharing Status | `client.messaging10dlc().campaign().getSharingStatus()` | `GET /10dlc/campaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| List shared partner campaigns | `client.messaging10dlc().partnerCampaigns().listSharedByMe()` | `GET /10dlc/partnerCampaign/sharedByMe` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Sharing Status | `client.messaging10dlc().partnerCampaigns().retrieveSharingStatus()` | `GET /10dlc/partnerCampaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| List Shared Campaigns | `client.messaging10dlc().partnerCampaigns().list()` | `GET /10dlc/partner_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Shared Campaign | `client.messaging10dlc().partnerCampaigns().retrieve()` | `GET /10dlc/partner_campaigns/{campaignId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Update Single Shared Campaign | `client.messaging10dlc().partnerCampaigns().update()` | `PATCH /10dlc/partner_campaigns/{campaignId}` | Modify an existing resource without recreating it. | `campaignId` |
+| Get Assignment Task Status | `client.messaging10dlc().phoneNumberAssignmentByProfile().retrieveStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
+| Get Phone Number Status | `client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
+| List phone number campaigns | `client.messaging10dlc().phoneNumberCampaigns().list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Single Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
+| Create New Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Delete Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.

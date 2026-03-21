@@ -1,8 +1,8 @@
 ---
 name: telnyx-account-access-go
 description: >-
-  Configure account addresses, authentication providers, IP access controls,
-  billing groups, and integration secrets. This skill provides Go SDK examples.
+  Account addresses, auth providers, IP access controls, billing groups,
+  integration secrets.
 metadata:
   author: telnyx
   product: account-access
@@ -13,6 +13,20 @@ metadata:
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
 
 # Telnyx Account Access - Go
+
+## Core Workflow
+
+### Steps
+
+1. **Manage addresses**: `client.Addresses.Create(ctx, params)`
+2. **Configure IP access**: `client.IpAddresses.Create(ctx, params)`
+3. **Manage billing groups**: `client.BillingGroups.Create(ctx, params)`
+
+### Common mistakes
+
+- IP access restrictions apply to API and portal — ensure you don't lock yourself out
+
+**Related skills**: telnyx-account-go
 
 ## Installation
 
@@ -47,7 +61,7 @@ or authentication errors (401). Always handle errors in production code:
 ```go
 import "errors"
 
-result, err := client.Messages.Send(ctx, params)
+result, err := client.Addresses.List(ctx, params)
 if err != nil {
   var apiErr *telnyx.Error
   if errors.As(err, &apiErr) {
@@ -74,92 +88,127 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
+**[references/api-details.md](references/api-details.md) has complete response schemas, all optional parameters, and webhook payload fields. You MUST read it when accessing response fields or using optional parameters not shown below.**
+
 ## List all Access IP Addresses
 
-`GET /access_ip_address`
+`client.AccessIPAddress.List()` — `GET /access_ip_address`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.AccessIPAddress.List(context.TODO(), telnyx.AccessIPAddressListParams{})
+	page, err := client.AccessIPAddress.List(context.Background(), telnyx.AccessIPAddressListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Create new Access IP Address
 
-`POST /access_ip_address` — Required: `ip_address`
+`client.AccessIPAddress.New()` — `POST /access_ip_address`
 
-Optional: `description` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `IpAddress` | string (IPv4/IPv6) | Yes |  |
+| `Description` | string | No |  |
 
 ```go
-	accessIPAddressResponse, err := client.AccessIPAddress.New(context.TODO(), telnyx.AccessIPAddressNewParams{
-		IPAddress: "ip_address",
+	accessIPAddressResponse, err := client.AccessIPAddress.New(context.Background(), telnyx.AccessIPAddressNewParams{
+		IPAddress: "203.0.113.10",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Retrieve an access IP address
 
-`GET /access_ip_address/{access_ip_address_id}`
+`client.AccessIPAddress.Get()` — `GET /access_ip_address/{access_ip_address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AccessIpAddressId` | string (UUID) | Yes |  |
 
 ```go
-	accessIPAddressResponse, err := client.AccessIPAddress.Get(context.TODO(), "access_ip_address_id")
+	accessIPAddressResponse, err := client.AccessIPAddress.Get(context.Background(), "access_ip_address_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## Delete access IP address
 
-`DELETE /access_ip_address/{access_ip_address_id}`
+`client.AccessIPAddress.Delete()` — `DELETE /access_ip_address/{access_ip_address_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `AccessIpAddressId` | string (UUID) | Yes |  |
 
 ```go
-	accessIPAddressResponse, err := client.AccessIPAddress.Delete(context.TODO(), "access_ip_address_id")
+	accessIPAddressResponse, err := client.AccessIPAddress.Delete(context.Background(), "access_ip_address_id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", accessIPAddressResponse.ID)
 ```
 
-Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
+Key response fields: `response.data.id, response.data.status, response.data.created_at`
 
 ## List all addresses
 
 Returns a list of your addresses.
 
-`GET /addresses`
+`client.Addresses.List()` — `GET /addresses`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Sort` | enum (created_at, first_name, last_name, business_name, street_address) | No | Specifies the sort order for results. |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.Addresses.List(context.TODO(), telnyx.AddressListParams{})
+	page, err := client.Addresses.List(context.Background(), telnyx.AddressListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Creates an address
 
 Creates an address.
 
-`POST /addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+`client.Addresses.New()` — `POST /addresses`
 
-Optional: `address_book` (boolean), `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `validate_address` (boolean)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `FirstName` | string | Yes | The first name associated with the address. |
+| `LastName` | string | Yes | The last name associated with the address. |
+| `BusinessName` | string | Yes | The business name associated with the address. |
+| `StreetAddress` | string | Yes | The primary street address information about the address. |
+| `Locality` | string | Yes | The locality of the address. |
+| `CountryCode` | string (ISO 3166-1 alpha-2) | Yes | The two-character (ISO 3166-1 alpha-2) country code of the a... |
+| `CustomerReference` | string | No | A customer reference string for customer look ups. |
+| `PhoneNumber` | string (E.164) | No | The phone number associated with the address. |
+| `ExtendedAddress` | string | No | Additional street address information about the address such... |
+| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
-	address, err := client.Addresses.New(context.TODO(), telnyx.AddressNewParams{
+	address, err := client.Addresses.New(context.Background(), telnyx.AddressNewParams{
 		BusinessName:  "Toy-O'Kon",
 		CountryCode:   "US",
 		FirstName:     "Alfred",
@@ -168,113 +217,142 @@ Optional: `address_book` (boolean), `administrative_area` (string), `borough` (s
 		StreetAddress: "600 Congress Avenue",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", address.Data)
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Validate an address
 
 Validates an address for emergency services.
 
-`POST /addresses/actions/validate` — Required: `country_code`, `street_address`, `postal_code`
+`client.Addresses.Actions.Validate()` — `POST /addresses/actions/validate`
 
-Optional: `administrative_area` (string), `extended_address` (string), `locality` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `StreetAddress` | string | Yes | The primary street address information about the address. |
+| `PostalCode` | string | Yes | The postal code of the address. |
+| `CountryCode` | string (ISO 3166-1 alpha-2) | Yes | The two-character (ISO 3166-1 alpha-2) country code of the a... |
+| `ExtendedAddress` | string | No | Additional street address information about the address such... |
+| `Locality` | string | No | The locality of the address. |
+| `AdministrativeArea` | string | No | The locality of the address. |
 
 ```go
-	response, err := client.Addresses.Actions.Validate(context.TODO(), telnyx.AddressActionValidateParams{
+	response, err := client.Addresses.Actions.Validate(context.Background(), telnyx.AddressActionValidateParams{
 		CountryCode:   "US",
 		PostalCode:    "78701",
 		StreetAddress: "600 Congress Avenue",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Key response fields: `response.data.errors, response.data.record_type, response.data.result`
 
 ## Retrieve an address
 
 Retrieves the details of an existing address.
 
-`GET /addresses/{id}`
+`client.Addresses.Get()` — `GET /addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | address ID |
 
 ```go
-	address, err := client.Addresses.Get(context.TODO(), "id")
+	address, err := client.Addresses.Get(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", address.Data)
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Deletes an address
 
 Deletes an existing address.
 
-`DELETE /addresses/{id}`
+`client.Addresses.Delete()` — `DELETE /addresses/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | address ID |
 
 ```go
-	address, err := client.Addresses.Delete(context.TODO(), "id")
+	address, err := client.Addresses.Delete(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", address.Data)
 ```
 
-Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
+Key response fields: `response.data.id, response.data.phone_number, response.data.created_at`
 
 ## Accepts this address suggestion as a new emergency address for Operator Connect and finishes the uploads of the numbers associated with it to Microsoft.
 
-`POST /addresses/{id}/actions/accept_suggestions`
+`client.Addresses.Actions.AcceptSuggestions()` — `POST /addresses/{id}/actions/accept_suggestions`
 
-Optional: `id` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | The UUID of the address that should be accepted. |
+| `Id` | string (UUID) | No | The ID of the address. |
 
 ```go
 	response, err := client.Addresses.Actions.AcceptSuggestions(
-		context.TODO(),
+		context.Background(),
 		"182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
 		telnyx.AddressActionAcceptSuggestionsParams{},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `accepted` (boolean), `id` (uuid), `record_type` (enum: address_suggestion)
+Key response fields: `response.data.id, response.data.accepted, response.data.record_type`
 
 ## List all SSO authentication providers
 
 Returns a list of your SSO authentication providers.
 
-`GET /authentication_providers`
+`client.AuthenticationProviders.List()` — `GET /authentication_providers`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Sort` | enum (name, -name, short_name, -short_name, active, ...) | No | Specifies the sort order for results. |
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.AuthenticationProviders.List(context.TODO(), telnyx.AuthenticationProviderListParams{})
+	page, err := client.AuthenticationProviders.List(context.Background(), telnyx.AuthenticationProviderListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Creates an authentication provider
 
 Creates an authentication provider.
 
-`POST /authentication_providers` — Required: `name`, `short_name`, `settings`
+`client.AuthenticationProviders.New()` — `POST /authentication_providers`
 
-Optional: `active` (boolean), `settings_url` (uri)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | Yes | The name associated with the authentication provider. |
+| `ShortName` | string | Yes | The short name associated with the authentication provider. |
+| `Settings` | object | Yes | The settings associated with the authentication provider. |
+| `Active` | boolean | No | The active status of the authentication provider |
+| `SettingsUrl` | string (URL) | No | The URL for the identity provider metadata file to populate ... |
 
 ```go
-	authenticationProvider, err := client.AuthenticationProviders.New(context.TODO(), telnyx.AuthenticationProviderNewParams{
+	authenticationProvider, err := client.AuthenticationProviders.New(context.Background(), telnyx.AuthenticationProviderNewParams{
 		Name: "Okta",
 		Settings: telnyx.SettingsParam{
 			IdpCertFingerprint: "13:38:C7:BB:C9:FF:4A:70:38:3A:E3:D9:5C:CD:DB:2E:50:1E:80:A7",
@@ -284,40 +362,50 @@ Optional: `active` (boolean), `settings_url` (uri)
 		ShortName: "myorg",
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", authenticationProvider.Data)
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Retrieve an authentication provider
 
 Retrieves the details of an existing authentication provider.
 
-`GET /authentication_providers/{id}`
+`client.AuthenticationProviders.Get()` — `GET /authentication_providers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | authentication provider ID |
 
 ```go
-	authenticationProvider, err := client.AuthenticationProviders.Get(context.TODO(), "id")
+	authenticationProvider, err := client.AuthenticationProviders.Get(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", authenticationProvider.Data)
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update an authentication provider
 
 Updates settings of an existing authentication provider.
 
-`PATCH /authentication_providers/{id}`
+`client.AuthenticationProviders.Update()` — `PATCH /authentication_providers/{id}`
 
-Optional: `active` (boolean), `name` (string), `settings` (object), `settings_url` (uri), `short_name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
+| `Name` | string | No | The name associated with the authentication provider. |
+| `ShortName` | string | No | The short name associated with the authentication provider. |
+| `Active` | boolean | No | The active status of the authentication provider |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	authenticationProvider, err := client.AuthenticationProviders.Update(
-		context.TODO(),
+		context.Background(),
 		"id",
 		telnyx.AuthenticationProviderUpdateParams{
 			Active: telnyx.Bool(true),
@@ -332,159 +420,195 @@ Optional: `active` (boolean), `name` (string), `settings` (object), `settings_ur
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", authenticationProvider.Data)
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Deletes an authentication provider
 
 Deletes an existing authentication provider.
 
-`DELETE /authentication_providers/{id}`
+`client.AuthenticationProviders.Delete()` — `DELETE /authentication_providers/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | authentication provider ID |
 
 ```go
-	authenticationProvider, err := client.AuthenticationProviders.Delete(context.TODO(), "id")
+	authenticationProvider, err := client.AuthenticationProviders.Delete(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", authenticationProvider.Data)
 ```
 
-Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (string), `settings` (object), `short_name` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List all billing groups
 
-`GET /billing_groups`
+`client.BillingGroups.List()` — `GET /billing_groups`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```go
-	page, err := client.BillingGroups.List(context.TODO(), telnyx.BillingGroupListParams{})
+	page, err := client.BillingGroups.List(context.Background(), telnyx.BillingGroupListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Create a billing group
 
-`POST /billing_groups`
+`client.BillingGroups.New()` — `POST /billing_groups`
 
-Optional: `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Name` | string | No | A name for the billing group |
 
 ```go
-	billingGroup, err := client.BillingGroups.New(context.TODO(), telnyx.BillingGroupNewParams{
+	billingGroup, err := client.BillingGroups.New(context.Background(), telnyx.BillingGroupNewParams{
 		Name: telnyx.String("string"),
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", billingGroup.Data)
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Get a billing group
 
-`GET /billing_groups/{id}`
+`client.BillingGroups.Get()` — `GET /billing_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | The id of the billing group |
 
 ```go
-	billingGroup, err := client.BillingGroups.Get(context.TODO(), "f5586561-8ff0-4291-a0ac-84fe544797bd")
+	billingGroup, err := client.BillingGroups.Get(context.Background(), "f5586561-8ff0-4291-a0ac-84fe544797bd")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", billingGroup.Data)
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Update a billing group
 
-`PATCH /billing_groups/{id}`
+`client.BillingGroups.Update()` — `PATCH /billing_groups/{id}`
 
-Optional: `name` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | The id of the billing group |
+| `Name` | string | No | A name for the billing group |
 
 ```go
 	billingGroup, err := client.BillingGroups.Update(
-		context.TODO(),
+		context.Background(),
 		"f5586561-8ff0-4291-a0ac-84fe544797bd",
 		telnyx.BillingGroupUpdateParams{
 			Name: telnyx.String("string"),
 		},
 	)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", billingGroup.Data)
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## Delete a billing group
 
-`DELETE /billing_groups/{id}`
+`client.BillingGroups.Delete()` — `DELETE /billing_groups/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | The id of the billing group |
 
 ```go
-	billingGroup, err := client.BillingGroups.Delete(context.TODO(), "f5586561-8ff0-4291-a0ac-84fe544797bd")
+	billingGroup, err := client.BillingGroups.Delete(context.Background(), "f5586561-8ff0-4291-a0ac-84fe544797bd")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", billingGroup.Data)
 ```
 
-Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.name, response.data.created_at`
 
 ## List integration secrets
 
 Retrieve a list of all integration secrets configured by the user.
 
-`GET /integration_secrets`
+`client.IntegrationSecrets.List()` — `GET /integration_secrets`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page` | object | No | Consolidated page parameter (deepObject style). |
+| `Filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```go
-	page, err := client.IntegrationSecrets.List(context.TODO(), telnyx.IntegrationSecretListParams{})
+	page, err := client.IntegrationSecrets.List(context.Background(), telnyx.IntegrationSecretListParams{})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (date-time), `id` (string), `identifier` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Create a secret
 
 Create a new secret with an associated identifier that can be used to securely integrate with other services.
 
-`POST /integration_secrets` — Required: `identifier`, `type`
+`client.IntegrationSecrets.New()` — `POST /integration_secrets`
 
-Optional: `password` (string), `token` (string), `username` (string)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Identifier` | string | Yes | The unique identifier of the secret. |
+| `Type` | enum (bearer, basic) | Yes | The type of secret. |
+| `Token` | string | No | The token for the secret. |
+| `Username` | string | No | The username for the secret. |
+| `Password` | string | No | The password for the secret. |
 
 ```go
-	integrationSecret, err := client.IntegrationSecrets.New(context.TODO(), telnyx.IntegrationSecretNewParams{
+	integrationSecret, err := client.IntegrationSecrets.New(context.Background(), telnyx.IntegrationSecretNewParams{
 		Identifier: "my_secret",
 		Type:       telnyx.IntegrationSecretNewParamsTypeBearer,
 		Token:      telnyx.String("my_secret_value"),
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", integrationSecret.Data)
 ```
 
-Returns: `created_at` (date-time), `id` (string), `identifier` (string), `record_type` (string), `updated_at` (date-time)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Delete an integration secret
 
 Delete an integration secret given its ID.
 
-`DELETE /integration_secrets/{id}`
+`client.IntegrationSecrets.Delete()` — `DELETE /integration_secrets/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes |  |
 
 ```go
-	err := client.IntegrationSecrets.Delete(context.TODO(), "id")
+	err := client.IntegrationSecrets.Delete(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 ```
 
@@ -492,12 +616,20 @@ Delete an integration secret given its ID.
 
 Create an Access Token (JWT) for the credential.
 
-`POST /telephony_credentials/{id}/token`
+`client.TelephonyCredentials.NewToken()` — `POST /telephony_credentials/{id}/token`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Id` | string (UUID) | Yes | Identifies the resource. |
 
 ```go
-	response, err := client.TelephonyCredentials.NewToken(context.TODO(), "id")
+	response, err := client.TelephonyCredentials.NewToken(context.Background(), "id")
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", response)
 ```
+
+---
+
+**Do not guess response field names or optional parameters. Load [references/api-details.md](references/api-details.md) for complete schemas and parameter details.**

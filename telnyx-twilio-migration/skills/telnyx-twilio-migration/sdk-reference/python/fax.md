@@ -2,6 +2,27 @@
 
 # Telnyx Fax - Python
 
+## Core Workflow
+
+### Prerequisites
+
+1. Buy or port a phone number with fax capability (see telnyx-numbers-python)
+2. Create a Fax Application with webhook URLs for inbound fax events
+3. Assign the phone number to the Fax Application
+
+### Steps
+
+1. **Send fax**: `client.faxes.create(connection_id=..., to=..., from_=..., media_url=...)`
+2. **Check status**: `client.faxes.retrieve(id=...)`
+3. **Receive inbound fax**: `Handle fax.received webhook — media_url in payload`
+
+### Common mistakes
+
+- media_url must be a publicly accessible URL to a PDF or TIFF file
+- Fax delivery is not instant — monitor status via webhooks or polling
+
+**Related skills**: telnyx-numbers-python
+
 ## Installation
 
 ```bash
@@ -30,7 +51,7 @@ or authentication errors (401). Always handle errors in production code:
 import telnyx
 
 try:
-    result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
+    result = client.faxes.create(params)
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
 except telnyx.RateLimitError:
@@ -52,11 +73,77 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
 
+**Complete response schemas, all optional parameters, and webhook payload fields are in the API Details section at the end of this file.**
+## Send a fax
+
+Send a fax. Files have size limits and page count limit validations. If a file is bigger than 50MB or has more than 350 pages it will fail with `file_size_limit_exceeded` and `page_count_limit_exceeded` respectively.
+
+`client.faxes.create()` — `POST /faxes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `connection_id` | string (UUID) | Yes | The connection ID to send the fax with. |
+| `to` | string (E.164) | Yes | The phone number, in E.164 format, the fax will be sent to o... |
+| `from_` | string (E.164) | Yes | The phone number, in E.164 format, the fax will be sent from... |
+| `webhook_url` | string (URL) | No | Use this field to override the URL to which Telnyx will send... |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `quality` | enum (normal, high, very_high, ultra_light, ultra_dark) | No | The quality of the fax. |
+| ... | | | +9 optional params in the API Details section below |
+
+```python
+fax = client.faxes.create(
+    connection_id="234423",
+    from_="+13125790015",
+    to="+13127367276",
+    media_url="https://example.com/document.pdf",
+)
+print(fax.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.to`
+
+## View a fax
+
+`client.faxes.retrieve()` — `GET /faxes/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The unique identifier of a fax. |
+
+```python
+fax = client.faxes.retrieve(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+print(fax.data)
+```
+
+Key response fields: `response.data.id, response.data.status, response.data.to`
+
+## Delete a fax
+
+`client.faxes.delete()` — `DELETE /faxes/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The unique identifier of a fax. |
+
+```python
+client.faxes.delete(
+    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
+)
+```
+
 ## List all Fax Applications
 
 This endpoint returns a list of your Fax Applications inside the 'data' attribute of the response. You can adjust which applications are listed by using filters. Fax Applications are used to configure how you send and receive faxes using the Programmable Fax API with Telnyx.
 
-`GET /fax_applications`
+`client.fax_applications.list()` — `GET /fax_applications`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sort` | enum (created_at, application_name, active) | No | Specifies the sort order for results. |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
 
 ```python
 page = client.fax_applications.list()
@@ -64,15 +151,22 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Creates a Fax Application
 
 Creates a new Fax Application based on the parameters sent in the request. The application name and webhook URL are required. Once created, you can assign phone numbers to your application using the `/phone_numbers` endpoint.
 
-`POST /fax_applications` — Required: `application_name`, `webhook_event_url`
+`client.fax_applications.create()` — `POST /fax_applications`
 
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `application_name` | string | Yes | A user-assigned name to help manage the application. |
+| `webhook_event_url` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `tags` | array[string] | No | Tags associated with the Fax Application. |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| ... | | | +4 optional params in the API Details section below |
 
 ```python
 fax_application = client.fax_applications.create(
@@ -82,13 +176,17 @@ fax_application = client.fax_applications.create(
 print(fax_application.data)
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Retrieve a Fax Application
 
 Return the details of an existing Fax Application inside the 'data' attribute of the response.
 
-`GET /fax_applications/{id}`
+`client.fax_applications.retrieve()` — `GET /fax_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```python
 fax_application = client.fax_applications.retrieve(
@@ -97,15 +195,23 @@ fax_application = client.fax_applications.retrieve(
 print(fax_application.data)
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Update a Fax Application
 
 Updates settings of an existing Fax Application based on the parameters of the request.
 
-`PATCH /fax_applications/{id}` — Required: `application_name`, `webhook_event_url`
+`client.fax_applications.update()` — `PATCH /fax_applications/{id}`
 
-Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `fax_email_recipient` (string | null), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_event_failover_url` (uri), `webhook_timeout_secs` (integer | null)
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `application_name` | string | Yes | A user-assigned name to help manage the application. |
+| `webhook_event_url` | string (URL) | Yes | The URL where webhooks related to this connection will be se... |
+| `id` | string (UUID) | Yes | Identifies the resource. |
+| `tags` | array[string] | No | Tags associated with the Fax Application. |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | No | `Latency` directs Telnyx to route media through the site wit... |
+| `active` | boolean | No | Specifies whether the connection can be used. |
+| ... | | | +5 optional params in the API Details section below |
 
 ```python
 fax_application = client.fax_applications.update(
@@ -116,13 +222,17 @@ fax_application = client.fax_applications.update(
 print(fax_application.data)
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## Deletes a Fax Application
 
 Permanently deletes a Fax Application. Deletion may be prevented if the application is in use by phone numbers.
 
-`DELETE /fax_applications/{id}`
+`client.fax_applications.delete()` — `DELETE /fax_applications/{id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Identifies the resource. |
 
 ```python
 fax_application = client.fax_applications.delete(
@@ -131,11 +241,16 @@ fax_application = client.fax_applications.delete(
 print(fax_application.data)
 ```
 
-Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `application_name` (string), `created_at` (string), `id` (string), `inbound` (object), `outbound` (object), `record_type` (string), `tags` (array[string]), `updated_at` (string), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
+Key response fields: `response.data.id, response.data.created_at, response.data.updated_at`
 
 ## View a list of faxes
 
-`GET /faxes`
+`client.faxes.list()` — `GET /faxes`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filter` | object | No | Consolidated filter parameter (deepObject style). |
+| `page` | object | No | Consolidated pagination parameter (deepObject style). |
 
 ```python
 page = client.faxes.list()
@@ -143,55 +258,17 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
-
-## Send a fax
-
-Send a fax. Files have size limits and page count limit validations. If a file is bigger than 50MB or has more than 350 pages it will fail with `file_size_limit_exceeded` and `page_count_limit_exceeded` respectively.
-
-`POST /faxes` — Required: `connection_id`, `from`, `to`
-
-Optional: `black_threshold` (integer), `client_state` (string), `from_display_name` (string), `media_name` (string), `media_url` (string), `monochrome` (boolean), `preview_format` (enum: pdf, tiff), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `store_media` (boolean), `store_preview` (boolean), `t38_enabled` (boolean), `webhook_url` (string)
-
-```python
-fax = client.faxes.create(
-    connection_id="234423",
-    from_="+13125790015",
-    to="+13127367276",
-)
-print(fax.data)
-```
-
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
-
-## View a fax
-
-`GET /faxes/{id}`
-
-```python
-fax = client.faxes.retrieve(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-print(fax.data)
-```
-
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
-
-## Delete a fax
-
-`DELETE /faxes/{id}`
-
-```python
-client.faxes.delete(
-    "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e",
-)
-```
+Key response fields: `response.data.id, response.data.status, response.data.to`
 
 ## Cancel a fax
 
 Cancel the outbound fax that is in one of the following states: `queued`, `media.processed`, `originated` or `sending`
 
-`POST /faxes/{id}/actions/cancel`
+`client.faxes.actions.cancel()` — `POST /faxes/{id}/actions/cancel`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The unique identifier of a fax. |
 
 ```python
 response = client.faxes.actions.cancel(
@@ -200,13 +277,17 @@ response = client.faxes.actions.cancel(
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ## Refresh a fax
 
 Refreshes the inbound fax's media_url when it has expired
 
-`POST /faxes/{id}/actions/refresh`
+`client.faxes.actions.refresh()` — `POST /faxes/{id}/actions/refresh`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | The unique identifier of a fax. |
 
 ```python
 response = client.faxes.actions.refresh(
@@ -215,7 +296,7 @@ response = client.faxes.actions.refresh(
 print(response.data)
 ```
 
-Returns: `result` (string)
+Key response fields: `response.data.result`
 
 ---
 
@@ -245,17 +326,125 @@ def handle_webhook():
 The following webhook events are sent to your configured webhook URL.
 All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers for Ed25519 signature verification. Use `client.webhooks.unwrap()` to verify.
 
-| Event | Description |
-|-------|-------------|
-| `fax.delivered` | Fax Delivered |
-| `fax.failed` | Fax Failed |
-| `fax.media.processed` | Fax Media Processed |
-| `fax.queued` | Fax Queued |
-| `fax.sending.started` | Fax Sending Started |
+| Event | `data.event_type` | Description |
+|-------|-------------------|-------------|
+| `fax.delivered` | `fax.delivered` | Fax Delivered |
+| `fax.failed` | `fax.failed` | Fax Failed |
+| `fax.media.processed` | `fax.media.processed` | Fax Media Processed |
+| `fax.queued` | `fax.queued` | Fax Queued |
+| `fax.sending.started` | `fax.sending.started` | Fax Sending Started |
 
-### Webhook payload fields
+Webhook payload field definitions are in the API Details section below.
 
-**`fax.delivered`**
+---
+
+# Fax (Python) — API Details
+
+<!-- Auto-generated reference file. Do not edit. -->
+
+## Table of Contents
+
+- [Response Schemas](#response-schemas)
+- [Optional Parameters](#optional-parameters)
+- [Webhook Payload Fields](#webhook-payload-fields)
+
+## Response Schemas
+
+**Returned by:** List all Fax Applications, Creates a Fax Application, Retrieve a Fax Application, Update a Fax Application, Deletes a Fax Application
+
+| Field | Type |
+|-------|------|
+| `active` | boolean |
+| `anchorsite_override` | enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany |
+| `application_name` | string |
+| `created_at` | string |
+| `id` | string |
+| `inbound` | object |
+| `outbound` | object |
+| `record_type` | string |
+| `tags` | array[string] |
+| `updated_at` | string |
+| `webhook_event_failover_url` | uri |
+| `webhook_event_url` | uri |
+| `webhook_timeout_secs` | integer \| null |
+
+**Returned by:** View a list of faxes, Send a fax, View a fax
+
+| Field | Type |
+|-------|------|
+| `client_state` | string |
+| `connection_id` | string |
+| `created_at` | date-time |
+| `direction` | enum: inbound, outbound |
+| `from` | string |
+| `from_display_name` | string |
+| `id` | uuid |
+| `media_name` | string |
+| `media_url` | string |
+| `preview_url` | string |
+| `quality` | enum: normal, high, very_high, ultra_light, ultra_dark |
+| `record_type` | enum: fax |
+| `status` | enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received |
+| `store_media` | boolean |
+| `stored_media_url` | string |
+| `to` | string |
+| `updated_at` | date-time |
+| `webhook_failover_url` | string |
+| `webhook_url` | string |
+
+**Returned by:** Cancel a fax, Refresh a fax
+
+| Field | Type |
+|-------|------|
+| `result` | string |
+
+## Optional Parameters
+
+### Creates a Fax Application — `client.fax_applications.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `active` | boolean | Specifies whether the connection can be used. |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | `Latency` directs Telnyx to route media through the site with the lowest roun... |
+| `webhook_event_failover_url` | string (URL) | The failover URL where webhooks related to this connection will be sent if se... |
+| `webhook_timeout_secs` | integer | Specifies how many seconds to wait before timing out a webhook. |
+| `tags` | array[string] | Tags associated with the Fax Application. |
+| `inbound` | object |  |
+| `outbound` | object |  |
+
+### Update a Fax Application — `client.fax_applications.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `active` | boolean | Specifies whether the connection can be used. |
+| `anchorsite_override` | enum (Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, ...) | `Latency` directs Telnyx to route media through the site with the lowest roun... |
+| `webhook_event_failover_url` | string (URL) | The failover URL where webhooks related to this connection will be sent if se... |
+| `webhook_timeout_secs` | integer | Specifies how many seconds to wait before timing out a webhook. |
+| `fax_email_recipient` | string | Specifies an email address where faxes sent to this application will be forwa... |
+| `tags` | array[string] | Tags associated with the Fax Application. |
+| `inbound` | object |  |
+| `outbound` | object |  |
+
+### Send a fax — `client.faxes.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `media_url` | string (URL) | The URL (or list of URLs) to the PDF used for the fax's media. |
+| `media_name` | string | The media_name used for the fax's media. |
+| `from_display_name` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
+| `quality` | enum (normal, high, very_high, ultra_light, ultra_dark) | The quality of the fax. |
+| `t38_enabled` | boolean | The flag to disable the T.38 protocol. |
+| `monochrome` | boolean | The flag to enable monochrome, true black and white fax results. |
+| `black_threshold` | integer | The black threshold percentage for monochrome faxes. |
+| `store_media` | boolean | Should fax media be stored on temporary URL. |
+| `store_preview` | boolean | Should fax preview be stored on temporary URL. |
+| `preview_format` | enum (pdf, tiff) | The format for the preview file in case the `store_preview` is `true`. |
+| `webhook_url` | string (URL) | Use this field to override the URL to which Telnyx will send subsequent webho... |
+| `client_state` | string | Use this field to add state to every subsequent webhook. |
+
+## Webhook Payload Fields
+
+### `fax.delivered`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -278,7 +467,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
 
-**`fax.failed`**
+### `fax.failed`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -300,7 +489,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
 
-**`fax.media.processed`**
+### `fax.media.processed`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -321,7 +510,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
 
-**`fax.queued`**
+### `fax.queued`
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -342,7 +531,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `meta.attempt` | integer | The delivery attempt number. |
 | `meta.delivered_to` | uri | The URL the webhook was delivered to. |
 
-**`fax.sending.started`**
+### `fax.sending.started`
 
 | Field | Type | Description |
 |-------|------|-------------|
