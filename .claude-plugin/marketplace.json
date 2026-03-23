@@ -99,7 +99,7 @@
     },
     {
       "name": "telnyx-java",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "description": "Official Telnyx Java SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Java.",
       "source": "./telnyx-java",
       "skills": [
