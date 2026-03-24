@@ -21,12 +21,12 @@ metadata:
 <!-- Maven -->
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
-    <artifactId>telnyx-java</artifactId>
-    <version>5.2.1</version>
+    <artifactId>telnyx</artifactId>
+    <version>6.36.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx-java:5.2.1")
+implementation("com.telnyx.sdk:telnyx:6.36.0")
 ```
 
 ## Setup
