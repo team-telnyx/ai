@@ -29,7 +29,7 @@ or authentication errors (401). Always handle errors in production code:
 try {
   const assistant = await client.ai.assistants.create({
     instructions: 'You are a helpful assistant.',
-    model: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+    model: 'openai/gpt-4o',
     name: 'my-resource',
   });
 } catch (err) {
@@ -84,7 +84,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 ```javascript
 const assistant = await client.ai.assistants.create({
   instructions: 'You are a helpful assistant.',
-  model: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+  model: 'openai/gpt-4o',
   name: 'my-resource',
 });
 

@@ -597,7 +597,7 @@ import com.telnyx.sdk.models.ai.finetuning.jobs.FineTuningJob;
 import com.telnyx.sdk.models.ai.finetuning.jobs.JobCreateParams;
 
 JobCreateParams params = JobCreateParams.builder()
-    .model("meta-llama/Meta-Llama-3.1-8B-Instruct")
+    .model("openai/gpt-4o")
     .trainingFile("training-data.jsonl")
     .build();
 FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().create(params);

@@ -546,7 +546,7 @@ Optional: `hyperparameters` (object), `suffix` (string)
 
 ```python
 fine_tuning_job = client.ai.fine_tuning.jobs.create(
-    model="meta-llama/Meta-Llama-3.1-8B-Instruct",
+    model="openai/gpt-4o",
     training_file="training-data.jsonl",
 )
 print(fine_tuning_job.id)

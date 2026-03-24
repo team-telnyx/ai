@@ -556,7 +556,7 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "model": "openai/gpt-4o",
   "training_file": "training-data.jsonl"
 }' \
   "https://api.telnyx.com/v2/ai/fine_tuning/jobs"

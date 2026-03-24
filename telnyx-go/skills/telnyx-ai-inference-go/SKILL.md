@@ -645,7 +645,7 @@ Optional: `hyperparameters` (object), `suffix` (string)
 
 ```go
 	fineTuningJob, err := client.AI.FineTuning.Jobs.New(context.Background(), telnyx.AIFineTuningJobNewParams{
-		Model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+		Model: "openai/gpt-4o",
 		TrainingFile: "training-data.jsonl",
 	})
 	if err != nil {

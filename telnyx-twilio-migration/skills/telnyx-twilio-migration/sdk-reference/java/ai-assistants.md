@@ -37,7 +37,7 @@ import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
 import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
 AssistantCreateParams params = AssistantCreateParams.builder()
     .instructions("You are a helpful assistant.")
-    .model("meta-llama/Meta-Llama-3.1-8B-Instruct")
+    .model("openai/gpt-4o")
     .name("my-resource")
     .build();
 InferenceEmbedding assistant = client.ai().assistants().create(params);
@@ -83,7 +83,7 @@ import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
 
 AssistantCreateParams params = AssistantCreateParams.builder()
     .instructions("You are a helpful assistant.")
-    .model("meta-llama/Meta-Llama-3.1-8B-Instruct")
+    .model("openai/gpt-4o")
     .name("my-resource")
     .build();
 InferenceEmbedding assistant = client.ai().assistants().create(params);

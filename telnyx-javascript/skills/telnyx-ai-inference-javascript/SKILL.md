@@ -541,7 +541,7 @@ Optional: `hyperparameters` (object), `suffix` (string)
 
 ```javascript
 const fineTuningJob = await client.ai.fineTuning.jobs.create({
-  model: 'meta-llama/Meta-Llama-3.1-8B-Instruct',
+  model: 'openai/gpt-4o',
   training_file: 'training_file',
 });
 

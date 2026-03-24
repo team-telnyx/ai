@@ -515,7 +515,7 @@ Create a new fine tuning job.
 Optional: `hyperparameters` (object), `suffix` (string)
 
 ```ruby
-fine_tuning_job = client.ai.fine_tuning.jobs.create(model: "meta-llama/Meta-Llama-3.1-8B-Instruct", training_file: "training-data.jsonl")
+fine_tuning_job = client.ai.fine_tuning.jobs.create(model: "openai/gpt-4o", training_file: "training-data.jsonl")
 
 puts(fine_tuning_job)
 ```

@@ -37,7 +37,7 @@ import "errors"
 
 assistant, err := client.AI.Assistants.New(context.Background(), telnyx.AIAssistantNewParams{
 		Instructions: "You are a helpful assistant.",
-		Model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+		Model: "openai/gpt-4o",
 		Name: "my-resource",
 	})
 if err != nil {
@@ -94,7 +94,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 ```go
 	assistant, err := client.AI.Assistants.New(context.Background(), telnyx.AIAssistantNewParams{
 		Instructions: "You are a helpful assistant.",
-		Model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+		Model: "openai/gpt-4o",
 		Name: "my-resource",
 	})
 	if err != nil {
