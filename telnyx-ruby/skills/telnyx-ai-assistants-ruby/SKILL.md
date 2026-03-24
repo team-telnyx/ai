@@ -39,7 +39,7 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```ruby
-assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", model: "meta-llama/Meta-Llama-3.1-8B-Instruct", name: "my-resource")
+assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", model: "openai/gpt-4o", name: "my-resource")
 puts(assistant)
 ```
 
@@ -78,7 +78,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | ... | | | +11 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
-assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", model: "meta-llama/Meta-Llama-3.1-8B-Instruct", name: "my-resource")
+assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", model: "openai/gpt-4o", name: "my-resource")
 
 puts(assistant)
 ```

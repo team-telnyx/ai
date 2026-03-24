@@ -45,7 +45,7 @@ import telnyx
 try:
     assistant = client.ai.assistants.create(
         instructions="You are a helpful assistant.",
-        model="meta-llama/Meta-Llama-3.1-8B-Instruct",
+        model="openai/gpt-4o",
         name="my-resource",
     )
 except telnyx.APIConnectionError:
@@ -67,6 +67,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 - **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
 - **Pagination:** List methods return an auto-paginating iterator. Use `for item in page_result:` to iterate through all pages automatically.
+- **Model availability** varies by account. If a model returns 422 "not available for inference", use `client.ai.assistants.list()` to discover working models. Commonly available: `openai/gpt-4o`, `Qwen/Qwen3-235B-A22B`.
 
 ## Reference Use Rules
 
@@ -96,7 +97,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 ```python
 assistant = client.ai.assistants.create(
     instructions="You are a helpful assistant.",
-    model="meta-llama/Meta-Llama-3.1-8B-Instruct",
+    model="openai/gpt-4o",
     name="my-resource",
 )
 print(assistant.id)
