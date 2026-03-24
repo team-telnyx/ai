@@ -41,7 +41,7 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "name": "my-resource",
-  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "model": "openai/gpt-4o",
   "instructions": "You are a helpful assistant."
 }' \
   "https://api.telnyx.com/v2/ai/assistants"
@@ -88,7 +88,7 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "name": "my-resource",
-  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "model": "openai/gpt-4o",
   "instructions": "You are a helpful assistant."
 }' \
   "https://api.telnyx.com/v2/ai/assistants"
