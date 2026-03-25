@@ -136,6 +136,17 @@
 | `type` | string |
 | `url` | string |
 
+**Returned by:** List Tools, Create Tool, Get Tool, Update Tool
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `display_name` | string |
+| `id` | string |
+| `timeout_ms` | integer |
+| `tool_definition` | object |
+| `type` | string |
+
 ## Optional Parameters
 
 ### Create an assistant — `client.ai().assistants().create()`
@@ -143,6 +154,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `tools` | array[object] | The tools that the assistant can use. |
+| `toolIds` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -205,6 +217,7 @@
 | `model` | string | ID of the model to use. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | The tools that the assistant can use. |
+| `toolIds` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -257,6 +270,7 @@
 | `model` | string | ID of the model to use. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | The tools that the assistant can use. |
+| `toolIds` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -289,3 +303,27 @@
 | `apiKeyRef` | string |  |
 | `allowedTools` | array[string] |  |
 | `createdAt` | string (date-time) |  |
+
+### Create Tool — `client.ai().tools().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `function` | object |  |
+| `retrieval` | object |  |
+| `handoff` | object |  |
+| `invite` | object |  |
+| `webhook` | object |  |
+| `timeoutMs` | integer |  |
+
+### Update Tool — `client.ai().tools().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | string |  |
+| `displayName` | string |  |
+| `function` | object |  |
+| `retrieval` | object |  |
+| `handoff` | object |  |
+| `invite` | object |  |
+| `webhook` | object |  |
+| `timeoutMs` | integer |  |

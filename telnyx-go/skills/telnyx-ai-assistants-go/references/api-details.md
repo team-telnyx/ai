@@ -136,6 +136,17 @@
 | `type` | string |
 | `url` | string |
 
+**Returned by:** List Tools, Create Tool, Get Tool, Update Tool
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `display_name` | string |
+| `id` | string |
+| `timeout_ms` | integer |
+| `tool_definition` | object |
+| `type` | string |
+
 ## Optional Parameters
 
 ### Create an assistant — `client.AI.Assistants.New()`
@@ -143,6 +154,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `Tools` | array[object] | The tools that the assistant can use. |
+| `ToolIds` | array[string] |  |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
 | `LlmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -205,6 +217,7 @@
 | `Model` | string | ID of the model to use. |
 | `Instructions` | string | System instructions for the assistant. |
 | `Tools` | array[object] | The tools that the assistant can use. |
+| `ToolIds` | array[string] |  |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
 | `LlmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -257,6 +270,7 @@
 | `Model` | string | ID of the model to use. |
 | `Instructions` | string | System instructions for the assistant. |
 | `Tools` | array[object] | The tools that the assistant can use. |
+| `ToolIds` | array[string] |  |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
 | `LlmApiKeyRef` | string | This is only needed when using third-party inference providers. |
@@ -289,3 +303,27 @@
 | `ApiKeyRef` | string |  |
 | `AllowedTools` | array[string] |  |
 | `CreatedAt` | string (date-time) |  |
+
+### Create Tool — `client.AI.Tools.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Function` | object |  |
+| `Retrieval` | object |  |
+| `Handoff` | object |  |
+| `Invite` | object |  |
+| `Webhook` | object |  |
+| `TimeoutMs` | integer |  |
+
+### Update Tool — `client.AI.Tools.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Type` | string |  |
+| `DisplayName` | string |  |
+| `Function` | object |  |
+| `Retrieval` | object |  |
+| `Handoff` | object |  |
+| `Invite` | object |  |
+| `Webhook` | object |  |
+| `TimeoutMs` | integer |  |

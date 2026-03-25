@@ -86,9 +86,9 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `model` | string | Yes | ID of the model to use. |
 | `instructions` | string | Yes | System instructions for the assistant. |
 | `tools` | array[object] | No | The tools that the assistant can use. |
+| `toolIds` | array[string] | No |  |
 | `description` | string | No |  |
-| `greeting` | string | No | Text that the assistant will use to start the conversation. |
-| ... | | | +11 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
@@ -230,7 +230,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use. |
 | `instructions` | string | No | System instructions for the assistant. |
-| ... | | | +15 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantUpdateParams;
@@ -434,6 +434,8 @@ Before using any operation below, read [the optional-parameters section](referen
 | Add Assistant Tag | `client.ai().assistants().tags().add()` | `POST /ai/assistants/{assistant_id}/tags` | Create or provision an additional resource when the core tasks do not cover this flow. | `tag`, `assistantId` |
 | Remove Assistant Tag | `client.ai().assistants().tags().remove()` | `DELETE /ai/assistants/{assistant_id}/tags/{tag}` | Remove, detach, or clean up an existing resource. | `assistantId`, `tag` |
 | Get assistant texml | `client.ai().assistants().getTexml()` | `GET /ai/assistants/{assistant_id}/texml` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
+| Add Assistant Tool | `client.ai().assistants().tools().add()` | `PUT /ai/assistants/{assistant_id}/tools/{tool_id}` | Modify an existing resource without recreating it. | `assistantId`, `toolId` |
+| Remove Assistant Tool | `client.ai().assistants().tools().remove()` | `DELETE /ai/assistants/{assistant_id}/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `assistantId`, `toolId` |
 | Test Assistant Tool | `client.ai().assistants().tools().test()` | `POST /ai/assistants/{assistant_id}/tools/{tool_id}/test` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId`, `toolId` |
 | Get all versions of an assistant | `client.ai().assistants().versions().list()` | `GET /ai/assistants/{assistant_id}/versions` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
 | Get a specific assistant version | `client.ai().assistants().versions().retrieve()` | `GET /ai/assistants/{assistant_id}/versions/{version_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId`, `versionId` |
@@ -445,6 +447,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get MCP Server | `client.ai().mcpServers().retrieve()` | `GET /ai/mcp_servers/{mcp_server_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `mcpServerId` |
 | Update MCP Server | `client.ai().mcpServers().update()` | `PUT /ai/mcp_servers/{mcp_server_id}` | Modify an existing resource without recreating it. | `mcpServerId` |
 | Delete MCP Server | `client.ai().mcpServers().delete()` | `DELETE /ai/mcp_servers/{mcp_server_id}` | Remove, detach, or clean up an existing resource. | `mcpServerId` |
+| List Tools | `client.ai().tools().list()` | `GET /ai/tools` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create Tool | `client.ai().tools().create()` | `POST /ai/tools` | Create or provision an additional resource when the core tasks do not cover this flow. | `type`, `displayName` |
+| Get Tool | `client.ai().tools().retrieve()` | `GET /ai/tools/{tool_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `toolId` |
+| Update Tool | `client.ai().tools().update()` | `PATCH /ai/tools/{tool_id}` | Modify an existing resource without recreating it. | `toolId` |
+| Delete Tool | `client.ai().tools().delete()` | `DELETE /ai/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `toolId` |
 
 ---
 

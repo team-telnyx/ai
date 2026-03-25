@@ -136,6 +136,17 @@
 | `type` | string |
 | `url` | string |
 
+**Returned by:** List Tools, Create Tool, Get Tool, Update Tool
+
+| Field | Type |
+|-------|------|
+| `created_at` | string |
+| `display_name` | string |
+| `id` | string |
+| `timeout_ms` | integer |
+| `tool_definition` | object |
+| `type` | string |
+
 ## Optional Parameters
 
 ### Create an assistant
@@ -143,6 +154,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `tools` | array[object] | The tools that the assistant can use. |
+| `tool_ids` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llm_api_key_ref` | string | This is only needed when using third-party inference providers. |
@@ -205,6 +217,7 @@
 | `model` | string | ID of the model to use. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | The tools that the assistant can use. |
+| `tool_ids` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llm_api_key_ref` | string | This is only needed when using third-party inference providers. |
@@ -257,6 +270,7 @@
 | `model` | string | ID of the model to use. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | The tools that the assistant can use. |
+| `tool_ids` | array[string] |  |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
 | `llm_api_key_ref` | string | This is only needed when using third-party inference providers. |
@@ -289,3 +303,27 @@
 | `api_key_ref` | string |  |
 | `allowed_tools` | array[string] |  |
 | `created_at` | string (date-time) |  |
+
+### Create Tool
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `function` | object |  |
+| `retrieval` | object |  |
+| `handoff` | object |  |
+| `invite` | object |  |
+| `webhook` | object |  |
+| `timeout_ms` | integer |  |
+
+### Update Tool
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | string |  |
+| `display_name` | string |  |
+| `function` | object |  |
+| `retrieval` | object |  |
+| `handoff` | object |  |
+| `invite` | object |  |
+| `webhook` | object |  |
+| `timeout_ms` | integer |  |
