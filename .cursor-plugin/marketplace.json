@@ -1,0 +1,15 @@
+{
+  "name": "telnyx",
+  "owner": {
+    "name": "Telnyx",
+    "email": "support@telnyx.com"
+  },
+  "plugins": [
+    {
+      "name": "telnyx",
+      "source": "./providers/cursor/plugin/",
+      "description": "Telnyx development plugin for Cursor",
+      "version": "0.1.0"
+    }
+  ]
+}

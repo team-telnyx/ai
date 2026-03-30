@@ -13,7 +13,7 @@
       "name": "telnyx-curl",
       "version": "1.0.7",
       "description": "Official Telnyx REST API (curl) skills \u2014 messaging, voice, numbers, IoT, AI, and more. Language-agnostic HTTP examples for any language or framework.",
-      "source": "./telnyx-curl",
+      "source": "./skills/telnyx-curl",
       "skills": [
         "./skills/telnyx-10dlc-curl",
         "./skills/telnyx-account-access-curl",
@@ -57,7 +57,7 @@
       "name": "telnyx-go",
       "version": "1.0.7",
       "description": "Official Telnyx Go SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Go.",
-      "source": "./telnyx-go",
+      "source": "./skills/telnyx-go",
       "skills": [
         "./skills/telnyx-10dlc-go",
         "./skills/telnyx-account-access-go",
@@ -101,7 +101,7 @@
       "name": "telnyx-java",
       "version": "1.0.9",
       "description": "Official Telnyx Java SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Java.",
-      "source": "./telnyx-java",
+      "source": "./skills/telnyx-java",
       "skills": [
         "./skills/telnyx-10dlc-java",
         "./skills/telnyx-account-access-java",
@@ -145,7 +145,7 @@
       "name": "telnyx-javascript",
       "version": "1.0.7",
       "description": "Official Telnyx Node.js/JavaScript SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in JavaScript.",
-      "source": "./telnyx-javascript",
+      "source": "./skills/telnyx-javascript",
       "skills": [
         "./skills/telnyx-10dlc-javascript",
         "./skills/telnyx-account-access-javascript",
@@ -189,7 +189,7 @@
       "name": "telnyx-python",
       "version": "1.0.8",
       "description": "Official Telnyx Python SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Python.",
-      "source": "./telnyx-python",
+      "source": "./skills/telnyx-python",
       "skills": [
         "./skills/telnyx-10dlc-python",
         "./skills/telnyx-account-access-python",
@@ -234,7 +234,7 @@
       "name": "telnyx-ruby",
       "version": "1.0.7",
       "description": "Official Telnyx Ruby SDK skills \u2014 messaging, voice, numbers, IoT, AI, and more. Install this plugin to give your agent Telnyx API expertise in Ruby.",
-      "source": "./telnyx-ruby",
+      "source": "./skills/telnyx-ruby",
       "skills": [
         "./skills/telnyx-10dlc-ruby",
         "./skills/telnyx-account-access-ruby",
@@ -278,7 +278,7 @@
       "name": "telnyx-webrtc-client",
       "version": "1.0.0",
       "description": "Telnyx WebRTC client SDK skills \u2014 build VoIP calling apps on web, iOS, Android, Flutter, and React Native. Covers authentication, call controls, push notifications, call quality metrics, and AI Agent integration.",
-      "source": "./telnyx-webrtc-client",
+      "source": "./skills/telnyx-webrtc-client",
       "skills": [
         "./skills/telnyx-webrtc-client-js",
         "./skills/telnyx-webrtc-client-ios",
@@ -292,7 +292,7 @@
       "name": "telnyx-twilio-migration",
       "version": "1.0.0",
       "description": "Migrate from Twilio to Telnyx \u2014 6-phase orchestrated workflow covering voice (TwiML \u2192 TeXML + Call Control), messaging, WebRTC, SIP trunking, number porting, Verify, fax, IoT, and more. Includes automated scanning, linting, validation, and integration test scripts.",
-      "source": "./telnyx-twilio-migration",
+      "source": "./skills/telnyx-twilio-migration",
       "skills": [
         "./skills/telnyx-twilio-migration"
       ]
@@ -301,7 +301,7 @@
       "name": "telnyx-cli",
       "version": "1.0.0",
       "description": "Telnyx CLI \u2014 manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
-      "source": "./telnyx-cli",
+      "source": "./skills/telnyx-cli",
       "skills": [
         "./skills/telnyx-cli"
       ]
@@ -310,7 +310,7 @@
       "name": "telnyx-import-voice-ai",
       "version": "1.0.0",
       "description": "Import voice AI assistants from Vapi, Retell, and ElevenLabs into Telnyx. Covers secret setup, bulk or selective import, verification, and post-import cleanup.",
-      "source": "./telnyx-import-voice-ai",
+      "source": "./skills/telnyx-import-voice-ai",
       "skills": [
         "./skills/telnyx-import-elevenlabs",
         "./skills/telnyx-import-retell",
