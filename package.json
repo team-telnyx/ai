@@ -1,0 +1,12 @@
+{
+  "name": "telnyx-ai-skills",
+  "private": true,
+  "description": "Telnyx AI skills monorepo — SDKs, CLI, guides, and agent skills",
+  "scripts": {
+    "test:guides": "npx tsx --test tests/guides.test.ts",
+    "test:guides-api": "npx tsx --test tests/guides-api.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

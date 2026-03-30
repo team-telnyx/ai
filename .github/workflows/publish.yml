@@ -1,0 +1,102 @@
+name: Publish Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish'
+        required: true
+        type: choice
+        options:
+          - 'all'
+          - 'python'
+          - 'typescript'
+          - 'cli'
+      dry_run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  publish-python:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.package == 'all' || github.event.inputs.package == 'python'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build tools
+        run: pip install build twine
+      - name: Build package
+        working-directory: tools/python
+        run: python -m build
+      - name: Publish to PyPI
+        if: github.event.inputs.dry_run != 'true'
+        working-directory: tools/python
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: twine upload dist/*
+
+  publish-typescript:
+    name: Publish TypeScript SDK
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.package == 'all' || github.event.inputs.package == 'typescript'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install deps
+        working-directory: tools/typescript
+        run: npm ci
+      - name: Build
+        working-directory: tools/typescript
+        run: npm run build
+      - name: Publish to npm
+        if: github.event.inputs.dry_run != 'true'
+        working-directory: tools/typescript
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+  publish-cli:
+    name: Publish CLI
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.package == 'all' || github.event.inputs.package == 'cli'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install deps
+        working-directory: cli
+        run: npm ci
+      - name: Build
+        working-directory: cli
+        run: npm run build
+      - name: Publish to npm
+        if: github.event.inputs.dry_run != 'true'
+        working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
