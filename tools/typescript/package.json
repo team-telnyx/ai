@@ -1,0 +1,77 @@
+{
+  "name": "@telnyx/agent-toolkit",
+  "version": "0.1.0",
+  "description": "Telnyx Agent Toolkit for TypeScript — tools for OpenAI, Vercel AI SDK, and LangChain.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./openai": {
+      "types": "./dist/openai/toolkit.d.ts",
+      "import": "./dist/openai/toolkit.js"
+    },
+    "./vercel-ai": {
+      "types": "./dist/vercel-ai/toolkit.d.ts",
+      "import": "./dist/vercel-ai/toolkit.js"
+    },
+    "./langchain": {
+      "types": "./dist/langchain/toolkit.d.ts",
+      "import": "./dist/langchain/toolkit.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx tests/integration.test.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "telnyx",
+    "agent",
+    "toolkit",
+    "openai",
+    "langchain",
+    "vercel-ai",
+    "function-calling",
+    "llm",
+    "ai"
+  ],
+  "author": "Telnyx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/team-telnyx/telnyx-agent-portal.git",
+    "directory": "packages/typescript"
+  },
+  "homepage": "https://github.com/team-telnyx/telnyx-agent-portal#readme",
+  "bugs": {
+    "url": "https://github.com/team-telnyx/telnyx-agent-portal/issues"
+  },
+  "peerDependencies": {
+    "openai": ">=4.0.0",
+    "ai": ">=3.0.0",
+    "zod": ">=3.0.0",
+    "@langchain/core": ">=0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "openai": { "optional": true },
+    "ai": { "optional": true },
+    "zod": { "optional": true },
+    "@langchain/core": { "optional": true }
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
