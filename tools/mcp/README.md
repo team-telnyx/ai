@@ -1,56 +1,26 @@
 # @telnyx/mcp
 
-Telnyx MCP server for Claude Desktop, Cursor, and other MCP clients.
+The Telnyx [Model Context Protocol](https://modelcontextprotocol.com/) server allows you to integrate with Telnyx APIs through function calling. This protocol supports various tools to interact with different Telnyx services.
 
-Proxies MCP requests from your IDE to the remote Telnyx MCP server at `https://api.telnyx.com/v2/mcp`.
+## Setup
 
-## Usage
+Telnyx hosts a remote MCP server at `https://api.telnyx.com/v2/mcp`.
+
+To run the Telnyx MCP server locally using npx:
 
 ```bash
-npx @telnyx/mcp --api-key YOUR_TELNYX_API_KEY
+npx -y @telnyx/mcp --api-key=YOUR_TELNYX_API_KEY
 ```
 
 Or set the environment variable:
 
 ```bash
 export TELNYX_API_KEY=YOUR_KEY
-npx @telnyx/mcp
-```
-
-## IDE Configuration
-
-### Claude Desktop / Claude Code
-
-Add to your MCP config:
-
-```json
-{
-  "mcpServers": {
-    "telnyx": {
-      "command": "npx",
-      "args": ["-y", "@telnyx/mcp", "--api-key", "YOUR_TELNYX_API_KEY"]
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to your MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "telnyx": {
-      "command": "npx",
-      "args": ["-y", "@telnyx/mcp", "--api-key", "YOUR_TELNYX_API_KEY"]
-    }
-  }
-}
+npx -y @telnyx/mcp
 ```
 
 ## How it works
 
-This package is a thin proxy. It receives MCP messages from your IDE over stdio and forwards them to the remote Telnyx MCP server over HTTP. The remote server provides the actual tools — docs search, code execution, and API access.
+This package proxies MCP requests to the remote Telnyx MCP server over HTTP. The remote server provides the tools — API endpoint discovery, schema inspection, and endpoint invocation.
 
 The full MCP server implementation lives in [`team-telnyx/telnyx-node/packages/mcp-server`](https://github.com/team-telnyx/telnyx-node/tree/master/packages/mcp-server).
