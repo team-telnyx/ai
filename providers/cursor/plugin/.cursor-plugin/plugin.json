@@ -1,6 +1,6 @@
 {
   "name": "telnyx",
-  "description": "Telnyx development plugin for Kiro",
+  "description": "Telnyx plugin for Cursor to help with Telnyx integrations including messaging, voice, numbers, AI assistants, and the Telnyx MCP server.",
   "version": "0.1.0",
   "author": {
     "name": "Telnyx",

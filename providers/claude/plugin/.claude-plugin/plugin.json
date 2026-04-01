@@ -6,5 +6,8 @@
     "name": "Telnyx",
     "url": "https://telnyx.com"
   },
+  "homepage": "https://developers.telnyx.com",
+  "repository": "https://github.com/team-telnyx/ai",
+  "license": "MIT",
   "keywords": ["telnyx", "telecom", "messaging", "voice", "sms", "api", "webhooks", "ai"]
 }
