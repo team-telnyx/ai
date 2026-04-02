@@ -18,7 +18,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Agent Toolkit
 
-Telnyx's Agent Toolkit enables popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK to integrate with Telnyx APIs through function calling. The library includes support for Python and TypeScript, and is built directly on top of the Telnyx [Python][python-sdk] and [Node][node-sdk] SDKs.
+Telnyx's Agent Toolkit enables popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK to integrate with Telnyx APIs through function calling. The library includes support for Python and TypeScript.
 
 Included below are basic instructions, but refer to [Python](/tools/python) and [TypeScript](/tools/typescript) packages for more information.
 
