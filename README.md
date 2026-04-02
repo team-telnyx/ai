@@ -130,16 +130,31 @@ Install individual skills for your coding assistant via the [Skills CLI](https:/
 npx skills add team-telnyx/ai --skill <SKILL> --agent <AGENT>
 ```
 
-Or install skills via the full Telnyx plugin via Claude Code:
+> [!NOTE]
+> See [Skills](/skills/README.md) for full install instrcuctions and comprehensive list of available skills
 
-```sh
-/plugin marketplace add team-telnyx/ai
-/plugin install telnyx@telnyx
+## Plugins
+
+Install the Telnyx plugin to give your AI coding assistant MCP server access and 228 Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, and more.
+
+### Claude Code
+
+ ```sh
+  /plugin marketplace add team-telnyx/ai
+  /plugin install telnyx@telnyx
+```
+### Gemini CLI
+
+ ```sh
+  gemini extensions install team-telnyx/ai
 ```
 
-> [!NOTE]
-> See [Skills](/skills/README.md) for full install instrcuctions and comprehensive list of available skills.
+### Cursor                                                
 
+```sh
+  /add-plugin telnyx
+```
+Note: Cursor marketplace listing is pending. In the meantime, install skills via the [Skills CLI](#agent-skills).
 
 ## Model Context Protocol (MCP)
 
@@ -159,9 +174,6 @@ Curl-first operational guides for common Telnyx workflows — SMS messaging, voi
 
 See [Guides](/guides) for the full list.
 
-[python-sdk]: https://github.com/team-telnyx/telnyx-python
-[node-sdk]: https://github.com/team-telnyx/telnyx-node
-[api-keys]: https://portal.telnyx.com/#/app/api-keys
 
 ## License
 
