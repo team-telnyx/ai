@@ -14,7 +14,8 @@ const __dirname = typeof import.meta.dirname === "string"
   : dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const GUIDES_DIR = join(ROOT, "guides");
-const AGENT_JSON_PATH = join(ROOT, "site", "public", ".well-known", "agent.json");
+// agent.json lives alongside guides in the repo root (site is a separate repo)
+const AGENT_JSON_PATH = join(ROOT, "agent.json");
 
 // Load agent.json
 const agentJson = JSON.parse(readFileSync(AGENT_JSON_PATH, "utf-8"));

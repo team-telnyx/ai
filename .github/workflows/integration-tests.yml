@@ -130,14 +130,6 @@ jobs:
         working-directory: cli
         run: npx tsx tests/integration-ci.test.ts
 
-      # Site endpoint tests (including getting-started)
-      - name: Install site deps
-        working-directory: site
-        run: npm ci
-      - name: Site endpoint tests
-        working-directory: site
-        run: npx tsx --test tests/site-integration.test.ts
-
       # Guide API smoke tests
       - name: Guide API smoke tests
         run: npx tsx --test tests/guides-api.test.ts
