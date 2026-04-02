@@ -66,6 +66,19 @@ const tools = toolkit.getLangChainTools();
 ```
 
 Works with LangChain and Vercel's AI SDK. See [TypeScript docs](/tools/typescript) for full usage.
+ for the full list of commands and options.
+
+## Agent Skills
+
+Install individual skills for your coding assistant via the [Skills CLI](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add team-telnyx/ai --skill <SKILL> --agent <AGENT>
+```
+
+> [!NOTE]
+> See [Skills](/skills/README.md) for full install instrcuctions and comprehensive list of available skills
+
 
 ## Agent CLI
 
@@ -80,18 +93,7 @@ telnyx-agent status            # Account health overview
 
 Every command supports `--json` for machine-readable output.
 
-See [Agent CLI](/cli) for the full list of commands and options.
-
-## Agent Skills
-
-Install individual skills for your coding assistant via the [Skills CLI](https://github.com/vercel-labs/skills):
-
-```sh
-npx skills add team-telnyx/ai --skill <SKILL> --agent <AGENT>
-```
-
-> [!NOTE]
-> See [Skills](/skills/README.md) for full install instrcuctions and comprehensive list of available skills
+See [Agent CLI](/cli)
 
 ## Plugins
 
