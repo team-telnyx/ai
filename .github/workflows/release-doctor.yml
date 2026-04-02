@@ -12,7 +12,7 @@ jobs:
     name: release doctor
     runs-on: ubuntu-latest
     if: >-
-      github.repository == 'team-telnyx/skills' &&
+      github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release'))
 
     steps:
