@@ -1,6 +1,12 @@
 # Telnyx AI
 
-Use Telnyx with AI agents and coding assistants.
+This repo is the one-stop shop for building AI-powered products and businesses on top of Telnyx.
+
+It contains a collection of SDKs to help you integrate Telnyx with LLMs and agent frameworks, including:
+
+* [`telnyx-agent-toolkit`](/tools/python) - for integrating Telnyx APIs with popular agent frameworks through function calling — available in [Python](/tools/python) and [TypeScript](/tools/typescript).
+* [Agent Skills](/skills) - for giving coding assistants accurate, up-to-date context about Telnyx APIs and SDKs.
+* [Agent CLI](/cli) - for provisioning Telnyx infrastructure in a single command.
 
 ## Model Context Protocol (MCP)
 
