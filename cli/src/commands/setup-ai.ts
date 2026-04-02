@@ -45,11 +45,10 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
     const step1Start = Date.now();
     try {
       const assistantRes = await telnyxCli([
-        "assistant", "create",
+        "ai:assistants", "create",
         "--name", assistantName,
         "--instructions", instructions,
         "--model", "Qwen/Qwen3-235B-A22B",
-        "--voice", "",  // Override CLI default 'Telnyx.Cove' which is invalid
       ]);
       // AI assistants API returns data at the top level or nested under .data
       const assistantData = (assistantRes.data ?? assistantRes) as Record<string, unknown>;
@@ -98,7 +97,8 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       // Assign the TeXML app to the phone number via CLI
       if (phoneNumber && texmlAppId) {
         await telnyxCli([
-          "number", "update", phoneNumber,
+          "phone-numbers", "update",
+          "--phone-number-id", phoneNumber,
           "--connection-id", texmlAppId,
           "--force",
         ]);

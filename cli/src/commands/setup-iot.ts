@@ -43,7 +43,7 @@ export async function setupIotCommand(flags: Record<string, string | boolean>): 
     const step1Start = Date.now();
     let availableSim: Record<string, unknown> | null = null;
     try {
-      const simsRes = await telnyxCli(["sim", "list", "--limit", "25"]);
+      const simsRes = await telnyxCli(["sim-cards", "list"]);
       const sims = simsRes.data as Record<string, unknown>[];
 
       // Find a disabled/standby SIM that can be activated
@@ -99,7 +99,7 @@ export async function setupIotCommand(flags: Record<string, string | boolean>): 
     // Step 3: Activate the SIM via CLI
     const step3Start = Date.now();
     try {
-      await telnyxCli(["sim", "enable", simId]);
+      await telnyxCli(["sim-cards:actions", "enable", "--id", simId]);
       simStatus = "enabled";
       steps.push({ step: 3, name: "Activate SIM", status: "completed", resourceId: simId, detail: `ICCID: ${simIccid}`, elapsedMs: Date.now() - step3Start });
     } catch (err) {

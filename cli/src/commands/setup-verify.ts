@@ -45,7 +45,7 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
     const step1Start = Date.now();
     try {
       const profileRes = await telnyxCli([
-        "verify", "profile", "create",
+        "verify-profiles", "create",
         "--name", profileName,
       ]);
       const profileData = profileRes.data as Record<string, unknown>;

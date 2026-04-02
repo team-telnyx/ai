@@ -29,11 +29,11 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
 
   // Run all queries concurrently via CLI
   const [balanceRes, numbersRes, profilesRes, connectionsRes, assistantsRes] = await Promise.allSettled([
-    telnyxCli(["billing", "balance"]),
-    telnyxCli(["number", "list", "--limit", "1"]),
-    telnyxCli(["messaging-profile", "list", "--limit", "1"]),
-    telnyxCli(["connection", "list", "--limit", "1", "--type", "credential"]),
-    telnyxCli(["assistant", "list", "--limit", "1"]),
+    telnyxCli(["balance", "retrieve"]),
+    telnyxCli(["phone-numbers", "list", "--page.size", "1"]),
+    telnyxCli(["messaging-profiles", "list", "--page.size", "1"]),
+    telnyxCli(["credential-connections", "list", "--page.size", "1"]),
+    telnyxCli(["ai:assistants", "list", "--page.size", "1"]),
   ]);
 
   // Balance

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, restructure/monorepo]
   workflow_dispatch:
     inputs:
       run_write_tests:
@@ -114,6 +114,14 @@ jobs:
         working-directory: tools/typescript
         run: npx tsx tests/integration-ci.test.ts
 
+      # Install Go CLI (telnyx-cli)
+      - name: Install telnyx CLI (Go)
+        run: |
+          curl -fsSL -o /tmp/telnyx.tar.gz https://github.com/team-telnyx/telnyx-cli/releases/download/v0.11.0/telnyx_0.11.0_linux_amd64.tar.gz
+          tar -xzf /tmp/telnyx.tar.gz -C /usr/local/bin telnyx
+          chmod +x /usr/local/bin/telnyx
+          telnyx --version
+
       # CLI read-only
       - name: Install CLI deps
         working-directory: cli
@@ -121,6 +129,14 @@ jobs:
       - name: CLI read-only tests
         working-directory: cli
         run: npx tsx tests/integration-ci.test.ts
+
+      # Site endpoint tests (including getting-started)
+      - name: Install site deps
+        working-directory: site
+        run: npm ci
+      - name: Site endpoint tests
+        working-directory: site
+        run: npx tsx --test tests/site-integration.test.ts
 
       # Guide API smoke tests
       - name: Guide API smoke tests
@@ -164,6 +180,14 @@ jobs:
         continue-on-error: true
         working-directory: tools/typescript
         run: RUN_WRITE_TESTS=true npx tsx tests/integration-ci.test.ts
+
+      # Install Go CLI (telnyx-cli)
+      - name: Install telnyx CLI (Go)
+        run: |
+          curl -fsSL -o /tmp/telnyx.tar.gz https://github.com/team-telnyx/telnyx-cli/releases/download/v0.11.0/telnyx_0.11.0_linux_amd64.tar.gz
+          tar -xzf /tmp/telnyx.tar.gz -C /usr/local/bin telnyx
+          chmod +x /usr/local/bin/telnyx
+          telnyx --version
 
       # CLI write tests
       - name: Install CLI deps

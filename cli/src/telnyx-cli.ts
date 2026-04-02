@@ -1,8 +1,8 @@
 /**
- * Telnyx CLI wrapper — shells out to `telnyx` CLI with `--json` for structured output.
+ * Telnyx CLI wrapper — shells out to `telnyx` (Go CLI) with `--format json` for structured output.
  *
- * The telnyx CLI (from @telnyx/api-cli) outputs:
- * - JSON to stdout (when --json is passed)
+ * The telnyx CLI (Stainless-generated Go binary from telnyx-cli) outputs:
+ * - JSON to stdout (when --format json is passed)
  * - Info/progress messages to stderr
  * - Non-zero exit code on API errors
  *
@@ -11,12 +11,32 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 
 /**
+ * Resolve the telnyx binary path.
+ * Checks the vendor/ directory first (installed by postinstall), then falls back to PATH.
+ */
+function findTelnyxBinary(): string {
+  // Check vendor directory first (installed by postinstall)
+  const vendorPath = join(dirname(fileURLToPath(import.meta.url)), "..", "vendor", "telnyx");
+  if (existsSync(vendorPath)) return vendorPath;
+  // Fall back to PATH
+  return "telnyx";
+}
+
+const TELNYX_BINARY = findTelnyxBinary();
+
+/**
  * Find the start of JSON in CLI output that may have info messages before it.
  * Looks for the first `{` or `[` that starts valid JSON.
+ *
+ * Note: The Go CLI outputs clean JSON with --format json, so this is kept as a
+ * safety net but shouldn't normally be needed.
  */
 function findJsonStart(text: string): number {
   for (let i = 0; i < text.length; i++) {
@@ -47,9 +67,9 @@ export class TelnyxCLIError extends Error {
 
 /**
  * Run a telnyx CLI command and return parsed JSON output.
- * Automatically appends `--json` to all commands.
+ * Automatically appends `--format json` to all commands.
  *
- * @param args - CLI arguments (e.g., ['number', 'search', '--country', 'US'])
+ * @param args - CLI arguments (e.g., ['available-phone-numbers', 'list', '--filter.country-code', 'US'])
  * @param opts - Optional overrides for timeout and env
  * @returns Parsed JSON response from the CLI (typically { data: ... } or { data: [...], meta: ... })
  */
@@ -59,15 +79,15 @@ export async function telnyxCli(
 ): Promise<any> {
   const timeout = opts?.timeout ?? 60000;
   try {
-    const { stdout } = await execFileAsync("telnyx", [...args, "--json"], {
+    const { stdout } = await execFileAsync(TELNYX_BINARY, [...args, "--format", "json"], {
       env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv,
       timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB — some list responses can be large
     });
     const trimmed = stdout.trim();
     if (!trimmed) return {};
-    // The CLI sometimes outputs info messages (e.g., "ℹ Fetching...") to stdout
-    // before the JSON. Find the first { or [ to locate the JSON start.
+    // The Go CLI should output clean JSON with --format json, but keep the
+    // findJsonStart safety net in case of unexpected prefix output.
     const jsonStart = findJsonStart(trimmed);
     if (jsonStart < 0) {
       throw new Error(`No JSON found in telnyx CLI output: ${trimmed.slice(0, 200)}`);
@@ -77,7 +97,7 @@ export async function telnyxCli(
     // execFile error with exit code
     if (err.code === "ENOENT") {
       throw new Error(
-        "telnyx CLI not found. Install it with: npm install -g @telnyx/api-cli",
+        "telnyx CLI not found. Install it with: go install github.com/team-telnyx/telnyx-cli/cmd/telnyx@latest",
       );
     }
     if (err.killed) {
@@ -103,7 +123,6 @@ export async function telnyxCli(
         }
       }
       // No JSON — extract the human-readable error message
-      // The CLI formats errors as: "    TelnyxApiError: <message>\n    Code: <code>"
       const cleanError = errorText
         .split("\n")
         .map((line: string) => line.trim())

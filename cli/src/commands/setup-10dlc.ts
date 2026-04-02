@@ -56,7 +56,7 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     const step1Start = Date.now();
     try {
       const brandArgs = [
-        "10dlc", "brand", "create",
+        "messaging-10dlc:brand", "create",
         "--display-name", brandName,
         "--email", email,
         "--vertical", vertical,
@@ -81,7 +81,7 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     const step2Start = Date.now();
     try {
       const campaignArgs = [
-        "10dlc", "campaign", "create",
+        "messaging-10dlc:campaign", "create",
         "--brand-id", brandId,
         "--usecase", usecase,
         "--description", description,
@@ -104,7 +104,9 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
       const step3Start = Date.now();
       try {
         const assignRes = await telnyxCli([
-          "10dlc", "assign", phoneNumberId, campaignId,
+          "messaging-10dlc:phone-number-campaigns", "create",
+          "--phone-number", phoneNumberId,
+          "--campaign-id", campaignId,
         ]);
         const assignData = (assignRes.data ?? assignRes) as Record<string, unknown>;
         assignedNumber = String(assignData.phone_number ?? phoneNumberId);

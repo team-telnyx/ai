@@ -1,8 +1,10 @@
 /**
- * Shared helper for searching and ordering phone numbers via telnyx CLI.
+ * Shared helper for searching and ordering phone numbers via telnyx CLI (Go binary).
  *
- * The CLI's `number order` handles the full order+poll flow internally,
- * eliminating the need for custom polling logic.
+ * Uses the Stainless-generated Go CLI commands:
+ * - `available-phone-numbers list` for searching
+ * - `number-orders create` for ordering
+ * - `phone-numbers retrieve` for lookup
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
@@ -33,11 +35,10 @@ export async function searchNumbers(
     limit?: number;
   },
 ): Promise<Array<Record<string, unknown>>> {
-  const args = ["number", "search", "--country", country];
-  if (opts?.type) args.push("--type", opts.type);
-  if (opts?.limit) args.push("--limit", String(opts.limit));
-  // Note: CLI doesn't have a --features flag; feature filtering happens via type
-  // (local numbers generally support voice+sms, toll_free supports both, etc.)
+  const args = ["available-phone-numbers", "list", "--filter.country-code", country];
+  if (opts?.type) args.push("--filter.phone-number-type", opts.type);
+  if (opts?.limit) args.push("--page.size", String(opts.limit));
+  if (opts?.features) args.push("--filter.features", opts.features);
 
   const res = await telnyxCli(args);
   const numbers = res.data as Array<Record<string, unknown>>;
@@ -49,7 +50,7 @@ export async function searchNumbers(
 
 /**
  * Order a phone number via CLI and resolve the real phone number resource ID.
- * The CLI's `number order` handles the full order+poll flow internally.
+ * Uses `number-orders create` for the order flow.
  */
 export async function orderNumber(
   phoneNumber: string,
@@ -59,7 +60,7 @@ export async function orderNumber(
     billingGroupId?: string;
   },
 ): Promise<OrderResult> {
-  const args = ["number", "order", phoneNumber];
+  const args = ["number-orders", "create", "--phone-numbers", phoneNumber];
   if (opts?.messagingProfileId) args.push("--messaging-profile-id", opts.messagingProfileId);
   if (opts?.connectionId) args.push("--connection-id", opts.connectionId);
   if (opts?.billingGroupId) args.push("--billing-group-id", opts.billingGroupId);
@@ -126,7 +127,7 @@ export async function searchAndBuyNumber(
 async function resolvePhoneNumberId(phoneNumber: string): Promise<string> {
   for (let i = 0; i < 5; i++) {
     try {
-      const res = await telnyxCli(["number", "get", phoneNumber]);
+      const res = await telnyxCli(["phone-numbers", "retrieve", "--id", phoneNumber]);
       const data = res.data as Record<string, unknown>;
       if (data?.id) return String(data.id);
     } catch {

@@ -3,9 +3,7 @@
  *
  * Completely non-blocking: fires fetch() and ignores the result.
  * Never throws — all errors are silently swallowed.
- *
- * NOTE: Friction reporting is inactive until DEFAULT_FRICTION_ENDPOINT
- * is set or TELNYX_FRICTION_ENDPOINT env var is provided.
+ * Enabled by default (the FFL endpoint is already live).
  */
 
 const DEFAULT_FRICTION_ENDPOINT =

@@ -86,7 +86,8 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
     try {
       if (phoneNumber) {
         await telnyxCli([
-          "number", "update", phoneNumber,
+          "phone-numbers", "update",
+          "--phone-number-id", phoneNumber,
           "--messaging-profile-id", profileId,
           "--force",
         ]);

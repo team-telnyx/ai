@@ -1,6 +1,6 @@
 {
   "name": "@telnyx/agent-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce multi-step workflows to a single command",
   "type": "module",
   "bin": {
@@ -8,21 +8,13 @@
   },
   "scripts": {
     "start": "tsx bin/telnyx-agent.ts",
-    "build": "echo 'CLI ships TypeScript source — no build needed'",
     "test": "tsx --test tests/integration.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "tsx scripts/postinstall.ts"
   },
   "dependencies": {
     "ethers": "^6.16.0",
     "tsx": "^4.19.0"
-  },
-  "peerDependencies": {
-    "@telnyx/api-cli": ">=1.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@telnyx/api-cli": {
-      "optional": false
-    }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -46,7 +38,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/team-telnyx/skills.git",
-    "directory": "cli"
+    "directory": "packages/cli"
   },
   "homepage": "https://github.com/team-telnyx/skills#readme",
   "bugs": {
@@ -55,9 +47,7 @@
   "files": [
     "bin",
     "src",
+    "scripts/postinstall.ts",
     "README.md"
-  ],
-  "publishConfig": {
-    "access": "public"
-  }
+  ]
 }

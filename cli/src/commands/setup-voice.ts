@@ -99,7 +99,8 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     try {
       if (phoneNumber) {
         await telnyxCli([
-          "number", "update", phoneNumber,
+          "phone-numbers", "update",
+          "--phone-number-id", phoneNumber,
           "--connection-id", connectionId,
           "--force",
         ]);
