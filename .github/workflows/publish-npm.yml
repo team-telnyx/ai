@@ -6,7 +6,7 @@
 #      - @telnyx/agent-toolkit
 #      - @telnyx/agent-cli
 #   2. For each package, go to Settings → Provenance and link:
-#      - Repository: https://github.com/team-telnyx/skills
+#      - Repository: https://github.com/team-telnyx/ai
 #      - Workflow: publish-npm.yml
 #   3. Ensure publishConfig.access is "public" in each package.json
 #
@@ -31,7 +31,7 @@ jobs:
     name: publish @telnyx/agent-toolkit
     runs-on: ubuntu-latest
     if: >-
-      github.repository == 'team-telnyx/skills' &&
+      github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'typescript')
     permissions:
       contents: read
@@ -55,7 +55,7 @@ jobs:
     name: publish @telnyx/agent-cli
     runs-on: ubuntu-latest
     if: >-
-      github.repository == 'team-telnyx/skills' &&
+      github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'cli')
     permissions:
       contents: read
@@ -79,7 +79,7 @@ jobs:
     name: publish @telnyx/mcp
     runs-on: ubuntu-latest
     if: >-
-      github.repository == 'team-telnyx/skills' &&
+      github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'mcp')
     permissions:
       contents: read
@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: publish-mcp
     if: >-
-      github.repository == 'team-telnyx/skills' &&
+      github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'mcp')
     permissions:
       contents: read
