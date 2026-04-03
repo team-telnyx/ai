@@ -50,7 +50,7 @@ Empowers coding agents to generate correct, production-ready code without relyin
 In the meantime, install skills via the [Skills CLI](#agent-skills).
 
 Add the Telnyx MCP server to your project's `.cursor/mcp.json`:                                                                                                
-  ```json       
+```json       
   {                                                         
     "mcpServers": {
       "telnyx": {
@@ -59,6 +59,7 @@ Add the Telnyx MCP server to your project's `.cursor/mcp.json`:
       }
     }
   }
+```
 
 ## Agent Toolkit
 
