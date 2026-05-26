@@ -299,6 +299,7 @@
 |-----------|------|-------------|
 | `type_` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
 
 ### Update a messaging hosted number — `client.messaging_hosted_numbers.update()`
 
