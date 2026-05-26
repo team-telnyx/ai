@@ -442,3 +442,5 @@ Before using any operation below, read [the optional-parameters section](referen
 ---
 
 For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).
+
+<!-- TEST ONLY: publish path verification from telnyx-ext-skills-generator PR #78. Do not merge. -->
