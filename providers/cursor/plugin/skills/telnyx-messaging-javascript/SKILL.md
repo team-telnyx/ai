@@ -392,6 +392,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `whatsappMessage` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```javascript
 const response = await client.messages.sendWhatsapp({

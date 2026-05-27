@@ -16,21 +16,34 @@
 | `created_at` | date-time |
 | `description` | string |
 | `dynamic_variables` | object |
+| `dynamic_variables_webhook_timeout_ms` | integer |
 | `dynamic_variables_webhook_url` | string |
 | `enabled_features` | array[object] |
+| `external_llm` | object |
+| `fallback_config` | object |
 | `greeting` | string |
 | `id` | string |
 | `import_metadata` | object |
 | `insight_settings` | object |
 | `instructions` | string |
+| `integrations` | array[object] |
+| `interruption_settings` | object |
 | `llm_api_key_ref` | string |
+| `mcp_servers` | array[object] |
 | `messaging_settings` | object |
 | `model` | string |
 | `name` | string |
+| `observability_settings` | object |
+| `post_conversation_settings` | object |
 | `privacy_settings` | object |
+| `related_mission_ids` | array[string] |
+| `tags` | array[string] |
 | `telephony_settings` | object |
 | `tools` | array[object] |
 | `transcription` | object |
+| `version_created_at` | date-time |
+| `version_id` | string |
+| `version_name` | string |
 | `voice_settings` | object |
 | `widget_settings` | object |
 
@@ -92,8 +105,8 @@
 |-------|------|
 | `assistant_id` | string |
 | `created_at` | date-time |
+| `rules` | array[object] |
 | `updated_at` | date-time |
-| `versions` | array[object] |
 
 **Returned by:** Assistant Chat (BETA)
 
@@ -153,11 +166,15 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `tools` | array[object] | The tools that the assistant can use. |
-| `toolIds` | array[string] |  |
+| `model` | string | ID of the model to use when `external_llm` is not set. |
+| `tools` | array[object] | Deprecated for new integrations. |
+| `mcpServers` | array[object] | MCP servers attached to the assistant. |
+| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
+| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
+| `externalLlm` | object |  |
+| `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
@@ -165,9 +182,15 @@
 | `enabledFeatures` | array[object] |  |
 | `insightSettings` | object |  |
 | `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If the dynamic_variables_webhook_url is set for the assistant, we will send a... |
+| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
 | `dynamicVariables` | object | Map of dynamic variables and their default values |
 | `widgetSettings` | object | Configuration settings for the assistant's web widget. |
+| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `integrations` | array[object] | Connected integrations attached to the assistant. |
+| `observabilitySettings` | object |  |
+| `tags` | array[string] | Tags associated with the assistant. |
+| `postConversationSettings` | object | Configuration for post-conversation processing. |
 
 ### Import assistants from external provider — `client.ai.assistants.imports()`
 
@@ -214,13 +237,16 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string |  |
-| `model` | string | ID of the model to use. |
+| `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
-| `tools` | array[object] | The tools that the assistant can use. |
-| `toolIds` | array[string] |  |
+| `tools` | array[object] | Deprecated for new integrations. |
+| `mcpServers` | array[object] | MCP servers attached to the assistant. |
+| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
+| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
+| `externalLlm` | object |  |
+| `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
@@ -228,10 +254,29 @@
 | `enabledFeatures` | array[object] |  |
 | `insightSettings` | object |  |
 | `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If the dynamic_variables_webhook_url is set for the assistant, we will send a... |
+| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
 | `dynamicVariables` | object | Map of dynamic variables and their default values |
 | `widgetSettings` | object | Configuration settings for the assistant's web widget. |
+| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `integrations` | array[object] | Connected integrations attached to the assistant. |
+| `observabilitySettings` | object |  |
+| `tags` | array[string] | Tags associated with the assistant. |
+| `versionName` | string | Human-readable name for the assistant version. |
+| `postConversationSettings` | object | Configuration for post-conversation processing. |
 | `promoteToMain` | boolean | Indicates whether the assistant should be promoted to the main version. |
+
+### Create Canary Deploy — `client.ai.assistants.canaryDeploys.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `rules` | array[object] |  |
+
+### Update Canary Deploy — `client.ai.assistants.canaryDeploys.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `rules` | array[object] |  |
 
 ### Assistant Chat (BETA) — `client.ai.assistants.chat()`
 
@@ -254,6 +299,8 @@
 | `text` | string | Required for sms scheduled events. |
 | `conversationMetadata` | object | Metadata associated with the conversation. |
 | `dynamicVariables` | object | A map of dynamic variable names to values. |
+| `maxRetriesClientErrors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
+| `retryIntervalSecs` | integer |  |
 
 ### Test Assistant Tool — `client.ai.assistants.tools.test()`
 
@@ -267,13 +314,16 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string |  |
-| `model` | string | ID of the model to use. |
+| `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
-| `tools` | array[object] | The tools that the assistant can use. |
-| `toolIds` | array[string] |  |
+| `tools` | array[object] | Deprecated for new integrations. |
+| `mcpServers` | array[object] | MCP servers attached to the assistant. |
+| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers. |
+| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
+| `externalLlm` | object |  |
+| `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
@@ -281,9 +331,16 @@
 | `enabledFeatures` | array[object] |  |
 | `insightSettings` | object |  |
 | `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If the dynamic_variables_webhook_url is set for the assistant, we will send a... |
+| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
 | `dynamicVariables` | object | Map of dynamic variables and their default values |
 | `widgetSettings` | object | Configuration settings for the assistant's web widget. |
+| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `integrations` | array[object] | Connected integrations attached to the assistant. |
+| `observabilitySettings` | object |  |
+| `tags` | array[string] | Tags associated with the assistant. |
+| `versionName` | string | Human-readable name for the assistant version. |
+| `postConversationSettings` | object | Configuration for post-conversation processing. |
 
 ### Create MCP Server — `client.ai.mcpServers.create()`
 

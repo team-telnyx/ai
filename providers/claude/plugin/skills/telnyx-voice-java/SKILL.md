@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -51,7 +51,7 @@ import com.telnyx.sdk.models.calls.CallDialResponse;
 CallDialParams params = CallDialParams.builder()
     .connectionId("7267xxxxxxxxxxxxxx")
     .from("+18005550101")
-    .to("+18005550100")
+    .to("+18005550100;secure=srtp")
     .build();
 CallDialResponse response = client.calls().dial(params);
 ```
@@ -95,7 +95,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +48 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.CallDialParams;
@@ -104,7 +104,7 @@ import com.telnyx.sdk.models.calls.CallDialResponse;
 CallDialParams params = CallDialParams.builder()
     .connectionId("7267xxxxxxxxxxxxxx")
     .from("+18005550101")
-    .to("+18005550100")
+    .to("+18005550100;secure=srtp")
     .build();
 CallDialResponse response = client.calls().dial(params);
 ```
@@ -129,7 +129,7 @@ Primary inbound call-control command.
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionAnswerParams;
@@ -155,7 +155,7 @@ Common post-answer control path with downstream webhook implications.
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +33 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionTransferParams;
@@ -163,7 +163,7 @@ import com.telnyx.sdk.models.calls.actions.ActionTransferResponse;
 
 ActionTransferParams params = ActionTransferParams.builder()
     .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
-    .to("+18005550100")
+    .to("+18005550100;secure=srtp")
     .build();
 ActionTransferResponse response = client.calls().actions().transfer(params);
 ```

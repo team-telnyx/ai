@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -278,7 +278,6 @@ Create or provision an additional resource when the core tasks do not cover this
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrder;
-import com.telnyx.sdk.models.advancedorders.AdvancedOrderCreateParams;
 import com.telnyx.sdk.models.advancedorders.AdvancedOrderCreateResponse;
 
 AdvancedOrder params = AdvancedOrder.builder().build();

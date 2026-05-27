@@ -128,14 +128,19 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
+| `assistant` | object | AI Assistant configuration. |
+| `conversation_relay_config` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
 | `from_display_name` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
+| `privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `audio_url` | string (URL) | The URL of a file to be played back to the callee when the call is answered. |
+| `send_digits_on_answer` | string | DTMF digits to send automatically after the called party answers. |
 | `media_name` | string | The media_name of a file to be played back to the callee when the call is ans... |
 | `preferred_codecs` | string | The list of comma-separated codecs in a preferred order for the forked media ... |
 | `timeout_secs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
 | `time_limit_secs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
 | `answering_machine_detection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
 | `answering_machine_detection_config` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
+| `deepfake_detection` | object | Enables deepfake detection on the call. |
 | `conference_config` | object | Optional configuration parameters to dial new participant into a conference. |
 | `custom_headers` | array[object] | Custom headers to be added to the SIP INVITE. |
 | `billing_group_id` | string (UUID) | Use this field to set the Billing Group ID for the call. |
@@ -163,6 +168,9 @@
 | `send_silence_when_idle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhook_url` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `webhook_url_method` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
+| `webhook_urls` | object | A map of event types to webhook URLs. |
+| `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
+| `webhook_retries_policies` | object | A map of event types to retry policies. |
 | `record` | enum (record-from-answer) | Start recording automatically after an event. |
 | `record_channels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
 | `record_format` | enum (wav, mp3) | Defines the format of the recording ('wav' or 'mp3') when `record` is specified. |
@@ -184,6 +192,8 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
+| `assistant` | object | AI Assistant configuration. |
+| `conversation_relay_config` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
 | `billing_group_id` | string (UUID) | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
@@ -213,6 +223,7 @@
 | `webhook_urls` | object | A map of event types to webhook URLs. |
 | `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `webhook_retries_policies` | object | A map of event types to retry policies. |
+| `deepfake_detection` | object | Enables deepfake detection on the call. |
 
 ### Bridge calls — `client.calls.actions.bridge()`
 
@@ -277,7 +288,9 @@
 |-----------|------|-------------|
 | `from_` | string (E.164) | The `from` number to be used as the caller id presented to the destination (`... |
 | `from_display_name` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
+| `privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `audio_url` | string (URL) | The URL of a file to be played back when the transfer destination answers bef... |
+| `send_digits_on_answer` | string | DTMF digits to send automatically after the transfer destination answers. |
 | `early_media` | boolean | If set to false, early media will not be passed to the originating leg. |
 | `media_name` | string | The media_name of a file to be played back when the transfer destination answ... |
 | `timeout_secs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |

@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -322,7 +322,6 @@ Create or provision an additional resource when the core tasks do not cover this
 ```java
 import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
 import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreate;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreateParams;
 
 PhoneNumberCampaignCreate params = PhoneNumberCampaignCreate.builder()
     .campaignId("4b300178-131c-d902-d54e-72d90ba1620j")

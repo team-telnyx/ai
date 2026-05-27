@@ -43,7 +43,7 @@ try {
   const response = await client.calls.dial({
     connection_id: '7267xxxxxxxxxxxxxx',
     from: '+18005550101',
-    to: '+18005550100',
+    to: '+18005550100;secure=srtp',
   });
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
@@ -99,13 +99,13 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +48 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.calls.dial({
   connection_id: '7267xxxxxxxxxxxxxx',
   from: '+18005550101',
-  to: '+18005550100',
+  to: '+18005550100;secure=srtp',
 });
 
 console.log(response.data);
@@ -131,7 +131,7 @@ Primary inbound call-control command.
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.calls.actions.answer('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -156,11 +156,11 @@ Common post-answer control path with downstream webhook implications.
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +33 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.calls.actions.transfer('call_control_id', {
-  to: '+18005550100',
+  to: '+18005550100;secure=srtp',
 });
 
 console.log(response.data);
