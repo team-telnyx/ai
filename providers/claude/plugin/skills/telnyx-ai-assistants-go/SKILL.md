@@ -50,8 +50,8 @@ import "errors"
 
 assistant, err := client.AI.Assistants.New(context.Background(), telnyx.AIAssistantNewParams{
 		Instructions: "You are a helpful assistant.",
-		Model: "openai/gpt-4o",
 		Name: "my-resource",
+		Model: "openai/gpt-4o",
 	})
 if err != nil {
   var apiErr *telnyx.Error
@@ -97,18 +97,17 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `Name` | string | Yes |  |
-| `Model` | string | Yes | ID of the model to use. |
 | `Instructions` | string | Yes | System instructions for the assistant. |
-| `Tools` | array[object] | No | The tools that the assistant can use. |
-| `ToolIds` | array[string] | No |  |
-| `Description` | string | No |  |
-| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
+| `Tags` | array[string] | No | Tags associated with the assistant. |
+| `Model` | string | No | ID of the model to use when `external_llm` is not set. |
+| `Tools` | array[object] | No | Deprecated for new integrations. |
+| ... | | | +22 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	assistant, err := client.AI.Assistants.New(context.Background(), telnyx.AIAssistantNewParams{
 		Instructions: "You are a helpful assistant.",
-		Model: "openai/gpt-4o",
 		Name: "my-resource",
+		Model: "openai/gpt-4o",
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -237,7 +236,7 @@ Primary response fields:
 - `assistant.CreatedAt`
 - `assistant.Description`
 - `assistant.DynamicVariables`
-- `assistant.DynamicVariablesWebhookURL`
+- `assistant.DynamicVariablesWebhookTimeoutMs`
 
 ### Update an assistant
 
@@ -248,10 +247,10 @@ Create or provision an additional resource when the core tasks do not cover this
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `AssistantId` | string (UUID) | Yes |  |
+| `Tags` | array[string] | No | Tags associated with the assistant. |
 | `Name` | string | No |  |
-| `Model` | string | No | ID of the model to use. |
-| `Instructions` | string | No | System instructions for the assistant. |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| `Model` | string | No | ID of the model to use when `external_llm` is not set. |
+| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	assistant, err := client.AI.Assistants.Update(
@@ -271,7 +270,7 @@ Primary response fields:
 - `assistant.CreatedAt`
 - `assistant.Description`
 - `assistant.DynamicVariables`
-- `assistant.DynamicVariablesWebhookURL`
+- `assistant.DynamicVariablesWebhookTimeoutMs`
 
 ### List assistants
 
@@ -296,7 +295,7 @@ Primary item fields:
 - `CreatedAt`
 - `Description`
 - `DynamicVariables`
-- `DynamicVariablesWebhookURL`
+- `DynamicVariablesWebhookTimeoutMs`
 
 ### Import assistants from external provider
 
@@ -330,7 +329,7 @@ Primary item fields:
 - `CreatedAt`
 - `Description`
 - `DynamicVariables`
-- `DynamicVariablesWebhookURL`
+- `DynamicVariablesWebhookTimeoutMs`
 
 ### Get All Tags
 
@@ -457,8 +456,8 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get specific test run details | `client.AI.Assistants.Tests.Runs.Get()` | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `TestId`, `RunId` |
 | Delete an assistant | `client.AI.Assistants.Delete()` | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `AssistantId` |
 | Get Canary Deploy | `client.AI.Assistants.CanaryDeploys.Get()` | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `AssistantId` |
-| Create Canary Deploy | `client.AI.Assistants.CanaryDeploys.New()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `Versions`, `AssistantId` |
-| Update Canary Deploy | `client.AI.Assistants.CanaryDeploys.Update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `Versions`, `AssistantId` |
+| Create Canary Deploy | `client.AI.Assistants.CanaryDeploys.New()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `AssistantId` |
+| Update Canary Deploy | `client.AI.Assistants.CanaryDeploys.Update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `AssistantId` |
 | Delete Canary Deploy | `client.AI.Assistants.CanaryDeploys.Delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `AssistantId` |
 | Assistant Sms Chat | `client.AI.Assistants.SendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `From`, `To`, `AssistantId` |
 | Clone Assistant | `client.AI.Assistants.Clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `AssistantId` |

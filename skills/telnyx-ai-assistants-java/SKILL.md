@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -50,8 +50,8 @@ import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
 import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
 AssistantCreateParams params = AssistantCreateParams.builder()
     .instructions("You are a helpful assistant.")
-    .model("openai/gpt-4o")
     .name("my-resource")
+    .model("openai/gpt-4o")
     .build();
 InferenceEmbedding assistant = client.ai().assistants().create(params);
 ```
@@ -83,12 +83,11 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `name` | string | Yes |  |
-| `model` | string | Yes | ID of the model to use. |
 | `instructions` | string | Yes | System instructions for the assistant. |
-| `tools` | array[object] | No | The tools that the assistant can use. |
-| `toolIds` | array[string] | No |  |
-| `description` | string | No |  |
-| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
+| `tags` | array[string] | No | Tags associated with the assistant. |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| `tools` | array[object] | No | Deprecated for new integrations. |
+| ... | | | +22 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
@@ -96,8 +95,8 @@ import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
 
 AssistantCreateParams params = AssistantCreateParams.builder()
     .instructions("You are a helpful assistant.")
-    .model("openai/gpt-4o")
     .name("my-resource")
+    .model("openai/gpt-4o")
     .build();
 InferenceEmbedding assistant = client.ai().assistants().create(params);
 ```
@@ -216,7 +215,7 @@ Primary response fields:
 - `assistant.createdAt`
 - `assistant.description`
 - `assistant.dynamicVariables`
-- `assistant.dynamicVariablesWebhookUrl`
+- `assistant.dynamicVariablesWebhookTimeoutMs`
 
 ### Update an assistant
 
@@ -227,10 +226,10 @@ Create or provision an additional resource when the core tasks do not cover this
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `assistantId` | string (UUID) | Yes |  |
+| `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
-| `model` | string | No | ID of the model to use. |
-| `instructions` | string | No | System instructions for the assistant. |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantUpdateParams;
@@ -245,7 +244,7 @@ Primary response fields:
 - `assistant.createdAt`
 - `assistant.description`
 - `assistant.dynamicVariables`
-- `assistant.dynamicVariablesWebhookUrl`
+- `assistant.dynamicVariablesWebhookTimeoutMs`
 
 ### List assistants
 
@@ -269,7 +268,7 @@ Primary item fields:
 - `createdAt`
 - `description`
 - `dynamicVariables`
-- `dynamicVariablesWebhookUrl`
+- `dynamicVariablesWebhookTimeoutMs`
 
 ### Import assistants from external provider
 
@@ -303,7 +302,7 @@ Primary item fields:
 - `createdAt`
 - `description`
 - `dynamicVariables`
-- `dynamicVariablesWebhookUrl`
+- `dynamicVariablesWebhookTimeoutMs`
 
 ### Get All Tags
 
@@ -422,8 +421,8 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get specific test run details | `client.ai().assistants().tests().runs().retrieve()` | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `testId`, `runId` |
 | Delete an assistant | `client.ai().assistants().delete()` | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistantId` |
 | Get Canary Deploy | `client.ai().assistants().canaryDeploys().retrieve()` | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
-| Create Canary Deploy | `client.ai().assistants().canaryDeploys().create()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `versions`, `assistantId` |
-| Update Canary Deploy | `client.ai().assistants().canaryDeploys().update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `versions`, `assistantId` |
+| Create Canary Deploy | `client.ai().assistants().canaryDeploys().create()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId` |
+| Update Canary Deploy | `client.ai().assistants().canaryDeploys().update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistantId` |
 | Delete Canary Deploy | `client.ai().assistants().canaryDeploys().delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistantId` |
 | Assistant Sms Chat | `client.ai().assistants().sendSms()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistantId` |
 | Clone Assistant | `client.ai().assistants().clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId` |

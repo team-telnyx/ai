@@ -36,6 +36,7 @@
 | `id` | uuid |
 | `media` | array[object] |
 | `messaging_profile_id` | string |
+| `num_chars` | integer |
 | `organization_id` | uuid |
 | `parts` | integer |
 | `received_at` | date-time |
@@ -93,6 +94,7 @@
 | `id` | uuid |
 | `media` | array[object] |
 | `messaging_profile_id` | string |
+| `num_chars` | integer |
 | `organization_id` | uuid |
 | `parts` | integer |
 | `received_at` | date-time |
@@ -299,6 +301,7 @@
 |-----------|------|-------------|
 | `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `messagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
 
 ### Update a messaging hosted number — `client.messagingHostedNumbers().update()`
 
@@ -343,6 +346,7 @@
 | `data.payload.to` | array[object] |  |
 | `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
+| `data.payload.num_chars` | integer | The number of characters in the message text |
 | `data.payload.subject` | string \| null | Subject of multimedia message |
 | `data.payload.media` | array[object] |  |
 | `data.payload.webhook_url` | url | The URL where webhooks related to this message will be sent. |
@@ -382,6 +386,7 @@
 | `data.payload.to` | array[object] |  |
 | `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
+| `data.payload.num_chars` | integer | The number of characters in the message text |
 | `data.payload.subject` | string \| null | Message subject. |
 | `data.payload.media` | array[object] |  |
 | `data.payload.webhook_url` | url | The URL where webhooks related to this message will be sent. |

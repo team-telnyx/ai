@@ -416,6 +416,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `WhatsappMessage` | object | Yes |  |
 | `Type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `MessagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```go
 	response, err := client.Messages.SendWhatsapp(context.Background(), telnyx.MessageSendWhatsappParams{
