@@ -1,6 +1,6 @@
 {
   "name": "@telnyx/opencode",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Telnyx auth and provider plugin for OpenCode",
   "license": "MIT",
   "type": "module",
