@@ -98,6 +98,12 @@ function providerModels(models: HostedModel[], enabled: Set<string>) {
         entry.variants = {
           thinking: { enable_thinking: true },
           "no-thinking": { enable_thinking: false },
+          max: { disabled: true },
+          high: { disabled: true },
+          medium: { disabled: true },
+          low: { disabled: true },
+          fast: { disabled: true },
+          none: { disabled: true },
         }
       }
       return [[model.id, entry] as const]

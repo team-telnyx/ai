@@ -78,6 +78,12 @@ function modelConfig(model: JsonObject): [string, JsonObject] | undefined {
     base.variants = {
       thinking: { enable_thinking: true },
       "no-thinking": { enable_thinking: false },
+      max: { disabled: true },
+      high: { disabled: true },
+      medium: { disabled: true },
+      low: { disabled: true },
+      fast: { disabled: true },
+      none: { disabled: true },
     }
   }
 
