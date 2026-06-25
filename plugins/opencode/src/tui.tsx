@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import type { TuiPlugin, TuiPluginModule, TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { DEFAULT_ENABLED_MODELS, loadEnabledModels, persistEnabledModels } from "./models-config"
+import { loadEnabledModels, persistEnabledModels, THINKING_CAPABLE_MODELS } from "./models-config"
 
 const PROVIDER_ID = "telnyx"
 const API_BASE = "https://api.telnyx.com/v2/ai"
@@ -42,7 +42,9 @@ function isTelnyxHostedModel(model: JsonObject): boolean {
   return typeof model.owned_by === "string" && model.owned_by.toLowerCase() === "telnyx"
 }
 
-function normalizeModel(model: JsonObject): { id: string; name: string; context: number; vision: boolean } | undefined {
+type HostedModel = { id: string; name: string; context: number; output: number; vision: boolean; thinking: boolean }
+
+function normalizeModel(model: JsonObject): HostedModel | undefined {
   const id = typeof model.id === "string" ? model.id : undefined
   const task = typeof model.task === "string" ? model.task : undefined
   const context = typeof model.context_length === "number" ? model.context_length : undefined
@@ -51,10 +53,12 @@ function normalizeModel(model: JsonObject): { id: string; name: string; context:
   if (!isTelnyxHostedModel(model)) return undefined
   const name = id.includes("/") ? id.split("/").pop() ?? id : id
   const vision = model.is_vision_supported === true
-  return { id, name, context, vision }
+  const output = typeof model.max_output_length === "number" ? model.max_output_length : 16384
+  const thinking = THINKING_CAPABLE_MODELS.has(id)
+  return { id, name, context, output, vision, thinking }
 }
 
-async function fetchHostedModels(key: string | undefined): Promise<Array<{ id: string; name: string; context: number; vision: boolean }>> {
+async function fetchHostedModels(key: string | undefined): Promise<HostedModel[]> {
   if (!key) return []
   try {
     const response = await fetch(MODELS_URL, {
@@ -76,17 +80,25 @@ async function fetchHostedModels(key: string | undefined): Promise<Array<{ id: s
   }
 }
 
-function providerModels(models: Array<{ id: string; name: string; context: number; vision: boolean }>, enabled: Set<string>) {
+function providerModels(models: HostedModel[], enabled: Set<string>) {
   return Object.fromEntries(
     models.flatMap((model) => {
       if (!enabled.has(model.id)) return []
       const entry: Record<string, unknown> = {
         name: model.name,
-        limit: { context: model.context, output: 16384 },
+        limit: { context: model.context, output: model.output },
       }
       if (model.vision) {
         entry.attachment = true
         entry.modalities = { input: ["text", "image"], output: ["text"] }
+      }
+      if (model.thinking) {
+        entry.reasoning = true
+        entry.options = { enable_thinking: true }
+        entry.variants = {
+          thinking: { enable_thinking: true },
+          "no-thinking": { enable_thinking: false },
+        }
       }
       return [[model.id, entry] as const]
     }),

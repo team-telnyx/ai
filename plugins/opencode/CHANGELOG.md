@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added `zai-org/GLM-5.2` and `MiniMaxAI/MiniMax-M3-MXFP8` to the default enabled-models allowlist (now 5 models). Both are Telnyx-hosted text-generation models with 1M context windows, auto-registered from `GET https://api.telnyx.com/v2/ai/models`.
+- Updated `opencode auth login` model preset label from "Recommended 3" to "Recommended 5" and refreshed the hint text to list the new lineup.
+- Added thinking on/off variants for reasoning models. Thinking-capable models are registered with `reasoning: true` and two variants: `thinking` (default, `enable_thinking: true`) and `no-thinking` (`enable_thinking: false`). A `chat.message` + `chat.params` hook pair propagates the selected variant to the Telnyx API request body.
+- Added `THINKING_CAPABLE_MODELS` set to `models-config.ts` listing the 5 known reasoner model IDs. Non-reasoners are not sent `enable_thinking` (Telnyx API rejects it with error 10015).
+
+### Fixed
+
+- Fixed TUI `/telnyx` model toggle re-registering models with hardcoded `output: 16384` instead of the API's `max_output_length`. The TUI now honors the per-model output limit (e.g. 131072 for GLM-5.2), matching the server-side registration.
+- Removed unused `DEFAULT_ENABLED_MODELS` import from `tui.tsx`.
+
 ## [0.1.4] - 2026-05-19
 
 ### Fixed

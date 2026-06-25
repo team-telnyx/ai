@@ -23,12 +23,15 @@ opencode plugin -g @telnyx/opencode
 - reads the Telnyx API key from either `TELNYX_API_KEY` or OpenCode's stored `auth.json` credential
 - fetches available models from `https://api.telnyx.com/v2/ai/models` at startup
 - registers only Telnyx-hosted text models from the API response
-- enables these three recommended models by default:
+- enables these five recommended models by default:
   - `moonshotai/Kimi-K2.6`
+  - `zai-org/GLM-5.2`
   - `zai-org/GLM-5.1-FP8`
+  - `MiniMaxAI/MiniMax-M3-MXFP8`
   - `MiniMaxAI/MiniMax-M2.7`
 - persists the enabled-model allowlist in `~/.config/opencode/telnyx-models.json`
 - lets users enable additional Telnyx-hosted models through the `/telnyx` TUI command
+- registers thinking-capable models with `reasoning: true` and two variants: `thinking` (default, `enable_thinking: true`) and `no-thinking` (`enable_thinking: false`)
 - strips `maxOutputTokens` before requests so Telnyx accepts tool-enabled runs
 
 ## Authenticate
@@ -41,7 +44,7 @@ opencode auth login --provider telnyx --method "API Key"
 
 During login the plugin also asks which Telnyx model preset to enable:
 
-- **Recommended 3 (default)**
+- **Recommended 5 (default)**
 - **All hosted Telnyx models**
 - **Keep existing config**
 
@@ -63,6 +66,23 @@ opencode auth list
 opencode run --model 'telnyx/moonshotai/Kimi-K2.6' 'Say hello in one sentence.'
 ```
 
+## Thinking variants
+
+Telnyx-hosted reasoning models (all 5 default models) are registered with `reasoning: true` and two OpenCode variants:
+
+- `thinking` (default) — sends `enable_thinking: true` to the Telnyx API; reasoning content is surfaced in OpenCode
+- `no-thinking` — sends `enable_thinking: false`; skips the reasoning step for lower latency
+
+```bash
+# Thinking on (default)
+opencode run --model 'telnyx/zai-org/GLM-5.2' 'What is 2+2?'
+
+# Thinking off
+opencode run --model 'telnyx/zai-org/GLM-5.2' --variant no-thinking 'What is 2+2?'
+```
+
+Non-reasoning Telnyx models (e.g. Llama, Qwen) are registered without thinking config — the Telnyx API rejects `enable_thinking` for non-reasoner models (error 10015). Only models in the `THINKING_CAPABLE_MODELS` set get thinking variants.
+
 ## How auth works
 
 Auth precedence is:
@@ -79,7 +99,9 @@ At startup the plugin calls `GET https://api.telnyx.com/v2/ai/models` and regist
 Default allowlist:
 
 - `moonshotai/Kimi-K2.6`
+- `zai-org/GLM-5.2`
 - `zai-org/GLM-5.1-FP8`
+- `MiniMaxAI/MiniMax-M3-MXFP8`
 - `MiniMaxAI/MiniMax-M2.7`
 
 Allowlist file:
@@ -89,7 +111,9 @@ Allowlist file:
   "version": 1,
   "enabledModels": [
     "moonshotai/Kimi-K2.6",
+    "zai-org/GLM-5.2",
     "zai-org/GLM-5.1-FP8",
+    "MiniMaxAI/MiniMax-M3-MXFP8",
     "MiniMaxAI/MiniMax-M2.7"
   ]
 }
@@ -104,7 +128,7 @@ Path:
 
 The package also registers a `/telnyx` command (alias: `/telnyx-models`) that opens an interactive model manager in the OpenCode TUI.
 
-- the dialog starts from the default 3-model allowlist
+- the dialog starts from the default 5-model allowlist
 - selecting a model toggles it on or off
 - changes are persisted to `~/.config/opencode/telnyx-models.json`
 - updated provider model availability is applied without manually editing config files

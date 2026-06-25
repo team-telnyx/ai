@@ -2,13 +2,15 @@ import { readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import type { Plugin } from "@opencode-ai/plugin"
-import { DEFAULT_ENABLED_MODELS, loadEnabledModels, persistEnabledModels } from "./models-config"
+import { DEFAULT_ENABLED_MODELS, THINKING_CAPABLE_MODELS, loadEnabledModels, persistEnabledModels } from "./models-config"
 
 const PROVIDER_ID = "telnyx"
 const API_BASE = "https://api.telnyx.com/v2/ai"
 const OPENAI_BASE = `${API_BASE}/openai`
 const MODELS_URL = `${API_BASE}/models`
 const TEXT_TASKS = new Set(["text-generation", "text generation"])
+
+const sessionVariants = new Map<string, string>()
 
 type JsonObject = Record<string, unknown>
 
@@ -54,23 +56,32 @@ function modelConfig(model: JsonObject): [string, JsonObject] | undefined {
   const shortId = id.includes("/") ? id.split("/").pop() ?? id : id
   const vision = model.is_vision_supported === true
   const output = typeof model.max_output_length === "number" ? model.max_output_length : 16384
+  const thinking = THINKING_CAPABLE_MODELS.has(id)
 
-  return [
-    id,
-    {
-      name: shortId,
-      limit: { context, output },
-      ...(vision
-        ? {
-            attachment: true,
-            modalities: {
-              input: ["text", "image"],
-              output: ["text"],
-            },
-          }
-        : {}),
-    },
-  ]
+  const base: JsonObject = {
+    name: shortId,
+    limit: { context, output },
+    ...(vision
+      ? {
+          attachment: true,
+          modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+          },
+        }
+      : {}),
+  }
+
+  if (thinking) {
+    base.reasoning = true
+    base.options = { enable_thinking: true }
+    base.variants = {
+      thinking: { enable_thinking: true },
+      "no-thinking": { enable_thinking: false },
+    }
+  }
+
+  return [id, base]
 }
 
 async function fetchModels(key: string | undefined, enabledModelIDs: readonly string[]): Promise<Record<string, JsonObject>> {
@@ -163,9 +174,9 @@ const TelnyxAuthPlugin: Plugin = async () => {
             message: "Which Telnyx models should be enabled?",
             options: [
               {
-                label: "Recommended 3 (default)",
+                label: "Recommended 5 (default)",
                 value: "recommended",
-                hint: "Kimi-K2.6, GLM-5.1-FP8, MiniMax-M2.7",
+                hint: "Kimi-K2.6, GLM-5.2, GLM-5.1-FP8, MiniMax-M3-MXFP8, MiniMax-M2.7",
               },
               {
                 label: "All hosted Telnyx models",
@@ -217,8 +228,23 @@ const TelnyxAuthPlugin: Plugin = async () => {
       }
     },
 
-    "chat.params": async (input: { model?: { providerID?: string } }, output: { maxOutputTokens?: number }) => {
-      if (input.model?.providerID === PROVIDER_ID) output.maxOutputTokens = undefined
+    "chat.message": async (input: { sessionID: string; model?: { providerID?: string }; variant?: string }) => {
+      if (input.model?.providerID !== PROVIDER_ID) return
+      if (input.variant) sessionVariants.set(input.sessionID, input.variant)
+      else sessionVariants.delete(input.sessionID)
+    },
+
+    "chat.params": async (
+      input: { model?: { providerID?: string; options?: { enable_thinking?: boolean } }; sessionID: string },
+      output: { maxOutputTokens?: number; options?: Record<string, unknown> },
+    ) => {
+      if (input.model?.providerID !== PROVIDER_ID) return
+      output.maxOutputTokens = undefined
+      const variant = sessionVariants.get(input.sessionID)
+      if (variant === "no-thinking") {
+        output.options ??= {}
+        output.options.enable_thinking = false
+      }
     },
   }
 }

@@ -16,7 +16,25 @@ export const DEFAULT_ENABLED_MODELS = [
   "moonshotai/Kimi-K2.6",
   "zai-org/GLM-5.1-FP8",
   "MiniMaxAI/MiniMax-M2.7",
+  "zai-org/GLM-5.2",
+  "MiniMaxAI/MiniMax-M3-MXFP8",
 ] as const
+
+/**
+ * Telnyx-hosted model IDs known to support the `enable_thinking` request
+ * parameter (reasoning models). The Telnyx API rejects `enable_thinking`
+ * for non-reasoner models with error 10015, so this set must only contain
+ * confirmed reasoners. Verified via the Telnyx Chat Completions API.
+ *
+ * Extend this set as new reasoners are confirmed on the Telnyx platform.
+ */
+export const THINKING_CAPABLE_MODELS: ReadonlySet<string> = new Set([
+  "moonshotai/Kimi-K2.6",
+  "zai-org/GLM-5.1-FP8",
+  "MiniMaxAI/MiniMax-M2.7",
+  "zai-org/GLM-5.2",
+  "MiniMaxAI/MiniMax-M3-MXFP8",
+])
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null
