@@ -93,6 +93,9 @@ jobs:
       - name: Guide structural tests
         run: npx tsx --test tests/guides.test.ts
 
+      - name: OpenRouter readiness packet tests
+        run: npx tsx --test tests/openrouter-readiness.test.ts
+
   api-readonly:
     name: API Read-Only Tests
     runs-on: ubuntu-latest
@@ -200,5 +203,4 @@ jobs:
         continue-on-error: true
         working-directory: cli
         run: RUN_WRITE_TESTS=true npx tsx tests/integration-ci-write.test.ts
-
 

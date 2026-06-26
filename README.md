@@ -10,6 +10,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 - [Telnyx Plugins](#plugins) - Install the Telnyx plugin for Claude Code, Cursor, or Gemini CLI to give your coding assistant Telnyx MCP server access and Telnyx Agent Skills.
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
+
+- [Inference Integrations](#inference-integrations) - provider-readiness packets and model-backend integrations for LLM ecosystems such as OpenRouter.
   
 - [Agent Skills](#agent-skills) - give AI coding assistants accurate, up-to-date context about Telnyx APIs and SDKs.
   
@@ -156,6 +158,14 @@ const tools = toolkit.getLangChainTools();
 
 Works with LangChain and Vercel's AI SDK. See [TypeScript docs](/tools/typescript) for full usage.
  for the full list of commands and options.
+
+## Inference Integrations
+
+Provider-readiness packets and model-backend integrations for AI inference ecosystems live in [`inference/`](/inference).
+
+Current entries:
+
+- [OpenRouter readiness packet](/inference/openrouter) - onboarding packet, draft model manifest, and validation script for listing Telnyx as an OpenRouter provider.
 
 ## Agent Skills
 

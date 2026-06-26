@@ -1,0 +1,170 @@
+{
+  "_warning": "Draft only. Do not expose this as a production OpenRouter model-list endpoint until TODO fields are replaced with product-approved values.",
+  "_source_docs": [
+    "https://developers.telnyx.com/docs/inference/models",
+    "https://developers.telnyx.com/api-reference/openai-chat/get-available-models-openai-compatible",
+    "https://openrouter.ai/docs/guides/community/for-providers"
+  ],
+  "data": [
+    {
+      "id": "moonshotai/Kimi-K2.6",
+      "hugging_face_id": "moonshotai/Kimi-K2.6",
+      "name": "Moonshot AI: Kimi K2.6",
+      "created": 0,
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "quantization": "TODO_CONFIRM_QUANTIZATION",
+      "context_length": 262144,
+      "max_output_length": null,
+      "pricing": {
+        "prompt": "TODO_CONFIRM_USD_PER_INPUT_TOKEN",
+        "completion": "TODO_CONFIRM_USD_PER_OUTPUT_TOKEN",
+        "request": "0",
+        "image": "0",
+        "input_cache_read": "TODO_CONFIRM_USD_PER_CACHED_INPUT_TOKEN"
+      },
+      "supported_sampling_parameters": [
+        "temperature",
+        "top_p",
+        "frequency_penalty",
+        "presence_penalty",
+        "stop",
+        "max_tokens"
+      ],
+      "supported_features": ["reasoning"],
+      "description": "Highest-intelligence Telnyx-hosted open-source chat model; recommended by current Telnyx model docs.",
+      "is_ready": false,
+      "is_free": false,
+      "discount_to_user": 0,
+      "capacity_tpm": null,
+      "openrouter": {
+        "slug": "moonshotai/kimi-k2.6"
+      },
+      "datacenters": [
+        {
+          "country_code": "TODO_CONFIRM_ISO_3166_ALPHA_2"
+        }
+      ]
+    },
+    {
+      "id": "zai-org/GLM-5.2",
+      "hugging_face_id": "zai-org/GLM-5.2",
+      "name": "Z.ai: GLM 5.2",
+      "created": 0,
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "quantization": "TODO_CONFIRM_QUANTIZATION",
+      "context_length": 1000000,
+      "max_output_length": null,
+      "pricing": {
+        "prompt": "TODO_CONFIRM_USD_PER_INPUT_TOKEN",
+        "completion": "TODO_CONFIRM_USD_PER_OUTPUT_TOKEN",
+        "request": "0",
+        "image": "0",
+        "input_cache_read": "TODO_CONFIRM_USD_PER_CACHED_INPUT_TOKEN"
+      },
+      "supported_sampling_parameters": [
+        "temperature",
+        "top_p",
+        "frequency_penalty",
+        "presence_penalty",
+        "stop",
+        "max_tokens"
+      ],
+      "supported_features": ["reasoning"],
+      "description": "Telnyx-hosted long-context model for coding and reasoning.",
+      "is_ready": false,
+      "is_free": false,
+      "discount_to_user": 0,
+      "capacity_tpm": null,
+      "openrouter": {
+        "slug": "zai-org/glm-5.2"
+      },
+      "datacenters": [
+        {
+          "country_code": "TODO_CONFIRM_ISO_3166_ALPHA_2"
+        }
+      ]
+    },
+    {
+      "id": "zai-org/GLM-5.1-FP8",
+      "hugging_face_id": "zai-org/GLM-5.1-FP8",
+      "name": "Z.ai: GLM 5.1 FP8",
+      "created": 0,
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "quantization": "fp8",
+      "context_length": 202000,
+      "max_output_length": null,
+      "pricing": {
+        "prompt": "TODO_CONFIRM_USD_PER_INPUT_TOKEN",
+        "completion": "TODO_CONFIRM_USD_PER_OUTPUT_TOKEN",
+        "request": "0",
+        "image": "0",
+        "input_cache_read": "TODO_CONFIRM_USD_PER_CACHED_INPUT_TOKEN"
+      },
+      "supported_sampling_parameters": [
+        "temperature",
+        "top_p",
+        "frequency_penalty",
+        "presence_penalty",
+        "stop",
+        "max_tokens"
+      ],
+      "supported_features": ["tools", "reasoning"],
+      "description": "Efficient Telnyx-hosted reasoning model with function-calling suitability per current model docs.",
+      "is_ready": false,
+      "is_free": false,
+      "discount_to_user": 0,
+      "capacity_tpm": null,
+      "openrouter": {
+        "slug": "zai-org/glm-5.1-fp8"
+      },
+      "datacenters": [
+        {
+          "country_code": "TODO_CONFIRM_ISO_3166_ALPHA_2"
+        }
+      ]
+    },
+    {
+      "id": "MiniMaxAI/MiniMax-M3-MXFP8",
+      "hugging_face_id": "MiniMaxAI/MiniMax-M3-MXFP8",
+      "name": "MiniMax AI: MiniMax M3 MXFP8",
+      "created": 0,
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "quantization": "TODO_CONFIRM_QUANTIZATION",
+      "context_length": 1000000,
+      "max_output_length": null,
+      "pricing": {
+        "prompt": "TODO_CONFIRM_USD_PER_INPUT_TOKEN",
+        "completion": "TODO_CONFIRM_USD_PER_OUTPUT_TOKEN",
+        "request": "0",
+        "image": "0",
+        "input_cache_read": "TODO_CONFIRM_USD_PER_CACHED_INPUT_TOKEN"
+      },
+      "supported_sampling_parameters": [
+        "temperature",
+        "top_p",
+        "frequency_penalty",
+        "presence_penalty",
+        "stop",
+        "max_tokens"
+      ],
+      "supported_features": [],
+      "description": "Cost-efficient Telnyx-hosted high-intelligence chat model.",
+      "is_ready": false,
+      "is_free": false,
+      "discount_to_user": 0,
+      "capacity_tpm": null,
+      "openrouter": {
+        "slug": "minimaxai/minimax-m3-mxfp8"
+      },
+      "datacenters": [
+        {
+          "country_code": "TODO_CONFIRM_ISO_3166_ALPHA_2"
+        }
+      ]
+    }
+  ]
+}
