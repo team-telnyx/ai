@@ -353,6 +353,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```ruby
 response = client.messages.send_whatsapp(from: "+13125551234", to: "+13125551234", whatsapp_message: {})

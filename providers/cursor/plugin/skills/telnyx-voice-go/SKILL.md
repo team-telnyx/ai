@@ -52,7 +52,7 @@ response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
 		ConnectionID: "7267xxxxxxxxxxxxxx",
 		From:         "+18005550101",
 		To: telnyx.CallDialParamsToUnion{
-			OfString: telnyx.String("+18005550100"),
+			OfString: telnyx.String("+18005550100;secure=srtp"),
 		},
 	})
 if err != nil {
@@ -111,14 +111,14 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +48 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
 		ConnectionID: "7267xxxxxxxxxxxxxx",
 		From:         "+18005550101",
 		To: telnyx.CallDialParamsToUnion{
-			OfString: telnyx.String("+18005550100"),
+			OfString: telnyx.String("+18005550100;secure=srtp"),
 		},
 	})
 	if err != nil {
@@ -147,7 +147,7 @@ Primary inbound call-control command.
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Answer(
@@ -178,14 +178,14 @@ Common post-answer control path with downstream webhook implications.
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +33 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Transfer(
 		context.Background(),
 		"call_control_id",
 		telnyx.CallActionTransferParams{
-			To: "+18005550100",
+			To: "+18005550100;secure=srtp",
 		},
 	)
 	if err != nil {

@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -261,7 +261,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.brand.BrandRetrieveParams;
@@ -286,8 +286,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `usecase` | string | Yes |  |
-| `brandId` | string (UUID) | Yes |  |
+| `usecase` | string | Yes | Unique identifier of the usecase. |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.campaignbuilder.brand.BrandQualifyByUsecaseParams;
@@ -322,7 +322,6 @@ Create or provision an additional resource when the core tasks do not cover this
 ```java
 import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaign;
 import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreate;
-import com.telnyx.sdk.models.messaging10dlc.phonenumbercampaigns.PhoneNumberCampaignCreateParams;
 
 PhoneNumberCampaignCreate params = PhoneNumberCampaignCreate.builder()
     .campaignId("4b300178-131c-d902-d54e-72d90ba1620j")
@@ -347,7 +346,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `campaignId` | string (UUID) | Yes |  |
+| `campaignId` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.campaign.CampaignRetrieveParams;
@@ -373,7 +372,7 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `page` | integer | No |  |
+| `page` | integer | No | Page number to retrieve (1-based). |
 | `recordsPerPage` | integer | No | number of records per page. |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
@@ -397,7 +396,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```java
 import com.telnyx.sdk.models.messaging10dlc.brand.BrandGetFeedbackParams;

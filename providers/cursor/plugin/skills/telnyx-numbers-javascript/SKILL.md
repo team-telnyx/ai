@@ -273,7 +273,7 @@ Modify an existing resource without recreating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `advanced-order-id` | string (UUID) | Yes |  |
+| `advanced-order-id` | string (UUID) | Yes | Unique identifier of the advanced order. |
 | `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `requirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `countryCode` | string (ISO 3166-1 alpha-2) | No |  |
@@ -303,7 +303,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `orderId` | string (UUID) | Yes |  |
+| `orderId` | string (UUID) | Yes | Unique identifier of the order. |
 
 ```javascript
 const advancedOrder = await client.advancedOrders.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');

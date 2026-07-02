@@ -66,8 +66,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas).
 
 ## Core Tasks
 
@@ -113,7 +113,7 @@ Number ordering is the production provisioning step after number selection.
 | `ConnectionId` | string (UUID) | No | Identifies the connection associated with this phone number. |
 | `MessagingProfileId` | string (UUID) | No | Identifies the messaging profile associated with the phone n... |
 | `BillingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
-| ... | | | +1 optional params in the API Details section below |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	numberOrder, err := client.NumberOrders.New(context.Background(), telnyx.NumberOrderNewParams{
@@ -177,7 +177,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `Status` | enum (pending, success, failure) | No | The status of the entire reservation. |
 | `Id` | string (UUID) | No |  |
 | `RecordType` | string | No |  |
-| ... | | | +3 optional params in the API Details section below |
+| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	numberReservation, err := client.NumberReservations.New(context.Background(), telnyx.NumberReservationNewParams{
@@ -259,7 +259,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `RequirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `CountryCode` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	advancedOrder, err := client.AdvancedOrders.New(context.Background(), telnyx.AdvancedOrderNewParams{
@@ -287,11 +287,11 @@ Modify an existing resource without recreating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Advanced-order-id` | string (UUID) | Yes |  |
+| `Advanced-order-id` | string (UUID) | Yes | Unique identifier of the advanced order. |
 | `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `RequirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `CountryCode` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.AdvancedOrders.UpdateRequirementGroup(
@@ -323,7 +323,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `OrderId` | string (UUID) | Yes |  |
+| `OrderId` | string (UUID) | Yes | Unique identifier of the order. |
 
 ```go
 	advancedOrder, err := client.AdvancedOrders.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")
@@ -405,8 +405,8 @@ Primary item fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -455,4 +455,126 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/numbers.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create Advanced Order — `client.AdvancedOrders.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CountryCode` | string (ISO 3166-1 alpha-2) |  |
+| `Comments` | string |  |
+| `Quantity` | integer |  |
+| `AreaCode` | string |  |
+| `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `Features` | array[object] |  |
+| `CustomerReference` | string |  |
+| `RequirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Update Advanced Order — `client.AdvancedOrders.UpdateRequirementGroup()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CountryCode` | string (ISO 3166-1 alpha-2) |  |
+| `Comments` | string |  |
+| `Quantity` | integer |  |
+| `AreaCode` | string |  |
+| `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `Features` | array[object] |  |
+| `CustomerReference` | string |  |
+| `RequirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Create a comment — `client.Comments.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Id` | string (UUID) |  |
+| `Body` | string |  |
+| `Commenter` | string |  |
+| `CommenterType` | enum (admin, user) |  |
+| `CommentRecordType` | enum (sub_number_order, requirement_group) |  |
+| `CommentRecordId` | string (UUID) |  |
+| `ReadAt` | string (date-time) | An ISO 8901 datetime string for when the comment was read. |
+| `CreatedAt` | string (date-time) | An ISO 8901 datetime string denoting when the comment was created. |
+| `UpdatedAt` | string (date-time) | An ISO 8901 datetime string for when the comment was updated. |
+
+### Create an inexplicit number order — `client.InexplicitNumberOrders.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ConnectionId` | string (UUID) | Connection id to apply to phone numbers that are purchased |
+| `MessagingProfileId` | string (UUID) | Messaging profile id to apply to phone numbers that are purchased |
+| `CustomerReference` | string | Reference label for the customer |
+| `BillingGroupId` | string (UUID) | Billing group id to apply to phone numbers that are purchased |
+
+### Create a number block order — `client.NumberBlockOrders.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Id` | string (UUID) |  |
+| `RecordType` | string |  |
+| `PhoneNumbersCount` | integer | The count of phone numbers in the number order. |
+| `ConnectionId` | string (UUID) | Identifies the connection associated with this phone number. |
+| `MessagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `Status` | enum (pending, success, failure) | The status of the order. |
+| `CustomerReference` | string | A customer reference string for customer look ups. |
+| `CreatedAt` | string (date-time) | An ISO 8901 datetime string denoting when the number order was created. |
+| `UpdatedAt` | string (date-time) | An ISO 8901 datetime string for when the number order was updated. |
+| `RequirementsMet` | boolean | True if all requirements are met for every phone number, false otherwise. |
+| `Errors` | string | Errors the reservation could happen upon |
+
+### Update requirements for a single phone number within a number order. — `client.NumberOrderPhoneNumbers.UpdateRequirements()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `RegulatoryRequirements` | array[object] |  |
+
+### Create a number order — `client.NumberOrders.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `PhoneNumbers` | array[object] |  |
+| `ConnectionId` | string (UUID) | Identifies the connection associated with this phone number. |
+| `MessagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `BillingGroupId` | string (UUID) | Identifies the billing group associated with the phone number. |
+| `CustomerReference` | string | A customer reference string for customer look ups. |
+
+### Update a number order — `client.NumberOrders.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `RegulatoryRequirements` | array[object] |  |
+| `CustomerReference` | string | A customer reference string for customer look ups. |
+
+### Create a number reservation — `client.NumberReservations.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Id` | string (UUID) |  |
+| `RecordType` | string |  |
+| `PhoneNumbers` | array[object] |  |
+| `Status` | enum (pending, success, failure) | The status of the entire reservation. |
+| `CustomerReference` | string | A customer reference string for customer look ups. |
+| `CreatedAt` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
+| `UpdatedAt` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
+
+### Update a sub number order's requirements — `client.SubNumberOrders.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `RegulatoryRequirements` | array[object] |  |
+
+### Create a sub number orders report — `client.SubNumberOrdersReport.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Status` | enum (pending, success, failure) | Filter by order status |
+| `CountryCode` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `CreatedAtGt` | string (date-time) | Filter for orders created after this date |
+| `CreatedAtLt` | string (date-time) | Filter for orders created before this date |
+| `OrderRequestId` | string (UUID) | Filter by specific order request ID |
+| `CustomerReference` | string | Filter by customer reference |

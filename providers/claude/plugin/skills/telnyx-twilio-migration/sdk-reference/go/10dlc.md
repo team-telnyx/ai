@@ -77,9 +77,9 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
-- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/10dlc.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](../../references/sdk-api-details/10dlc.md#webhook-payload-fields).
 
 ## Core Tasks
 
@@ -99,7 +99,7 @@ Brand registration is the entrypoint for any US A2P 10DLC campaign flow.
 | `CompanyName` | string | No | (Required for Non-profit/private/public) Legal company name. |
 | `FirstName` | string | No | First name of business contact. |
 | `LastName` | string | No | Last name of business contact. |
-| ... | | | +16 optional params in the API Details section below |
+| ... | | | +16 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	telnyxBrand, err := client.Messaging10dlc.Brand.New(context.Background(), telnyx.Messaging10dlcBrandNewParams{
@@ -137,7 +137,7 @@ Campaign submission is the compliance-critical step that determines whether traf
 | `AgeGated` | boolean | No | Age gated message content in campaign. |
 | `AutoRenewal` | boolean | No | Campaign subscription auto-renewal option. |
 | `DirectLending` | boolean | No | Direct lending or loan arrangement |
-| ... | | | +29 optional params in the API Details section below |
+| ... | | | +29 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	telnyxCampaignCsp, err := client.Messaging10dlc.CampaignBuilder.Submit(context.Background(), telnyx.Messaging10dlcCampaignBuilderSubmitParams{
@@ -228,7 +228,7 @@ These webhook payload fields are inline because they are part of the primary int
 | `description` | string | Description of the event. |
 | `status` | enum: ACCEPTED, REJECTED, DORMANT, success, failed | The status of the campaign. |
 
-If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](../../references/sdk-api-details/10dlc.md#webhook-payload-fields) before writing the handler.
 
 ---
 
@@ -244,7 +244,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `BrandId` | string (UUID) | Yes |  |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	brand, err := client.Messaging10dlc.Brand.Get(context.Background(), "brandId")
@@ -270,8 +270,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Usecase` | string | Yes |  |
-| `BrandId` | string (UUID) | Yes |  |
+| `Usecase` | string | Yes | Unique identifier of the usecase. |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	response, err := client.Messaging10dlc.CampaignBuilder.Brand.QualifyByUsecase(
@@ -335,7 +335,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `CampaignId` | string (UUID) | Yes |  |
+| `CampaignId` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```go
 	telnyxCampaignCsp, err := client.Messaging10dlc.Campaign.Get(context.Background(), "campaignId")
@@ -362,9 +362,9 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `Sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `Page` | integer | No |  |
+| `Page` | integer | No | Page number to retrieve (1-based). |
 | `RecordsPerPage` | integer | No | number of records per page. |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	page, err := client.Messaging10dlc.Brand.List(context.Background(), telnyx.Messaging10dlcBrandListParams{})
@@ -387,7 +387,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `BrandId` | string (UUID) | Yes |  |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	response, err := client.Messaging10dlc.Brand.GetFeedback(context.Background(), "brandId")
@@ -405,8 +405,8 @@ Primary response fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/10dlc.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -445,4 +445,131 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/10dlc.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create Brand — `client.Messaging10dlc.Brand.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CompanyName` | string | (Required for Non-profit/private/public) Legal company name. |
+| `FirstName` | string | First name of business contact. |
+| `LastName` | string | Last name of business contact. |
+| `Ein` | string | (Required for Non-profit) Government assigned corporate tax ID. |
+| `Phone` | string | Valid phone number in e.164 international format. |
+| `Street` | string | Street number and name. |
+| `City` | string | City name |
+| `State` | string | State. |
+| `PostalCode` | string | Postal codes. |
+| `StockSymbol` | string | (Required for public company) stock symbol. |
+| `StockExchange` | object | (Required for public company) stock exchange. |
+| `IpAddress` | string (IPv4/IPv6) | IP address of the browser requesting to create brand identity. |
+| `Website` | string | Brand website URL. |
+| `IsReseller` | boolean |  |
+| `Mock` | boolean | Mock brand for testing purposes. |
+| `MobilePhone` | string | Valid mobile phone number in e.164 international format. |
+| `BusinessContactEmail` | string | Business contact email. |
+| `WebhookURL` | string | Webhook URL for brand status updates. |
+| `WebhookFailoverURL` | string | Webhook failover URL for brand status updates. |
+
+### Update Brand — `client.Messaging10dlc.Brand.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `CompanyName` | string | (Required for Non-profit/private/public) Legal company name. |
+| `FirstName` | string | First name of business contact. |
+| `LastName` | string | Last name of business contact. |
+| `Ein` | string | (Required for Non-profit) Government assigned corporate tax ID. |
+| `Phone` | string | Valid phone number in e.164 international format. |
+| `Street` | string | Street number and name. |
+| `City` | string | City name |
+| `State` | string | State. |
+| `PostalCode` | string | Postal codes. |
+| `StockSymbol` | string | (Required for public company) stock symbol. |
+| `StockExchange` | object | (Required for public company) stock exchange. |
+| `IpAddress` | string (IPv4/IPv6) | IP address of the browser requesting to create brand identity. |
+| `Website` | string | Brand website URL. |
+| `AltBusinessIdType` | enum (NONE, DUNS, GIIN, LEI) | An enumeration. |
+| `IsReseller` | boolean |  |
+| `IdentityStatus` | enum (VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED) | The verification status of an active brand |
+| `BusinessContactEmail` | string | Business contact email. |
+| `WebhookURL` | string | Webhook URL for brand status updates. |
+| `WebhookFailoverURL` | string | Webhook failover URL for brand status updates. |
+| `AltBusinessId` | string (UUID) | Alternate business identifier such as DUNS, LEI, or GIIN |
+
+### Import External Vetting Record — `client.Messaging10dlc.Brand.ExternalVetting.Imports()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `VettingToken` | string | Required by some providers for vetting record confirmation. |
+
+### Update campaign — `client.Messaging10dlc.Campaign.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ResellerId` | string (UUID) | Alphanumeric identifier of the reseller that you want to associate with this ... |
+| `Sample1` | string | Message sample. |
+| `Sample2` | string | Message sample. |
+| `Sample3` | string | Message sample. |
+| `Sample4` | string | Message sample. |
+| `Sample5` | string | Message sample. |
+| `MessageFlow` | string | Message flow description. |
+| `HelpMessage` | string | Help message of the campaign. |
+| `AutoRenewal` | boolean | Help message of the campaign. |
+| `WebhookURL` | string | Webhook to which campaign status updates are sent. |
+| `WebhookFailoverURL` | string | Webhook failover to which campaign status updates are sent. |
+
+### Submit Campaign — `client.Messaging10dlc.CampaignBuilder.Submit()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `AgeGated` | boolean | Age gated message content in campaign. |
+| `AutoRenewal` | boolean | Campaign subscription auto-renewal option. |
+| `DirectLending` | boolean | Direct lending or loan arrangement |
+| `EmbeddedLink` | boolean | Does message generated by the campaign include URL link in SMS? |
+| `EmbeddedPhone` | boolean | Does message generated by the campaign include phone number in SMS? |
+| `HelpKeywords` | string | Subscriber help keywords. |
+| `HelpMessage` | string | Help message of the campaign. |
+| `MessageFlow` | string | Message flow description. |
+| `MnoIds` | array[integer] | Submit campaign to given list of MNOs by MNO's network ID. |
+| `NumberPool` | boolean | Does campaign utilize pool of phone numbers? |
+| `OptinKeywords` | string | Subscriber opt-in keywords. |
+| `OptinMessage` | string | Subscriber opt-in message. |
+| `OptoutKeywords` | string | Subscriber opt-out keywords. |
+| `OptoutMessage` | string | Subscriber opt-out message. |
+| `ReferenceId` | string (UUID) | Caller supplied campaign reference ID. |
+| `ResellerId` | string (UUID) | Alphanumeric identifier of the reseller that you want to associate with this ... |
+| `Sample1` | string | Message sample. |
+| `Sample2` | string | Message sample. |
+| `Sample3` | string | Message sample. |
+| `Sample4` | string | Message sample. |
+| `Sample5` | string | Message sample. |
+| `SubUsecases` | array[string] | Campaign sub-usecases. |
+| `SubscriberHelp` | boolean | Does campaign responds to help keyword(s)? |
+| `SubscriberOptin` | boolean | Does campaign require subscriber to opt-in before SMS is sent to subscriber? |
+| `SubscriberOptout` | boolean | Does campaign support subscriber opt-out keyword(s)? |
+| `Tag` | array[string] | Tags to be set on the Campaign. |
+| `TermsAndConditions` | boolean | Is terms and conditions accepted? |
+| `PrivacyPolicyLink` | string | Link to the campaign's privacy policy. |
+| `TermsAndConditionsLink` | string | Link to the campaign's terms and conditions. |
+| `EmbeddedLinkSample` | string | Sample of an embedded link that will be sent to subscribers. |
+| `WebhookURL` | string | Webhook to which campaign status updates are sent. |
+| `WebhookFailoverURL` | string | Failover webhook to which campaign status updates are sent. |
+
+### Update Single Shared Campaign — `client.Messaging10dlc.PartnerCampaigns.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `WebhookURL` | string | Webhook to which campaign status updates are sent. |
+| `WebhookFailoverURL` | string | Webhook failover to which campaign status updates are sent. |
+
+### Assign Messaging Profile To Campaign — `client.Messaging10dlc.PhoneNumberAssignmentByProfile.Assign()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `TcrCampaignId` | string (UUID) | The TCR ID of the shared campaign you want to link to the specified messaging... |
+| `CampaignId` | string (UUID) | The ID of the campaign you want to link to the specified messaging profile. |

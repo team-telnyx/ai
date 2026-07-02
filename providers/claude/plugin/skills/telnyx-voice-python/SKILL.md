@@ -46,7 +46,7 @@ try:
     response = client.calls.dial(
         connection_id="7267xxxxxxxxxxxxxx",
         from_="+18005550101",
-        to="+18005550100",
+        to="+18005550100;secure=srtp",
     )
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
@@ -98,13 +98,13 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +48 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.dial(
     connection_id="7267xxxxxxxxxxxxxx",
     from_="+18005550101",
-    to="+18005550100",
+    to="+18005550100;secure=srtp",
 )
 print(response.data)
 ```
@@ -129,7 +129,7 @@ Primary inbound call-control command.
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +26 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.answer(
@@ -155,12 +155,12 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +33 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.transfer(
     call_control_id="550e8400-e29b-41d4-a716-446655440000",
-    to="+18005550100",
+    to="+18005550100;secure=srtp",
 )
 print(response.data)
 ```

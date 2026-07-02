@@ -67,9 +67,9 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
-- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/10dlc.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](../../references/sdk-api-details/10dlc.md#webhook-payload-fields).
 
 ## Core Tasks
 
@@ -89,7 +89,7 @@ Brand registration is the entrypoint for any US A2P 10DLC campaign flow.
 | `companyName` | string | No | (Required for Non-profit/private/public) Legal company name. |
 | `firstName` | string | No | First name of business contact. |
 | `lastName` | string | No | Last name of business contact. |
-| ... | | | +16 optional params in the API Details section below |
+| ... | | | +16 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 const telnyxBrand = await client.messaging10dlc.brand.create({
@@ -125,7 +125,7 @@ Campaign submission is the compliance-critical step that determines whether traf
 | `ageGated` | boolean | No | Age gated message content in campaign. |
 | `autoRenewal` | boolean | No | Campaign subscription auto-renewal option. |
 | `directLending` | boolean | No | Direct lending or loan arrangement |
-| ... | | | +29 optional params in the API Details section below |
+| ... | | | +29 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 const telnyxCampaignCsp = await client.messaging10dlc.campaignBuilder.submit({
@@ -214,7 +214,7 @@ These webhook payload fields are inline because they are part of the primary int
 | `description` | string | Description of the event. |
 | `status` | enum: ACCEPTED, REJECTED, DORMANT, success, failed | The status of the campaign. |
 
-If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](../../references/sdk-api-details/10dlc.md#webhook-payload-fields) before writing the handler.
 
 ---
 
@@ -230,7 +230,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```javascript
 const brand = await client.messaging10dlc.brand.retrieve('BXXX001');
@@ -254,8 +254,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `usecase` | string | Yes |  |
-| `brandId` | string (UUID) | Yes |  |
+| `usecase` | string | Yes | Unique identifier of the usecase. |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```javascript
 const response = await client.messaging10dlc.campaignBuilder.brand.qualifyByUsecase('usecase', {
@@ -309,7 +309,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `campaignId` | string (UUID) | Yes |  |
+| `campaignId` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```javascript
 const telnyxCampaignCsp = await client.messaging10dlc.campaign.retrieve('CXXX001');
@@ -334,9 +334,9 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `page` | integer | No |  |
+| `page` | integer | No | Page number to retrieve (1-based). |
 | `recordsPerPage` | integer | No | number of records per page. |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 // Automatically fetches more pages as needed.
@@ -358,7 +358,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```javascript
 const response = await client.messaging10dlc.brand.getFeedback('BXXX001');
@@ -374,8 +374,8 @@ Primary response fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/10dlc.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -414,4 +414,131 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/10dlc.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create Brand — `client.messaging10dlc.brand.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `companyName` | string | (Required for Non-profit/private/public) Legal company name. |
+| `firstName` | string | First name of business contact. |
+| `lastName` | string | Last name of business contact. |
+| `ein` | string | (Required for Non-profit) Government assigned corporate tax ID. |
+| `phone` | string | Valid phone number in e.164 international format. |
+| `street` | string | Street number and name. |
+| `city` | string | City name |
+| `state` | string | State. |
+| `postalCode` | string | Postal codes. |
+| `stockSymbol` | string | (Required for public company) stock symbol. |
+| `stockExchange` | object | (Required for public company) stock exchange. |
+| `ipAddress` | string (IPv4/IPv6) | IP address of the browser requesting to create brand identity. |
+| `website` | string | Brand website URL. |
+| `isReseller` | boolean |  |
+| `mock` | boolean | Mock brand for testing purposes. |
+| `mobilePhone` | string | Valid mobile phone number in e.164 international format. |
+| `businessContactEmail` | string | Business contact email. |
+| `webhookURL` | string | Webhook URL for brand status updates. |
+| `webhookFailoverURL` | string | Webhook failover URL for brand status updates. |
+
+### Update Brand — `client.messaging10dlc.brand.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `companyName` | string | (Required for Non-profit/private/public) Legal company name. |
+| `firstName` | string | First name of business contact. |
+| `lastName` | string | Last name of business contact. |
+| `ein` | string | (Required for Non-profit) Government assigned corporate tax ID. |
+| `phone` | string | Valid phone number in e.164 international format. |
+| `street` | string | Street number and name. |
+| `city` | string | City name |
+| `state` | string | State. |
+| `postalCode` | string | Postal codes. |
+| `stockSymbol` | string | (Required for public company) stock symbol. |
+| `stockExchange` | object | (Required for public company) stock exchange. |
+| `ipAddress` | string (IPv4/IPv6) | IP address of the browser requesting to create brand identity. |
+| `website` | string | Brand website URL. |
+| `altBusinessIdType` | enum (NONE, DUNS, GIIN, LEI) | An enumeration. |
+| `isReseller` | boolean |  |
+| `identityStatus` | enum (VERIFIED, UNVERIFIED, SELF_DECLARED, VETTED_VERIFIED) | The verification status of an active brand |
+| `businessContactEmail` | string | Business contact email. |
+| `webhookURL` | string | Webhook URL for brand status updates. |
+| `webhookFailoverURL` | string | Webhook failover URL for brand status updates. |
+| `altBusinessId` | string (UUID) | Alternate business identifier such as DUNS, LEI, or GIIN |
+
+### Import External Vetting Record — `client.messaging10dlc.brand.externalVetting.imports()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `vettingToken` | string | Required by some providers for vetting record confirmation. |
+
+### Update campaign — `client.messaging10dlc.campaign.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `resellerId` | string (UUID) | Alphanumeric identifier of the reseller that you want to associate with this ... |
+| `sample1` | string | Message sample. |
+| `sample2` | string | Message sample. |
+| `sample3` | string | Message sample. |
+| `sample4` | string | Message sample. |
+| `sample5` | string | Message sample. |
+| `messageFlow` | string | Message flow description. |
+| `helpMessage` | string | Help message of the campaign. |
+| `autoRenewal` | boolean | Help message of the campaign. |
+| `webhookURL` | string | Webhook to which campaign status updates are sent. |
+| `webhookFailoverURL` | string | Webhook failover to which campaign status updates are sent. |
+
+### Submit Campaign — `client.messaging10dlc.campaignBuilder.submit()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ageGated` | boolean | Age gated message content in campaign. |
+| `autoRenewal` | boolean | Campaign subscription auto-renewal option. |
+| `directLending` | boolean | Direct lending or loan arrangement |
+| `embeddedLink` | boolean | Does message generated by the campaign include URL link in SMS? |
+| `embeddedPhone` | boolean | Does message generated by the campaign include phone number in SMS? |
+| `helpKeywords` | string | Subscriber help keywords. |
+| `helpMessage` | string | Help message of the campaign. |
+| `messageFlow` | string | Message flow description. |
+| `mnoIds` | array[integer] | Submit campaign to given list of MNOs by MNO's network ID. |
+| `numberPool` | boolean | Does campaign utilize pool of phone numbers? |
+| `optinKeywords` | string | Subscriber opt-in keywords. |
+| `optinMessage` | string | Subscriber opt-in message. |
+| `optoutKeywords` | string | Subscriber opt-out keywords. |
+| `optoutMessage` | string | Subscriber opt-out message. |
+| `referenceId` | string (UUID) | Caller supplied campaign reference ID. |
+| `resellerId` | string (UUID) | Alphanumeric identifier of the reseller that you want to associate with this ... |
+| `sample1` | string | Message sample. |
+| `sample2` | string | Message sample. |
+| `sample3` | string | Message sample. |
+| `sample4` | string | Message sample. |
+| `sample5` | string | Message sample. |
+| `subUsecases` | array[string] | Campaign sub-usecases. |
+| `subscriberHelp` | boolean | Does campaign responds to help keyword(s)? |
+| `subscriberOptin` | boolean | Does campaign require subscriber to opt-in before SMS is sent to subscriber? |
+| `subscriberOptout` | boolean | Does campaign support subscriber opt-out keyword(s)? |
+| `tag` | array[string] | Tags to be set on the Campaign. |
+| `termsAndConditions` | boolean | Is terms and conditions accepted? |
+| `privacyPolicyLink` | string | Link to the campaign's privacy policy. |
+| `termsAndConditionsLink` | string | Link to the campaign's terms and conditions. |
+| `embeddedLinkSample` | string | Sample of an embedded link that will be sent to subscribers. |
+| `webhookURL` | string | Webhook to which campaign status updates are sent. |
+| `webhookFailoverURL` | string | Failover webhook to which campaign status updates are sent. |
+
+### Update Single Shared Campaign — `client.messaging10dlc.partnerCampaigns.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `webhookURL` | string | Webhook to which campaign status updates are sent. |
+| `webhookFailoverURL` | string | Webhook failover to which campaign status updates are sent. |
+
+### Assign Messaging Profile To Campaign — `client.messaging10dlc.phoneNumberAssignmentByProfile.assign()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `tcrCampaignId` | string (UUID) | The TCR ID of the shared campaign you want to link to the specified messaging... |
+| `campaignId` | string (UUID) | The ID of the campaign you want to link to the specified messaging profile. |

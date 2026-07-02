@@ -55,8 +55,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas).
 
 ## Core Tasks
 
@@ -99,7 +99,7 @@ Number ordering is the production provisioning step after number selection.
 | `connection_id` | string (UUID) | No | Identifies the connection associated with this phone number. |
 | `messaging_profile_id` | string (UUID) | No | Identifies the messaging profile associated with the phone n... |
 | `billing_group_id` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
-| ... | | | +1 optional params in the API Details section below |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```python
 number_order = client.number_orders.create(
@@ -159,7 +159,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `status` | enum (pending, success, failure) | No | The status of the entire reservation. |
 | `id` | string (UUID) | No |  |
 | `record_type` | string | No |  |
-| ... | | | +3 optional params in the API Details section below |
+| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```python
 number_reservation = client.number_reservations.create(
@@ -234,7 +234,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `requirement_group_id` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `country_code` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```python
 advanced_order = client.advanced_orders.create()
@@ -257,11 +257,11 @@ Modify an existing resource without recreating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `advanced-order-id` | string (UUID) | Yes |  |
+| `advanced-order-id` | string (UUID) | Yes | Unique identifier of the advanced order. |
 | `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `requirement_group_id` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `country_code` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```python
 response = client.advanced_orders.update_requirement_group(
@@ -286,7 +286,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `order_id` | string (UUID) | Yes |  |
+| `order_id` | string (UUID) | Yes | Unique identifier of the order. |
 
 ```python
 advanced_order = client.advanced_orders.retrieve(
@@ -361,8 +361,8 @@ Primary item fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -411,4 +411,126 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/numbers.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create Advanced Order — `client.advanced_orders.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `country_code` | string (ISO 3166-1 alpha-2) |  |
+| `comments` | string |  |
+| `quantity` | integer |  |
+| `area_code` | string |  |
+| `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `features` | array[object] |  |
+| `customer_reference` | string |  |
+| `requirement_group_id` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Update Advanced Order — `client.advanced_orders.update_requirement_group()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `country_code` | string (ISO 3166-1 alpha-2) |  |
+| `comments` | string |  |
+| `quantity` | integer |  |
+| `area_code` | string |  |
+| `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `features` | array[object] |  |
+| `customer_reference` | string |  |
+| `requirement_group_id` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Create a comment — `client.comments.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `body` | string |  |
+| `commenter` | string |  |
+| `commenter_type` | enum (admin, user) |  |
+| `comment_record_type` | enum (sub_number_order, requirement_group) |  |
+| `comment_record_id` | string (UUID) |  |
+| `read_at` | string (date-time) | An ISO 8901 datetime string for when the comment was read. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the comment was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the comment was updated. |
+
+### Create an inexplicit number order — `client.inexplicit_number_orders.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `connection_id` | string (UUID) | Connection id to apply to phone numbers that are purchased |
+| `messaging_profile_id` | string (UUID) | Messaging profile id to apply to phone numbers that are purchased |
+| `customer_reference` | string | Reference label for the customer |
+| `billing_group_id` | string (UUID) | Billing group id to apply to phone numbers that are purchased |
+
+### Create a number block order — `client.number_block_orders.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `record_type` | string |  |
+| `phone_numbers_count` | integer | The count of phone numbers in the number order. |
+| `connection_id` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messaging_profile_id` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `status` | enum (pending, success, failure) | The status of the order. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the number order was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number order was updated. |
+| `requirements_met` | boolean | True if all requirements are met for every phone number, false otherwise. |
+| `errors` | string | Errors the reservation could happen upon |
+
+### Update requirements for a single phone number within a number order. — `client.number_order_phone_numbers.update_requirements()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatory_requirements` | array[object] |  |
+
+### Create a number order — `client.number_orders.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `phone_numbers` | array[object] |  |
+| `connection_id` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messaging_profile_id` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `billing_group_id` | string (UUID) | Identifies the billing group associated with the phone number. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+
+### Update a number order — `client.number_orders.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatory_requirements` | array[object] |  |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+
+### Create a number reservation — `client.number_reservations.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `record_type` | string |  |
+| `phone_numbers` | array[object] |  |
+| `status` | enum (pending, success, failure) | The status of the entire reservation. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
+
+### Update a sub number order's requirements — `client.sub_number_orders.update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatory_requirements` | array[object] |  |
+
+### Create a sub number orders report — `client.sub_number_orders_report.create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | enum (pending, success, failure) | Filter by order status |
+| `country_code` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `created_at_gt` | string (date-time) | Filter for orders created after this date |
+| `created_at_lt` | string (date-time) | Filter for orders created before this date |
+| `order_request_id` | string (UUID) | Filter by specific order request ID |
+| `customer_reference` | string | Filter by customer reference |

@@ -236,7 +236,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/10dlc/brand/BXXX001"
@@ -258,8 +258,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `usecase` | string | Yes |  |
-| `brandId` | string (UUID) | Yes |  |
+| `usecase` | string | Yes | Unique identifier of the usecase. |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/10dlc/campaignBuilder/brand/BXXX001/usecase/{usecase}"
@@ -312,7 +312,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `campaignId` | string (UUID) | Yes |  |
+| `campaignId` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/10dlc/campaign/CXXX001"
@@ -335,7 +335,7 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `page` | integer | No |  |
+| `page` | integer | No | Page number to retrieve (1-based). |
 | `recordsPerPage` | integer | No | number of records per page. |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
@@ -356,7 +356,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brandId` | string (UUID) | Yes |  |
+| `brandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/10dlc/brand/feedback/BXXX001"

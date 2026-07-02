@@ -257,7 +257,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `BrandId` | string (UUID) | Yes |  |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	brand, err := client.Messaging10dlc.Brand.Get(context.Background(), "brandId")
@@ -283,8 +283,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Usecase` | string | Yes |  |
-| `BrandId` | string (UUID) | Yes |  |
+| `Usecase` | string | Yes | Unique identifier of the usecase. |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	response, err := client.Messaging10dlc.CampaignBuilder.Brand.QualifyByUsecase(
@@ -348,7 +348,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `CampaignId` | string (UUID) | Yes |  |
+| `CampaignId` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```go
 	telnyxCampaignCsp, err := client.Messaging10dlc.Campaign.Get(context.Background(), "campaignId")
@@ -375,7 +375,7 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `Sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `Page` | integer | No |  |
+| `Page` | integer | No | Page number to retrieve (1-based). |
 | `RecordsPerPage` | integer | No | number of records per page. |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
@@ -400,7 +400,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `BrandId` | string (UUID) | Yes |  |
+| `BrandId` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```go
 	response, err := client.Messaging10dlc.Brand.GetFeedback(context.Background(), "brandId")

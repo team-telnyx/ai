@@ -232,7 +232,7 @@ Inspect the current state of an existing brand registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brand_id` | string (UUID) | Yes |  |
+| `brand_id` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```ruby
 brand = client.messaging_10dlc.brand.retrieve("BXXX001")
@@ -256,8 +256,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `usecase` | string | Yes |  |
-| `brand_id` | string (UUID) | Yes |  |
+| `usecase` | string | Yes | Unique identifier of the usecase. |
+| `brand_id` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```ruby
 response = client.messaging_10dlc.campaign_builder.brand.qualify_by_usecase("usecase", brand_id: "brandId")
@@ -309,7 +309,7 @@ Inspect the current state of an existing campaign registration.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `campaign_id` | string (UUID) | Yes |  |
+| `campaign_id` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```ruby
 telnyx_campaign_csp = client.messaging_10dlc.campaign.retrieve("CXXX001")
@@ -334,7 +334,7 @@ Inspect available resources or choose an existing resource before mutating it.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `sort` | enum (assignedCampaignsCount, -assignedCampaignsCount, brandId, -brandId, createdAt, ...) | No | Specifies the sort order for results. |
-| `page` | integer | No |  |
+| `page` | integer | No | Page number to retrieve (1-based). |
 | `records_per_page` | integer | No | number of records per page. |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
@@ -357,7 +357,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `brand_id` | string (UUID) | Yes |  |
+| `brand_id` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```ruby
 response = client.messaging_10dlc.brand.get_feedback("BXXX001")

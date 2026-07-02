@@ -76,9 +76,9 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
-- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/messaging.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](../../references/sdk-api-details/messaging.md#webhook-payload-fields).
 
 ## Core Tasks
 
@@ -96,7 +96,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `MessagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in the API Details section below |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.Send(context.Background(), telnyx.MessageSendParams{
@@ -207,7 +207,7 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
-If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](../../references/sdk-api-details/messaging.md#webhook-payload-fields) before writing the handler.
 
 ---
 
@@ -228,7 +228,7 @@ Send one MMS payload to multiple recipients.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in the API Details section below |
+| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendGroupMms(context.Background(), telnyx.MessageSendGroupMmsParams{
@@ -263,7 +263,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendLongCode(context.Background(), telnyx.MessageSendLongCodeParams{
@@ -298,7 +298,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendNumberPool(context.Background(), telnyx.MessageSendNumberPoolParams{
@@ -333,7 +333,7 @@ Force a short-code sending path when the sender must be a short code.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendShortCode(context.Background(), telnyx.MessageSendShortCodeParams{
@@ -367,7 +367,7 @@ Queue a message for future delivery instead of sending immediately.
 | `MessagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +8 optional params in the API Details section below |
+| ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.Schedule(context.Background(), telnyx.MessageScheduleParams{
@@ -403,6 +403,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `WhatsappMessage` | object | Yes |  |
 | `Type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `MessagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```go
 	response, err := client.Messages.SendWhatsapp(context.Background(), telnyx.MessageSendWhatsappParams{
@@ -428,8 +429,8 @@ Primary response fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/messaging.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -462,4 +463,141 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/messaging.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create an alphanumeric sender ID — `client.AlphanumericSenderIDs.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `UsLongCodeFallback` | string | A US long code number to use as fallback when sending to US destinations. |
+
+### Send a message — `client.Messages.Send()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `From` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
+| `MessagingProfileId` | string (UUID) | Unique identifier for a messaging profile. |
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `SendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+| `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a message using an alphanumeric sender ID — `client.Messages.SendWithAlphanumericSender()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `WebhookUrl` | string (URL) | Callback URL for delivery status updates. |
+| `WebhookFailoverUrl` | string (URL) | Failover callback URL for delivery status updates. |
+| `UseProfileWebhooks` | boolean | If true, use the messaging profile's webhook settings. |
+
+### Send a group MMS message — `client.Messages.SendGroupMms()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+
+### Send a long code message — `client.Messages.SendLongCode()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a message using number pool — `client.Messages.SendNumberPool()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Schedule a message — `client.Messages.Schedule()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `From` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
+| `MessagingProfileId` | string (UUID) | Unique identifier for a messaging profile. |
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `SendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+
+### Send a short code message — `client.Messages.SendShortCode()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Text` | string | Message body (i.e., content) as a non-empty string. |
+| `Subject` | string | Subject of multimedia message |
+| `MediaUrls` | array[string] | A list of media URLs. |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a WhatsApp message — `client.Messages.SendWhatsapp()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
+| `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `MessagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+
+### Update a messaging hosted number — `client.MessagingHostedNumbers.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `MessagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to:
+
+* Omit thi... |
+| `MessagingProduct` | string | Configure the messaging product for this number:
+
+* Omit this field or set it... |
+| `Tags` | array[string] | Tags to set on this phone number. |
+
+### Create auto-response setting — `client.MessagingProfiles.AutorespConfigs.New()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `RespText` | string |  |
+
+### Update Auto-Response Setting — `client.MessagingProfiles.AutorespConfigs.Update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `RespText` | string |  |

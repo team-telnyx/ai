@@ -299,7 +299,7 @@ Modify an existing resource without recreating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Advanced-order-id` | string (UUID) | Yes |  |
+| `Advanced-order-id` | string (UUID) | Yes | Unique identifier of the advanced order. |
 | `PhoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `RequirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `CountryCode` | string (ISO 3166-1 alpha-2) | No |  |
@@ -335,7 +335,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `OrderId` | string (UUID) | Yes |  |
+| `OrderId` | string (UUID) | Yes | Unique identifier of the order. |
 
 ```go
 	advancedOrder, err := client.AdvancedOrders.Get(context.Background(), "182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e")

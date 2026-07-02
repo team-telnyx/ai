@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -420,6 +420,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `whatsappMessage` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendWhatsappParams;

@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.58.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.58.0")
 ```
 
 ## Setup
@@ -51,8 +51,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas).
 
 ## Core Tasks
 
@@ -97,7 +97,7 @@ Number ordering is the production provisioning step after number selection.
 | `connectionId` | string (UUID) | No | Identifies the connection associated with this phone number. |
 | `messagingProfileId` | string (UUID) | No | Identifies the messaging profile associated with the phone n... |
 | `billingGroupId` | string (UUID) | No | Identifies the billing group associated with the phone numbe... |
-| ... | | | +1 optional params in the API Details section below |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.numberorders.NumberOrderCreateParams;
@@ -171,7 +171,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `status` | enum (pending, success, failure) | No | The status of the entire reservation. |
 | `id` | string (UUID) | No |  |
 | `recordType` | string | No |  |
-| ... | | | +3 optional params in the API Details section below |
+| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.numberreservations.NumberReservationCreateParams;
@@ -262,11 +262,10 @@ Create or provision an additional resource when the core tasks do not cover this
 | `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `requirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `countryCode` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrder;
-import com.telnyx.sdk.models.advancedorders.AdvancedOrderCreateParams;
 import com.telnyx.sdk.models.advancedorders.AdvancedOrderCreateResponse;
 
 AdvancedOrder params = AdvancedOrder.builder().build();
@@ -289,11 +288,11 @@ Modify an existing resource without recreating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `advanced-order-id` | string (UUID) | Yes |  |
+| `advanced-order-id` | string (UUID) | Yes | Unique identifier of the advanced order. |
 | `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) | No |  |
 | `requirementGroupId` | string (UUID) | No | The ID of the requirement group to associate with this advan... |
 | `countryCode` | string (ISO 3166-1 alpha-2) | No |  |
-| ... | | | +5 optional params in the API Details section below |
+| ... | | | +5 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrder;
@@ -323,7 +322,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `orderId` | string (UUID) | Yes |  |
+| `orderId` | string (UUID) | Yes | Unique identifier of the order. |
 
 ```java
 import com.telnyx.sdk.models.advancedorders.AdvancedOrderRetrieveParams;
@@ -402,8 +401,8 @@ Primary item fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/numbers.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -452,4 +451,126 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/numbers.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create Advanced Order — `client.advancedOrders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `countryCode` | string (ISO 3166-1 alpha-2) |  |
+| `comments` | string |  |
+| `quantity` | integer |  |
+| `areaCode` | string |  |
+| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `features` | array[object] |  |
+| `customerReference` | string |  |
+| `requirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Update Advanced Order — `client.advancedOrders().updateRequirementGroup()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `countryCode` | string (ISO 3166-1 alpha-2) |  |
+| `comments` | string |  |
+| `quantity` | integer |  |
+| `areaCode` | string |  |
+| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `features` | array[object] |  |
+| `customerReference` | string |  |
+| `requirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+
+### Create a comment — `client.comments().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `body` | string |  |
+| `commenter` | string |  |
+| `commenterType` | enum (admin, user) |  |
+| `commentRecordType` | enum (sub_number_order, requirement_group) |  |
+| `commentRecordId` | string (UUID) |  |
+| `readAt` | string (date-time) | An ISO 8901 datetime string for when the comment was read. |
+| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the comment was created. |
+| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the comment was updated. |
+
+### Create an inexplicit number order — `client.inexplicitNumberOrders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `connectionId` | string (UUID) | Connection id to apply to phone numbers that are purchased |
+| `messagingProfileId` | string (UUID) | Messaging profile id to apply to phone numbers that are purchased |
+| `customerReference` | string | Reference label for the customer |
+| `billingGroupId` | string (UUID) | Billing group id to apply to phone numbers that are purchased |
+
+### Create a number block order — `client.numberBlockOrders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `recordType` | string |  |
+| `phoneNumbersCount` | integer | The count of phone numbers in the number order. |
+| `connectionId` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `status` | enum (pending, success, failure) | The status of the order. |
+| `customerReference` | string | A customer reference string for customer look ups. |
+| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the number order was created. |
+| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the number order was updated. |
+| `requirementsMet` | boolean | True if all requirements are met for every phone number, false otherwise. |
+| `errors` | string | Errors the reservation could happen upon |
+
+### Update requirements for a single phone number within a number order. — `client.numberOrderPhoneNumbers().updateRequirements()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatoryRequirements` | array[object] |  |
+
+### Create a number order — `client.numberOrders().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `phoneNumbers` | array[object] |  |
+| `connectionId` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `billingGroupId` | string (UUID) | Identifies the billing group associated with the phone number. |
+| `customerReference` | string | A customer reference string for customer look ups. |
+
+### Update a number order — `client.numberOrders().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatoryRequirements` | array[object] |  |
+| `customerReference` | string | A customer reference string for customer look ups. |
+
+### Create a number reservation — `client.numberReservations().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string (UUID) |  |
+| `recordType` | string |  |
+| `phoneNumbers` | array[object] |  |
+| `status` | enum (pending, success, failure) | The status of the entire reservation. |
+| `customerReference` | string | A customer reference string for customer look ups. |
+| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
+| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
+
+### Update a sub number order's requirements — `client.subNumberOrders().update()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `regulatoryRequirements` | array[object] |  |
+
+### Create a sub number orders report — `client.subNumberOrdersReport().create()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | enum (pending, success, failure) | Filter by order status |
+| `countryCode` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `createdAtGt` | string (date-time) | Filter for orders created after this date |
+| `createdAtLt` | string (date-time) | Filter for orders created before this date |
+| `orderRequestId` | string (UUID) | Filter by specific order request ID |
+| `customerReference` | string | Filter by customer reference |

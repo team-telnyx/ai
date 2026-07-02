@@ -40,10 +40,10 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "my-resource",
-  "model": "openai/gpt-4o",
-  "instructions": "You are a helpful assistant."
-}' \
+      "name": "my-resource",
+      "instructions": "You are a helpful assistant.",
+      "model": "openai/gpt-4o"
+  }' \
   "https://api.telnyx.com/v2/ai/assistants"
 ```
 
@@ -74,12 +74,11 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `name` | string | Yes |  |
-| `model` | string | Yes | ID of the model to use. |
 | `instructions` | string | Yes | System instructions for the assistant. |
-| `tools` | array[object] | No | The tools that the assistant can use. |
-| `tool_ids` | array[string] | No |  |
-| `description` | string | No |  |
-| ... | | | +12 optional params in [references/api-details.md](references/api-details.md) |
+| `tags` | array[string] | No | Tags associated with the assistant. |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| `tools` | array[object] | No | Deprecated for new integrations. |
+| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -87,10 +86,10 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "my-resource",
-  "model": "openai/gpt-4o",
-  "instructions": "You are a helpful assistant."
-}' \
+      "name": "my-resource",
+      "instructions": "You are a helpful assistant.",
+      "model": "openai/gpt-4o"
+  }' \
   "https://api.telnyx.com/v2/ai/assistants"
 ```
 
@@ -100,7 +99,7 @@ Primary response fields:
 - `.data.model`
 - `.data.instructions`
 - `.data.created_at`
-- `.data.description`
+- `.data.conversation_flow`
 
 ### Chat with an assistant
 
@@ -112,7 +111,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 |-----------|------|----------|-------------|
 | `content` | string | Yes | The message content sent by the client to the assistant |
 | `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
-| `assistant_id` | string (UUID) | Yes |  |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
 
 ```bash
@@ -192,10 +191,10 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `assistant_id` | string (UUID) | Yes |  |
-| `call_control_id` | string (UUID) | No |  |
-| `fetch_dynamic_variables_from_webhook` | boolean | No |  |
-| `from` | string (E.164) | No |  |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `call_control_id` | string (UUID) | No | Filter results by call control id. |
+| `fetch_dynamic_variables_from_webhook` | boolean | No | Whether to fetch dynamic variables from the configured webho... |
+| `from` | string (E.164) | No | Start of the filter range. |
 | ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
@@ -206,9 +205,9 @@ Primary response fields:
 - `.data.id`
 - `.data.name`
 - `.data.created_at`
+- `.data.conversation_flow`
 - `.data.description`
 - `.data.dynamic_variables`
-- `.data.dynamic_variables_webhook_url`
 
 ### Update an assistant
 
@@ -218,11 +217,11 @@ Create or provision an additional resource when the core tasks do not cover this
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `assistant_id` | string (UUID) | Yes |  |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
-| `model` | string | No | ID of the model to use. |
-| `instructions` | string | No | System instructions for the assistant. |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -236,9 +235,9 @@ Primary response fields:
 - `.data.id`
 - `.data.name`
 - `.data.created_at`
+- `.data.conversation_flow`
 - `.data.description`
 - `.data.dynamic_variables`
-- `.data.dynamic_variables_webhook_url`
 
 ### List assistants
 
@@ -257,9 +256,9 @@ Primary item fields:
 - `id`
 - `name`
 - `created_at`
+- `conversation_flow`
 - `description`
 - `dynamic_variables`
-- `dynamic_variables_webhook_url`
 
 ### Import assistants from external provider
 
@@ -292,9 +291,9 @@ Primary item fields:
 - `id`
 - `name`
 - `created_at`
+- `conversation_flow`
 - `description`
 - `dynamic_variables`
-- `dynamic_variables_webhook_url`
 
 ### Get All Tags
 
@@ -362,7 +361,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `suite_name` | string | Yes |  |
+| `suite_name` | string | Yes | Name of the suite. |
 | `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
 | `status` | string | No | Filter runs by execution status (pending, running, completed... |
 | `page` | object | No | Consolidated page parameter (deepObject style). |
@@ -401,11 +400,12 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get specific test run details | HTTP only | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id`, `run_id` |
 | Delete an assistant | HTTP only | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistant_id` |
 | Get Canary Deploy | HTTP only | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
-| Create Canary Deploy | HTTP only | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `versions`, `assistant_id` |
-| Update Canary Deploy | HTTP only | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `versions`, `assistant_id` |
+| Create Canary Deploy | HTTP only | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Update Canary Deploy | HTTP only | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
 | Delete Canary Deploy | HTTP only | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
 | Assistant Sms Chat | HTTP only | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
 | Clone Assistant | HTTP only | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Enhance Assistant Instructions | HTTP only | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
 | List scheduled events | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Create a scheduled event | HTTP only | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
 | Get a scheduled event | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |

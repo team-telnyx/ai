@@ -53,9 +53,9 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 Do not invent Telnyx parameters, enums, response fields, or webhook fields.
 
-- If the parameter, enum, or response field you need is not shown inline in this skill, read the API Details section below before writing code.
-- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
-- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](references/api-details.md#webhook-payload-fields).
+- If the parameter, enum, or response field you need is not shown inline in this skill, read the Optional Parameters section below and the shared SDK API Details reference before writing code.
+- Before using any operation in `## Additional Operations`, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/messaging.md#response-schemas).
+- Before reading or matching webhook fields beyond the inline examples, read [the webhook payload reference](../../references/sdk-api-details/messaging.md#webhook-payload-fields).
 
 ## Core Tasks
 
@@ -73,7 +73,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in the API Details section below |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -183,7 +183,7 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
-If you need webhook fields that are not listed inline here, read [the webhook payload reference](references/api-details.md#webhook-payload-fields) before writing the handler.
+If you need webhook fields that are not listed inline here, read [the webhook payload reference](../../references/sdk-api-details/messaging.md#webhook-payload-fields) before writing the handler.
 
 ---
 
@@ -204,7 +204,7 @@ Send one MMS payload to multiple recipients.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in the API Details section below |
+| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -242,7 +242,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -278,7 +278,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -314,7 +314,7 @@ Force a short-code sending path when the sender must be a short code.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the API Details section below |
+| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -349,7 +349,7 @@ Queue a message for future delivery instead of sending immediately.
 | `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +8 optional params in the API Details section below |
+| ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -386,6 +386,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```bash
 curl \
@@ -412,8 +413,8 @@ Primary response fields:
 
 ## Additional Operations
 
-Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the API Details section below for full optional params, response schemas, and lower-frequency webhook payloads.
-Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use the Optional Parameters section below and the shared SDK API Details reference for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read the Optional Parameters section below and [the response-schemas section](../../references/sdk-api-details/messaging.md#response-schemas) so you do not guess missing fields.
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
@@ -446,4 +447,141 @@ Before using any operation below, read [the optional-parameters section](referen
 
 ---
 
-For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the API Details section below.
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see the Optional Parameters section below and the shared SDK API Details reference.
+---
+
+**Do not guess optional fields. Response schemas and webhook payload fields are in [the shared SDK API Details reference](../../references/sdk-api-details/messaging.md). Optional parameters for this language are in the Optional Parameters section below.**
+
+## Optional Parameters
+
+### Create an alphanumeric sender ID
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `us_long_code_fallback` | string | A US long code number to use as fallback when sending to US destinations. |
+
+### Send a message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
+| `messaging_profile_id` | string (UUID) | Unique identifier for a messaging profile. |
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+| `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a message using an alphanumeric sender ID
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `webhook_url` | string (URL) | Callback URL for delivery status updates. |
+| `webhook_failover_url` | string (URL) | Failover callback URL for delivery status updates. |
+| `use_profile_webhooks` | boolean | If true, use the messaging profile's webhook settings. |
+
+### Send a group MMS message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+
+### Send a long code message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a message using number pool
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Schedule a message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
+| `messaging_profile_id` | string (UUID) | Unique identifier for a messaging profile. |
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+
+### Send a short code message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `text` | string | Message body (i.e., content) as a non-empty string. |
+| `subject` | string | Subject of multimedia message |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+
+### Send a WhatsApp message
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+
+### Update a messaging hosted number
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `messaging_profile_id` | string (UUID) | Configure the messaging profile this phone number is assigned to:
+
+* Omit thi... |
+| `messaging_product` | string | Configure the messaging product for this number:
+
+* Omit this field or set it... |
+| `tags` | array[string] | Tags to set on this phone number. |
+
+### Create auto-response setting
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `resp_text` | string |  |
+
+### Update Auto-Response Setting
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `resp_text` | string |  |
