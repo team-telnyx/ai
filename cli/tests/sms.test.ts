@@ -8,7 +8,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,7 +39,8 @@ function flag(f) { const i = command.indexOf(f); return i >= 0 ? command[i + 1] 
 if (command[0] === "messages" && command[1] === "send") {
   console.log(JSON.stringify({ data: { id: "msg-123", record_type: "message", type: flag("--type"), from: { phone_number: flag("--from"), carrier: "", line_type: "" }, to: [{ phone_number: flag("--to"), status: "queued", carrier: "", line_type: "" }] } }));
 } else if (command[0] === "messages" && command[1] === "send-group-mms") {
-  console.log(JSON.stringify({ data: { id: "grp-789", status: "queued", type: "MMS", from: flag("--from"), to: flag("--to") } }));
+  const recipients = (flag("--to") || "").split(",").map((p) => ({ phone_number: p, status: "queued", carrier: "", line_type: "" }));
+  console.log(JSON.stringify({ data: { id: "grp-789", record_type: "message", type: "MMS", from: { phone_number: flag("--from") }, to: recipients } }));
 } else if (command[0] === "messages" && command[1] === "schedule") {
   console.log(JSON.stringify({ data: { id: "sched-456", record_type: "message", from: { phone_number: flag("--from") }, to: [{ phone_number: flag("--to"), status: "scheduled" }], send_at: flag("--send-at") } }));
 } else if (command[0] === "messages" && command[1] === "retrieve") {
@@ -66,6 +67,7 @@ if (command[0] === "messages" && command[1] === "send") {
 }
 
 function readLoggedArgs(logPath: string): string[][] {
+  if (!existsSync(logPath)) return [];
   return readFileSync(logPath, "utf8")
     .trim()
     .split("\n")
@@ -227,6 +229,29 @@ describe("SMS action commands", () => {
     assert.ok(groupCall, "should call messages send-group-mms");
     assertFlagValue(groupCall, "--media-url", "https://example.com/cat.png");
     assert.ok(!groupCall.includes("--text"), "should not include --text when not provided");
+  });
+
+  it("send-group-mms rejects --messaging-profile-id (not in the group MMS schema)", () => {
+    const fake = setupFakeTelnyx();
+
+    runAgentExpectingFailure(
+      [
+        "send-group-mms",
+        "--from", "+131****0000",
+        "--to", "+131****0001,+131****0002",
+        "--text", "hi",
+        "--messaging-profile-id", "prof-1",
+        "--json",
+      ],
+      fake.env,
+      /--messaging-profile-id is not supported for group MMS/,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    assert.ok(
+      !calls.some((a) => a.slice(0, 2).join(" ") === "messages send-group-mms"),
+      "should not invoke the Go CLI when an unsupported flag is passed",
+    );
   });
 
   it("send-group-mms fails without --from", () => {
