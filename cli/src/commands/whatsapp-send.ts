@@ -59,9 +59,15 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
     const res = await telnyxCli(args);
     const data = (res.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
-    // Extract the actual delivery status from the API response
-    // (queued, accepted, sent, delivered, etc.) instead of assuming "sent"
-    const deliveryStatus = String(data.status ?? data.delivery_status ?? "submitted");
+    // Extract the actual delivery status from the API response.
+    // The Telnyx WhatsApp send response returns the per-recipient state in
+    // data.to[0].status (e.g. queued/accepted/sent/delivered). Fall back to
+    // data.status/data.delivery_status for alternate envelopes, then
+    // "submitted" as a last resort — never assume "sent".
+    const recipient = (Array.isArray(data.to) ? data.to[0] : undefined) as
+      | Record<string, unknown>
+      | undefined;
+    const deliveryStatus = String(recipient?.status ?? data.status ?? data.delivery_status ?? "submitted");
 
     const result: WhatsappSendResult = {
       from,

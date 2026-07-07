@@ -82,7 +82,10 @@ else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
 }
 // Messages send-whatsapp
 else if (cmd[0] === "messages" && cmd[1] === "send-whatsapp") {
-  console.log(JSON.stringify({ data: { id: "msg_abc123", status: "queued" } }));
+  // Mirror the real Telnyx envelope: per-recipient state lives in to[0].status
+  // while the top-level status is a coarse "submitted". The wrapper must
+  // surface the recipient status, not the top-level one.
+  console.log(JSON.stringify({ data: { id: "msg_abc123", to: [{ status: "queued" }], status: "submitted" } }));
 }
 // available-phone-numbers list (for setup-whatsapp number search).
 // Pre-existing callers (utils/number-order.ts) still read this with
