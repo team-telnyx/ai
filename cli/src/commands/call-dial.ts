@@ -18,8 +18,8 @@ interface CallDialResult {
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
-/** Valid HTTP methods for --webhook-url-method. */
-const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+/** Valid HTTP methods for --webhook-url-method (Voice API only accepts GET/POST). */
+const HTTP_METHODS = ["GET", "POST"] as const;
 
 export async function callDialCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;

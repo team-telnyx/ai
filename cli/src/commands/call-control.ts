@@ -65,6 +65,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const contentType = flags["content-type"] as string | undefined;
   const clientState = flags["client-state"] as string | undefined;
   const commandId = flags["command-id"] as string | undefined;
+  // Flags for media forking (start-forking).
+  const forkTarget = flags["fork-target"] as string | undefined;
+  const forkRx = flags["fork-rx"] as string | undefined;
+  const forkTx = flags["fork-tx"] as string | undefined;
 
   if (!action) {
     printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
@@ -142,6 +146,12 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError("--client-state is required for update-client-state");
     process.exit(1);
   }
+  // start-forking requires either a target or both rx+tx (the Voice API
+  // rejects fork_start without a destination).
+  if (act === "start-forking" && !forkTarget && !(forkRx && forkTx)) {
+    printError("--fork-target (or both --fork-rx and --fork-tx) is required for start-forking");
+    process.exit(1);
+  }
 
   const args = buildActionArgs(act, {
     callControlId,
@@ -162,6 +172,9 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     contentType,
     clientState,
     commandId,
+    forkTarget,
+    forkRx,
+    forkTx,
   });
 
   try {
@@ -217,6 +230,9 @@ function buildActionArgs(
     contentType?: string;
     clientState?: string;
     commandId?: string;
+    forkTarget?: string;
+    forkRx?: string;
+    forkTx?: string;
   },
 ): string[] {
   switch (action) {
@@ -289,8 +305,13 @@ function buildActionArgs(
       return ["calls:actions", "pause-recording", "--call-control-id", opts.callControlId];
     case "resume-recording":
       return ["calls:actions", "resume-recording", "--call-control-id", opts.callControlId];
-    case "start-forking":
-      return ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
+    case "start-forking": {
+      const forkArgs = ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
+      if (opts.forkTarget) forkArgs.push("--target", opts.forkTarget);
+      if (opts.forkRx) forkArgs.push("--rx", opts.forkRx);
+      if (opts.forkTx) forkArgs.push("--tx", opts.forkTx);
+      return forkArgs;
+    }
     case "stop-forking":
       return ["calls:actions", "stop-forking", "--call-control-id", opts.callControlId];
     case "start-siprec":
