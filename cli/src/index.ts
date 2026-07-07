@@ -8,6 +8,8 @@ import { setupIotCommand } from "./commands/setup-iot.ts";
 import { setupAiCommand } from "./commands/setup-ai.ts";
 import { setupWireguardCommand } from "./commands/setup-wireguard.ts";
 import { setupVerifyCommand } from "./commands/setup-verify.ts";
+import { verifySendCommand } from "./commands/verify-send.ts";
+import { verifyCheckCommand } from "./commands/verify-check.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
 import { edgeDoctorCommand } from "./commands/edge-doctor.ts";
@@ -43,6 +45,8 @@ Commands:
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
   setup-verify      Zero to verification: create profile, buy number
+  verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
+  verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number
   setup-porting     Zero to porting: check portability, create order, submit
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
@@ -74,6 +78,16 @@ Setup-specific Flags:
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
   --profile-name    Custom verify profile name (setup-verify)
+
+Verify Flags:
+  --phone-number    E.164 number to verify (verify-send, required)
+  --verify-profile-id Verify profile ID (verify-send, required)
+  --method          Verification channel (verify-send, required): sms, call, flashcall, whatsapp
+  --custom-code     Self-generated code to send (verify-send, optional; not used with flashcall)
+  --timeout-secs    Verification timeout in seconds (verify-send, optional)
+  --extension       Extension for the call leg (verify-send, optional; only with --method call)
+  --verification-id Verification ID to check (verify-check, required)
+  --code            Code to submit for verification (verify-check, optional; if omitted, status is retrieved)
   --phone           Contact phone for brand (setup-10dlc, required)
   --email           Contact email for brand (setup-10dlc, required)
   --brand-name      Brand display name (setup-10dlc)
@@ -199,6 +213,10 @@ Examples:
   telnyx-agent setup-voice --webhook https://example.com/calls
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
   telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
+  telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
+  telnyx-agent verify-check --verification-id ver_xxx --code 123456
+  telnyx-agent verify-check --verification-id ver_xxx
+  telnyx-agent setup-porting --phone-numbers +13125550001,+13125550002 --customer-name "Acme Corp"
   telnyx-agent edge-doctor --json
   telnyx-agent setup-edge-mcp --name my-mcp-server
   telnyx-agent setup-edge-webhook --name my-webhook
@@ -258,6 +276,8 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
   "setup-ai": setupAiCommand,
   "setup-wireguard": setupWireguardCommand,
   "setup-verify": setupVerifyCommand,
+  "verify-send": verifySendCommand,
+  "verify-check": verifyCheckCommand,
   "setup-10dlc": setup10dlcCommand,
   "setup-porting": setupPortingCommand,
   "edge-doctor": edgeDoctorCommand,
