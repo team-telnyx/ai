@@ -30,8 +30,8 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 
 const cmd = args.filter(a => a !== "--format" && a !== "json");
 
-if (cmd[0] === "speech-to-text" && cmd[1] === "retrieve-transcription") {
-  console.log(JSON.stringify({ data: { transcription: "Hello, this is a test transcription.", language: "en" } }));
+if (cmd[0] === "ai:audio" && cmd[1] === "transcribe") {
+  console.log(JSON.stringify({ text: "Hello, this is a test transcription." }));
 } else if (cmd[0] === "speech-to-text" && cmd[1] === "list-providers") {
   console.log(JSON.stringify({ data: [{ provider: "telnyx", service_type: "batch" }, { provider: "aws", service_type: "batch" }] }));
 } else {
@@ -72,7 +72,7 @@ function runCli(args: string[], env: NodeJS.ProcessEnv): string {
 }
 
 describe("STT commands", () => {
-  it("stt passes --audio-url flag correctly", () => {
+  it("stt routes to ai:audio transcribe with --file-url and default model", () => {
     const fake = setupFakeTelnyx();
     const output = runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--json"], fake.env);
 
@@ -81,30 +81,35 @@ describe("STT commands", () => {
     assert.ok(data.transcription.length > 0);
 
     const calls = readLoggedArgs(fake.logPath);
-    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "speech-to-text retrieve-transcription");
-    assert.ok(sttCall, "must call speech-to-text retrieve-transcription");
-    assert.equal(sttCall![sttCall!.indexOf("--audio-url") + 1], "https://example.com/audio.mp3");
+    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "ai:audio transcribe");
+    assert.ok(sttCall, "must call ai:audio transcribe");
+    assert.equal(sttCall![sttCall!.indexOf("--file-url") + 1], "https://example.com/audio.mp3");
+    // --model is required by the Go CLI, so the wrapper must always pass it
+    assert.equal(sttCall![sttCall!.indexOf("--model") + 1], "distil-whisper/distil-large-v2");
+    // the default model rejects --language, so it must not be sent unless requested
+    assert.ok(!sttCall!.includes("--language"), "must not pass --language unless explicitly provided");
+    assert.ok(!sttCall!.includes("--audio-url"), "must not pass the unsupported --audio-url flag through");
   });
 
   it("stt with --language and --model flags", () => {
     const fake = setupFakeTelnyx();
-    runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--language", "es", "--model", "whisper-large", "--json"], fake.env);
+    runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--language", "es", "--model", "openai/whisper-large-v3-turbo", "--json"], fake.env);
 
     const calls = readLoggedArgs(fake.logPath);
-    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "speech-to-text retrieve-transcription");
-    assert.ok(sttCall, "must call speech-to-text retrieve-transcription");
+    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "ai:audio transcribe");
+    assert.ok(sttCall, "must call ai:audio transcribe");
     assert.equal(sttCall![sttCall!.indexOf("--language") + 1], "es");
-    assert.equal(sttCall![sttCall!.indexOf("--model") + 1], "whisper-large");
+    assert.equal(sttCall![sttCall!.indexOf("--model") + 1], "openai/whisper-large-v3-turbo");
   });
 
-  it("stt with --transcription-engine flag", () => {
+  it("stt with --response-format flag", () => {
     const fake = setupFakeTelnyx();
-    runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--transcription-engine", "telnyx", "--json"], fake.env);
+    runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--response-format", "verbose_json", "--json"], fake.env);
 
     const calls = readLoggedArgs(fake.logPath);
-    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "speech-to-text retrieve-transcription");
-    assert.ok(sttCall!.includes("--transcription-engine"), "must include --transcription-engine");
-    assert.equal(sttCall![sttCall!.indexOf("--transcription-engine") + 1], "telnyx");
+    const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "ai:audio transcribe");
+    assert.ok(sttCall!.includes("--response-format"), "must include --response-format");
+    assert.equal(sttCall![sttCall!.indexOf("--response-format") + 1], "verbose_json");
   });
 
   it("stt fails without --audio-url", () => {
@@ -121,9 +126,23 @@ describe("STT commands", () => {
     const fake = setupFakeTelnyx();
     const output = runCli(["stt-providers", "--json"], fake.env);
 
+    const data = JSON.parse(output);
+    assert.equal(data.count, 2);
+
     const calls = readLoggedArgs(fake.logPath);
     const providersCall = calls.find((a) => a.slice(0, 2).join(" ") === "speech-to-text list-providers");
     assert.ok(providersCall, "must call speech-to-text list-providers");
+  });
+
+  it("stt-providers passes --provider and --service-type filters", () => {
+    const fake = setupFakeTelnyx();
+    runCli(["stt-providers", "--provider", "telnyx", "--service-type", "transcription", "--json"], fake.env);
+
+    const calls = readLoggedArgs(fake.logPath);
+    const providersCall = calls.find((a) => a.slice(0, 2).join(" ") === "speech-to-text list-providers");
+    assert.ok(providersCall, "must call speech-to-text list-providers");
+    assert.equal(providersCall![providersCall!.indexOf("--provider") + 1], "telnyx");
+    assert.equal(providersCall![providersCall!.indexOf("--service-type") + 1], "transcription");
   });
 
   it("help text includes stt commands", () => {

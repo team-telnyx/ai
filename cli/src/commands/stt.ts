@@ -1,36 +1,44 @@
 /**
  * telnyx-agent stt — Speech-to-text transcription.
  *
- * Shells out to the telnyx CLI's `speech-to-text retrieve-transcription`
- * subcommand and surfaces the resulting transcription text to the caller in
- * either human-readable or JSON form.
+ * Shells out to the telnyx CLI's `ai:audio transcribe` subcommand (the
+ * OpenAI-compatible transcription endpoint) and surfaces the resulting
+ * transcription text to the caller in either human-readable or JSON form.
  *
- * The retrieve-transcription endpoint accepts an audio URL and returns the
- * transcribed text along with metadata (language, engine, model, etc.).
+ * The transcribe endpoint accepts a hosted audio file URL (`--file-url`)
+ * and returns the transcribed text. Note: the Go CLI's separate
+ * `speech-to-text retrieve-transcription` command is a WebSocket streaming
+ * API (no audio-URL support), so URL-based transcription must go through
+ * `ai:audio transcribe`.
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
+/**
+ * Default transcription model. `ai:audio transcribe` requires --model;
+ * this mirrors the Go CLI's own default (lower latency, English-only).
+ */
+const DEFAULT_MODEL = "distil-whisper/distil-large-v2";
+
 interface SttResult {
   audio_url: string;
-  language: string;
+  model: string;
   transcription: string;
-  transcription_engine?: string;
-  model?: string;
+  language?: string;
 }
 
 /**
- * Extract the transcription text from a telnyx CLI speech-to-text response.
- * The CLI wraps the API payload in a `data` envelope, but different engines
- * surface the transcript under different field names, so we check a few
- * common ones.
+ * Extract the transcription text from a telnyx CLI transcribe response.
+ * The endpoint is OpenAI-compatible and returns the transcript under
+ * `text`, but we defensively check a `data` envelope and a few common
+ * field names.
  */
 function extractTranscription(response: unknown): string {
   const data = (response as Record<string, unknown> | undefined)?.data ?? response;
   const obj = (data ?? {}) as Record<string, unknown>;
 
-  for (const key of ["transcription", "transcript", "text"]) {
+  for (const key of ["text", "transcription", "transcript"]) {
     const v = obj[key];
     if (typeof v === "string" && v) return v;
   }
@@ -41,14 +49,11 @@ function extractTranscription(response: unknown): string {
 export async function sttCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
   const audioUrl = flags["audio-url"] as string;
-  const language = (flags.language as string) || "en";
-  const model = flags.model as string | undefined;
-  const transcriptionEngine = flags["transcription-engine"] as string | undefined;
-  const inputFormat = flags["input-format"] as string | undefined;
-  const interimResults = flags["interim-results"] === true;
-  const endpointing = flags.endpointing as string | undefined;
-  const redact = flags.redact === true;
-  const keywords = flags.keywords as string | undefined;
+  const model = (flags.model as string) || DEFAULT_MODEL;
+  // Only forward --language when explicitly provided: the default model
+  // (distil-whisper/distil-large-v2) rejects the language parameter.
+  const language = flags.language as string | undefined;
+  const responseFormat = flags["response-format"] as string | undefined;
 
   if (!audioUrl) {
     printError("--audio-url is required (e.g., --audio-url https://example.com/audio.mp3)");
@@ -60,25 +65,18 @@ export async function sttCommand(flags: Record<string, string | boolean>): Promi
       console.log("\n🎙️  Transcribing audio...\n");
     }
 
-    const args = ["speech-to-text", "retrieve-transcription", "--audio-url", audioUrl];
-    args.push("--language", language);
-    if (model) args.push("--model", model);
-    if (transcriptionEngine) args.push("--transcription-engine", transcriptionEngine);
-    if (inputFormat) args.push("--input-format", inputFormat);
-    if (interimResults) args.push("--interim-results");
-    if (endpointing) args.push("--endpointing", endpointing);
-    if (redact) args.push("--redact");
-    if (keywords) args.push("--keywords", keywords);
+    const args = ["ai:audio", "transcribe", "--file-url", audioUrl, "--model", model];
+    if (language) args.push("--language", language);
+    if (responseFormat) args.push("--response-format", responseFormat);
 
     const response = await telnyxCli(args);
     const transcription = extractTranscription(response);
 
     const result: SttResult = {
       audio_url: audioUrl,
-      language,
+      model,
       transcription,
-      ...(transcriptionEngine ? { transcription_engine: transcriptionEngine } : {}),
-      ...(model ? { model } : {}),
+      ...(language ? { language } : {}),
     };
 
     if (jsonOutput) {
@@ -86,10 +84,9 @@ export async function sttCommand(flags: Record<string, string | boolean>): Promi
     } else {
       const details: Record<string, string | number | boolean> = {
         "Audio URL": audioUrl,
-        Language: language,
+        Model: model,
       };
-      if (transcriptionEngine) details["Engine"] = transcriptionEngine;
-      if (model) details["Model"] = model;
+      if (language) details["Language"] = language;
       details["Transcription"] = transcription || "(no text returned)";
       printSuccess("Transcription complete!", details);
     }
