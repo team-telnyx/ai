@@ -69,9 +69,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const clientState = flags["client-state"] as string | undefined;
   const commandId = flags["command-id"] as string | undefined;
   // Flags for media forking (start-forking).
-  // The Go CLI supports --rx and --tx but not --target.
+  // The Go CLI supports --rx, --tx, and --stream-type.
   const forkRx = flags["fork-rx"] as string | undefined;
   const forkTx = flags["fork-tx"] as string | undefined;
+  const forkStreamType = flags["fork-stream-type"] as string | undefined;
   // --cause defaults to CALL_REJECTED, the generic rejection cause.
   const cause = (typeof flags.cause === "string" ? flags.cause : undefined) ?? "CALL_REJECTED";
 
@@ -183,6 +184,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     commandId,
     forkRx,
     forkTx,
+    forkStreamType,
     cause,
   });
 
@@ -241,6 +243,7 @@ function buildActionArgs(
     commandId?: string;
     forkRx?: string;
     forkTx?: string;
+    forkStreamType?: string;
     cause: string;
   },
 ): string[] {
@@ -321,6 +324,7 @@ function buildActionArgs(
       const forkArgs = ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
       if (opts.forkRx) forkArgs.push("--rx", opts.forkRx);
       if (opts.forkTx) forkArgs.push("--tx", opts.forkTx);
+      if (opts.forkStreamType) forkArgs.push("--stream-type", opts.forkStreamType);
       return forkArgs;
     }
     case "stop-forking":

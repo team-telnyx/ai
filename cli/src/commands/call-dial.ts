@@ -104,10 +104,8 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (audioUrl) args.push("--audio-url", audioUrl);
   if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
-  // Note: --privacy (number masking) is a Telnyx API feature but the
-  // generated Go CLI does not expose it as a flag, so we validate it
-  // for documentation but do not forward it to the CLI.
-  if (privacy) {/* validated but not forwarded */}
+  // --privacy is supported by the v0.21 Go CLI (BodyPath: "privacy").
+  if (privacy) args.push("--privacy", privacy);
   if (fromDisplayName) args.push("--from-display-name", fromDisplayName);
   if (timeLimitSecs) args.push("--time-limit-secs", timeLimitSecs);
   if (transcription) args.push("--transcription");
