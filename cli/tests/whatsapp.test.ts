@@ -68,7 +68,7 @@ else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
 }
 // Messages send-whatsapp
 else if (cmd[0] === "messages" && cmd[1] === "send-whatsapp") {
-  console.log(JSON.stringify({ data: { id: "msg_abc123", status: "sent" } }));
+  console.log(JSON.stringify({ data: { id: "msg_abc123", status: "queued" } }));
 }
 // available-phone-numbers list (for setup-whatsapp number search)
 else if (cmd[0] === "available-phone-numbers" && cmd[1] === "list") {
@@ -194,7 +194,7 @@ describe("WhatsApp commands", () => {
     );
 
     const data = JSON.parse(output);
-    assert.equal(data.status, "sent");
+    assert.equal(data.status, "queued");
     assert.equal(data.from, "+15551234567");
     assert.equal(data.to, "+15559876543");
     assert.equal(data.message_type, "text");

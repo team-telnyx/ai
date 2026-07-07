@@ -86,31 +86,49 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       const res = await telnyxCli(["whatsapp:business-accounts:phone-numbers", "list", "--id", wabaId]);
       const numbers = (res.data as Array<Record<string, unknown>>) ?? [];
       if (numbers.length) {
-        const first = numbers[0];
-        phoneNumber = String(first.phone_number ?? first.id ?? "");
-        // Check if the existing number is actually connected/verified
-        const waStatus = String(first.status ?? "").toLowerCase();
-        const isEnabled = first.enabled !== false && first.enabled !== "false";
-        if (waStatus === "connected" || waStatus === "verified" || waStatus === "registered") {
-          verified = true;
-          reusedExisting = true;
-        } else if (isEnabled) {
-          // Number exists but not yet verified — let user verify with --code
-          reusedExisting = true;
-        } else {
-          // Disabled/pending — treat as not usable, buy a new one
-          reusedExisting = false;
-        }
-        steps.push({
-          step: 2,
-          name: "List WhatsApp phone numbers",
-          status: "completed",
-          resourceId: phoneNumber,
-          detail: verified
-            ? `${numbers.length} number(s), reusing verified first`
-            : `${numbers.length} number(s) found, status: ${waStatus || "unknown"}`,
-          elapsedMs: Date.now() - step2Start,
+        // Scan the full list for a connected/verified number before
+        // falling back to a pending one, so we don't buy unnecessarily.
+        const connected = numbers.find((n) => {
+          const s = String(n.status ?? "").toLowerCase();
+          const en = n.enabled !== false && n.enabled !== "false";
+          return en && (s === "connected" || s === "verified" || s === "registered");
         });
+        const pending = numbers.find((n) => {
+          const s = String(n.status ?? "").toLowerCase();
+          const en = n.enabled !== false && n.enabled !== "false";
+          return en && s !== "connected" && s !== "verified" && s !== "registered";
+        });
+        const chosen = connected ?? pending;
+        if (chosen) {
+          phoneNumber = String(chosen.phone_number ?? chosen.id ?? "");
+          const waStatus = String(chosen.status ?? "").toLowerCase();
+          if (connected) {
+            verified = true;
+            reusedExisting = true;
+          } else {
+            // Enabled but not yet verified — let user verify with --code
+            reusedExisting = true;
+          }
+          steps.push({
+            step: 2,
+            name: "List WhatsApp phone numbers",
+            status: "completed",
+            resourceId: phoneNumber,
+            detail: verified
+              ? `${numbers.length} number(s), reusing connected`
+              : `${numbers.length} number(s) found, using ${waStatus || "pending"}`,
+            elapsedMs: Date.now() - step2Start,
+          });
+        } else {
+          // All numbers disabled/pending — buy a new one
+          steps.push({
+            step: 2,
+            name: "List WhatsApp phone numbers",
+            status: "completed",
+            detail: `${numbers.length} number(s) found, all unusable`,
+            elapsedMs: Date.now() - step2Start,
+          });
+        }
       } else {
         steps.push({
           step: 2,

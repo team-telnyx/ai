@@ -13,7 +13,7 @@ interface WhatsappSendResult {
   to: string;
   message_type: "text" | "template";
   message_id: string;
-  status: "sent";
+  status: string;
 }
 
 export async function whatsappSendCommand(flags: Record<string, string | boolean>): Promise<void> {
@@ -59,23 +59,26 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
     const res = await telnyxCli(args);
     const data = (res.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
+    // Extract the actual delivery status from the API response
+    // (queued, accepted, sent, delivered, etc.) instead of assuming "sent"
+    const deliveryStatus = String(data.status ?? data.delivery_status ?? "submitted");
 
     const result: WhatsappSendResult = {
       from,
       to,
       message_type: messageType,
       message_id: messageId,
-      status: "sent",
+      status: deliveryStatus,
     };
 
     if (jsonOutput) {
       outputJson(result);
     } else {
-      printSuccess("WhatsApp message sent!", {
+      printSuccess("WhatsApp message submitted!", {
         To: to,
         Type: messageType,
         "Message ID": messageId || "—",
-        Status: "sent",
+        Status: deliveryStatus,
       });
     }
   } catch (err) {
