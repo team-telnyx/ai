@@ -43,7 +43,9 @@ export async function setupIotCommand(flags: Record<string, string | boolean>): 
     const step1Start = Date.now();
     let availableSim: Record<string, unknown> | null = null;
     try {
-      const simsRes = await telnyxCli(["sim-cards", "list"]);
+      // v0.21: list commands with --format json stream per-item JSON (concatenated),
+      // not a { data: [...] } envelope. Use raw format to get the REST response body.
+      const simsRes = await telnyxCli(["sim-cards", "list"], { format: "raw" });
       const sims = simsRes.data as Record<string, unknown>[];
 
       // Find a disabled/standby SIM that can be activated

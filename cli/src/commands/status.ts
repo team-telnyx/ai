@@ -28,12 +28,15 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
   };
 
   // Run all queries concurrently via CLI
+  // List commands use { format: "raw" } — v0.21 list commands with --format json
+  // stream per-item JSON (concatenated, NOT a { data, meta } envelope), so raw
+  // format is needed to get the parseable REST response body.
   const [balanceRes, numbersRes, profilesRes, connectionsRes, assistantsRes] = await Promise.allSettled([
     telnyxCli(["balance", "retrieve"]),
-    telnyxCli(["phone-numbers", "list", "--page-size", "1"]),
-    telnyxCli(["messaging-profiles", "list", "--page-size", "1"]),
-    telnyxCli(["credential-connections", "list", "--page-size", "1"]),
-    telnyxCli(["ai:assistants", "list"]),
+    telnyxCli(["phone-numbers", "list", "--page-size", "1"], { format: "raw" }),
+    telnyxCli(["messaging-profiles", "list", "--page-size", "1"], { format: "raw" }),
+    telnyxCli(["credential-connections", "list", "--page-size", "1"], { format: "raw" }),
+    telnyxCli(["ai:assistants", "list"], { format: "raw" }),
   ]);
 
   // Balance

@@ -109,7 +109,7 @@ describe("telnyx CLI flag compatibility", () => {
     assert.ok(!assistantsCall.includes("--page-size"), "ai:assistants list does not support pagination flags");
   });
 
-  it("searchNumbers uses the Go CLI's --page-size flag for limits", async () => {
+  it("searchNumbers uses the Go CLI's --filter.limit flag for limits", async () => {
     const fake = setupFakeTelnyx();
     const previousPath = process.env.PATH;
     const previousCliPath = process.env.TELNYX_CLI_PATH;
@@ -129,8 +129,9 @@ describe("telnyx CLI flag compatibility", () => {
       const calls = readLoggedArgs(fake.logPath);
       const searchCall = calls.find((args) => args.slice(0, 2).join(" ") === "available-phone-numbers list");
       assert.ok(searchCall, "searchNumbers should call available-phone-numbers list");
-      assertFlagValue(searchCall, "--page-size", "5");
-      assert.ok(!searchCall.includes("--page.size"), "searchNumbers must not use unsupported --page.size flag");
+      // v0.21 Go CLI uses --filter.limit (not --page-size) for available-phone-numbers list
+      assertFlagValue(searchCall, "--filter.limit", "5");
+      assert.ok(!searchCall.includes("--page-size"), "searchNumbers must not use legacy --page-size flag");
     } finally {
       process.env.PATH = previousPath;
       if (previousCliPath === undefined) delete process.env.TELNYX_CLI_PATH;
