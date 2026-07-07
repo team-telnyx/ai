@@ -255,4 +255,114 @@ describe("Voice API action commands", () => {
     assert.ok(composite.some((c: string) => c.includes("call-control")));
     assert.ok(composite.some((c: string) => c.includes("call-status")));
   });
+
+  // === Gap PR tests: number masking + advanced call-control actions ===
+
+  it("call-dial with --privacy id passes number masking flag to Go CLI", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--privacy", "id", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
+    assert.ok(dialCall, "should invoke `calls dial`");
+    assertFlagValue(dialCall!, "--privacy", "id");
+  });
+
+  it("call-dial with --from-display-name passes the flag through", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--from-display-name", "Acme Corp", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
+    assert.ok(dialCall);
+    assertFlagValue(dialCall!, "--from-display-name", "Acme Corp");
+  });
+
+  it("call-dial with --transcription flag passes through", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--transcription", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
+    assert.ok(dialCall);
+    assert.ok(dialCall!.includes("--transcription"), "should include --transcription flag");
+  });
+
+  it("call-control --action gather calls `calls:actions gather`", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "gather", "--call-control-id", "call-1", "--client-state", "state-1", "--command-id", "cmd-1", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const gatherCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions gather");
+    assert.ok(gatherCall, "should invoke `calls:actions gather`");
+    assertFlagValue(gatherCall!, "--call-control-id", "call-1");
+  });
+
+  it("call-control --action start-playback calls `calls:actions start-playback` with --audio-url", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "start-playback", "--call-control-id", "call-1", "--audio-url", "https://example.com/hello.wav", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const playbackCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions start-playback");
+    assert.ok(playbackCall, "should invoke `calls:actions start-playback`");
+    assertFlagValue(playbackCall!, "--call-control-id", "call-1");
+    assertFlagValue(playbackCall!, "--audio-url", "https://example.com/hello.wav");
+  });
+
+  it("call-control --action stop-gather calls `calls:actions stop-gather`", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "stop-gather", "--call-control-id", "call-1", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const stopCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions stop-gather");
+    assert.ok(stopCall, "should invoke `calls:actions stop-gather`");
+  });
+
+  it("call-control --action pause-recording calls `calls:actions pause-recording`", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "pause-recording", "--call-control-id", "call-1", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const pauseCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions pause-recording");
+    assert.ok(pauseCall, "should invoke `calls:actions pause-recording`");
+  });
+
+  it("call-control --action start-transcription calls `calls:actions start-transcription`", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "start-transcription", "--call-control-id", "call-1", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const transCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions start-transcription");
+    assert.ok(transCall, "should invoke `calls:actions start-transcription`");
+  });
+
+  it("help text includes --privacy flag for number masking", () => {
+    const output = run(["help"]);
+    assert.ok(output.includes("--privacy"), "help should document --privacy flag");
+    assert.ok(output.includes("number masking") || output.includes("Number masking") || output.includes("caller ID"), "help should mention number masking");
+  });
 });

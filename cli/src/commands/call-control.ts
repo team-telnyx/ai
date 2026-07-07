@@ -7,7 +7,11 @@
  *
  * Supported actions:
  *   answer, hangup, transfer, dtmf, start-recording, stop-recording,
- *   start-noise-suppression, stop-noise-suppression, speak, bridge, refer, reject
+ *   start-noise-suppression, stop-noise-suppression, speak, bridge, refer, reject,
+ *   gather, stop-gather, start-playback, stop-playback, start-transcription,
+ *   stop-transcription, pause-recording, resume-recording, start-forking,
+ *   stop-forking, start-siprec, stop-siprec, start-streaming, stop-streaming,
+ *   enqueue, leave-queue, send-sip-info, update-client-state
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
@@ -18,6 +22,15 @@ const ACTIONS = [
   "start-recording", "stop-recording",
   "start-noise-suppression", "stop-noise-suppression",
   "speak", "bridge", "refer", "reject",
+  "gather", "stop-gather",
+  "start-playback", "stop-playback",
+  "start-transcription", "stop-transcription",
+  "pause-recording", "resume-recording",
+  "start-forking", "stop-forking",
+  "start-siprec", "stop-siprec",
+  "start-streaming", "stop-streaming",
+  "enqueue", "leave-queue",
+  "send-sip-info", "update-client-state",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
@@ -45,6 +58,12 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
+  // Flags for the advanced call-control actions.
+  const audioUrl = flags["audio-url"] as string | undefined;
+  const queueName = flags["queue-name"] as string | undefined;
+  const content = flags["content"] as string | undefined;
+  const clientState = flags["client-state"] as string | undefined;
+  const commandId = flags["command-id"] as string | undefined;
 
   if (!action) {
     printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
@@ -99,6 +118,27 @@ export async function callControlCommand(flags: Record<string, string | boolean>
       process.exit(1);
     }
   }
+  // gather requires client-state and command-id per the Call Control API.
+  if (act === "gather" && (!clientState || !commandId)) {
+    printError("--client-state and --command-id are required for gather");
+    process.exit(1);
+  }
+  if (act === "start-playback" && !audioUrl) {
+    printError("--audio-url is required for start-playback (URL of audio to play)");
+    process.exit(1);
+  }
+  if (act === "enqueue" && !queueName) {
+    printError("--queue-name is required for enqueue");
+    process.exit(1);
+  }
+  if (act === "send-sip-info" && !content) {
+    printError("--content is required for send-sip-info (SIP INFO body content)");
+    process.exit(1);
+  }
+  if (act === "update-client-state" && !clientState) {
+    printError("--client-state is required for update-client-state");
+    process.exit(1);
+  }
 
   const args = buildActionArgs(act, {
     callControlId,
@@ -113,6 +153,11 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     deepfakeDetection,
     record,
     webhookUrl,
+    audioUrl,
+    queueName,
+    content,
+    clientState,
+    commandId,
   });
 
   try {
@@ -162,6 +207,11 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
+    audioUrl?: string;
+    queueName?: string;
+    content?: string;
+    clientState?: string;
+    commandId?: string;
   },
 ): string[] {
   switch (action) {
@@ -209,6 +259,63 @@ function buildActionArgs(
       return ["calls:actions", "refer", "--call-control-id", opts.callControlId, "--sip-address", opts.sipAddress!];
     case "reject":
       return ["calls:actions", "reject", "--call-control-id", opts.callControlId];
+    case "gather":
+      return [
+        "calls:actions", "gather",
+        "--call-control-id", opts.callControlId,
+        "--client-state", opts.clientState!,
+        "--command-id", opts.commandId!,
+      ];
+    case "stop-gather":
+      return ["calls:actions", "stop-gather", "--call-control-id", opts.callControlId];
+    case "start-playback":
+      return [
+        "calls:actions", "start-playback",
+        "--call-control-id", opts.callControlId,
+        "--audio-url", opts.audioUrl!,
+      ];
+    case "stop-playback":
+      return ["calls:actions", "stop-playback", "--call-control-id", opts.callControlId];
+    case "start-transcription":
+      return ["calls:actions", "start-transcription", "--call-control-id", opts.callControlId];
+    case "stop-transcription":
+      return ["calls:actions", "stop-transcription", "--call-control-id", opts.callControlId];
+    case "pause-recording":
+      return ["calls:actions", "pause-recording", "--call-control-id", opts.callControlId];
+    case "resume-recording":
+      return ["calls:actions", "resume-recording", "--call-control-id", opts.callControlId];
+    case "start-forking":
+      return ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
+    case "stop-forking":
+      return ["calls:actions", "stop-forking", "--call-control-id", opts.callControlId];
+    case "start-siprec":
+      return ["calls:actions", "start-siprec", "--call-control-id", opts.callControlId];
+    case "stop-siprec":
+      return ["calls:actions", "stop-siprec", "--call-control-id", opts.callControlId];
+    case "start-streaming":
+      return ["calls:actions", "start-streaming", "--call-control-id", opts.callControlId];
+    case "stop-streaming":
+      return ["calls:actions", "stop-streaming", "--call-control-id", opts.callControlId];
+    case "enqueue":
+      return [
+        "calls:actions", "enqueue",
+        "--call-control-id", opts.callControlId,
+        "--queue-name", opts.queueName!,
+      ];
+    case "leave-queue":
+      return ["calls:actions", "leave-queue", "--call-control-id", opts.callControlId];
+    case "send-sip-info":
+      return [
+        "calls:actions", "send-sip-info",
+        "--call-control-id", opts.callControlId,
+        "--content", opts.content!,
+      ];
+    case "update-client-state":
+      return [
+        "calls:actions", "update-client-state",
+        "--call-control-id", opts.callControlId,
+        "--client-state", opts.clientState!,
+      ];
   }
 }
 

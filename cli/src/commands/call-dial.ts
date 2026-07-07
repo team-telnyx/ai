@@ -18,6 +18,9 @@ interface CallDialResult {
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
+/** Valid HTTP methods for --webhook-url-method. */
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+
 export async function callDialCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
   const connectionId = flags["connection-id"] as string | undefined;
@@ -29,6 +32,16 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   const webhookUrl = flags["webhook-url"] as string | undefined;
   const audioUrl = flags["audio-url"] as string | undefined;
   const timeoutSecs = flags["timeout-secs"] as string | undefined;
+  // New flags (number masking + advanced dial options).
+  const privacy = flags["privacy"] as string | undefined;
+  const fromDisplayName = flags["from-display-name"] as string | undefined;
+  const timeLimitSecs = flags["time-limit-secs"] as string | undefined;
+  const transcription = flags["transcription"] === true;
+  const mediaEncryption = flags["media-encryption"] as string | undefined;
+  const clientState = flags["client-state"] as string | undefined;
+  const commandId = flags["command-id"] as string | undefined;
+  const webhookUrlMethod = flags["webhook-url-method"] as string | undefined;
+  const webhookUrls = flags["webhook-urls"] as string | undefined;
 
   // Validate required flags
   if (!connectionId) {
@@ -55,6 +68,18 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
     printError(`Invalid --timeout-secs: ${timeoutSecs}. Must be a positive integer`);
     process.exit(1);
   }
+  if (privacy !== undefined && !["id", "none"].includes(privacy)) {
+    printError(`Invalid --privacy: ${privacy}. Must be 'id' (number masking) or 'none'`);
+    process.exit(1);
+  }
+  if (timeLimitSecs !== undefined && (!/^\d+$/.test(timeLimitSecs) || Number(timeLimitSecs) <= 0)) {
+    printError(`Invalid --time-limit-secs: ${timeLimitSecs}. Must be a positive integer`);
+    process.exit(1);
+  }
+  if (webhookUrlMethod !== undefined && !HTTP_METHODS.includes(webhookUrlMethod.toUpperCase() as (typeof HTTP_METHODS)[number])) {
+    printError(`Invalid --webhook-url-method: ${webhookUrlMethod}. Must be one of ${HTTP_METHODS.join(", ")}`);
+    process.exit(1);
+  }
 
   const args: string[] = [
     "calls", "dial",
@@ -68,6 +93,15 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (audioUrl) args.push("--audio-url", audioUrl);
   if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
+  if (privacy) args.push("--privacy", privacy);
+  if (fromDisplayName) args.push("--from-display-name", fromDisplayName);
+  if (timeLimitSecs) args.push("--time-limit-secs", timeLimitSecs);
+  if (transcription) args.push("--transcription");
+  if (mediaEncryption) args.push("--media-encryption", mediaEncryption);
+  if (clientState) args.push("--client-state", clientState);
+  if (commandId) args.push("--command-id", commandId);
+  if (webhookUrlMethod) args.push("--webhook-url-method", webhookUrlMethod);
+  if (webhookUrls) args.push("--webhook-urls", webhookUrls);
 
   try {
     if (!jsonOutput) {
@@ -75,6 +109,8 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
       console.log(`  From:           ${from}`);
       console.log(`  To:             ${to}`);
       console.log(`  Connection ID:  ${connectionId}`);
+      if (privacy === "id") console.log(`  Privacy:        number masking (caller ID hidden)`);
+      if (fromDisplayName) console.log(`  Caller ID Name: ${fromDisplayName}`);
       console.log();
     }
 
@@ -98,9 +134,12 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
         "To": to,
         "Connection ID": connectionId,
       };
+      if (privacy === "id") details["Privacy"] = "number masking (caller ID hidden)";
+      if (fromDisplayName) details["Caller ID Name"] = fromDisplayName;
       if (answeringMachineDetection) details["AMD"] = "enabled";
       if (deepfakeDetection) details["Deepfake Detection"] = "enabled";
       if (record) details["Recording"] = "enabled";
+      if (transcription) details["Transcription"] = "enabled";
       printSuccess("Outbound call placed!", details);
     }
   } catch (err) {

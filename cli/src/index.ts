@@ -154,7 +154,11 @@ Voice Call Flags:
   --call-control-id Call Control ID of the call (call-control, call-status, required)
   --action           Call Control action (call-control, required)
                     Valid: answer, hangup, transfer, dtmf, start-recording, stop-recording,
-                    start-noise-suppression, stop-noise-suppression, speak, bridge, refer, reject
+                    start-noise-suppression, stop-noise-suppression, speak, bridge, refer, reject,
+                    gather, stop-gather, start-playback, stop-playback, start-transcription,
+                    stop-transcription, pause-recording, resume-recording, start-forking,
+                    stop-forking, start-siprec, stop-siprec, start-streaming, stop-streaming,
+                    enqueue, leave-queue, send-sip-info, update-client-state
   --digits           DTMF digits to send (call-control dtmf)
   --payload          Text to synthesize and speak (call-control speak)
   --voice            TTS voice to use (call-control speak, default: female)
@@ -166,8 +170,19 @@ Voice Call Flags:
   --deepfake-detection           Enable deepfake detection (call-dial, call-control answer)
   --record                       Record the call (call-dial, call-control answer)
   --webhook-url                  Webhook URL override (call-dial, call-control answer)
-  --audio-url                    Audio URL to play on answer (call-dial)
+  --audio-url                    Audio URL to play on answer (call-dial); audio to play (call-control start-playback, required)
   --timeout-secs                 Dial timeout in seconds (call-dial)
+  --privacy                      Number masking: 'id' hides caller ID, 'none' is normal (call-dial, default: none)
+  --from-display-name            Caller ID display name (call-dial)
+  --time-limit-secs              Max call duration in seconds (call-dial)
+  --transcription                Enable real-time transcription on dial (call-dial)
+  --media-encryption             Media encryption mode (call-dial)
+  --client-state                 Opaque client-state string (call-dial; call-control gather/update-client-state, required)
+  --command-id                   Idempotency/command UUID (call-dial; call-control gather, required)
+  --webhook-url-method           HTTP method for --webhook-url (call-dial: GET|POST|PUT|PATCH|DELETE)
+  --webhook-urls                 Comma-separated additional webhook URLs (call-dial)
+  --queue-name                   Queue to place the call into (call-control enqueue, required)
+  --content                      SIP INFO body content (call-control send-sip-info, required)
 
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
@@ -211,6 +226,23 @@ Examples:
   telnyx-agent call-control --action speak --call-control-id <id> --payload "Hello there" --voice female
   telnyx-agent call-control --action start-recording --call-control-id <id> --channels dual --format mp3
   telnyx-agent call-control --action bridge --call-control-id <id> --call-control-id-2 <id2>
+  telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --privacy id
+  telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --transcription --time-limit-secs 600
+  telnyx-agent call-control --action start-playback --call-control-id <id> --audio-url https://example.com/hello.wav
+  telnyx-agent call-control --action stop-playback --call-control-id <id>
+  telnyx-agent call-control --action gather --call-control-id <id> --client-state state-1 --command-id cmd-1
+  telnyx-agent call-control --action stop-gather --call-control-id <id>
+  telnyx-agent call-control --action start-transcription --call-control-id <id>
+  telnyx-agent call-control --action stop-transcription --call-control-id <id>
+  telnyx-agent call-control --action pause-recording --call-control-id <id>
+  telnyx-agent call-control --action resume-recording --call-control-id <id>
+  telnyx-agent call-control --action start-forking --call-control-id <id>
+  telnyx-agent call-control --action start-siprec --call-control-id <id>
+  telnyx-agent call-control --action start-streaming --call-control-id <id>
+  telnyx-agent call-control --action enqueue --call-control-id <id> --queue-name support
+  telnyx-agent call-control --action leave-queue --call-control-id <id>
+  telnyx-agent call-control --action send-sip-info --call-control-id <id> --content "hello"
+  telnyx-agent call-control --action update-client-state --call-control-id <id> --client-state state-2
   telnyx-agent call-status --call-control-id <id> --json
 `;
 
