@@ -7,6 +7,7 @@
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { deriveMessageStatus } from "../utils/message-status.ts";
 
 interface SendSmsResult {
   message_id: string;
@@ -58,7 +59,8 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
     const res = await telnyxCli(args);
     const data = (res?.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
-    const status = String(data.status ?? data.delivery_status ?? "submitted");
+    // Delivery state lives on each recipient (data.to[].status), not top-level.
+    const status = deriveMessageStatus(data, "queued");
 
     const result: SendSmsResult = {
       message_id: messageId,

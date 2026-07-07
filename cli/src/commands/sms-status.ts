@@ -7,6 +7,7 @@
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { deriveMessageStatus } from "../utils/message-status.ts";
 
 interface SmsStatusResult {
   message_id: string;
@@ -29,7 +30,8 @@ export async function smsStatusCommand(flags: Record<string, string | boolean>):
       const res = await telnyxCli(["messages", "cancel-scheduled", "--id", id]);
       const data = (res?.data ?? res) as Record<string, unknown>;
       const messageId = String(data.id ?? id);
-      const status = String(data.status ?? data.delivery_status ?? "cancelled");
+      // Delivery state lives on each recipient (data.to[].status), not top-level.
+      const status = deriveMessageStatus(data, "cancelled");
 
       const result: SmsStatusResult = {
         message_id: messageId,
@@ -51,7 +53,8 @@ export async function smsStatusCommand(flags: Record<string, string | boolean>):
     const res = await telnyxCli(["messages", "retrieve", "--id", id]);
     const data = (res?.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? id);
-    const status = String(data.status ?? data.delivery_status ?? "unknown");
+    // Delivery state lives on each recipient (data.to[].status), not top-level.
+    const status = deriveMessageStatus(data, "unknown");
 
     const result: SmsStatusResult = {
       message_id: messageId,
