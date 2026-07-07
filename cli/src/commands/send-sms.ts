@@ -35,8 +35,10 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
     printError("--to is required (E.164 format, e.g., +13125550001)");
     process.exit(1);
   }
-  if (!text) {
-    printError("--text is required (pass --media-url for an MMS with media)");
+  // --text is required for a plain SMS, but the Telnyx API supports
+  // media-only MMS, so only require text when no --media-url is provided.
+  if (!text && !mediaUrl) {
+    printError("--text is required (or pass --media-url for a media-only MMS)");
     process.exit(1);
   }
 
@@ -47,9 +49,9 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
     "messages", "send",
     "--from", from,
     "--to", to,
-    "--text", text,
     "--type", type,
   ];
+  if (text) args.push("--text", text);
   if (mediaUrl) args.push("--media-url", mediaUrl);
   if (messagingProfileId) args.push("--messaging-profile-id", messagingProfileId);
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
