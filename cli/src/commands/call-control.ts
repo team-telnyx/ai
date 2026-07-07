@@ -34,11 +34,11 @@ const ACTIONS = [
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
-/** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
-const E164_RE = /^\+[1-9]\d{1,14}$/;
-
 /** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
 const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
+
+/** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
+const E164_RE = /^\+[1-9]\d{1,14}$/;
 
 interface CallControlResult {
   action: string;
@@ -61,6 +61,121 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
+  // Flags for the advanced call-control actions.
+  const audioUrl = flags["audio-url"] as string | undefined;
+  const queueName = flags["queue-name"] as string | undefined;
+  const body = flags["body"] as string | undefined;
+  const contentType = flags["content-type"] as string | undefined;
+  const clientState = flags["client-state"] as string | undefined;
+  const commandId = flags["command-id"] as string | undefined;
+  // Flags for media forking (start-forking).
+  // The Go CLI supports --rx, --tx, and --stream-type.
+  const forkRx = flags["fork-rx"] as string | undefined;
+  const forkTx = flags["fork-tx"] as string | undefined;
+  const forkStreamType = flags["fork-stream-type"] as string | undefined;
+  // --cause defaults to CALL_REJECTED, the generic rejection cause.
+  const cause = (typeof flags.cause === "string" ? flags.cause : undefined) ?? "CALL_REJECTED";
+
+  if (!action) {
+    printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
+    process.exit(1);
+  }
+  if (!ACTIONS.includes(action as Action)) {
+    printError(`Unknown --action: ${action}. Valid actions: ${ACTIONS.join(", ")}`);
+    process.exit(1);
+  }
+  const act = action as Action;
+
+  // Every action needs a call-control-id (bridge uses it as the first leg).
+  if (!callControlId) {
+    printError("--call-control-id is required");
+    process.exit(1);
+  }
+
+  // Action-specific flag validation
+  if (act === "transfer") {
+    if (!to) {
+      printError("--to is required for transfer (E.164 destination number)");
+      process.exit(1);
+    }
+    if (!E164_RE.test(to)) {
+      printError(`Invalid --to number: ${to}. Must be E.164 (e.g. +13125559999)`);
+      process.exit(1);
+    }
+  }
+  if (act === "dtmf" && !digits) {
+    printError("--digits is required for dtmf (e.g. 1234 or *,#)");
+    process.exit(1);
+  }
+  if (act === "speak" && !payload) {
+    printError("--payload is required for speak (text to synthesize)");
+    process.exit(1);
+  }
+  if (act === "bridge" && !callControlId2) {
+    printError("--call-control-id-2 is required for bridge (the second call to bridge with)");
+    process.exit(1);
+  }
+  if (act === "refer" && !sipAddress) {
+    printError("--sip-address is required for refer (e.g. sip:user@example.com)");
+    process.exit(1);
+  }
+  if (act === "start-recording") {
+    if (channels !== undefined && !["single", "dual"].includes(channels)) {
+      printError(`Invalid --channels: ${channels}. Must be 'single' or 'dual'`);
+      process.exit(1);
+    }
+    if (format !== undefined && !["mp3", "wav"].includes(format)) {
+      printError(`Invalid --format: ${format}. Must be 'mp3' or 'wav'`);
+      process.exit(1);
+    }
+  }
+  // gather accepts optional client-state/command-id; forward only if provided.
+  if (act === "start-playback" && !audioUrl) {
+    printError("--audio-url is required for start-playback (URL of audio to play)");
+    process.exit(1);
+  }
+  if (act === "enqueue" && !queueName) {
+    printError("--queue-name is required for enqueue");
+    process.exit(1);
+  }
+  if (act === "send-sip-info") {
+    if (!body) {
+      printError("--body is required for send-sip-info (SIP INFO body content)");
+      process.exit(1);
+    }
+    if (!contentType) {
+      printError("--content-type is required for send-sip-info (e.g. application/dtmf-relay)");
+      process.exit(1);
+    }
+  }
+  if (act === "update-client-state" && !clientState) {
+    printError("--client-state is required for update-client-state");
+    process.exit(1);
+  }
+  // start-forking requires both rx+tx (the Voice API rejects fork_start
+  // without a destination, and the Go CLI only exposes --rx/--tx).
+  if (act === "start-forking" && !(forkRx && forkTx)) {
+    printError("--fork-rx and --fork-tx are both required for start-forking");
+    process.exit(1);
+  }
+  if (act === "reject" && !REJECT_CAUSES.includes(cause as (typeof REJECT_CAUSES)[number])) {
+    printError(`Invalid --cause: ${cause}. Must be one of: ${REJECT_CAUSES.join(", ")}`);
+    process.exit(1);
+  }
+
+  const args = buildActionArgs(act, {
+    callControlId,
+    callControlId2,
+    to,
+    digits,
+    payload,
+    voice,
+    sipAddress,
+    channels,
+    format,
+    deepfakeDetection,
+    record,
+    webhookUrl,
     audioUrl,
     queueName,
     body,
@@ -69,6 +184,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     commandId,
     forkRx,
     forkTx,
+    forkStreamType,
     cause,
   });
 
@@ -119,6 +235,66 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
+    audioUrl?: string;
+    queueName?: string;
+    body?: string;
+    contentType?: string;
+    clientState?: string;
+    commandId?: string;
+    forkRx?: string;
+    forkTx?: string;
+    forkStreamType?: string;
+    cause: string;
+  },
+): string[] {
+  switch (action) {
+    case "answer":
+      return [
+        "calls:actions", "answer",
+        "--call-control-id", opts.callControlId,
+        // deepfake_detection is an object in the Answer API; the Go CLI exposes it via inner flags.
+        ...(opts.deepfakeDetection ? ["--deepfake-detection.enabled"] : []),
+        // The Go CLI's --record flag takes the event to record from, not a boolean.
+        ...(opts.record ? ["--record", "record-from-answer"] : []),
+        ...(opts.webhookUrl ? ["--webhook-url", opts.webhookUrl] : []),
+      ];
+    case "hangup":
+      return ["calls:actions", "hangup", "--call-control-id", opts.callControlId];
+    case "transfer":
+      return ["calls:actions", "transfer", "--call-control-id", opts.callControlId, "--to", opts.to!];
+    case "dtmf":
+      return ["calls:actions", "send-dtmf", "--call-control-id", opts.callControlId, "--digits", opts.digits!];
+    case "start-recording":
+      return [
+        "calls:actions", "start-recording",
+        "--call-control-id", opts.callControlId,
+        // Supply safe defaults — the Go CLI requires both channels and format.
+        ...(opts.channels ? ["--channels", opts.channels] : ["--channels", "single"]),
+        ...(opts.format ? ["--format", opts.format] : ["--format", "mp3"]),
+      ];
+    case "stop-recording":
+      return ["calls:actions", "stop-recording", "--call-control-id", opts.callControlId];
+    case "start-noise-suppression":
+      return ["calls:actions", "start-noise-suppression", "--call-control-id", opts.callControlId];
+    case "stop-noise-suppression":
+      return ["calls:actions", "stop-noise-suppression", "--call-control-id", opts.callControlId];
+    case "speak":
+      return [
+        "calls:actions", "speak",
+        "--call-control-id", opts.callControlId,
+        "--payload", opts.payload!,
+        "--voice", opts.voice,
+      ];
+    case "bridge":
+      return [
+        "calls:actions", "bridge",
+        "--call-control-id-to-bridge", opts.callControlId,
+        "--call-control-id-to-bridge-with", opts.callControlId2!,
+      ];
+    case "refer":
+      return ["calls:actions", "refer", "--call-control-id", opts.callControlId, "--sip-address", opts.sipAddress!];
+    case "reject":
+      return ["calls:actions", "reject", "--call-control-id", opts.callControlId, "--cause", opts.cause];
     case "gather":
       return [
         "calls:actions", "gather",
@@ -148,6 +324,7 @@ function buildActionArgs(
       const forkArgs = ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
       if (opts.forkRx) forkArgs.push("--rx", opts.forkRx);
       if (opts.forkTx) forkArgs.push("--tx", opts.forkTx);
+      if (opts.forkStreamType) forkArgs.push("--stream-type", opts.forkStreamType);
       return forkArgs;
     }
     case "stop-forking":

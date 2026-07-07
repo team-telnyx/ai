@@ -18,8 +18,11 @@ interface CallDialResult {
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
-/** Valid answering_machine_detection modes accepted by the Dial API. */
+/** Valid AMD modes (Go CLI accepts these as the --answering-machine-detection value). */
 const AMD_MODES = ["premium", "detect", "detect_beep", "detect_words", "greeting_end", "disabled"] as const;
+
+/** Valid HTTP methods for --webhook-url-method (Voice API only accepts GET/POST). */
+const HTTP_METHODS = ["GET", "POST"] as const;
 
 export async function callDialCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -70,6 +73,19 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
     printError(`Invalid --timeout-secs: ${timeoutSecs}. Must be a positive integer`);
     process.exit(1);
   }
+  if (privacy !== undefined && !["id", "none"].includes(privacy)) {
+    printError(`Invalid --privacy: ${privacy}. Must be 'id' (number masking) or 'none'`);
+    process.exit(1);
+  }
+  if (timeLimitSecs !== undefined && (!/^\d+$/.test(timeLimitSecs) || Number(timeLimitSecs) <= 0)) {
+    printError(`Invalid --time-limit-secs: ${timeLimitSecs}. Must be a positive integer`);
+    process.exit(1);
+  }
+  if (webhookUrlMethod !== undefined && !HTTP_METHODS.includes(webhookUrlMethod.toUpperCase() as (typeof HTTP_METHODS)[number])) {
+    printError(`Invalid --webhook-url-method: ${webhookUrlMethod}. Must be one of ${HTTP_METHODS.join(", ")}`);
+    process.exit(1);
+  }
+
   if (answeringMachineDetection !== undefined && !AMD_MODES.includes(answeringMachineDetection as (typeof AMD_MODES)[number])) {
     printError(`Invalid --answering-machine-detection mode: ${answeringMachineDetection}. Must be one of: ${AMD_MODES.join(", ")}`);
     process.exit(1);
@@ -81,19 +97,15 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
     "--from", from,
     "--to", to,
   ];
-  // The Go CLI's --answering-machine-detection flag takes a mode value (default "disabled").
   if (answeringMachineDetection) args.push("--answering-machine-detection", answeringMachineDetection);
-  // deepfake_detection is an object in the Dial API; the Go CLI exposes it via inner flags.
   if (deepfakeDetection) args.push("--deepfake-detection.enabled");
-  // The Go CLI's --record flag takes the event to record from, not a boolean.
+  // --record takes the event to record from (default: record-from-answer).
   if (record) args.push("--record", "record-from-answer");
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (audioUrl) args.push("--audio-url", audioUrl);
   if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
-  // Note: --privacy (number masking) is a Telnyx API feature but the
-  // generated Go CLI does not expose it as a flag, so we validate it
-  // for documentation but do not forward it to the CLI.
-  if (privacy) {/* validated but not forwarded */}
+  // --privacy is supported by the v0.21 Go CLI (BodyPath: "privacy").
+  if (privacy) args.push("--privacy", privacy);
   if (fromDisplayName) args.push("--from-display-name", fromDisplayName);
   if (timeLimitSecs) args.push("--time-limit-secs", timeLimitSecs);
   if (transcription) args.push("--transcription");
@@ -135,6 +147,8 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
         "To": to,
         "Connection ID": connectionId,
       };
+      if (privacy === "id") details["Privacy"] = "number masking (caller ID hidden)";
+      if (fromDisplayName) details["Caller ID Name"] = fromDisplayName;
       if (answeringMachineDetection) details["AMD"] = answeringMachineDetection;
       if (deepfakeDetection) details["Deepfake Detection"] = "enabled";
       if (record) details["Recording"] = "enabled";
