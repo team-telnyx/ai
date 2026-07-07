@@ -43,11 +43,18 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   // Group MMS always goes through the group-MMS subcommand (type is MMS).
   const type = "MMS";
 
+  // The Go CLI expects `--to` repeated once per recipient, not a single
+  // comma-separated string, so split the user-facing list and push a `--to`
+  // flag per recipient.
+  const recipients = to.split(",").map((n) => n.trim()).filter(Boolean);
+
   const args: string[] = [
     "messages", "send-group-mms",
     "--from", from,
-    "--to", to,
   ];
+  for (const recipient of recipients) {
+    args.push("--to", recipient);
+  }
   if (text) args.push("--text", text);
   if (mediaUrl) args.push("--media-url", mediaUrl);
   // Note: the group-MMS API (and thus the generated Go CLI subcommand) does not
@@ -59,8 +66,6 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
     const messageId = String(data.id ?? data.message_id ?? "");
     // Delivery state lives on each recipient (data.to[].status), not top-level.
     const status = deriveMessageStatus(data, "queued");
-
-    const recipients = to.split(",").map((n) => n.trim()).filter(Boolean);
 
     const result: SendGroupMmsResult = {
       message_id: messageId,
