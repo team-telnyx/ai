@@ -40,7 +40,10 @@ export async function searchNumbers(
   if (opts?.limit) args.push("--page-size", String(opts.limit));
   if (opts?.features) args.push("--filter.features", opts.features);
 
-  const res = await telnyxCli(args);
+  // Use { format: "raw" } — v0.21 list commands output per-item JSON
+  // when --format json is used, which is not the { data: [...] } envelope
+  // the helper parses. Raw mode returns a parseable array.
+  const res = await telnyxCli(args, { format: "raw" });
   const numbers = res.data as Array<Record<string, unknown>>;
   if (!numbers?.length) {
     throw new Error(`No phone numbers available in ${country}`);

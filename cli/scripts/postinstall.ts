@@ -18,11 +18,24 @@ const PLATFORM_MAP: Record<string, string> = {
 };
 
 async function main() {
-  // Skip if telnyx is already on PATH
+  // Skip if telnyx is already on PATH AND at the required version.
+  // An older CLI on PATH would leave WhatsApp and other commands broken,
+  // so we check the version before skipping the download.
   try {
-    execSync("telnyx --version", { stdio: "ignore" });
-    console.log("✓ telnyx CLI already installed");
-    return;
+    const out = execSync("telnyx --version", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const installedVersion = out.match(/v?(\d+\.\d+\.\d+)/)?.[1];
+    if (installedVersion) {
+      const [maj, min] = installedVersion.split(".").map(Number);
+      const [reqMaj, reqMin] = VERSION.split(".").map(Number);
+      if (maj > reqMaj || (maj === reqMaj && min >= reqMin)) {
+        console.log(`✓ telnyx CLI ${installedVersion} already installed (>= ${VERSION})`);
+        return;
+      }
+      console.log(`⚠ telnyx CLI ${installedVersion} found but ${VERSION} required — downloading…`);
+    } else {
+      console.log("✓ telnyx CLI already installed");
+      return;
+    }
   } catch {}
 
   const key = `${process.platform}-${process.arch}`;
