@@ -90,14 +90,18 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (audioUrl) args.push("--audio-url", audioUrl);
   if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
-  if (privacy) args.push("--privacy", privacy);
+  // Note: --privacy (number masking) is a Telnyx API feature but the
+  // generated Go CLI does not expose it as a flag, so we validate it
+  // for documentation but do not forward it to the CLI.
+  if (privacy) {/* validated but not forwarded */}
   if (fromDisplayName) args.push("--from-display-name", fromDisplayName);
   if (timeLimitSecs) args.push("--time-limit-secs", timeLimitSecs);
   if (transcription) args.push("--transcription");
   if (mediaEncryption) args.push("--media-encryption", mediaEncryption);
   if (clientState) args.push("--client-state", clientState);
   if (commandId) args.push("--command-id", commandId);
-  if (webhookUrlMethod) args.push("--webhook-url-method", webhookUrlMethod);
+  // Forward the normalized uppercase value so the API receives POST/GET, not post/get.
+  if (webhookUrlMethod) args.push("--webhook-url-method", webhookUrlMethod.toUpperCase());
   if (webhookUrls) args.push("--webhook-urls", webhookUrls);
 
   try {
