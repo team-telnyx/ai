@@ -154,10 +154,10 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     } else {
       try {
         // Create a messaging profile first (required for WhatsApp verification
-        // — the SMS verification code needs an inbound route via the profile)
-        const apiKey = process.env.TELNYX_API_KEY;
-        if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
-        const client = new TelnyxClient(apiKey);
+        // — the SMS verification code needs an inbound route via the profile).
+        // TelnyxClient resolves TELNYX_API_KEY or ~/.config/telnyx/config.json,
+        // matching the auth options supported by the telnyx CLI calls above.
+        const client = new TelnyxClient();
         const profileRes = await client.post("/messaging_profiles", {
           name: `WhatsApp Profile - ${new Date().toISOString().slice(0, 19).replace("T", " ")}`,
           whitelisted_destinations: [country || "US"],
