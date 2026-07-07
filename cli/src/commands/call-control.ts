@@ -69,7 +69,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const clientState = flags["client-state"] as string | undefined;
   const commandId = flags["command-id"] as string | undefined;
   // Flags for media forking (start-forking).
-  const forkTarget = flags["fork-target"] as string | undefined;
+  // The Go CLI supports --rx and --tx but not --target.
   const forkRx = flags["fork-rx"] as string | undefined;
   const forkTx = flags["fork-tx"] as string | undefined;
   // --cause defaults to CALL_REJECTED, the generic rejection cause.
@@ -151,10 +151,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError("--client-state is required for update-client-state");
     process.exit(1);
   }
-  // start-forking requires either a target or both rx+tx (the Voice API
-  // rejects fork_start without a destination).
-  if (act === "start-forking" && !forkTarget && !(forkRx && forkTx)) {
-    printError("--fork-target (or both --fork-rx and --fork-tx) is required for start-forking");
+  // start-forking requires both rx+tx (the Voice API rejects fork_start
+  // without a destination, and the Go CLI only exposes --rx/--tx).
+  if (act === "start-forking" && !(forkRx && forkTx)) {
+    printError("--fork-rx and --fork-tx are both required for start-forking");
     process.exit(1);
   }
   if (act === "reject" && !REJECT_CAUSES.includes(cause as (typeof REJECT_CAUSES)[number])) {
@@ -181,7 +181,6 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     contentType,
     clientState,
     commandId,
-    forkTarget,
     forkRx,
     forkTx,
     cause,
@@ -240,7 +239,6 @@ function buildActionArgs(
     contentType?: string;
     clientState?: string;
     commandId?: string;
-    forkTarget?: string;
     forkRx?: string;
     forkTx?: string;
     cause: string;
@@ -321,7 +319,6 @@ function buildActionArgs(
       return ["calls:actions", "resume-recording", "--call-control-id", opts.callControlId];
     case "start-forking": {
       const forkArgs = ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
-      if (opts.forkTarget) forkArgs.push("--target", opts.forkTarget);
       if (opts.forkRx) forkArgs.push("--rx", opts.forkRx);
       if (opts.forkTx) forkArgs.push("--tx", opts.forkTx);
       return forkArgs;

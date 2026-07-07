@@ -346,7 +346,7 @@ describe("Voice API action commands", () => {
 
   // === Gap PR tests: number masking + advanced call-control actions ===
 
-  it("call-dial with --privacy id passes number masking flag to Go CLI", () => {
+  it("call-dial with --privacy id validates but does not forward to Go CLI", () => {
     const fake = setupFakeTelnyx();
     run(
       ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--privacy", "id", "--json"],
@@ -356,7 +356,9 @@ describe("Voice API action commands", () => {
     const calls = readLoggedArgs(fake.logPath);
     const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
     assert.ok(dialCall, "should invoke `calls dial`");
-    assertFlagValue(dialCall!, "--privacy", "id");
+    // The Go CLI does not expose --privacy; we validate it for documentation
+    // but do not forward it, so it should NOT appear in the CLI args.
+    assert.equal(dialCall!.indexOf("--privacy"), -1, "must not forward --privacy to Go CLI");
   });
 
   it("call-dial with --from-display-name passes the flag through", () => {
