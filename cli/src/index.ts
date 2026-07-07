@@ -166,7 +166,10 @@ Voice Call Flags:
   --sip-address      SIP address to refer to (call-control refer, e.g. sip:user@example.com)
   --channels         Recording channels: single|dual (call-control start-recording)
   --format           Recording format: mp3|wav (call-control start-recording)
-  --answering-machine-detection  Enable answering machine detection (call-dial)
+  --cause            Rejection cause: CALL_REJECTED|USER_BUSY (call-control reject, default: CALL_REJECTED)
+  --answering-machine-detection [mode]  Enable answering machine detection (call-dial)
+                    Valid: premium, detect, detect_beep, detect_words, greeting_end, disabled
+                    (bare flag defaults to detect)
   --deepfake-detection           Enable deepfake detection (call-dial, call-control answer)
   --record                       Record the call (call-dial, call-control answer)
   --webhook-url                  Webhook URL override (call-dial, call-control answer)
@@ -244,6 +247,7 @@ Examples:
   telnyx-agent call-control --action leave-queue --call-control-id <id>
   telnyx-agent call-control --action send-sip-info --call-control-id <id> --body "hello" --content-type application/dtmf-relay
   telnyx-agent call-control --action update-client-state --call-control-id <id> --client-state state-2
+  telnyx-agent call-control --action reject --call-control-id <id> --cause USER_BUSY
   telnyx-agent call-status --call-control-id <id> --json
 `;
 

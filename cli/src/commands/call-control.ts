@@ -37,6 +37,9 @@ type Action = (typeof ACTIONS)[number];
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
+/** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
+const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
+
 interface CallControlResult {
   action: string;
   call_control_id: string | null;
@@ -58,17 +61,8 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
-  // Flags for the advanced call-control actions.
-  const audioUrl = flags["audio-url"] as string | undefined;
-  const queueName = flags["queue-name"] as string | undefined;
-  const body = flags["body"] as string | undefined;
-  const contentType = flags["content-type"] as string | undefined;
-  const clientState = flags["client-state"] as string | undefined;
-  const commandId = flags["command-id"] as string | undefined;
-  // Flags for media forking (start-forking).
-  const forkTarget = flags["fork-target"] as string | undefined;
-  const forkRx = flags["fork-rx"] as string | undefined;
-  const forkTx = flags["fork-tx"] as string | undefined;
+  // --cause defaults to CALL_REJECTED, the generic rejection cause.
+  const cause = (typeof flags.cause === "string" ? flags.cause : undefined) ?? "CALL_REJECTED";
 
   if (!action) {
     printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
@@ -111,6 +105,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   }
   if (act === "refer" && !sipAddress) {
     printError("--sip-address is required for refer (e.g. sip:user@example.com)");
+    process.exit(1);
+  }
+  if (act === "reject" && !REJECT_CAUSES.includes(cause as (typeof REJECT_CAUSES)[number])) {
+    printError(`Invalid --cause: ${cause}. Must be one of: ${REJECT_CAUSES.join(", ")}`);
     process.exit(1);
   }
   if (act === "start-recording") {
@@ -166,15 +164,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     deepfakeDetection,
     record,
     webhookUrl,
-    audioUrl,
-    queueName,
-    body,
-    contentType,
-    clientState,
-    commandId,
-    forkTarget,
-    forkRx,
-    forkTx,
+    cause,
   });
 
   try {
@@ -224,15 +214,7 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
-    audioUrl?: string;
-    queueName?: string;
-    body?: string;
-    contentType?: string;
-    clientState?: string;
-    commandId?: string;
-    forkTarget?: string;
-    forkRx?: string;
-    forkTx?: string;
+    cause: string;
   },
 ): string[] {
   switch (action) {
@@ -240,8 +222,10 @@ function buildActionArgs(
       return [
         "calls:actions", "answer",
         "--call-control-id", opts.callControlId,
-        ...(opts.deepfakeDetection ? ["--deepfake-detection"] : []),
-        ...(opts.record ? ["--record"] : []),
+        // deepfake_detection is an object in the Answer API; the Go CLI exposes it via inner flags.
+        ...(opts.deepfakeDetection ? ["--deepfake-detection.enabled"] : []),
+        // The Go CLI's --record flag takes the event to record from, not a boolean.
+        ...(opts.record ? ["--record", "record-from-answer"] : []),
         ...(opts.webhookUrl ? ["--webhook-url", opts.webhookUrl] : []),
       ];
     case "hangup":
@@ -279,70 +263,8 @@ function buildActionArgs(
     case "refer":
       return ["calls:actions", "refer", "--call-control-id", opts.callControlId, "--sip-address", opts.sipAddress!];
     case "reject":
-      return ["calls:actions", "reject", "--call-control-id", opts.callControlId];
-    case "gather":
-      return [
-        "calls:actions", "gather",
-        "--call-control-id", opts.callControlId,
-        ...(opts.clientState ? ["--client-state", opts.clientState] : []),
-        ...(opts.commandId ? ["--command-id", opts.commandId] : []),
-      ];
-    case "stop-gather":
-      return ["calls:actions", "stop-gather", "--call-control-id", opts.callControlId];
-    case "start-playback":
-      return [
-        "calls:actions", "start-playback",
-        "--call-control-id", opts.callControlId,
-        "--audio-url", opts.audioUrl!,
-      ];
-    case "stop-playback":
-      return ["calls:actions", "stop-playback", "--call-control-id", opts.callControlId];
-    case "start-transcription":
-      return ["calls:actions", "start-transcription", "--call-control-id", opts.callControlId];
-    case "stop-transcription":
-      return ["calls:actions", "stop-transcription", "--call-control-id", opts.callControlId];
-    case "pause-recording":
-      return ["calls:actions", "pause-recording", "--call-control-id", opts.callControlId];
-    case "resume-recording":
-      return ["calls:actions", "resume-recording", "--call-control-id", opts.callControlId];
-    case "start-forking": {
-      const forkArgs = ["calls:actions", "start-forking", "--call-control-id", opts.callControlId];
-      if (opts.forkTarget) forkArgs.push("--target", opts.forkTarget);
-      if (opts.forkRx) forkArgs.push("--rx", opts.forkRx);
-      if (opts.forkTx) forkArgs.push("--tx", opts.forkTx);
-      return forkArgs;
-    }
-    case "stop-forking":
-      return ["calls:actions", "stop-forking", "--call-control-id", opts.callControlId];
-    case "start-siprec":
-      return ["calls:actions", "start-siprec", "--call-control-id", opts.callControlId];
-    case "stop-siprec":
-      return ["calls:actions", "stop-siprec", "--call-control-id", opts.callControlId];
-    case "start-streaming":
-      return ["calls:actions", "start-streaming", "--call-control-id", opts.callControlId];
-    case "stop-streaming":
-      return ["calls:actions", "stop-streaming", "--call-control-id", opts.callControlId];
-    case "enqueue":
-      return [
-        "calls:actions", "enqueue",
-        "--call-control-id", opts.callControlId,
-        "--queue-name", opts.queueName!,
-      ];
-    case "leave-queue":
-      return ["calls:actions", "leave-queue", "--call-control-id", opts.callControlId];
-    case "send-sip-info":
-      return [
-        "calls:actions", "send-sip-info",
-        "--call-control-id", opts.callControlId,
-        "--body", opts.body!,
-        "--content-type", opts.contentType!,
-      ];
-    case "update-client-state":
-      return [
-        "calls:actions", "update-client-state",
-        "--call-control-id", opts.callControlId,
-        "--client-state", opts.clientState!,
-      ];
+      // The Reject API requires a cause (CALL_REJECTED or USER_BUSY).
+      return ["calls:actions", "reject", "--call-control-id", opts.callControlId, "--cause", opts.cause];
   }
 }
 
