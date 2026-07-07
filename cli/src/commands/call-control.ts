@@ -193,11 +193,14 @@ function buildActionArgs(
     case "dtmf":
       return ["calls:actions", "send-dtmf", "--call-control-id", opts.callControlId, "--digits", opts.digits!];
     case "start-recording":
+      // The Go CLI treats --channels and --format as required for
+      // start-recording. Supply safe defaults (single/mp3) when the caller
+      // omits them so the command works out of the box instead of erroring.
       return [
         "calls:actions", "start-recording",
         "--call-control-id", opts.callControlId,
-        ...(opts.channels ? ["--channels", opts.channels] : []),
-        ...(opts.format ? ["--format", opts.format] : []),
+        "--channels", opts.channels ?? "single",
+        "--format", opts.format ?? "mp3",
       ];
     case "stop-recording":
       return ["calls:actions", "stop-recording", "--call-control-id", opts.callControlId];
