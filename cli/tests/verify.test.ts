@@ -50,7 +50,7 @@ if (joined.startsWith("verifications trigger-sms")) {
   const responseCode = code === "000000" ? "rejected" : "accepted";
   console.log(JSON.stringify({ data: { phone_number: "+13125550001", response_code: responseCode } }));
 } else if (joined.startsWith("verifications retrieve")) {
-  console.log(JSON.stringify({ data: { id: cmd[cmd.indexOf("--verification-id") + 1], status: "pending" } }));
+  console.log(JSON.stringify({ data: { id: cmd[cmd.indexOf("--verification-id") + 1], status: "pending", custom_code: "123456" } }));
 } else {
   console.log(JSON.stringify({ data: {} }));
 }
@@ -236,6 +236,16 @@ describe("verify-check command", () => {
       "should call verifications retrieve");
     assertFlagValue(call, "--verification-id", "ver_abc");
     assert.ok(!call.includes("--code"), "retrieve must not pass --code");
+  });
+
+  it("redacts custom_code from --json output", () => {
+    const fake = setupFakeTelnyx();
+    const out = runCli(["verify-check", "--verification-id", "ver_abc", "--json"], fake.env);
+    const data = JSON.parse(out);
+    assert.equal(data.response.custom_code, undefined,
+      "raw response must not include the OTP custom_code");
+    assert.ok(!out.includes("123456"), "OTP value must not appear anywhere in output");
+    assert.equal(data.response.status, "pending", "other response fields are preserved");
   });
 });
 

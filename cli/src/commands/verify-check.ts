@@ -52,13 +52,18 @@ export async function verifyCheckCommand(flags: Record<string, string | boolean>
     const responseCode = data.response_code as string | undefined;
     const verified = code ? (responseCode ?? status) === "accepted" : undefined;
 
+    // Verification resources include `custom_code` — the OTP itself when the
+    // verification was created with one. Strip it so --json output can't leak
+    // the code into logs or agent transcripts.
+    const { custom_code: _redacted, ...safeResponse } = data;
+
     const result: VerifyCheckResult = {
       verification_id: verificationId,
       mode,
       status,
       response_code: responseCode,
       verified,
-      response: data,
+      response: safeResponse,
     };
 
     if (jsonOutput) {
