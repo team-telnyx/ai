@@ -18,6 +18,9 @@ import { statusCommand } from "./commands/status.ts";
 import { fundAccountCommand } from "./commands/fund-account.ts";
 import { ttsCommand } from "./commands/tts.ts";
 import { ttsVoicesCommand } from "./commands/tts-voices.ts";
+import { setupWhatsappCommand } from "./commands/setup-whatsapp.ts";
+import { whatsappSendCommand } from "./commands/whatsapp-send.ts";
+import { whatsappTemplatesCommand } from "./commands/whatsapp-templates.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -43,6 +46,9 @@ Commands:
   fund-account      Fund account via x402 USDC payment (EIP-712 signing)
   tts               Generate speech from text (text-to-speech)
   tts-voices        List available TTS voices (optionally filter by provider)
+  setup-whatsapp    Zero to WhatsApp: list WABA, buy number, verify, set profile
+  whatsapp-send     Send a WhatsApp message (text or template)
+  whatsapp-templates List or create WhatsApp message templates
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -98,6 +104,24 @@ TTS-voices Flags:
   --provider        Filter voices by provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (optional)
   --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., elevenlabs, resemble)
 
+WhatsApp Flags:
+  --waba-id <id>    WhatsApp Business Account id (setup-whatsapp, whatsapp-templates)
+  --display-name    WhatsApp profile display name (setup-whatsapp)
+  --about           WhatsApp profile about text (setup-whatsapp)
+  --category        WhatsApp business category, e.g. RETAIL (setup-whatsapp)
+  --code            Verification code, to verify a number already initialized (setup-whatsapp)
+  --from            Sender E.164 number (whatsapp-send, required)
+  --to              Recipient E.164 number (whatsapp-send, required)
+  --text            Text message body (whatsapp-send)
+  --template-name   Template name to send (whatsapp-send)
+  --template-language Template language code, default en_US (whatsapp-send)
+  --messaging-profile-id Messaging profile id (whatsapp-send)
+  --create          Switch to create mode (whatsapp-templates)
+  --name            Template name (whatsapp-templates, create)
+  --language        Template language, default en_US (whatsapp-templates, create)
+  --component       Template components as a JSON array string (whatsapp-templates, create)
+  --status          Filter templates by status: APPROVED|PENDING|REJECTED (whatsapp-templates, list)
+
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
 
@@ -108,7 +132,7 @@ Examples:
   telnyx-agent setup-sms --country US
   telnyx-agent setup-voice --webhook https://example.com/calls
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
-  telnyx-agent setup-porting --phone-numbers +13125550001,+13125550002 --customer-name "Acme Corp"
+  telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
   telnyx-agent edge-doctor --json
   telnyx-agent setup-edge-mcp --name my-mcp-server
   telnyx-agent setup-edge-webhook --name my-webhook
@@ -119,6 +143,12 @@ Examples:
   telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml --output-type base64
   telnyx-agent tts-voices --json
   telnyx-agent tts-voices --provider aws
+  telnyx-agent setup-whatsapp --json
+  telnyx-agent setup-whatsapp --waba-id <id> --display-name "My Biz" --code 123456
+  telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --text "Hello!"
+  telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --template-name order_ready
+  telnyx-agent whatsapp-templates --waba-id <id> --json
+  telnyx-agent whatsapp-templates --waba-id <id> --create --name promo --category MARKETING --component '[]'
 `;
 
 const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Promise<void>> = {
@@ -138,6 +168,9 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
   "fund-account": fundAccountCommand,
   tts: ttsCommand,
   "tts-voices": ttsVoicesCommand,
+  "setup-whatsapp": setupWhatsappCommand,
+  "whatsapp-send": whatsappSendCommand,
+  "whatsapp-templates": whatsappTemplatesCommand,
 };
 
 export async function run(argv: string[]): Promise<void> {

@@ -63,6 +63,9 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "upload_porting_document", "list_porting_requirements"] },
     { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
   ],
+  "💬 WhatsApp": [
+    { name: "WhatsApp Business", description: "Send WhatsApp messages, manage business accounts, phone numbers, and templates", actions: ["setup_whatsapp", "send_whatsapp_message", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile"] },
+  ],
 };
 
 const COMPOSITE_COMMANDS = [
@@ -80,6 +83,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-porting", description: "Zero to porting: checks portability, creates porting order, lists requirements, optionally submits" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)" },
+  { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
   { name: "telnyx-agent status", description: "Account health overview — balance, numbers, profiles, connections" },
   { name: "telnyx-agent capabilities", description: "This command — lists all available API capabilities" },
 ];

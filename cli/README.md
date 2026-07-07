@@ -90,6 +90,75 @@ telnyx-agent setup-ai --name "Support Bot" --json
 
 Output: `{ assistant_id, phone_number, test_command }`
 
+### `telnyx-agent setup-whatsapp`
+
+**One command: zero to WhatsApp.**
+
+Lists your WhatsApp Business Accounts (WABAs), picks one (or use `--waba-id`), checks for existing WhatsApp phone numbers, buys an SMS-capable number if needed, initializes WhatsApp verification, and (optionally) verifies it and sets up the business profile.
+
+```bash
+telnyx-agent setup-whatsapp                                # Auto-pick WABA, buy number, init verification
+telnyx-agent setup-whatsapp --waba-id waba_123 --json      # Use specific WABA
+telnyx-agent setup-whatsapp --display-name "My Biz" --code 123456  # Verify + set profile
+telnyx-agent setup-whatsapp --category RETAIL --about "We sell widgets"
+```
+
+**Flags:**
+
+- `--waba-id <id>` — Use a specific WhatsApp Business Account (default: first available)
+- `--display-name` — WhatsApp profile display name
+- `--about` — WhatsApp profile about text
+- `--category` — Business category (e.g. RETAIL, TECHNOLOGY)
+- `--code` — Verification code to verify an initialized number
+- `--country <code>` — Country for number search (default: US)
+
+Output: `{ waba_id, phone_number, verified, profile_configured, ready }`
+
+### `telnyx-agent whatsapp-send`
+
+**Send a WhatsApp message (text or template).**
+
+Constructs the WhatsApp message JSON from simple flags and sends via the Telnyx API.
+
+```bash
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hello!"
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --template-name order_ready
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hi" --messaging-profile-id msgprof_123
+```
+
+**Flags:**
+
+- `--from` — Sender E.164 number (required)
+- `--to` — Recipient E.164 number (required)
+- `--text` — Text message body
+- `--template-name` — Template name to send
+- `--template-language` — Template language code (default: en_US)
+- `--messaging-profile-id` — Messaging profile ID (required if `--from` is not SMS-enabled)
+
+Output: `{ from, to, message_type, message_id, status }`
+
+### `telnyx-agent whatsapp-templates`
+
+**List or create WhatsApp message templates.**
+
+```bash
+telnyx-agent whatsapp-templates --waba-id waba_123                    # List templates
+telnyx-agent whatsapp-templates --waba-id waba_123 --status APPROVED   # Filter by status
+telnyx-agent whatsapp-templates --waba-id waba_123 --create \
+  --name order_ready --language en_US --category UTILITY \
+  --component '[{"type":"BODY","text":"Your order is ready"}]'
+```
+
+**Flags:**
+
+- `--waba-id <id>` — WhatsApp Business Account ID (required)
+- `--create` — Switch to create mode (default: list)
+- `--name` — Template name (create mode, required)
+- `--language` — Template language, default en_US (create mode)
+- `--category` — UTILITY, MARKETING, or AUTHENTICATION (create mode, required)
+- `--component` — Template components as JSON array string (create mode, required)
+- `--status` — Filter by status: APPROVED, PENDING, REJECTED (list mode)
+
 ### Edge Compute handoff commands
 
 These are **thin executable bridges**, not native Edge lifecycle support.
@@ -160,7 +229,7 @@ The CLI looks for an API key in this order:
 ## Architecture
 
 - **Hybrid execution** — wraps `telnyx-cli` where available, falls back to native `fetch()` for operations without CLI support
-- **No CLI framework** — simple `process.argv` parsing for 13 commands
+- **No CLI framework** — simple `process.argv` parsing for 17 commands
 - **TypeScript + tsx** — direct execution, no build step
 - **Error handling** — composite commands report what succeeded and what failed
 
