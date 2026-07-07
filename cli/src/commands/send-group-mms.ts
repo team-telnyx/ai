@@ -7,6 +7,7 @@
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { deriveMessageStatus } from "../utils/message-status.ts";
 
 interface SendGroupMmsResult {
   message_id: string;
@@ -22,7 +23,6 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   const to = flags["to"] as string | undefined;
   const text = flags["text"] as string | undefined;
   const mediaUrl = flags["media-url"] as string | undefined;
-  const messagingProfileId = flags["messaging-profile-id"] as string | undefined;
 
   if (!from) {
     printError("--from is required (E.164 format, e.g., +131****0000)");
@@ -30,6 +30,13 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   }
   if (!to) {
     printError("--to is required (comma-separated E.164 numbers, e.g., +131****0001,+131****0002)");
+    process.exit(1);
+  }
+  if (flags["messaging-profile-id"]) {
+    // The group-MMS API schema does not accept messaging_profile_id, so the
+    // generated Go CLI subcommand has no such flag. Fail fast instead of
+    // forwarding a flag the CLI would reject.
+    printError("--messaging-profile-id is not supported for group MMS (the sending number's profile is used)");
     process.exit(1);
   }
 
@@ -43,13 +50,15 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   ];
   if (text) args.push("--text", text);
   if (mediaUrl) args.push("--media-url", mediaUrl);
-  if (messagingProfileId) args.push("--messaging-profile-id", messagingProfileId);
+  // Note: the group-MMS API (and thus the generated Go CLI subcommand) does not
+  // accept messaging_profile_id, so no --messaging-profile-id passthrough here.
 
   try {
     const res = await telnyxCli(args);
     const data = (res?.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
-    const status = String(data.status ?? data.delivery_status ?? "submitted");
+    // Delivery state lives on each recipient (data.to[].status), not top-level.
+    const status = deriveMessageStatus(data, "queued");
 
     const recipients = to.split(",").map((n) => n.trim()).filter(Boolean);
 

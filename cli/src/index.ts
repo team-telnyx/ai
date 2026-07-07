@@ -117,7 +117,7 @@ SMS Action Flags:
   --to <e164,...>        Comma-separated recipients, E.164 (send-group-mms — required)
   --text <msg>           Message text (send-sms, schedule-sms — required; send-group-mms — optional)
   --media-url <url>      Media URL; sends MMS instead of SMS (send-sms, schedule-sms, send-group-mms)
-  --messaging-profile-id <id> Messaging profile to use (send-sms, send-group-mms, schedule-sms)
+  --messaging-profile-id <id> Messaging profile to use (send-sms, schedule-sms; not supported by group MMS)
   --webhook-url <url>    Webhook for delivery status updates (send-sms)
   --subject <text>       MMS subject line (send-sms)
   --send-at <iso8601>    Send time, ISO 8601 (schedule-sms — required, e.g., 2024-12-31T00:00:00Z)
