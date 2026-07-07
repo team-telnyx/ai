@@ -50,7 +50,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const step1Start = Date.now();
     try {
       const res = await telnyxCli(["whatsapp:business-accounts", "list"]);
-      const wabas = (res.data as Array<Record<string, unknown>>) ?? [];
+      const wabas = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       if (!wabas.length) {
         throw new Error(
           "No WhatsApp Business Accounts found. Create one via the Telnyx portal: https://portal.telnyx.com/whatsapp",
@@ -84,7 +84,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     let reusedExisting = false;
     try {
       const res = await telnyxCli(["whatsapp:business-accounts:phone-numbers", "list", "--id", wabaId]);
-      const numbers = (res.data as Array<Record<string, unknown>>) ?? [];
+      const numbers = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       if (numbers.length) {
         // Scan the full list for a connected/verified number before
         // falling back to a pending one, so we don't buy unnecessarily.

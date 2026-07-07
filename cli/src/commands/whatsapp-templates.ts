@@ -100,7 +100,7 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
       if (status) args.push("--filter-status", status);
 
       const res = await telnyxCli(args);
-      const raw = (res.data as Array<Record<string, unknown>>) ?? [];
+      const raw = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       const templates: WhatsappTemplate[] = raw.map((t) => ({
         name: String(t.name ?? ""),
         language: String(t.language ?? ""),

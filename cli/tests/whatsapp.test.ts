@@ -34,13 +34,13 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 
 const cmd = args.filter(a => a !== "--format" && a !== "json");
 
-// WhatsApp Business Accounts — list
+// WhatsApp Business Accounts — list (returns bare array, matching real CLI --format json)
 if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
-  console.log(JSON.stringify({ data: [{ id: "waba_test123", name: "Test WABA" }] }));
+  console.log(JSON.stringify([{ id: "waba_test123", name: "Test WABA" }]));
 }
-// WhatsApp Business Account phone numbers — list
+// WhatsApp Business Account phone numbers — list (returns bare array)
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
-  console.log(JSON.stringify({ data: [] }));
+  console.log(JSON.stringify([]));
 }
 // WhatsApp Business Account phone numbers — initialize-verification
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "initialize-verification") {
@@ -58,9 +58,9 @@ else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "retrieve") {
 else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "update") {
   console.log(JSON.stringify({ data: { display_name: "Updated", status: "updated" } }));
 }
-// WhatsApp templates — list
+// WhatsApp templates — list (returns bare array)
 else if (cmd[0] === "whatsapp:templates" && cmd[1] === "list") {
-  console.log(JSON.stringify({ data: [{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }] }));
+  console.log(JSON.stringify([{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }]));
 }
 // WhatsApp templates — create
 else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
@@ -124,10 +124,10 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 const cmd = args.filter(a => a !== "--format" && a !== "json");
 
 if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
-  console.log(JSON.stringify({ data: [{ id: "waba_test123", name: "Test WABA" }] }));
+  console.log(JSON.stringify([{ id: "waba_test123", name: "Test WABA" }]));
 }
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
-  console.log(JSON.stringify({ data: [{ phone_number: "+155****4567", status: "${status}", enabled: true }] }));
+  console.log(JSON.stringify([{ phone_number: "+155****4567", status: "${status}", enabled: true }]));
 }
 else if (cmd[0] === "whatsapp:phone-numbers" && cmd[1] === "verify") {
   console.log(JSON.stringify({ data: { phone_number: "+155****4567", status: "verified" } }));
