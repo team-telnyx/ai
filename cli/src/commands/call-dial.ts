@@ -18,6 +18,9 @@ interface CallDialResult {
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
+/** Valid AMD modes (Go CLI accepts these as the --answering-machine-detection value). */
+const AMD_MODES = ["premium", "detect", "detect_beep", "detect_words", "greeting_end", "disabled"] as const;
+
 /** Valid HTTP methods for --webhook-url-method (Voice API only accepts GET/POST). */
 const HTTP_METHODS = ["GET", "POST"] as const;
 
@@ -26,7 +29,9 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   const connectionId = flags["connection-id"] as string | undefined;
   const from = flags["from"] as string | undefined;
   const to = flags["to"] as string | undefined;
-  const answeringMachineDetection = flags["answering-machine-detection"] === true;
+  // --answering-machine-detection [mode] — bare flag enables standard detection ("detect").
+  const amdRaw = flags["answering-machine-detection"];
+  const answeringMachineDetection = amdRaw === true ? "detect" : (amdRaw as string | undefined);
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
@@ -81,15 +86,21 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
     process.exit(1);
   }
 
+  if (answeringMachineDetection !== undefined && !AMD_MODES.includes(answeringMachineDetection as (typeof AMD_MODES)[number])) {
+    printError(`Invalid --answering-machine-detection mode: ${answeringMachineDetection}. Must be one of: ${AMD_MODES.join(", ")}`);
+    process.exit(1);
+  }
+
   const args: string[] = [
     "calls", "dial",
     "--connection-id", connectionId,
     "--from", from,
     "--to", to,
   ];
-  if (answeringMachineDetection) args.push("--answering-machine-detection");
-  if (deepfakeDetection) args.push("--deepfake-detection");
-  if (record) args.push("--record");
+  if (answeringMachineDetection) args.push("--answering-machine-detection", answeringMachineDetection);
+  if (deepfakeDetection) args.push("--deepfake-detection.enabled");
+  // --record takes the event to record from (default: record-from-answer).
+  if (record) args.push("--record", "record-from-answer");
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (audioUrl) args.push("--audio-url", audioUrl);
   if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
@@ -136,7 +147,7 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
       };
       if (privacy === "id") details["Privacy"] = "number masking (caller ID hidden)";
       if (fromDisplayName) details["Caller ID Name"] = fromDisplayName;
-      if (answeringMachineDetection) details["AMD"] = "enabled";
+      if (answeringMachineDetection) details["AMD"] = answeringMachineDetection;
       if (deepfakeDetection) details["Deepfake Detection"] = "enabled";
       if (record) details["Recording"] = "enabled";
       if (transcription) details["Transcription"] = "enabled";

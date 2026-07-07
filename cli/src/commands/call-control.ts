@@ -34,6 +34,9 @@ const ACTIONS = [
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
+/** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
+const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
+
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
@@ -69,6 +72,8 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const forkTarget = flags["fork-target"] as string | undefined;
   const forkRx = flags["fork-rx"] as string | undefined;
   const forkTx = flags["fork-tx"] as string | undefined;
+  // --cause defaults to CALL_REJECTED, the generic rejection cause.
+  const cause = (typeof flags.cause === "string" ? flags.cause : undefined) ?? "CALL_REJECTED";
 
   if (!action) {
     printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
@@ -152,6 +157,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError("--fork-target (or both --fork-rx and --fork-tx) is required for start-forking");
     process.exit(1);
   }
+  if (act === "reject" && !REJECT_CAUSES.includes(cause as (typeof REJECT_CAUSES)[number])) {
+    printError(`Invalid --cause: ${cause}. Must be one of: ${REJECT_CAUSES.join(", ")}`);
+    process.exit(1);
+  }
 
   const args = buildActionArgs(act, {
     callControlId,
@@ -175,6 +184,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     forkTarget,
     forkRx,
     forkTx,
+    cause,
   });
 
   try {
@@ -233,6 +243,7 @@ function buildActionArgs(
     forkTarget?: string;
     forkRx?: string;
     forkTx?: string;
+    cause: string;
   },
 ): string[] {
   switch (action) {
@@ -240,8 +251,10 @@ function buildActionArgs(
       return [
         "calls:actions", "answer",
         "--call-control-id", opts.callControlId,
-        ...(opts.deepfakeDetection ? ["--deepfake-detection"] : []),
-        ...(opts.record ? ["--record"] : []),
+        // deepfake_detection is an object in the Answer API; the Go CLI exposes it via inner flags.
+        ...(opts.deepfakeDetection ? ["--deepfake-detection.enabled"] : []),
+        // The Go CLI's --record flag takes the event to record from, not a boolean.
+        ...(opts.record ? ["--record", "record-from-answer"] : []),
         ...(opts.webhookUrl ? ["--webhook-url", opts.webhookUrl] : []),
       ];
     case "hangup":
@@ -254,8 +267,9 @@ function buildActionArgs(
       return [
         "calls:actions", "start-recording",
         "--call-control-id", opts.callControlId,
-        ...(opts.channels ? ["--channels", opts.channels] : []),
-        ...(opts.format ? ["--format", opts.format] : []),
+        // Supply safe defaults — the Go CLI requires both channels and format.
+        ...(opts.channels ? ["--channels", opts.channels] : ["--channels", "single"]),
+        ...(opts.format ? ["--format", opts.format] : ["--format", "mp3"]),
       ];
     case "stop-recording":
       return ["calls:actions", "stop-recording", "--call-control-id", opts.callControlId];
@@ -279,7 +293,7 @@ function buildActionArgs(
     case "refer":
       return ["calls:actions", "refer", "--call-control-id", opts.callControlId, "--sip-address", opts.sipAddress!];
     case "reject":
-      return ["calls:actions", "reject", "--call-control-id", opts.callControlId];
+      return ["calls:actions", "reject", "--call-control-id", opts.callControlId, "--cause", opts.cause];
     case "gather":
       return [
         "calls:actions", "gather",

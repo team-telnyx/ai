@@ -7,7 +7,7 @@ import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 
-const VERSION = "0.11.0"; // Pin to known working version
+const VERSION = "0.21.0"; // Pin to known working version (adds whatsapp:user-data, conversation windows, and CLI bug fixes)
 
 const PLATFORM_MAP: Record<string, string> = {
   "darwin-arm64": `telnyx_${VERSION}_macos_arm64.zip`,
