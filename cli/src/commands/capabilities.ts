@@ -28,6 +28,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)", actions: ["generate_speech"] },
     { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)", actions: ["list_voices"] },
+  ],
   "🎤 Speech-to-Text": [
     { name: "Transcription", description: "Transcribe hosted audio files to text via the OpenAI-compatible transcription endpoint, with model and language options", actions: ["ai_audio_transcribe"] },
     { name: "Providers", description: "List available speech-to-text providers and service types", actions: ["list_stt_providers"] },

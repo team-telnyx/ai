@@ -17,6 +17,14 @@ const PLATFORM_MAP: Record<string, string> = {
   "win32-x64": `telnyx_${VERSION}_windows_amd64.zip`,
 };
 
+/** True when `found` (e.g. [0,21,0]) is >= `want`, comparing major.minor.patch. */
+function isAtLeast(found: number[], want: number[]): boolean {
+  for (let i = 0; i < 3; i++) {
+    if ((found[i] ?? 0) !== (want[i] ?? 0)) return (found[i] ?? 0) > (want[i] ?? 0);
+  }
+  return true;
+}
+
 async function main() {
   // Skip if telnyx is already on PATH AND at the required version.
   // An older CLI on PATH would leave WhatsApp and other commands broken,

@@ -26,6 +26,10 @@ interface SttResult {
   model: string;
   transcription: string;
   language?: string;
+  response_format?: string;
+  /** Full API response when a non-default --response-format is requested —
+   * verbose_json carries timestamps/segments the flat fields drop. */
+  response?: unknown;
 }
 
 /**
@@ -72,11 +76,16 @@ export async function sttCommand(flags: Record<string, string | boolean>): Promi
     const response = await telnyxCli(args);
     const transcription = extractTranscription(response);
 
+    const verbose = responseFormat !== undefined && responseFormat !== "json";
     const result: SttResult = {
       audio_url: audioUrl,
       model,
       transcription,
       ...(language ? { language } : {}),
+      ...(responseFormat ? { response_format: responseFormat } : {}),
+      ...(verbose
+        ? { response: (response as Record<string, unknown> | undefined)?.data ?? response }
+        : {}),
     };
 
     if (jsonOutput) {

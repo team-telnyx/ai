@@ -31,7 +31,11 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 const cmd = args.filter(a => a !== "--format" && a !== "json");
 
 if (cmd[0] === "ai:audio" && cmd[1] === "transcribe") {
-  console.log(JSON.stringify({ text: "Hello, this is a test transcription." }));
+  if (cmd.includes("verbose_json")) {
+    console.log(JSON.stringify({ text: "Hello, this is a test transcription.", duration: 2.5, segments: [{ id: 0, start: 0, end: 2.5, text: "Hello, this is a test transcription." }] }));
+  } else {
+    console.log(JSON.stringify({ text: "Hello, this is a test transcription." }));
+  }
 } else if (cmd[0] === "speech-to-text" && cmd[1] === "list-providers") {
   console.log(JSON.stringify({ data: [{ provider: "telnyx", service_type: "batch" }, { provider: "aws", service_type: "batch" }] }));
 } else {
@@ -110,6 +114,28 @@ describe("STT commands", () => {
     const sttCall = calls.find((a) => a.slice(0, 2).join(" ") === "ai:audio transcribe");
     assert.ok(sttCall!.includes("--response-format"), "must include --response-format");
     assert.equal(sttCall![sttCall!.indexOf("--response-format") + 1], "verbose_json");
+  });
+
+  it("stt preserves verbose response fields for --response-format verbose_json", () => {
+    const fake = setupFakeTelnyx();
+    const out = runCli(
+      ["stt", "--audio-url", "https://example.com/audio.mp3", "--response-format", "verbose_json", "--json"],
+      fake.env,
+    );
+    const data = JSON.parse(out);
+    assert.equal(data.response_format, "verbose_json");
+    assert.ok(data.response, "verbose response must be included");
+    assert.equal(data.response.segments.length, 1, "segments from the API must be preserved");
+    assert.equal(data.response.duration, 2.5);
+    assert.equal(data.transcription, "Hello, this is a test transcription.");
+  });
+
+  it("stt omits raw response for the default response format", () => {
+    const fake = setupFakeTelnyx();
+    const out = runCli(["stt", "--audio-url", "https://example.com/audio.mp3", "--json"], fake.env);
+    const data = JSON.parse(out);
+    assert.equal(data.response, undefined, "default format should keep the flat shape");
+    assert.equal(data.response_format, undefined);
   });
 
   it("stt fails without --audio-url", () => {
