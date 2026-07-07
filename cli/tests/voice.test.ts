@@ -102,7 +102,7 @@ describe("Voice API action commands", () => {
     assert.ok(!dialCall!.includes("--deepfake-detection"));
   });
 
-  it("call-dial forwards --answering-machine-detection and --deepfake-detection flags", () => {
+  it("call-dial forwards AMD mode, deepfake and record flags in Go CLI syntax", () => {
     const fake = setupFakeTelnyx();
     run(
       [
@@ -112,6 +112,7 @@ describe("Voice API action commands", () => {
         "--to", "+13125551234",
         "--answering-machine-detection",
         "--deepfake-detection",
+        "--record",
         "--json",
       ],
       fake.env,
@@ -120,8 +121,49 @@ describe("Voice API action commands", () => {
     const calls = readLoggedArgs(fake.logPath);
     const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
     assert.ok(dialCall, "should invoke `calls dial`");
-    assert.ok(dialCall!.includes("--answering-machine-detection"), "must include --answering-machine-detection");
-    assert.ok(dialCall!.includes("--deepfake-detection"), "must include --deepfake-detection");
+    // Bare --answering-machine-detection defaults to the "detect" mode value.
+    assertFlagValue(dialCall!, "--answering-machine-detection", "detect");
+    // deepfake_detection is an object; the Go CLI takes the inner --deepfake-detection.enabled flag.
+    assert.ok(dialCall!.includes("--deepfake-detection.enabled"), "must include --deepfake-detection.enabled");
+    // --record takes the event to record from, not a boolean.
+    assertFlagValue(dialCall!, "--record", "record-from-answer");
+  });
+
+  it("call-dial forwards an explicit --answering-machine-detection mode", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      [
+        "call-dial",
+        "--connection-id", "conn-1",
+        "--from", "+13125550000",
+        "--to", "+13125551234",
+        "--answering-machine-detection", "premium",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
+    assert.ok(dialCall, "should invoke `calls dial`");
+    assertFlagValue(dialCall!, "--answering-machine-detection", "premium");
+  });
+
+  it("call-dial rejects an invalid --answering-machine-detection mode", () => {
+    const fake = setupFakeTelnyx();
+    assert.throws(() =>
+      run(
+        [
+          "call-dial",
+          "--connection-id", "conn-1",
+          "--from", "+13125550000",
+          "--to", "+13125551234",
+          "--answering-machine-detection", "bogus",
+          "--json",
+        ],
+        fake.env,
+      ),
+    );
   });
 
   it("call-control --action hangup calls `calls:actions hangup`", () => {
@@ -215,6 +257,52 @@ describe("Voice API action commands", () => {
     assert.ok(bridgeCall, "should invoke `calls:actions bridge`");
     assertFlagValue(bridgeCall!, "--call-control-id-to-bridge", "call-1");
     assertFlagValue(bridgeCall!, "--call-control-id-to-bridge-with", "call-2");
+  });
+
+  it("call-control --action reject forwards --cause (default CALL_REJECTED)", () => {
+    const fake = setupFakeTelnyx();
+    run(["call-control", "--action", "reject", "--call-control-id", "call-1", "--json"], fake.env);
+
+    const calls = readLoggedArgs(fake.logPath);
+    const rejectCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions reject");
+    assert.ok(rejectCall, "should invoke `calls:actions reject`");
+    assertFlagValue(rejectCall!, "--call-control-id", "call-1");
+    // The Reject API requires a cause; default to CALL_REJECTED.
+    assertFlagValue(rejectCall!, "--cause", "CALL_REJECTED");
+  });
+
+  it("call-control --action reject forwards an explicit --cause and rejects invalid ones", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "reject", "--call-control-id", "call-1", "--cause", "USER_BUSY", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const rejectCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions reject");
+    assert.ok(rejectCall);
+    assertFlagValue(rejectCall!, "--cause", "USER_BUSY");
+
+    assert.throws(() =>
+      run(
+        ["call-control", "--action", "reject", "--call-control-id", "call-1", "--cause", "NOT_A_CAUSE", "--json"],
+        fake.env,
+      ),
+    );
+  });
+
+  it("call-control --action answer forwards deepfake/record flags in Go CLI syntax", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "answer", "--call-control-id", "call-1", "--deepfake-detection", "--record", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const answerCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions answer");
+    assert.ok(answerCall, "should invoke `calls:actions answer`");
+    assert.ok(answerCall!.includes("--deepfake-detection.enabled"), "must include --deepfake-detection.enabled");
+    assertFlagValue(answerCall!, "--record", "record-from-answer");
   });
 
   it("call-status calls `calls retrieve-status`", () => {

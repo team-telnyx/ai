@@ -24,6 +24,9 @@ type Action = (typeof ACTIONS)[number];
 /** E.164: a leading '+' then 1-15 digits, country code must not start with 0. */
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
+/** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
+const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
+
 interface CallControlResult {
   action: string;
   call_control_id: string | null;
@@ -45,6 +48,8 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
+  // --cause defaults to CALL_REJECTED, the generic rejection cause.
+  const cause = (typeof flags.cause === "string" ? flags.cause : undefined) ?? "CALL_REJECTED";
 
   if (!action) {
     printError(`--action is required. Valid actions: ${ACTIONS.join(", ")}`);
@@ -89,6 +94,10 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError("--sip-address is required for refer (e.g. sip:user@example.com)");
     process.exit(1);
   }
+  if (act === "reject" && !REJECT_CAUSES.includes(cause as (typeof REJECT_CAUSES)[number])) {
+    printError(`Invalid --cause: ${cause}. Must be one of: ${REJECT_CAUSES.join(", ")}`);
+    process.exit(1);
+  }
   if (act === "start-recording") {
     if (channels !== undefined && !["single", "dual"].includes(channels)) {
       printError(`Invalid --channels: ${channels}. Must be 'single' or 'dual'`);
@@ -113,6 +122,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     deepfakeDetection,
     record,
     webhookUrl,
+    cause,
   });
 
   try {
@@ -162,6 +172,7 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
+    cause: string;
   },
 ): string[] {
   switch (action) {
@@ -169,8 +180,10 @@ function buildActionArgs(
       return [
         "calls:actions", "answer",
         "--call-control-id", opts.callControlId,
-        ...(opts.deepfakeDetection ? ["--deepfake-detection"] : []),
-        ...(opts.record ? ["--record"] : []),
+        // deepfake_detection is an object in the Answer API; the Go CLI exposes it via inner flags.
+        ...(opts.deepfakeDetection ? ["--deepfake-detection.enabled"] : []),
+        // The Go CLI's --record flag takes the event to record from, not a boolean.
+        ...(opts.record ? ["--record", "record-from-answer"] : []),
         ...(opts.webhookUrl ? ["--webhook-url", opts.webhookUrl] : []),
       ];
     case "hangup":
@@ -208,7 +221,8 @@ function buildActionArgs(
     case "refer":
       return ["calls:actions", "refer", "--call-control-id", opts.callControlId, "--sip-address", opts.sipAddress!];
     case "reject":
-      return ["calls:actions", "reject", "--call-control-id", opts.callControlId];
+      // The Reject API requires a cause (CALL_REJECTED or USER_BUSY).
+      return ["calls:actions", "reject", "--call-control-id", opts.callControlId, "--cause", opts.cause];
   }
 }
 
