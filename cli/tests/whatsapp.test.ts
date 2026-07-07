@@ -315,7 +315,13 @@ describe("WhatsApp commands", () => {
     assert.equal(createCall[createCall.indexOf("--waba-id") + 1], "waba_abc");
     assert.equal(createCall[createCall.indexOf("--name") + 1], "order_ready");
     assert.equal(createCall[createCall.indexOf("--category") + 1], "UTILITY");
-    assert.equal(createCall[createCall.indexOf("--component") + 1], component);
+    // Go CLI v0.21: --component is Flag[[]map[string]any] — each object gets its own --component flag
+    const componentIdxs = createCall.reduce((acc: number[], val, i) => val === "--component" ? [...acc, i] : acc, []);
+    assert.equal(componentIdxs.length, 1, "one --component per object in the array");
+    const compVal = createCall[componentIdxs[0] + 1];
+    const parsed = JSON.parse(compVal);
+    assert.equal(parsed.type, "BODY");
+    assert.equal(parsed.text, "Your order is ready");
   });
 
   it("setup-whatsapp lists WABAs and picks the first one", () => {

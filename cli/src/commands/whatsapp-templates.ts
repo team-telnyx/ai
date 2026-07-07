@@ -54,22 +54,36 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         );
         process.exit(1);
       }
-      // Validate the component JSON up front for a friendlier error
+      // Validate and expand the component JSON
+      // Go CLI v0.21: --component is Flag[[]map[string]any] — requestflag appends one map
+      // per --component occurrence. A JSON array as a single value is rejected.
+      let components: Array<Record<string, unknown>>;
       try {
-        JSON.parse(component);
+        const parsed = JSON.parse(component);
+        if (!Array.isArray(parsed)) {
+          // Single object — wrap in array
+          components = [parsed];
+        } else {
+          components = parsed;
+        }
       } catch {
         printError("--component must be valid JSON");
         process.exit(1);
       }
 
-      const res = await telnyxCli([
+      const createArgs = [
         "whatsapp:templates", "create",
         "--waba-id", wabaId,
         "--name", name,
         "--language", language,
         "--category", category,
-        "--component", component,
-      ]);
+      ];
+      // Emit one --component flag per component object (Go CLI slice semantics)
+      for (const comp of components) {
+        createArgs.push("--component", JSON.stringify(comp));
+      }
+
+      const res = await telnyxCli(createArgs);
       const data = (res.data ?? res) as Record<string, unknown>;
       const templateId = String(data.id ?? "");
 
