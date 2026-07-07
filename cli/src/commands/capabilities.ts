@@ -12,7 +12,7 @@ interface Capability {
 
 const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
-    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages", actions: ["send_sms", "send_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile"] },
+    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile"] },
   ],
   "📞 Voice": [
     { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections"] },
@@ -71,6 +71,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
 const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-sms", description: "Zero to SMS: creates messaging profile, buys number, assigns it" },
   { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS)" },
+  { name: "telnyx-agent send-group-mms", description: "Send a group MMS to multiple recipients (--to comma-separated E.164 numbers)" },
   { name: "telnyx-agent schedule-sms", description: "Schedule an SMS for future delivery at a given ISO 8601 time" },
   { name: "telnyx-agent sms-status", description: "Check SMS delivery status, or cancel a scheduled message with --cancel" },
   { name: "telnyx-agent setup-voice", description: "Zero to voice: creates SIP connection, buys number, assigns it" },

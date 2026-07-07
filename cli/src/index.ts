@@ -22,6 +22,7 @@ import { setupWhatsappCommand } from "./commands/setup-whatsapp.ts";
 import { whatsappSendCommand } from "./commands/whatsapp-send.ts";
 import { whatsappTemplatesCommand } from "./commands/whatsapp-templates.ts";
 import { sendSmsCommand } from "./commands/send-sms.ts";
+import { sendGroupMmsCommand } from "./commands/send-group-mms.ts";
 import { scheduleSmsCommand } from "./commands/schedule-sms.ts";
 import { smsStatusCommand } from "./commands/sms-status.ts";
 import { parseFlags } from "./utils/output.ts";
@@ -53,6 +54,7 @@ Commands:
   whatsapp-send     Send a WhatsApp message (text or template)
   whatsapp-templates List or create WhatsApp message templates
   send-sms          Send an SMS or MMS message (--media-url sends MMS)
+  send-group-mms    Send a group MMS to multiple recipients (--to comma-separated)
   schedule-sms      Schedule an SMS for future delivery (--send-at ISO 8601)
   sms-status        Check SMS delivery status, or cancel a scheduled message (--cancel)
 
@@ -110,11 +112,12 @@ TTS-voices Flags:
   --provider        Filter voices by provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (optional)
   --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., elevenlabs, resemble)
 SMS Action Flags:
-  --from <e164>          Sender number, E.164 (send-sms, schedule-sms — required)
+  --from <e164>          Sender number, E.164 (send-sms, send-group-mms, schedule-sms — required)
   --to <e164>            Recipient number, E.164 (send-sms, schedule-sms — required)
-  --text <msg>           Message text (send-sms, schedule-sms — required)
-  --media-url <url>      Media URL; sends MMS instead of SMS (send-sms, schedule-sms)
-  --messaging-profile-id <id> Messaging profile to use (send-sms, schedule-sms)
+  --to <e164,...>        Comma-separated recipients, E.164 (send-group-mms — required)
+  --text <msg>           Message text (send-sms, schedule-sms — required; send-group-mms — optional)
+  --media-url <url>      Media URL; sends MMS instead of SMS (send-sms, schedule-sms, send-group-mms)
+  --messaging-profile-id <id> Messaging profile to use (send-sms, send-group-mms, schedule-sms)
   --webhook-url <url>    Webhook for delivery status updates (send-sms)
   --subject <text>       MMS subject line (send-sms)
   --send-at <iso8601>    Send time, ISO 8601 (schedule-sms — required, e.g., 2024-12-31T00:00:00Z)
@@ -168,6 +171,8 @@ Examples:
   telnyx-agent whatsapp-templates --waba-id <id> --create --name promo --category MARKETING --component '[]'
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello!"
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "See this" --media-url https://example.com/img.png --subject "Photo"
+  telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002,+131****0003 --text "Group hi!"
+  telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002 --media-url https://example.com/cat.png
   telnyx-agent schedule-sms --from +131****0000 --to +131****0001 --text "Later" --send-at 2024-12-31T00:00:00Z
   telnyx-agent sms-status --id 3fa85f64-5717-4562-b3fc-2c963f66afa6
   telnyx-agent sms-status --id 3fa85f64-5717-4562-b3fc-2c963f66afa6 --cancel
@@ -194,6 +199,7 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
   "whatsapp-send": whatsappSendCommand,
   "whatsapp-templates": whatsappTemplatesCommand,
   "send-sms": sendSmsCommand,
+  "send-group-mms": sendGroupMmsCommand,
   "schedule-sms": scheduleSmsCommand,
   "sms-status": smsStatusCommand,
 };
