@@ -89,7 +89,7 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
     steps.push({ step: 4, name: "Link number to verify profile", status: "completed", detail: `${profileId} ↔ ${phoneNumber}`, elapsedMs: Date.now() - step4Start });
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    const testCommand = `telnyx-agent verify send --phone-number ${phoneNumber} --profile-id ${profileId}`;
+    const testCommand = `telnyx-agent verify-send --phone-number ${phoneNumber} --verify-profile-id ${profileId} --method sms`;
 
     const result: SetupVerifyResult = {
       profile_id: profileId,
