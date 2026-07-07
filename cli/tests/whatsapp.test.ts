@@ -270,7 +270,7 @@ describe("WhatsApp commands", () => {
     }
   });
 
-  it("whatsapp-templates list passes --filter.waba_id to Go CLI", () => {
+  it("whatsapp-templates list passes --filter-waba-id to Go CLI", () => {
     const fake = setupFakeTelnyx();
     const output = runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], fake.env);
 
@@ -281,20 +281,20 @@ describe("WhatsApp commands", () => {
     const calls = readLoggedArgs(fake.logPath);
     const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
     assert.ok(listCall, "must call whatsapp:templates list");
-    const filterIdx = listCall.indexOf("--filter.waba_id");
-    assert.notEqual(filterIdx, -1, "must include --filter.waba_id");
+    const filterIdx = listCall.indexOf("--filter-waba-id");
+    assert.notEqual(filterIdx, -1, "must include --filter-waba-id");
     assert.equal(listCall[filterIdx + 1], "waba_abc");
   });
 
-  it("whatsapp-templates list passes --filter.status when provided", () => {
+  it("whatsapp-templates list passes --filter-status when provided", () => {
     const fake = setupFakeTelnyx();
     runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--status", "APPROVED", "--json"], fake.env);
 
     const calls = readLoggedArgs(fake.logPath);
     const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
     assert.ok(listCall, "must call whatsapp:templates list");
-    assert.ok(listCall!.includes("--filter.status"), "must include --filter.status");
-    assert.equal(listCall![listCall!.indexOf("--filter.status") + 1], "APPROVED");
+    assert.ok(listCall!.includes("--filter-status"), "must include --filter-status");
+    assert.equal(listCall![listCall!.indexOf("--filter-status") + 1], "APPROVED");
   });
 
   it("whatsapp-templates create passes all required flags", () => {

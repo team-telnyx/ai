@@ -37,7 +37,7 @@ export async function searchNumbers(
 ): Promise<Array<Record<string, unknown>>> {
   const args = ["available-phone-numbers", "list", "--filter.country-code", country];
   if (opts?.type) args.push("--filter.phone-number-type", opts.type);
-  if (opts?.limit) args.push("--page-size", String(opts.limit));
+  if (opts?.limit) args.push("--filter.limit", String(opts.limit));
   if (opts?.features) args.push("--filter.features", opts.features);
 
   // Use { format: "raw" } — v0.21 list commands output per-item JSON
@@ -63,7 +63,7 @@ export async function orderNumber(
     billingGroupId?: string;
   },
 ): Promise<OrderResult> {
-  const args = ["number-orders", "create", "--phone-numbers", phoneNumber];
+  const args = ["number-orders", "create", "--phone-number", phoneNumber];
   if (opts?.messagingProfileId) args.push("--messaging-profile-id", opts.messagingProfileId);
   if (opts?.connectionId) args.push("--connection-id", opts.connectionId);
   if (opts?.billingGroupId) args.push("--billing-group-id", opts.billingGroupId);
