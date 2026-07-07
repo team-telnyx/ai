@@ -49,7 +49,10 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     // Step 1: List WhatsApp business accounts and pick one
     const step1Start = Date.now();
     try {
-      const res = await telnyxCli(["whatsapp:business-accounts", "list"]);
+      // format: "raw" — list commands need the raw REST envelope; with
+      // --format json the Go CLI emits concatenated per-item JSON documents
+      // that can't be parsed as a single value (see telnyxCli docs).
+      const res = await telnyxCli(["whatsapp:business-accounts", "list"], { format: "raw" });
       const wabas = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       if (!wabas.length) {
         throw new Error(
@@ -83,7 +86,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const step2Start = Date.now();
     let reusedExisting = false;
     try {
-      const res = await telnyxCli(["whatsapp:business-accounts:phone-numbers", "list", "--id", wabaId]);
+      const res = await telnyxCli(["whatsapp:business-accounts:phone-numbers", "list", "--id", wabaId], { format: "raw" });
       const numbers = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       if (numbers.length) {
         // Scan the full list for a connected/verified number before

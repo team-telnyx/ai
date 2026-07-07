@@ -32,15 +32,29 @@ const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 
-const cmd = args.filter(a => a !== "--format" && a !== "json");
+const fmtIdx = args.indexOf("--format");
+const format = fmtIdx >= 0 ? args[fmtIdx + 1] : "json";
+const cmd = args.filter((a, i) => i !== fmtIdx && i !== fmtIdx + 1);
 
-// WhatsApp Business Accounts — list (returns bare array, matching real CLI --format json)
-if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
-  console.log(JSON.stringify([{ id: "waba_test123", name: "Test WABA" }]));
+// Emulate the real Go CLI list behavior: with --format json, list commands
+// route through ShowJSONIterator and print each item as a SEPARATE
+// pretty-printed JSON document (concatenated — NOT a JSON array, NOT a
+// { data: [...] } envelope). Only --format raw prints the REST envelope.
+function printList(items) {
+  if (format === "raw") {
+    console.log(JSON.stringify({ data: items, meta: { total_results: items.length } }));
+  } else {
+    for (const item of items) console.log(JSON.stringify(item, null, 2));
+  }
 }
-// WhatsApp Business Account phone numbers — list (returns bare array)
+
+// WhatsApp Business Accounts — list
+if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
+  printList([{ id: "waba_test123", name: "Test WABA" }]);
+}
+// WhatsApp Business Account phone numbers — list
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
-  console.log(JSON.stringify([]));
+  printList([]);
 }
 // WhatsApp Business Account phone numbers — initialize-verification
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "initialize-verification") {
@@ -58,9 +72,9 @@ else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "retrieve") {
 else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "update") {
   console.log(JSON.stringify({ data: { display_name: "Updated", status: "updated" } }));
 }
-// WhatsApp templates — list (returns bare array)
+// WhatsApp templates — list
 else if (cmd[0] === "whatsapp:templates" && cmd[1] === "list") {
-  console.log(JSON.stringify([{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }]));
+  printList([{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }, { id: "tpl_2", name: "order_shipped", language: "en_US", category: "UTILITY", status: "PENDING" }]);
 }
 // WhatsApp templates — create
 else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
@@ -70,7 +84,9 @@ else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
 else if (cmd[0] === "messages" && cmd[1] === "send-whatsapp") {
   console.log(JSON.stringify({ data: { id: "msg_abc123", status: "queued" } }));
 }
-// available-phone-numbers list (for setup-whatsapp number search)
+// available-phone-numbers list (for setup-whatsapp number search).
+// Pre-existing callers (utils/number-order.ts) still read this with
+// --format json, so keep the envelope here regardless of format.
 else if (cmd[0] === "available-phone-numbers" && cmd[1] === "list") {
   console.log(JSON.stringify({ data: [{ phone_number: "+15551234567" }] }));
 }
@@ -121,13 +137,25 @@ const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 
-const cmd = args.filter(a => a !== "--format" && a !== "json");
+const fmtIdx = args.indexOf("--format");
+const format = fmtIdx >= 0 ? args[fmtIdx + 1] : "json";
+const cmd = args.filter((a, i) => i !== fmtIdx && i !== fmtIdx + 1);
+
+// Same list emulation as the base fake: --format raw returns the REST
+// envelope; --format json streams concatenated per-item JSON documents.
+function printList(items) {
+  if (format === "raw") {
+    console.log(JSON.stringify({ data: items, meta: { total_results: items.length } }));
+  } else {
+    for (const item of items) console.log(JSON.stringify(item, null, 2));
+  }
+}
 
 if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
-  console.log(JSON.stringify([{ id: "waba_test123", name: "Test WABA" }]));
+  printList([{ id: "waba_test123", name: "Test WABA" }]);
 }
 else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
-  console.log(JSON.stringify([{ phone_number: "+155****4567", status: "${status}", enabled: true }]));
+  printList([{ phone_number: "+155****4567", status: "${status}", enabled: true }]);
 }
 else if (cmd[0] === "whatsapp:phone-numbers" && cmd[1] === "verify") {
   console.log(JSON.stringify({ data: { phone_number: "+155****4567", status: "verified" } }));
@@ -334,5 +362,40 @@ describe("WhatsApp commands", () => {
     const data = JSON.parse(output);
     assert.equal(data.verified, false);
     assert.equal(data.ready, false);
+  });
+
+  it("setup-whatsapp requests --format raw for list commands (json list output is concatenated docs)", () => {
+    const fake = setupFakeTelnyxWithNumbers("connected");
+    const output = runCli(["setup-whatsapp", "--json"], fake.env);
+
+    // The fake CLI mirrors the real one: list commands only return the
+    // { data: [...] } envelope with --format raw. If the command regressed
+    // to --format json, the WABA list would parse as a single bare item
+    // (or fail entirely with multiple items) and setup would find no WABA.
+    const data = JSON.parse(output);
+    assert.equal(data.waba_id, "waba_test123");
+
+    const calls = readLoggedArgs(fake.logPath);
+    for (const subcommand of ["whatsapp:business-accounts", "whatsapp:business-accounts:phone-numbers"]) {
+      const call = calls.find((a) => a[0] === subcommand && a[1] === "list");
+      assert.ok(call, `must call ${subcommand} list`);
+      const fmtIdx = call!.indexOf("--format");
+      assert.notEqual(fmtIdx, -1, `${subcommand} list must pass --format`);
+      assert.equal(call![fmtIdx + 1], "raw", `${subcommand} list must use --format raw`);
+    }
+  });
+
+  it("whatsapp-templates list requests --format raw and parses the data envelope", () => {
+    const fake = setupFakeTelnyx();
+    const output = runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], fake.env);
+
+    const data = JSON.parse(output);
+    assert.equal(data.templates.length, 2, "must parse all templates from the data envelope");
+
+    const calls = readLoggedArgs(fake.logPath);
+    const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
+    assert.ok(listCall, "must call whatsapp:templates list");
+    const fmtIdx = listCall!.indexOf("--format");
+    assert.equal(listCall![fmtIdx + 1], "raw", "templates list must use --format raw");
   });
 });

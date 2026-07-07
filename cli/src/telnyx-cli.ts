@@ -68,19 +68,28 @@ export class TelnyxCLIError extends Error {
 
 /**
  * Run a telnyx CLI command and return parsed JSON output.
- * Automatically appends `--format json` to all commands.
+ * Automatically appends `--format json` (or the format given in opts) to all commands.
+ *
+ * IMPORTANT — list commands: with `--format json` the Go CLI routes list
+ * output through ShowJSONIterator, which prints each item as a separate
+ * pretty-printed JSON document (concatenated, NOT a JSON array and NOT the
+ * `{ data: [...] }` envelope). That output is not parseable as a single JSON
+ * value. For list commands, pass `{ format: "raw" }` — the raw format prints
+ * the actual REST response body, i.e. `{ data: [...], meta: {...} }`.
+ * Single-object commands (retrieve/create/update) print the full envelope
+ * with `--format json`, so the default is fine for those.
  *
  * @param args - CLI arguments (e.g., ['available-phone-numbers', 'list', '--filter.country-code', 'US'])
- * @param opts - Optional overrides for timeout and env
+ * @param opts - Optional overrides for timeout, env, and output format
  * @returns Parsed JSON response from the CLI (typically { data: ... } or { data: [...], meta: ... })
  */
 export async function telnyxCli(
   args: string[],
-  opts?: { timeout?: number; env?: Record<string, string | undefined> },
+  opts?: { timeout?: number; env?: Record<string, string | undefined>; format?: "json" | "raw" },
 ): Promise<any> {
   const timeout = opts?.timeout ?? 60000;
   try {
-    const { stdout } = await execFileAsync(TELNYX_BINARY, [...args, "--format", "json"], {
+    const { stdout } = await execFileAsync(TELNYX_BINARY, [...args, "--format", opts?.format ?? "json"], {
       env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv,
       timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB — some list responses can be large

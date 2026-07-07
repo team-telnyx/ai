@@ -99,7 +99,9 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
       const args = ["whatsapp:templates", "list", "--filter-waba-id", wabaId];
       if (status) args.push("--filter-status", status);
 
-      const res = await telnyxCli(args);
+      // format: "raw" — list output via --format json is concatenated per-item
+      // JSON documents, not a parseable array (see telnyxCli docs).
+      const res = await telnyxCli(args, { format: "raw" });
       const raw = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
       const templates: WhatsappTemplate[] = raw.map((t) => ({
         name: String(t.name ?? ""),
