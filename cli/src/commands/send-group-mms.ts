@@ -22,7 +22,7 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   const from = flags["from"] as string | undefined;
   const to = flags["to"] as string | undefined;
   const text = flags["text"] as string | undefined;
-  const mediaUrl = flags["media-url"] as string | undefined;
+  const mediaUrls = flags["media-url"] as string | string[] | undefined;
 
   if (!from) {
     printError("--from is required (E.164 format, e.g., +131****0000)");
@@ -56,7 +56,12 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
     args.push("--to", recipient);
   }
   if (text) args.push("--text", text);
-  if (mediaUrl) args.push("--media-url", mediaUrl);
+  // The Go CLI treats --media-url as a repeatable array flag, so push
+  // one --media-url per URL (matches the API's media_urls[] body field).
+  const mediaUrlList = Array.isArray(mediaUrls) ? mediaUrls : (mediaUrls ? [mediaUrls] : []);
+  for (const url of mediaUrlList) {
+    args.push("--media-url", url);
+  }
   // Note: the group-MMS API (and thus the generated Go CLI subcommand) does not
   // accept messaging_profile_id, so no --messaging-profile-id passthrough here.
 
