@@ -34,14 +34,16 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 const command = args.filter((a) => a !== "--format" && a !== "json");
 function flag(f) { const i = command.indexOf(f); return i >= 0 ? command[i + 1] : null; }
 
+// Realistic Telnyx message resources: delivery state is reported per
+// recipient in data.to[].status — there is NO top-level status field.
 if (command[0] === "messages" && command[1] === "send") {
-  console.log(JSON.stringify({ data: { id: "msg-123", status: "queued", type: flag("--type"), from: flag("--from"), to: flag("--to") } }));
+  console.log(JSON.stringify({ data: { id: "msg-123", record_type: "message", type: flag("--type"), from: { phone_number: flag("--from"), carrier: "", line_type: "" }, to: [{ phone_number: flag("--to"), status: "queued", carrier: "", line_type: "" }] } }));
 } else if (command[0] === "messages" && command[1] === "schedule") {
-  console.log(JSON.stringify({ data: { id: "sched-456", status: "scheduled", send_at: flag("--send-at") } }));
+  console.log(JSON.stringify({ data: { id: "sched-456", record_type: "message", from: { phone_number: flag("--from") }, to: [{ phone_number: flag("--to"), status: "scheduled" }], send_at: flag("--send-at") } }));
 } else if (command[0] === "messages" && command[1] === "retrieve") {
-  console.log(JSON.stringify({ data: { id: flag("--id"), status: "delivered", direction: "outbound" } }));
+  console.log(JSON.stringify({ data: { id: flag("--id"), record_type: "message", direction: "outbound", to: [{ phone_number: "+13125550001", status: "delivered" }] } }));
 } else if (command[0] === "messages" && command[1] === "cancel-scheduled") {
-  console.log(JSON.stringify({ data: { id: flag("--id"), status: "cancelled" } }));
+  console.log(JSON.stringify({ data: { id: flag("--id"), record_type: "message", to: [{ phone_number: "+13125550001", status: "cancelled" }] } }));
 } else {
   console.log(JSON.stringify({ data: {} }));
 }
@@ -225,6 +227,33 @@ describe("SMS action commands", () => {
       !calls.some((a) => a.slice(0, 2).join(" ") === "messages retrieve"),
       "should not call retrieve",
     );
+  });
+
+  it("derives status from recipient entries (data.to[].status)", async () => {
+    const { deriveMessageStatus, recipientStatuses } = await import("../src/utils/message-status.ts");
+
+    // Real send/retrieve responses carry status per recipient, not top-level.
+    assert.equal(
+      deriveMessageStatus({ to: [{ phone_number: "+1", status: "queued" }] }, "submitted"),
+      "queued",
+    );
+    // Multiple distinct recipient statuses are all surfaced.
+    assert.equal(
+      deriveMessageStatus(
+        { to: [{ phone_number: "+1", status: "delivered" }, { phone_number: "+2", status: "sending_failed" }] },
+        "unknown",
+      ),
+      "delivered, sending_failed",
+    );
+    // Defensive: top-level status honored if recipients carry none.
+    assert.equal(deriveMessageStatus({ status: "cancelled", to: [] }, "unknown"), "cancelled");
+    // Fallback only when the response has no status information at all.
+    assert.equal(deriveMessageStatus({}, "unknown"), "unknown");
+
+    assert.deepEqual(recipientStatuses({ to: [{ phone_number: "+1", status: "queued" }] }), [
+      { phone_number: "+1", status: "queued" },
+    ]);
+    assert.deepEqual(recipientStatuses({ to: "not-an-array" }), []);
   });
 
   it("help text includes SMS commands", () => {

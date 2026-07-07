@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "tsx bin/telnyx-agent.ts",
-    "test": "tsx --test tests/integration.test.ts tests/telnyx-cli-flags.test.ts tests/edge-handoff.test.ts",
+    "test": "tsx --test tests/integration.test.ts tests/telnyx-cli-flags.test.ts tests/edge-handoff.test.ts tests/sms.test.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "tsx scripts/postinstall.ts",
     "build": "npm run typecheck"
