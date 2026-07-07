@@ -33,13 +33,14 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 
 const command = args.filter((a) => a !== "--format" && a !== "json");
 function flag(f) { const i = command.indexOf(f); return i >= 0 ? command[i + 1] : null; }
+function flags(f) { const out = []; for (let i = 0; i < command.length; i++) { if (command[i] === f && i + 1 < command.length) out.push(command[i + 1]); } return out; }
 
 // Realistic Telnyx message resources: delivery state is reported per
 // recipient in data.to[].status — there is NO top-level status field.
 if (command[0] === "messages" && command[1] === "send") {
   console.log(JSON.stringify({ data: { id: "msg-123", record_type: "message", type: flag("--type"), from: { phone_number: flag("--from"), carrier: "", line_type: "" }, to: [{ phone_number: flag("--to"), status: "queued", carrier: "", line_type: "" }] } }));
 } else if (command[0] === "messages" && command[1] === "send-group-mms") {
-  const recipients = (flag("--to") || "").split(",").map((p) => ({ phone_number: p, status: "queued", carrier: "", line_type: "" }));
+  const recipients = flags("--to").map((p) => ({ phone_number: p, status: "queued", carrier: "", line_type: "" }));
   console.log(JSON.stringify({ data: { id: "grp-789", record_type: "message", type: "MMS", from: { phone_number: flag("--from") }, to: recipients } }));
 } else if (command[0] === "messages" && command[1] === "schedule") {
   console.log(JSON.stringify({ data: { id: "sched-456", record_type: "message", from: { phone_number: flag("--from") }, to: [{ phone_number: flag("--to"), status: "scheduled" }], send_at: flag("--send-at") } }));
@@ -202,7 +203,16 @@ describe("SMS action commands", () => {
     const groupCall = calls.find((a) => a.slice(0, 2).join(" ") === "messages send-group-mms");
     assert.ok(groupCall, "should call messages send-group-mms");
     assertFlagValue(groupCall, "--from", "+131****0000");
-    assertFlagValue(groupCall, "--to", "+131****0001,+131****0002,+131****0003");
+    // Recipients are expanded into repeated --to flags, one per recipient.
+    const toIndices = groupCall
+      .map((a, i) => (a === "--to" ? i : -1))
+      .filter((i) => i >= 0);
+    assert.equal(toIndices.length, 3, "should push --to once per recipient");
+    assert.deepEqual(
+      toIndices.map((i) => groupCall[i + 1]),
+      ["+131****0001", "+131****0002", "+131****0003"],
+      "each --to should carry a single recipient (not a comma-separated list)",
+    );
     assertFlagValue(groupCall, "--text", "Group hi!");
     assert.ok(!groupCall.includes("--media-url"), "should not include --media-url when not provided");
   });
