@@ -15,6 +15,7 @@ interface VerifyCheckResult {
   verification_id: string;
   mode: "verify" | "retrieve";
   status?: string;
+  response_code?: string;
   verified?: boolean;
   response?: Record<string, unknown>;
 }
@@ -43,14 +44,19 @@ export async function verifyCheckCommand(flags: Record<string, string | boolean>
     const res = await telnyxCli(args);
     const data = (res?.data ?? res ?? {}) as Record<string, unknown>;
     const status = data.status as string | undefined;
-    // The verify action responds with a status like "verified" / "pending" /
-    // "expired"; derive a boolean for convenience.
-    const verified = code ? status === "verified" || status === "approved" : undefined;
+    // POST /verifications/{id}/actions/verify responds with
+    // `response_code: "accepted" | "rejected"` (there is no `status` field);
+    // GET /verifications/{id} responds with `status: "pending" | "accepted" |
+    // "invalid" | "expired" | "error"`. Derive a boolean for convenience,
+    // falling back to `status` should `response_code` ever be absent.
+    const responseCode = data.response_code as string | undefined;
+    const verified = code ? (responseCode ?? status) === "accepted" : undefined;
 
     const result: VerifyCheckResult = {
       verification_id: verificationId,
       mode,
       status,
+      response_code: responseCode,
       verified,
       response: data,
     };
@@ -64,7 +70,9 @@ export async function verifyCheckCommand(flags: Record<string, string | boolean>
       printSuccess(title, {
         "Verification ID": verificationId,
         "Mode": mode,
-        "Status": status || "unknown",
+        ...(code
+          ? { "Response Code": responseCode || status || "unknown" }
+          : { "Status": status || "unknown" }),
         ...(verified !== undefined ? { "Verified": verified ? "✓" : "✗" } : {}),
       });
     }

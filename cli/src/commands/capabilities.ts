@@ -40,7 +40,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "✅ Verify": [
     { name: "Phone Verification", description: "Send and verify phone codes (2FA)", actions: ["verify_phone", "verify_code", "create_verify_profile"] },
-    { name: "Verification Send", description: "Trigger a verification via SMS, call, flashcall, or WhatsApp", actions: ["send_verification_sms", "send_verification_call", "send_verification_flashcall", "send_verification_whatsapp"] },
+    { name: "Verification Send", description: "Trigger a verification via SMS, call, or flashcall", actions: ["send_verification_sms", "send_verification_call", "send_verification_flashcall"] },
     { name: "Verification Check", description: "Submit a code for verification or check verification status", actions: ["verify_code", "check_verification_status"] },
   ],
   "🔐 Networking": [
@@ -85,7 +85,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-edge-mcp", description: "Concrete MCP-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
   { name: "telnyx-agent setup-edge-webhook", description: "Concrete webhook-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
   { name: "telnyx-agent setup-verify", description: "Zero to verification: creates verify profile, buys number — outputs test command" },
-  { name: "telnyx-agent verify-send", description: "Trigger a verification via SMS, call, flashcall, or WhatsApp — returns verification ID" },
+  { name: "telnyx-agent verify-send", description: "Trigger a verification via SMS, call, or flashcall — returns verification ID" },
   { name: "telnyx-agent verify-check", description: "Submit a code for verification (--code) or retrieve the current verification status" },
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },
   { name: "telnyx-agent setup-porting", description: "Zero to porting: checks portability, creates porting order, lists requirements, optionally submits" },

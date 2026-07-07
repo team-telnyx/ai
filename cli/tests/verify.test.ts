@@ -43,12 +43,14 @@ if (joined.startsWith("verifications trigger-sms")) {
   console.log(JSON.stringify({ data: { id: "ver_call_456", record_type: "verification", status: "pending" } }));
 } else if (joined.startsWith("verifications trigger-flashcall")) {
   console.log(JSON.stringify({ data: { id: "ver_flash_789", record_type: "verification", status: "pending" } }));
-} else if (joined.startsWith("verifications trigger-whatsapp-verification")) {
-  console.log(JSON.stringify({ data: { id: "ver_wa_000", record_type: "verification", status: "pending" } }));
 } else if (joined.startsWith("verifications:actions verify")) {
-  console.log(JSON.stringify({ data: { id: cmd[cmd.indexOf("--verification-id") + 1], status: "verified" } }));
+  // POST /verifications/{id}/actions/verify returns only phone_number and
+  // response_code ("accepted" | "rejected") — no status field.
+  const code = cmd[cmd.indexOf("--code") + 1];
+  const responseCode = code === "000000" ? "rejected" : "accepted";
+  console.log(JSON.stringify({ data: { phone_number: "+13125550001", response_code: responseCode } }));
 } else if (joined.startsWith("verifications retrieve")) {
-  console.log(JSON.stringify({ data: { id: cmd[cmd.indexOf("--verification-id") + 1], status: "delivered" } }));
+  console.log(JSON.stringify({ data: { id: cmd[cmd.indexOf("--verification-id") + 1], status: "pending" } }));
 } else {
   console.log(JSON.stringify({ data: {} }));
 }
@@ -145,21 +147,16 @@ describe("verify-send command", () => {
     assert.ok(!call.includes("--custom-code"), "flashcall must not pass --custom-code");
   });
 
-  it("--method whatsapp calls verifications trigger-whatsapp-verification", () => {
+  it("rejects --method whatsapp (not supported by the pinned telnyx CLI)", () => {
     const fake = setupFakeTelnyx();
-    const out = runCli(
-      ["verify-send", "--phone-number", "+13125550001", "--verify-profile-id", "prof_abc",
-       "--method", "whatsapp", "--custom-code", "987654", "--json"],
-      fake.env,
+    assert.throws(
+      () => runCli(
+        ["verify-send", "--phone-number", "+13125550001", "--verify-profile-id", "prof_abc",
+         "--method", "whatsapp", "--json"],
+        fake.env,
+      ),
+      /Command failed|exit code|Invalid --method/,
     );
-    const data = JSON.parse(out);
-    assert.equal(data.method, "whatsapp");
-    assert.equal(data.verification_id, "ver_wa_000");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const call = calls[0];
-    assert.equal(call.slice(0, 2).join(" "), "verifications trigger-whatsapp-verification");
-    assertFlagValue(call, "--custom-code", "987654");
   });
 
   it("forwards --custom-code and --timeout-secs when provided (sms)", () => {
@@ -196,7 +193,7 @@ describe("verify-check command", () => {
     const data = JSON.parse(out);
     assert.equal(data.mode, "verify");
     assert.equal(data.verification_id, "ver_abc");
-    assert.equal(data.status, "verified");
+    assert.equal(data.response_code, "accepted");
     assert.equal(data.verified, true);
 
     const calls = readLoggedArgs(fake.logPath);
@@ -208,6 +205,18 @@ describe("verify-check command", () => {
     assertFlagValue(call, "--code", "123456");
   });
 
+  it("with --code reports a rejected code as not verified", () => {
+    const fake = setupFakeTelnyx();
+    const out = runCli(
+      ["verify-check", "--verification-id", "ver_abc", "--code", "000000", "--json"],
+      fake.env,
+    );
+    const data = JSON.parse(out);
+    assert.equal(data.mode, "verify");
+    assert.equal(data.response_code, "rejected");
+    assert.equal(data.verified, false);
+  });
+
   it("without --code calls verifications retrieve", () => {
     const fake = setupFakeTelnyx();
     const out = runCli(
@@ -217,7 +226,8 @@ describe("verify-check command", () => {
     const data = JSON.parse(out);
     assert.equal(data.mode, "retrieve");
     assert.equal(data.verification_id, "ver_abc");
-    assert.equal(data.status, "delivered");
+    assert.equal(data.status, "pending");
+    assert.equal(data.verified, undefined, "retrieve mode should not derive a verified boolean");
 
     const calls = readLoggedArgs(fake.logPath);
     assert.equal(calls.length, 1);
@@ -254,7 +264,8 @@ describe("help text", () => {
     assert.ok(verifyActions.includes("send_verification_sms"));
     assert.ok(verifyActions.includes("send_verification_call"));
     assert.ok(verifyActions.includes("send_verification_flashcall"));
-    assert.ok(verifyActions.includes("send_verification_whatsapp"));
+    assert.ok(!verifyActions.includes("send_verification_whatsapp"),
+      "whatsapp is not supported by the pinned telnyx CLI (0.11.0)");
     assert.ok(verifyActions.includes("verify_code"));
     assert.ok(verifyActions.includes("check_verification_status"));
   });
