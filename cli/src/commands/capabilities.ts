@@ -15,7 +15,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile"] },
   ],
   "📞 Voice": [
-    { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections"] },
+    { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection"] },
   ],
   "🔢 Numbers": [
     { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
@@ -90,6 +90,9 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
   { name: "telnyx-agent status", description: "Account health overview — balance, numbers, profiles, connections" },
   { name: "telnyx-agent capabilities", description: "This command — lists all available API capabilities" },
+  { name: "telnyx-agent call-dial", description: "Make an outbound call via Call Control (AMD, deepfake detection, recording optional)" },
+  { name: "telnyx-agent call-control", description: "Call Control actions: answer, hangup, transfer, DTMF, recording, noise suppression, speak (TTS), bridge, refer, reject" },
+  { name: "telnyx-agent call-status", description: "Get the status of a call by call-control-id" },
 ];
 
 export async function capabilitiesCommand(flags: Record<string, string | boolean>): Promise<void> {
