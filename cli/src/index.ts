@@ -177,12 +177,13 @@ Voice Call Flags:
   --time-limit-secs              Max call duration in seconds (call-dial)
   --transcription                Enable real-time transcription on dial (call-dial)
   --media-encryption             Media encryption mode (call-dial)
-  --client-state                 Opaque client-state string (call-dial; call-control gather/update-client-state, required)
-  --command-id                   Idempotency/command UUID (call-dial; call-control gather, required)
+  --client-state                 Opaque client-state string (call-dial; call-control update-client-state, required; call-control gather, optional)
+  --command-id                   Idempotency/command UUID (call-dial; call-control gather, optional)
   --webhook-url-method           HTTP method for --webhook-url (call-dial: GET|POST|PUT|PATCH|DELETE)
   --webhook-urls                 Comma-separated additional webhook URLs (call-dial)
   --queue-name                   Queue to place the call into (call-control enqueue, required)
-  --content                      SIP INFO body content (call-control send-sip-info, required)
+  --body                         SIP INFO body content (call-control send-sip-info, required)
+  --content-type                 SIP INFO Content-Type header (call-control send-sip-info, required, e.g. application/dtmf-relay)
 
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
@@ -241,7 +242,7 @@ Examples:
   telnyx-agent call-control --action start-streaming --call-control-id <id>
   telnyx-agent call-control --action enqueue --call-control-id <id> --queue-name support
   telnyx-agent call-control --action leave-queue --call-control-id <id>
-  telnyx-agent call-control --action send-sip-info --call-control-id <id> --content "hello"
+  telnyx-agent call-control --action send-sip-info --call-control-id <id> --body "hello" --content-type application/dtmf-relay
   telnyx-agent call-control --action update-client-state --call-control-id <id> --client-state state-2
   telnyx-agent call-status --call-control-id <id> --json
 `;

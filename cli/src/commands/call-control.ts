@@ -61,7 +61,8 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   // Flags for the advanced call-control actions.
   const audioUrl = flags["audio-url"] as string | undefined;
   const queueName = flags["queue-name"] as string | undefined;
-  const content = flags["content"] as string | undefined;
+  const body = flags["body"] as string | undefined;
+  const contentType = flags["content-type"] as string | undefined;
   const clientState = flags["client-state"] as string | undefined;
   const commandId = flags["command-id"] as string | undefined;
 
@@ -118,11 +119,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
       process.exit(1);
     }
   }
-  // gather requires client-state and command-id per the Call Control API.
-  if (act === "gather" && (!clientState || !commandId)) {
-    printError("--client-state and --command-id are required for gather");
-    process.exit(1);
-  }
+  // gather accepts optional client-state/command-id; forward only if provided.
   if (act === "start-playback" && !audioUrl) {
     printError("--audio-url is required for start-playback (URL of audio to play)");
     process.exit(1);
@@ -131,9 +128,15 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError("--queue-name is required for enqueue");
     process.exit(1);
   }
-  if (act === "send-sip-info" && !content) {
-    printError("--content is required for send-sip-info (SIP INFO body content)");
-    process.exit(1);
+  if (act === "send-sip-info") {
+    if (!body) {
+      printError("--body is required for send-sip-info (SIP INFO body content)");
+      process.exit(1);
+    }
+    if (!contentType) {
+      printError("--content-type is required for send-sip-info (e.g. application/dtmf-relay)");
+      process.exit(1);
+    }
   }
   if (act === "update-client-state" && !clientState) {
     printError("--client-state is required for update-client-state");
@@ -155,7 +158,8 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     webhookUrl,
     audioUrl,
     queueName,
-    content,
+    body,
+    contentType,
     clientState,
     commandId,
   });
@@ -209,7 +213,8 @@ function buildActionArgs(
     webhookUrl?: string;
     audioUrl?: string;
     queueName?: string;
-    content?: string;
+    body?: string;
+    contentType?: string;
     clientState?: string;
     commandId?: string;
   },
@@ -263,8 +268,8 @@ function buildActionArgs(
       return [
         "calls:actions", "gather",
         "--call-control-id", opts.callControlId,
-        "--client-state", opts.clientState!,
-        "--command-id", opts.commandId!,
+        ...(opts.clientState ? ["--client-state", opts.clientState] : []),
+        ...(opts.commandId ? ["--command-id", opts.commandId] : []),
       ];
     case "stop-gather":
       return ["calls:actions", "stop-gather", "--call-control-id", opts.callControlId];
@@ -308,7 +313,8 @@ function buildActionArgs(
       return [
         "calls:actions", "send-sip-info",
         "--call-control-id", opts.callControlId,
-        "--content", opts.content!,
+        "--body", opts.body!,
+        "--content-type", opts.contentType!,
       ];
     case "update-client-state":
       return [

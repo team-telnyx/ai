@@ -297,7 +297,7 @@ describe("Voice API action commands", () => {
     assert.ok(dialCall!.includes("--transcription"), "should include --transcription flag");
   });
 
-  it("call-control --action gather calls `calls:actions gather`", () => {
+  it("call-control --action gather calls `calls:actions gather` and forwards client-state/command-id", () => {
     const fake = setupFakeTelnyx();
     run(
       ["call-control", "--action", "gather", "--call-control-id", "call-1", "--client-state", "state-1", "--command-id", "cmd-1", "--json"],
@@ -308,6 +308,38 @@ describe("Voice API action commands", () => {
     const gatherCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions gather");
     assert.ok(gatherCall, "should invoke `calls:actions gather`");
     assertFlagValue(gatherCall!, "--call-control-id", "call-1");
+    assertFlagValue(gatherCall!, "--client-state", "state-1");
+    assertFlagValue(gatherCall!, "--command-id", "cmd-1");
+  });
+
+  it("call-control --action gather works without --client-state/--command-id (optional)", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "gather", "--call-control-id", "call-1", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const gatherCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions gather");
+    assert.ok(gatherCall, "should invoke `calls:actions gather`");
+    assertFlagValue(gatherCall!, "--call-control-id", "call-1");
+    assert.ok(!gatherCall!.includes("--client-state"), "must not include --client-state when omitted");
+    assert.ok(!gatherCall!.includes("--command-id"), "must not include --command-id when omitted");
+  });
+
+  it("call-control --action send-sip-info forwards --body and --content-type", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      ["call-control", "--action", "send-sip-info", "--call-control-id", "call-1", "--body", "Signal=1234", "--content-type", "application/dtmf-relay", "--json"],
+      fake.env,
+    );
+
+    const calls = readLoggedArgs(fake.logPath);
+    const sipCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions send-sip-info");
+    assert.ok(sipCall, "should invoke `calls:actions send-sip-info`");
+    assertFlagValue(sipCall!, "--call-control-id", "call-1");
+    assertFlagValue(sipCall!, "--body", "Signal=1234");
+    assertFlagValue(sipCall!, "--content-type", "application/dtmf-relay");
   });
 
   it("call-control --action start-playback calls `calls:actions start-playback` with --audio-url", () => {
