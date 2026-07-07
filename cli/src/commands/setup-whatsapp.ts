@@ -3,19 +3,21 @@
  *
  * Steps:
  * 1. List WhatsApp Business Accounts (WABAs) and pick one
- * 2. List WhatsApp phone numbers for the WABA (reuse existing if present)
- * 3. Search & buy an SMS-capable number (skipped if a number already exists)
+ * 2. List WhatsApp phone numbers for the WABA (reuse existing if verified)
+ * 3. Create messaging profile & buy an SMS-capable number (skipped if reusing)
  * 4. Initialize WhatsApp verification and (optionally) verify with --code
  * 5. Configure (or retrieve) the WhatsApp business profile
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
 
 interface SetupWhatsappResult {
   waba_id: string;
   phone_number: string;
+  messaging_profile_id: string;
   verified: boolean;
   profile_configured: boolean;
   ready: boolean;
@@ -37,6 +39,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
 
   let wabaId = "";
   let phoneNumber = "";
+  let messagingProfileId = "";
   let verified = false;
   let profileConfigured = false;
 
@@ -85,14 +88,27 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       if (numbers.length) {
         const first = numbers[0];
         phoneNumber = String(first.phone_number ?? first.id ?? "");
-        reusedExisting = true;
-        verified = true; // existing numbers are already registered WhatsApp numbers
+        // Check if the existing number is actually connected/verified
+        const waStatus = String(first.status ?? "").toLowerCase();
+        const isEnabled = first.enabled !== false && first.enabled !== "false";
+        if (waStatus === "connected" || waStatus === "verified" || waStatus === "registered") {
+          verified = true;
+          reusedExisting = true;
+        } else if (isEnabled) {
+          // Number exists but not yet verified — let user verify with --code
+          reusedExisting = true;
+        } else {
+          // Disabled/pending — treat as not usable, buy a new one
+          reusedExisting = false;
+        }
         steps.push({
           step: 2,
           name: "List WhatsApp phone numbers",
           status: "completed",
           resourceId: phoneNumber,
-          detail: `${numbers.length} number(s), reusing first`,
+          detail: verified
+            ? `${numbers.length} number(s), reusing verified first`
+            : `${numbers.length} number(s) found, status: ${waStatus || "unknown"}`,
           elapsedMs: Date.now() - step2Start,
         });
       } else {
@@ -116,28 +132,61 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       steps.push({ step: 3, name: "Search & buy number", status: "skipped", detail: "reusing existing number", elapsedMs: 0 });
     } else {
       try {
-        const result = await searchAndBuyNumber(country, { features: "sms", type: "local" });
+        // Create a messaging profile first (required for WhatsApp verification
+        // — the SMS verification code needs an inbound route via the profile)
+        const apiKey = process.env.TELNYX_API_KEY;
+        if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
+        const client = new TelnyxClient(apiKey);
+        const profileRes = await client.post("/messaging_profiles", {
+          name: `WhatsApp Profile - ${new Date().toISOString().slice(0, 19).replace("T", " ")}`,
+          whitelisted_destinations: [country || "US"],
+        });
+        const profileData = (profileRes.data ?? profileRes) as Record<string, unknown>;
+        messagingProfileId = String(profileData.id);
+
+        const result = await searchAndBuyNumber(country, {
+          features: "sms",
+          type: "local",
+          messagingProfileId,
+        });
         phoneNumber = result.phoneNumber;
         steps.push({
           step: 3,
-          name: "Search & buy number",
+          name: "Create profile & buy number",
           status: "completed",
           resourceId: result.phoneNumberId,
-          detail: phoneNumber,
+          detail: `${phoneNumber} (profile ${messagingProfileId.slice(-8)})`,
           elapsedMs: Date.now() - step3Start,
         });
       } catch (err) {
-        steps.push({ step: 3, name: "Search & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step3Start });
+        steps.push({ step: 3, name: "Create profile & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step3Start });
         throw err;
       }
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 4: Initialize & verify WhatsApp number (skipped if reusing existing)
+    // Step 4: Initialize & verify WhatsApp number (skipped if existing AND verified)
     const step4Start = Date.now();
-    if (reusedExisting) {
-      steps.push({ step: 4, name: "Initialize & verify WhatsApp number", status: "skipped", detail: "existing number", elapsedMs: 0 });
-    } else {
+    if (reusedExisting && verified) {
+      steps.push({ step: 4, name: "Initialize & verify WhatsApp number", status: "skipped", detail: "already verified", elapsedMs: 0 });
+    } else if (reusedExisting && !verified && code) {
+      // Existing number that needs verification with user-supplied code
+      try {
+        await telnyxCli(["whatsapp:phone-numbers", "verify", "--phone-number", phoneNumber, "--code", code]);
+        verified = true;
+        steps.push({
+          step: 4,
+          name: "Verify WhatsApp number",
+          status: "completed",
+          resourceId: phoneNumber,
+          detail: "verified with code",
+          elapsedMs: Date.now() - step4Start,
+        });
+      } catch (err) {
+        steps.push({ step: 4, name: "Verify WhatsApp number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
+        throw err;
+      }
+    } else if (!reusedExisting) {
       try {
         await telnyxCli([
           "whatsapp:business-accounts:phone-numbers", "initialize-verification",
@@ -172,9 +221,32 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
         steps.push({ step: 4, name: "Initialize WhatsApp verification", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
         throw err;
       }
+    } else {
+      // Existing number, unverified, no --code provided — initialize verification
+      try {
+        await telnyxCli([
+          "whatsapp:business-accounts:phone-numbers", "initialize-verification",
+          "--id", wabaId,
+          "--display-name", displayName,
+          "--phone-number", phoneNumber,
+          "--language", "en_US",
+          "--verification-method", "sms",
+        ]);
+        steps.push({
+          step: 4,
+          name: "Re-initialize WhatsApp verification",
+          status: "completed",
+          resourceId: phoneNumber,
+          detail: "code sent via SMS",
+          elapsedMs: Date.now() - step4Start,
+        });
+      } catch (err) {
+        steps.push({ step: 4, name: "Initialize WhatsApp verification", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
+        throw err;
+      }
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
-    if (!reusedExisting && !code && !jsonOutput) {
+    if (!verified && !code && !jsonOutput) {
       console.log("  ℹ Verification code sent via SMS. Run again with --code <code> to verify, or use:");
       console.log(`    telnyx whatsapp:phone-numbers verify --phone-number ${phoneNumber} --code <code>`);
     }
@@ -218,9 +290,10 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const result: SetupWhatsappResult = {
       waba_id: wabaId,
       phone_number: phoneNumber,
+      messaging_profile_id: messagingProfileId,
       verified,
       profile_configured: profileConfigured,
-      ready: true,
+      ready: verified,
       steps,
     };
 
@@ -241,6 +314,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       status: "failed",
       waba_id: wabaId || null,
       phone_number: phoneNumber || null,
+      messaging_profile_id: messagingProfileId || null,
       verified,
       profile_configured: profileConfigured,
       ready: false,
@@ -262,6 +336,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
 }
 
 function errorMsg(err: unknown): string {
+  if (err instanceof TelnyxAPIError) return `${err.detail} (HTTP ${err.statusCode})`;
   if (err instanceof TelnyxCLIError) return err.stderr || err.message;
   if (err instanceof Error) return err.message;
   return String(err);

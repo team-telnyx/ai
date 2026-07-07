@@ -106,6 +106,47 @@ else {
   };
 }
 
+/**
+ * Variant that returns an existing WhatsApp phone number with status "connected"
+ * so the setup-whatsapp command can skip number purchase and test the
+ * verified-number reuse path.
+ */
+function setupFakeTelnyxWithNumbers(status: string = "connected"): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
+  const base = setupFakeTelnyx();
+  // Overwrite the fake binary to return an existing number with the given status
+  writeFileSync(
+    base.fakeTelnyx,
+    `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
+
+const cmd = args.filter(a => a !== "--format" && a !== "json");
+
+if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
+  console.log(JSON.stringify({ data: [{ id: "waba_test123", name: "Test WABA" }] }));
+}
+else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
+  console.log(JSON.stringify({ data: [{ phone_number: "+155****4567", status: "${status}", enabled: true }] }));
+}
+else if (cmd[0] === "whatsapp:phone-numbers" && cmd[1] === "verify") {
+  console.log(JSON.stringify({ data: { phone_number: "+155****4567", status: "verified" } }));
+}
+else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "retrieve") {
+  console.log(JSON.stringify({ data: { display_name: "Test", about: "Hello" } }));
+}
+else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "update") {
+  console.log(JSON.stringify({ data: { display_name: "Updated", status: "updated" } }));
+}
+else {
+  console.log(JSON.stringify({ data: {} }));
+}
+`,
+  );
+  chmodSync(base.fakeTelnyx, 0o755);
+  return base;
+}
+
 function readLoggedArgs(logPath: string): string[][] {
   return readFileSync(logPath, "utf8")
     .trim()
@@ -247,7 +288,7 @@ describe("WhatsApp commands", () => {
   });
 
   it("setup-whatsapp lists WABAs and picks the first one", () => {
-    const fake = setupFakeTelnyx();
+    const fake = setupFakeTelnyxWithNumbers("connected");
     const output = runCli(["setup-whatsapp", "--json"], fake.env);
 
     const data = JSON.parse(output);
@@ -258,34 +299,40 @@ describe("WhatsApp commands", () => {
     assert.ok(wabaListCall, "must call whatsapp:business-accounts list");
   });
 
-  it("setup-whatsapp initializes verification when no existing numbers", () => {
-    const fake = setupFakeTelnyx();
-    runCli(["setup-whatsapp", "--display-name", "My Biz", "--json"], fake.env);
-
-    const calls = readLoggedArgs(fake.logPath);
-    const initCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:business-accounts:phone-numbers initialize-verification");
-    assert.ok(initCall, "must call initialize-verification when no existing numbers");
-    assert.equal(initCall[initCall.indexOf("--display-name") + 1], "My Biz");
-  });
-
-  it("setup-whatsapp with --code verifies the number", () => {
-    const fake = setupFakeTelnyx();
+  it("setup-whatsapp with --code verifies a pending number", () => {
+    const fake = setupFakeTelnyxWithNumbers("pending");
     runCli(["setup-whatsapp", "--code", "123456", "--json"], fake.env);
 
     const calls = readLoggedArgs(fake.logPath);
     const verifyCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:phone-numbers verify");
     assert.ok(verifyCall, "must call whatsapp:phone-numbers verify when --code is provided");
-    assert.equal(verifyCall[verifyCall.indexOf("--code") + 1], "123456");
+    assert.equal(verifyCall![verifyCall!.indexOf("--code") + 1], "123456");
   });
 
   it("setup-whatsapp with --display-name and --category updates the profile", () => {
-    const fake = setupFakeTelnyx();
+    const fake = setupFakeTelnyxWithNumbers("connected");
     runCli(["setup-whatsapp", "--display-name", "Acme", "--category", "RETAIL", "--json"], fake.env);
 
     const calls = readLoggedArgs(fake.logPath);
     const profileCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:phone-numbers:profile update");
     assert.ok(profileCall, "must call profile update when profile flags are provided");
-    assert.equal(profileCall[profileCall.indexOf("--display-name") + 1], "Acme");
-    assert.equal(profileCall[profileCall.indexOf("--category") + 1], "RETAIL");
+    assert.equal(profileCall![profileCall!.indexOf("--display-name") + 1], "Acme");
+    assert.equal(profileCall![profileCall!.indexOf("--category") + 1], "RETAIL");
+  });
+
+  it("setup-whatsapp reports ready=true when number is connected (no --code needed)", () => {
+    const fake = setupFakeTelnyxWithNumbers("connected");
+    const output = runCli(["setup-whatsapp", "--json"], fake.env);
+    const data = JSON.parse(output);
+    assert.equal(data.verified, true);
+    assert.equal(data.ready, true);
+  });
+
+  it("setup-whatsapp reports ready=false when number is pending and no --code", () => {
+    const fake = setupFakeTelnyxWithNumbers("pending");
+    const output = runCli(["setup-whatsapp", "--json"], fake.env);
+    const data = JSON.parse(output);
+    assert.equal(data.verified, false);
+    assert.equal(data.ready, false);
   });
 });
