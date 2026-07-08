@@ -1,6 +1,6 @@
 {
   "name": "@telnyx/agent-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce multi-step workflows to a single command",
   "type": "module",
   "bin": {
