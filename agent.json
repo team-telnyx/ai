@@ -46,6 +46,15 @@
       "requires": ["phone_number"]
     },
     {
+      "id": "voice_agent_smallest",
+      "name": "Voice Agent with Smallest AI",
+      "description": "Build a real-time voice agent on Telnyx using Smallest AI's Pulse STT and Lightning TTS over bidirectional media streaming.",
+      "guide": "/guides/smallest-ai-voice-agent.md",
+      "api": "POST /v2/calls/{call_control_id}/actions/streaming_start",
+      "docs": "https://developers.telnyx.com/docs/voice/programmable-voice/media-streaming",
+      "requires": ["voice_connection", "phone_number"]
+    },
+    {
       "id": "ai_inference",
       "name": "AI Inference",
       "description": "LLM chat completions and embeddings via OpenAI-compatible API.",
