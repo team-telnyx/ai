@@ -121,10 +121,11 @@ for plugin_dir in "${CLAUDE_PLUGINS}"/*; do
     [ ! -d "$plugin_dir/skills" ] && continue
     for skill_dir in "$plugin_dir"/skills/*/; do
         skill_name=$(basename "$skill_dir")
-        cp -r "$skill_dir" "$AGG_CLAUDE/"
+        # Remove trailing slash so cp -r copies the directory itself, not its contents
+        cp -r "${skill_dir%/}" "$AGG_CLAUDE/"
         # Also sync to cursor if cursor has this plugin
         cursor_src="$REPO_ROOT/providers/cursor/plugins/${plugin_name}/skills/${skill_name}"
-        [ -d "$cursor_src" ] && cp -r "$skill_dir" "$AGG_CURSOR/"
+        [ -d "$cursor_src" ] && cp -r "${skill_dir%/}" "$AGG_CURSOR/"
     done
     # Copy agents
     if [ -d "$plugin_dir/agents" ]; then

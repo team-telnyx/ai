@@ -1307,7 +1307,7 @@ def scan_generic_text_file(filepath: Path, lines: List[str]) -> List[Detection]:
             sl = stripped.lower()
             if "<response>" in sl or "<say>" in sl or "<gather>" in sl or "<dial>" in sl:
                 product = "twiml"
-            elif "api.twilio.com" in sl:
+            elif re.search(r'(?:^|[/@.])api\.twilio\.com(?:[/\s"\'\)]|$)', sl):
                 product = "general"
             detections.append(
                 Detection(
