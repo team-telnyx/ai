@@ -81,7 +81,7 @@ for entry in "${PLUGIN_PATTERNS[@]}"; do
 
     if [ "$match" = "1" ]; then
       cp -R "$skill_dir" "$skills_dir/$skill_name"
-      ((count++))
+      ((++count))
     fi
   done
 
@@ -107,3 +107,39 @@ total_cursor=$(find "$CURSOR_SKILLS" -name "SKILL.md" | wc -l | tr -d ' ')
 echo "  Done — $total_cursor skills synced"
 
 echo "All providers synced."
+
+
+# === Sync aggregate plugin (all skills) ===
+echo "Syncing aggregate telnyx plugin..."
+AGG_CLAUDE="${CLAUDE_PLUGINS}/telnyx/skills"
+AGG_CURSOR="$REPO_ROOT/providers/cursor/plugins/telnyx/skills"
+mkdir -p "$AGG_CLAUDE" "$AGG_CURSOR"
+
+for plugin_dir in "${CLAUDE_PLUGINS}"/*; do
+    plugin_name=$(basename "$plugin_dir")
+    [ "$plugin_name" = "telnyx" ] && continue
+    [ ! -d "$plugin_dir/skills" ] && continue
+    for skill_dir in "$plugin_dir"/skills/*/; do
+        skill_name=$(basename "$skill_dir")
+        cp -r "$skill_dir" "$AGG_CLAUDE/"
+        # Also sync to cursor if cursor has this plugin
+        cursor_src="$REPO_ROOT/providers/cursor/plugins/${plugin_name}/skills/${skill_name}"
+        [ -d "$cursor_src" ] && cp -r "$skill_dir" "$AGG_CURSOR/"
+    done
+    # Copy agents
+    if [ -d "$plugin_dir/agents" ]; then
+        mkdir -p "${CLAUDE_PLUGINS}/telnyx/agents"
+        cp -r "$plugin_dir/agents/"* "${CLAUDE_PLUGINS}/telnyx/agents/" 2>/dev/null
+    fi
+done
+
+# Copy scripts and .mcp.json to aggregate
+if [ -d "${CLAUDE_PLUGINS}/telnyx-platform/scripts" ]; then
+    mkdir -p "${CLAUDE_PLUGINS}/telnyx/scripts"
+    cp -r "${CLAUDE_PLUGINS}/telnyx-platform/scripts/"* "${CLAUDE_PLUGINS}/telnyx/scripts/"
+fi
+if [ -f "${CLAUDE_PLUGINS}/telnyx-platform/.mcp.json" ]; then
+    cp "${CLAUDE_PLUGINS}/telnyx-platform/.mcp.json" "${CLAUDE_PLUGINS}/telnyx/.mcp.json"
+fi
+
+echo "Aggregate plugin synced."

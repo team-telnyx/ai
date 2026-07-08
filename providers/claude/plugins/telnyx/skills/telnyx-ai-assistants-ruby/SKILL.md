@@ -1,0 +1,418 @@
+---
+name: telnyx-ai-assistants-ruby
+description: >-
+  AI voice assistants with custom instructions, knowledge bases, and tool
+  integrations.
+metadata:
+  author: telnyx
+  product: ai-assistants
+  language: ruby
+  generated_by: telnyx-ext-skills-generator
+  profile: northstar-v2
+---
+
+<!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
+
+# Telnyx AI Assistants - Ruby
+
+## Installation
+
+```bash
+gem install telnyx
+```
+
+## Setup
+
+```ruby
+require "telnyx"
+
+client = Telnyx::Client.new(
+  api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+)
+```
+
+All examples below assume `client` is already initialized as shown above.
+
+## Error Handling
+
+All API calls can fail with network errors, rate limits (429), validation errors (422),
+or authentication errors (401). Always handle errors in production code:
+
+```ruby
+assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", name: "my-resource", model: "openai/gpt-4o")
+puts(assistant)
+```
+
+Common error codes: `401` invalid API key, `403` insufficient permissions,
+`404` resource not found, `422` validation error (check field formats),
+`429` rate limited (retry with exponential backoff).
+
+## Important Notes
+
+- **Phone numbers** must be in E.164 format (e.g., `+13125550001`). Include the `+` prefix and country code. No spaces, dashes, or parentheses.
+- **Pagination:** Use `.auto_paging_each` for automatic iteration: `page.auto_paging_each { |item| puts item.id }`.
+
+## Reference Use Rules
+
+Do not invent Telnyx parameters, enums, response fields, or webhook fields.
+
+- If the parameter, enum, or response field you need is not shown inline in this skill, read [references/api-details.md](references/api-details.md) before writing code.
+- Before using any operation in `## Additional Operations`, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas).
+
+## Core Tasks
+
+### Create an assistant
+
+Assistant creation is the entrypoint for any AI assistant integration. Agents need the exact creation method and the top-level fields returned by the SDK.
+
+`client.ai.assistants.create()` — `POST /ai/assistants`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes |  |
+| `instructions` | string | Yes | System instructions for the assistant. |
+| `tags` | array[string] | No | Tags associated with the assistant. |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| `tools` | array[object] | No | Deprecated for new integrations. |
+| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+assistant = client.ai.assistants.create(instructions: "You are a helpful assistant.", name: "my-resource", model: "openai/gpt-4o")
+puts(assistant)
+```
+
+Primary response fields:
+- `assistant.id`
+- `assistant.name`
+- `assistant.model`
+- `assistant.instructions`
+- `assistant.created_at`
+- `assistant.conversation_flow`
+
+### Chat with an assistant
+
+Chat is the primary runtime path. Agents need the exact assistant method and the response content field.
+
+`client.ai.assistants.chat()` — `POST /ai/assistants/{assistant_id}/chat`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `content` | string | Yes | The message content sent by the client to the assistant |
+| `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `name` | string | No | The optional display name of the user sending the message |
+
+```ruby
+response = client.ai.assistants.chat(
+  "assistant_id",
+  content: "Tell me a joke about cats",
+  conversation_id: "42b20469-1215-4a9a-8964-c36f66b406f4"
+)
+
+puts(response)
+```
+
+Primary response fields:
+- `response.content`
+
+### Create an assistant test
+
+Test creation is the main validation path for production assistant behavior before deployment.
+
+`client.ai.assistants.tests.create()` — `POST /ai/assistants/tests`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | A descriptive name for the assistant test. |
+| `destination` | string | Yes | The target destination for the test conversation. |
+| `instructions` | string | Yes | Detailed instructions that define the test scenario and what... |
+| `rubric` | array[object] | Yes | Evaluation criteria used to assess the assistant's performan... |
+| `description` | string | No | Optional detailed description of what this test evaluates an... |
+| `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
+| `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+assistant_test = client.ai.assistants.tests.create(
+  destination: "+15551234567",
+  instructions: "Act as a frustrated customer who received a damaged product. Ask for a refund and escalate if not satisfied with the initial response.",
+  name: "Customer Support Bot Test",
+  rubric: [
+    {criteria: "Assistant responds within 30 seconds", name: "Response Time"},
+    {criteria: "Provides correct product information", name: "Accuracy"}
+  ]
+)
+
+puts(assistant_test)
+```
+
+Primary response fields:
+- `assistant_test.test_id`
+- `assistant_test.name`
+- `assistant_test.destination`
+- `assistant_test.created_at`
+- `assistant_test.instructions`
+- `assistant_test.description`
+
+---
+
+## Important Supporting Operations
+
+Use these when the core tasks above are close to your flow, but you need a common variation or follow-up step.
+
+### Get an assistant
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.ai.assistants.retrieve()` — `GET /ai/assistants/{assistant_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `call_control_id` | string (UUID) | No | Filter results by call control id. |
+| `fetch_dynamic_variables_from_webhook` | boolean | No | Whether to fetch dynamic variables from the configured webho... |
+| `from` | string (E.164) | No | Start of the filter range. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+assistant = client.ai.assistants.retrieve("550e8400-e29b-41d4-a716-446655440000")
+
+puts(assistant)
+```
+
+Primary response fields:
+- `assistant.id`
+- `assistant.name`
+- `assistant.created_at`
+- `assistant.conversation_flow`
+- `assistant.description`
+- `assistant.dynamic_variables`
+
+### Update an assistant
+
+Create or provision an additional resource when the core tasks do not cover this flow.
+
+`client.ai.assistants.update()` — `POST /ai/assistants/{assistant_id}`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `tags` | array[string] | No | Tags associated with the assistant. |
+| `name` | string | No |  |
+| `model` | string | No | ID of the model to use when `external_llm` is not set. |
+| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+assistant = client.ai.assistants.update("550e8400-e29b-41d4-a716-446655440000")
+
+puts(assistant)
+```
+
+Primary response fields:
+- `assistant.id`
+- `assistant.name`
+- `assistant.created_at`
+- `assistant.conversation_flow`
+- `assistant.description`
+- `assistant.dynamic_variables`
+
+### List assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.list()` — `GET /ai/assistants`
+
+```ruby
+assistants_list = client.ai.assistants.list
+
+puts(assistants_list)
+```
+
+Response wrapper:
+- items: `assistants_list.data`
+
+Primary item fields:
+- `id`
+- `name`
+- `created_at`
+- `conversation_flow`
+- `description`
+- `dynamic_variables`
+
+### Import assistants from external provider
+
+Import existing assistants from an external provider instead of creating from scratch.
+
+`client.ai.assistants.imports()` — `POST /ai/assistants/import`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
+| `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
+| `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+
+```ruby
+assistants_list = client.ai.assistants.imports(api_key_ref: "my-openai-key", provider: :elevenlabs)
+
+puts(assistants_list)
+```
+
+Response wrapper:
+- items: `assistants_list.data`
+
+Primary item fields:
+- `id`
+- `name`
+- `created_at`
+- `conversation_flow`
+- `description`
+- `dynamic_variables`
+
+### Get All Tags
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.tags.list()` — `GET /ai/assistants/tags`
+
+```ruby
+tags = client.ai.assistants.tags.list
+
+puts(tags)
+```
+
+Primary response fields:
+- `tags.tags`
+
+### List assistant tests with pagination
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.tests.list()` — `GET /ai/assistants/tests`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `test_suite` | string | No | Filter tests by test suite name |
+| `telnyx_conversation_channel` | string | No | Filter tests by communication channel (e.g., 'web_chat', 'sm... |
+| `destination` | string | No | Filter tests by destination (phone number, webhook URL, etc.... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+
+```ruby
+page = client.ai.assistants.tests.list
+
+puts(page)
+```
+
+Response wrapper:
+- items: `page.data`
+- pagination: `page.meta`
+
+Primary item fields:
+- `name`
+- `created_at`
+- `description`
+- `destination`
+- `instructions`
+- `max_duration_seconds`
+
+### Get all test suite names
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.tests.test_suites.list()` — `GET /ai/assistants/tests/test-suites`
+
+```ruby
+test_suites = client.ai.assistants.tests.test_suites.list
+
+puts(test_suites)
+```
+
+Response wrapper:
+- items: `test_suites.data`
+
+Primary item fields:
+- `data`
+
+### Get test suite run history
+
+Fetch the current state before updating, deleting, or making control-flow decisions.
+
+`client.ai.assistants.tests.test_suites.runs.list()` — `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `suite_name` | string | Yes | Name of the suite. |
+| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
+| `status` | string | No | Filter runs by execution status (pending, running, completed... |
+| `page` | object | No | Consolidated page parameter (deepObject style). |
+
+```ruby
+page = client.ai.assistants.tests.test_suites.runs.list("suite_name")
+
+puts(page)
+```
+
+Response wrapper:
+- items: `page.data`
+- pagination: `page.meta`
+
+Primary item fields:
+- `status`
+- `created_at`
+- `updated_at`
+- `completed_at`
+- `conversation_id`
+- `conversation_insights_id`
+
+---
+
+## Additional Operations
+
+Use the core tasks above first. The operations below are indexed here with exact SDK methods and required params; use [references/api-details.md](references/api-details.md) for full optional params, response schemas, and lower-frequency webhook payloads.
+Before using any operation below, read [the optional-parameters section](references/api-details.md#optional-parameters) and [the response-schemas section](references/api-details.md#response-schemas) so you do not guess missing fields.
+
+| Operation | SDK method | Endpoint | Use when | Required params |
+|-----------|------------|----------|----------|-----------------|
+| Trigger test suite execution | `client.ai.assistants.tests.test_suites.runs.trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
+| Get assistant test by ID | `client.ai.assistants.tests.retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Update an assistant test | `client.ai.assistants.tests.update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
+| Delete an assistant test | `client.ai.assistants.tests.delete()` | `DELETE /ai/assistants/tests/{test_id}` | Remove, detach, or clean up an existing resource. | `test_id` |
+| Get test run history for a specific test | `client.ai.assistants.tests.runs.list()` | `GET /ai/assistants/tests/{test_id}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Trigger a manual test run | `client.ai.assistants.tests.runs.trigger()` | `POST /ai/assistants/tests/{test_id}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `test_id` |
+| Get specific test run details | `client.ai.assistants.tests.runs.retrieve()` | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id`, `run_id` |
+| Delete an assistant | `client.ai.assistants.delete()` | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Get Canary Deploy | `client.ai.assistants.canary_deploys.retrieve()` | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create Canary Deploy | `client.ai.assistants.canary_deploys.create()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Update Canary Deploy | `client.ai.assistants.canary_deploys.update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
+| Delete Canary Deploy | `client.ai.assistants.canary_deploys.delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Assistant Sms Chat | `client.ai.assistants.send_sms()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Clone Assistant | `client.ai.assistants.clone_()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Enhance Assistant Instructions | `client.ai.assistants.instructions.enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| List scheduled events | `client.ai.assistants.scheduled_events.list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create a scheduled event | `client.ai.assistants.scheduled_events.create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
+| Get a scheduled event | `client.ai.assistants.scheduled_events.retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |
+| Delete a scheduled event | `client.ai.assistants.scheduled_events.delete()` | `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `event_id` |
+| Add Assistant Tag | `client.ai.assistants.tags.add()` | `POST /ai/assistants/{assistant_id}/tags` | Create or provision an additional resource when the core tasks do not cover this flow. | `tag`, `assistant_id` |
+| Remove Assistant Tag | `client.ai.assistants.tags.remove()` | `DELETE /ai/assistants/{assistant_id}/tags/{tag}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `tag` |
+| Get assistant texml | `client.ai.assistants.get_texml()` | `GET /ai/assistants/{assistant_id}/texml` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Add Assistant Tool | `client.ai.assistants.tools.add()` | `PUT /ai/assistants/{assistant_id}/tools/{tool_id}` | Modify an existing resource without recreating it. | `assistant_id`, `tool_id` |
+| Remove Assistant Tool | `client.ai.assistants.tools.remove()` | `DELETE /ai/assistants/{assistant_id}/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `tool_id` |
+| Test Assistant Tool | `client.ai.assistants.tools.test_()` | `POST /ai/assistants/{assistant_id}/tools/{tool_id}/test` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `tool_id` |
+| Get all versions of an assistant | `client.ai.assistants.versions.list()` | `GET /ai/assistants/{assistant_id}/versions` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Get a specific assistant version | `client.ai.assistants.versions.retrieve()` | `GET /ai/assistants/{assistant_id}/versions/{version_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `version_id` |
+| Update a specific assistant version | `client.ai.assistants.versions.update()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id`, `version_id` |
+| Delete a specific assistant version | `client.ai.assistants.versions.delete()` | `DELETE /ai/assistants/{assistant_id}/versions/{version_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `version_id` |
+| Promote an assistant version to main | `client.ai.assistants.versions.promote()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `version_id` |
+| List MCP Servers | `client.ai.mcp_servers.list()` | `GET /ai/mcp_servers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create MCP Server | `client.ai.mcp_servers.create()` | `POST /ai/mcp_servers` | Create or provision an additional resource when the core tasks do not cover this flow. | `name`, `type`, `url` |
+| Get MCP Server | `client.ai.mcp_servers.retrieve()` | `GET /ai/mcp_servers/{mcp_server_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `mcp_server_id` |
+| Update MCP Server | `client.ai.mcp_servers.update()` | `PUT /ai/mcp_servers/{mcp_server_id}` | Modify an existing resource without recreating it. | `mcp_server_id` |
+| Delete MCP Server | `client.ai.mcp_servers.delete()` | `DELETE /ai/mcp_servers/{mcp_server_id}` | Remove, detach, or clean up an existing resource. | `mcp_server_id` |
+| List Tools | `client.ai.tools.list()` | `GET /ai/tools` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create Tool | `client.ai.tools.create()` | `POST /ai/tools` | Create or provision an additional resource when the core tasks do not cover this flow. | `type`, `display_name` |
+| Get Tool | `client.ai.tools.retrieve()` | `GET /ai/tools/{tool_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `tool_id` |
+| Update Tool | `client.ai.tools.update()` | `PATCH /ai/tools/{tool_id}` | Modify an existing resource without recreating it. | `tool_id` |
+| Delete Tool | `client.ai.tools.delete()` | `DELETE /ai/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `tool_id` |
+
+---
+
+For exhaustive optional parameters, full response schemas, and complete webhook payloads, see [references/api-details.md](references/api-details.md).

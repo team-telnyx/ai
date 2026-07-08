@@ -1,0 +1,11 @@
+{
+  "name": "push-notification-tester",
+  "version": "1.0.0",
+  "description": "Test VoIP push notifications for Telnyx WebRTC iOS (APNs) and Android (FCM)",
+  "private": true,
+  "dependencies": {
+    "@parse/node-apn": "^6.0.1",
+    "axios": "^1.6.0",
+    "google-auth-library": "^9.4.0"
+  }
+}

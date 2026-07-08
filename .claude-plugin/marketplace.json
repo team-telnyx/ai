@@ -10,6 +10,12 @@
   },
   "plugins": [
     {
+      "name": "telnyx",
+      "source": "./providers/claude/plugins/telnyx",
+      "description": "Telnyx complete plugin \u2014 all skills. Install individual product plugins for lighter context.",
+      "version": "0.4.0"
+    },
+    {
       "name": "telnyx-whatsapp",
       "source": "./providers/claude/plugins/telnyx-whatsapp",
       "description": "Telnyx WhatsApp Business API \u2014 send messages, manage templates, WABAs, and phone numbers",

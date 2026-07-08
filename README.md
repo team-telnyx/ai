@@ -34,10 +34,28 @@ Empowers coding agents to generate correct, production-ready code without relyin
 /plugin marketplace add team-telnyx/ai
 ```
 
-**Step 2.** Install the plugin:
+**Step 2.** Install the plugin — choose one:
+
+**Option A: Complete plugin** (all 236 skills — easiest, but larger context):
 
 ```bash
 /plugin install telnyx@telnyx
+```
+
+**Option B: Product-specific plugins** (lighter context — install only what you need):
+
+```bash
+# Pick one or more:
+/plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
+/plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
+/plugin install telnyx-messaging@telnyx  # SMS / MMS
+/plugin install telnyx-tts@telnyx         # Text-to-speech
+/plugin install telnyx-stt@telnyx         # Speech-to-text
+/plugin install telnyx-verify@telnyx      # Phone verification / 2FA
+/plugin install telnyx-numbers@telnyx     # Number management
+/plugin install telnyx-webrtc@telnyx      # WebRTC
+/plugin install telnyx-ai@telnyx         # AI inference
+/plugin install telnyx-platform@telnyx   # Platform services (numbers, billing, MCP)
 ```
 
 ### Gemini CLI extension

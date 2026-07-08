@@ -1,0 +1,11 @@
+{
+  "name": "telnyx",
+  "version": "0.4.0",
+  "description": "Telnyx complete plugin \u2014 all skills for WhatsApp, Voice, SMS, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services. For context-efficient installs, use individual product plugins instead.",
+  "author": {
+    "name": "Telnyx",
+    "email": "support@telnyx.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/team-telnyx/ai"
+}
