@@ -134,10 +134,14 @@ for plugin_dir in "${CLAUDE_PLUGINS}"/*; do
     fi
 done
 
-# Copy scripts and .mcp.json to aggregate
+# Copy scripts, hooks, and .mcp.json to aggregate
 if [ -d "${CLAUDE_PLUGINS}/telnyx-platform/scripts" ]; then
     mkdir -p "${CLAUDE_PLUGINS}/telnyx/scripts"
     cp -r "${CLAUDE_PLUGINS}/telnyx-platform/scripts/"* "${CLAUDE_PLUGINS}/telnyx/scripts/"
+fi
+if [ -d "${CLAUDE_PLUGINS}/telnyx-platform/hooks" ]; then
+    mkdir -p "${CLAUDE_PLUGINS}/telnyx/hooks"
+    cp -r "${CLAUDE_PLUGINS}/telnyx-platform/hooks/"* "${CLAUDE_PLUGINS}/telnyx/hooks/"
 fi
 if [ -f "${CLAUDE_PLUGINS}/telnyx-platform/.mcp.json" ]; then
     cp "${CLAUDE_PLUGINS}/telnyx-platform/.mcp.json" "${CLAUDE_PLUGINS}/telnyx/.mcp.json"
