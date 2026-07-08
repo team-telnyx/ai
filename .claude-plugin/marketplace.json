@@ -5,14 +5,14 @@
     "email": "support@telnyx.com"
   },
   "metadata": {
-    "description": "Official Telnyx plugin for AI coding agents — MCP server, Agent Skills, and development tools",
-    "version": "0.1.0"
+    "description": "Official Telnyx plugin for AI coding agents \u2014 MCP server, Agent Skills, and development tools",
+    "version": "0.4.0"
   },
   "plugins": [
     {
       "name": "telnyx",
-      "version": "0.1.0",
-      "description": "Telnyx development plugin — MCP server for API access, plus skills for messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, and more.",
+      "version": "0.4.0",
+      "description": "Telnyx development plugin \u2014 MCP server for API access, plus skills for messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, and more.",
       "source": "./providers/claude/plugin/"
     }
   ]
