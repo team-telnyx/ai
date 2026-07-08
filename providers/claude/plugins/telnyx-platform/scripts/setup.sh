@@ -65,7 +65,7 @@ case "$OPT_IN" in
       echo "[telnyx-ai:setup] friction-report ready" >&2
     else
       echo "[telnyx-ai:setup] installing friction-report CLI (opted in)..." >&2
-      python3 -m pip install --user --quiet "${CLAUDE_PLUGIN_ROOT}/../../../tools/ffl-cli" 2>&1 | tail -3 >&2
+      python3 -m pip install --user --quiet "${CLAUDE_PLUGIN_ROOT}/../../../../tools/ffl-cli" 2>&1 | tail -3 >&2
       if command -v friction-report &>/dev/null; then
         echo "[telnyx-ai:setup] friction-report installed" >&2
       else
