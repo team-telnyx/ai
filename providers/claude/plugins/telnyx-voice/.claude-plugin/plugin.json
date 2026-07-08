@@ -1,0 +1,15 @@
+{
+  "name": "telnyx-voice",
+  "description": "Telnyx Voice API \u2014 call control, DTMF, recording, noise suppression, AMD, deepfake detection, number masking, SIPREC, streaming",
+  "version": "0.4.0",
+  "author": {
+    "name": "Telnyx",
+    "url": "https://telnyx.com"
+  },
+  "homepage": "https://developers.telnyx.com",
+  "repository": "https://github.com/team-telnyx/ai",
+  "license": "MIT",
+  "keywords": [
+    "voice"
+  ]
+}

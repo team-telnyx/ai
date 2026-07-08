@@ -5,15 +5,69 @@
     "email": "support@telnyx.com"
   },
   "metadata": {
-    "description": "Official Telnyx plugin for AI coding agents \u2014 MCP server, Agent Skills, and development tools",
+    "description": "Official Telnyx plugin marketplace for AI coding agents \u2014 modular plugins for WhatsApp, Voice, SMS, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services",
     "version": "0.4.0"
   },
   "plugins": [
     {
-      "name": "telnyx",
-      "version": "0.4.0",
-      "description": "Telnyx development plugin \u2014 MCP server for API access, plus skills for messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, and more.",
-      "source": "./providers/claude/plugin/"
+      "name": "telnyx-whatsapp",
+      "source": "./providers/claude/plugins/telnyx-whatsapp",
+      "description": "Telnyx WhatsApp Business API \u2014 send messages, manage templates, WABAs, and phone numbers",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-voice",
+      "source": "./providers/claude/plugins/telnyx-voice",
+      "description": "Telnyx Voice API \u2014 call control, DTMF, recording, noise suppression, AMD, deepfake detection, number masking, SIPREC, streaming",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-messaging",
+      "source": "./providers/claude/plugins/telnyx-messaging",
+      "description": "Telnyx SMS/MMS \u2014 send, schedule, group MMS, delivery webhooks, opt-out handling, messaging profiles",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-tts",
+      "source": "./providers/claude/plugins/telnyx-tts",
+      "description": "Telnyx Text-to-Speech \u2014 generate speech from text via Telnyx and third-party providers (AWS, Azure, ElevenLabs, MiniMax, Resemble, Rime, xAI)",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-stt",
+      "source": "./providers/claude/plugins/telnyx-stt",
+      "description": "Telnyx Speech-to-Text \u2014 transcribe audio to text via OpenAI-compatible endpoint with model, language, and keyword biasing",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-verify",
+      "source": "./providers/claude/plugins/telnyx-verify",
+      "description": "Telnyx Verify \u2014 phone verification via SMS, call, or flash call (2FA OTP)",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-ai",
+      "source": "./providers/claude/plugins/telnyx-ai",
+      "description": "Telnyx AI \u2014 LLM inference, chat completions, embeddings, AI assistants, conversation insights",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-numbers",
+      "source": "./providers/claude/plugins/telnyx-numbers",
+      "description": "Telnyx Numbers \u2014 search, buy, manage phone numbers, 10DLC compliance registration, number porting",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-webrtc",
+      "source": "./providers/claude/plugins/telnyx-webrtc",
+      "description": "Telnyx WebRTC \u2014 browser-based real-time communications, video rooms, WebRTC client SDKs",
+      "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-platform",
+      "source": "./providers/claude/plugins/telnyx-platform",
+      "description": "Telnyx Platform \u2014 account management, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration, and other platform services",
+      "version": "0.4.0"
     }
   ]
 }

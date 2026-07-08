@@ -1,6 +1,6 @@
 {
-  "name": "telnyx",
-  "description": "Telnyx development plugin for Claude",
+  "name": "telnyx-tts",
+  "description": "Telnyx Text-to-Speech \u2014 generate speech from text via Telnyx and third-party providers (AWS, Azure, ElevenLabs, MiniMax, Resemble, Rime, xAI)",
   "version": "0.4.0",
   "author": {
     "name": "Telnyx",
@@ -10,13 +10,6 @@
   "repository": "https://github.com/team-telnyx/ai",
   "license": "MIT",
   "keywords": [
-    "telnyx",
-    "telecom",
-    "messaging",
-    "voice",
-    "sms",
-    "api",
-    "webhooks",
-    "ai"
+    "tts"
   ]
 }
