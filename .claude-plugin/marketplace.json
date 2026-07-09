@@ -10,15 +10,6 @@
   },
   "plugins": [
     {
-      "name": "telnyx-cli",
-      "version": "1.0.0",
-      "description": "Telnyx CLI \u2014 manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
-      "source": "./telnyx-cli",
-      "skills": [
-        "./telnyx-cli/skills/telnyx-cli"
-      ]
-    },
-    {
       "name": "telnyx-curl",
       "version": "1.0.3",
       "description": "Official Telnyx REST API (curl) skills \u2014 messaging, voice, numbers, IoT, AI, and more. Language-agnostic HTTP examples for any language or framework.",
@@ -283,12 +274,17 @@
       ]
     },
     {
-      "name": "telnyx-taurus",
+      "name": "telnyx-webrtc-client",
       "version": "1.0.0",
-      "description": "Internal Taurus transcript API skill for searching meeting records and retrieving call transcripts through a controlled read-only API.",
-      "source": "./telnyx-taurus",
+      "description": "Telnyx WebRTC client SDK skills \u2014 build VoIP calling apps on web, iOS, Android, Flutter, and React Native. Covers authentication, call controls, push notifications, call quality metrics, and AI Agent integration.",
+      "source": "./telnyx-webrtc-client",
       "skills": [
-        "./telnyx-taurus/skills/taurus-transcript-api"
+        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-js",
+        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-ios",
+        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-android",
+        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-flutter",
+        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-react-native",
+        "./telnyx-webrtc-client/skills/push-notification-tester"
       ]
     },
     {
@@ -301,17 +297,21 @@
       ]
     },
     {
-      "name": "telnyx-webrtc-client",
+      "name": "telnyx-cli",
       "version": "1.0.0",
-      "description": "Telnyx WebRTC client SDK skills \u2014 build VoIP calling apps on web, iOS, Android, Flutter, and React Native. Covers authentication, call controls, push notifications, call quality metrics, and AI Agent integration.",
-      "source": "./telnyx-webrtc-client",
+      "description": "Telnyx CLI \u2014 manage phone numbers, send messages, make calls, and access all Telnyx APIs from the terminal. 946 commands auto-generated from the OpenAPI spec.",
+      "source": "./telnyx-cli",
       "skills": [
-        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-js",
-        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-ios",
-        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-android",
-        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-flutter",
-        "./telnyx-webrtc-client/skills/telnyx-webrtc-client-react-native",
-        "./telnyx-webrtc-client/skills/push-notification-tester"
+        "./telnyx-cli/skills/telnyx-cli"
+      ]
+    },
+    {
+      "name": "telnyx-taurus",
+      "version": "1.0.0",
+      "description": "Internal Taurus transcript API skill for searching meeting records and retrieving call transcripts through a controlled read-only API.",
+      "source": "./telnyx-taurus",
+      "skills": [
+        "./telnyx-taurus/skills/taurus-transcript-api"
       ]
     }
   ]
