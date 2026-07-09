@@ -2016,15 +2016,6 @@
       "format": "agent-skill-v1"
     },
     {
-      "id": "taurus-transcript-api",
-      "plugin": "telnyx-taurus",
-      "product": "taurus",
-      "language": null,
-      "path": "./telnyx-taurus/skills/taurus-transcript-api/SKILL.md",
-      "references": [],
-      "format": "agent-skill-v1"
-    },
-    {
       "id": "telnyx-twilio-migration",
       "plugin": "telnyx-twilio-migration",
       "product": "migration",
@@ -2084,6 +2075,15 @@
       "product": "webrtc",
       "language": "typescript",
       "path": "./telnyx-webrtc-client/skills/telnyx-webrtc-client-react-native/SKILL.md",
+      "references": [],
+      "format": "agent-skill-v1"
+    },
+    {
+      "id": "taurus-transcript-api",
+      "plugin": "telnyx-taurus",
+      "product": "taurus",
+      "language": null,
+      "path": "./telnyx-taurus/skills/taurus-transcript-api/SKILL.md",
       "references": [],
       "format": "agent-skill-v1"
     }
