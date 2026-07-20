@@ -26,5 +26,9 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Install TypeScript dependencies
+        working-directory: tools/typescript
+        run: npm ci
+
       - name: Check release environment
         run: bash ./.github/bin/check-release-environment

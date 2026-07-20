@@ -26,7 +26,7 @@ export class OpenAIToolkit {
    */
   getTools(): Record<string, unknown>[] {
     return this.tools.map((toolDef) => {
-      const properties = toolDef.parameters.properties;
+      const { properties, ...topLevelSchema } = toolDef.parameters;
 
       // Clean up properties for OpenAI (remove defaults from schema)
       const cleanProps: Record<string, Record<string, unknown>> = {};
@@ -46,9 +46,8 @@ export class OpenAIToolkit {
           name: toolDef.name,
           description: toolDef.description,
           parameters: {
-            type: "object",
+            ...topLevelSchema,
             properties: cleanProps,
-            required: toolDef.parameters.required,
           },
         },
       };
