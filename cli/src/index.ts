@@ -176,10 +176,13 @@ Voice Call Flags:
                     gather, stop-gather, start-playback, stop-playback, start-transcription,
                     stop-transcription, pause-recording, resume-recording, start-forking,
                     stop-forking, start-siprec, stop-siprec, start-streaming, stop-streaming,
-                    enqueue, leave-queue, send-sip-info, update-client-state
+                    enqueue, leave-queue, send-sip-info, update-client-state,
+                    add-ai-assistant-messages, gather-using-ai, gather-using-audio,
+                    gather-using-speak, join-ai-assistant, start-ai-assistant, stop-ai-assistant,
+                    start-conversation-relay, stop-conversation-relay, switch-supervisor-role
   --digits           DTMF digits to send (call-control dtmf)
-  --payload          Text to synthesize and speak (call-control speak)
-  --voice            TTS voice to use (call-control speak, default: female)
+  --payload          Text/SSML to synthesize (speak; gather-using-speak, required)
+  --voice            TTS voice (speak default: female; gather-using-speak, required; AI/relay optional)
   --call-control-id-2 Second call-control-id to bridge with (call-control bridge)
   --sip-address      SIP address to refer to (call-control refer, e.g. sip:user@example.com)
   --channels         Recording channels: single|dual (call-control start-recording)
@@ -191,20 +194,31 @@ Voice Call Flags:
   --deepfake-detection           Enable deepfake detection (call-dial, call-control answer)
   --record                       Record the call (call-dial, call-control answer)
   --webhook-url                  Webhook URL override (call-dial, call-control answer)
-  --audio-url                    Audio URL to play on answer (call-dial); audio to play (call-control start-playback, required)
+  --audio-url                    Audio URL to play on answer (call-dial); start-playback (required); gather-using-audio (optional)
   --timeout-secs                 Dial timeout in seconds (call-dial)
   --privacy                      Number masking: 'id' hides caller ID, 'none' is normal (call-dial, default: none)
   --from-display-name            Caller ID display name (call-dial)
   --time-limit-secs              Max call duration in seconds (call-dial)
   --transcription                Enable real-time transcription on dial (call-dial)
   --media-encryption             Media encryption mode (call-dial)
-  --client-state                 Opaque client-state string (call-dial; call-control update-client-state, required; call-control gather, optional)
-  --command-id                   Idempotency/command UUID (call-dial; call-control gather, optional)
+  --client-state                 Opaque client-state string (call-dial; update-client-state required; gather/AI/relay actions optional)
+  --command-id                   Idempotency/command UUID (call-dial; gather/AI/relay actions optional)
   --webhook-url-method           HTTP method for --webhook-url (call-dial: GET|POST|PUT|PATCH|DELETE)
   --webhook-urls                 Comma-separated additional webhook URLs (call-dial)
   --queue-name                   Queue to place the call into (call-control enqueue, required)
   --body                         SIP INFO body content (call-control send-sip-info, required)
   --content-type                 SIP INFO Content-Type header (call-control send-sip-info, required, e.g. application/dtmf-relay)
+  --message                      AI message array as JSON (add-ai-assistant-messages, optional)
+  --parameters                   JSON Schema object (gather-using-ai, required)
+  --assistant                    Assistant configuration as JSON (gather/start AI and conversation relay, optional)
+  --greeting                     Initial spoken greeting (gather-using-ai, start-ai-assistant/start-conversation-relay, optional)
+  --conversation-id              Existing AI conversation ID (join-ai-assistant, required)
+  --participant                  Participant object as JSON (join-ai-assistant, required; start-ai-assistant, optional)
+  --url                          WebSocket URL (start-conversation-relay, optional)
+  --dtmf-detection               Enable relay DTMF detection (start-conversation-relay, optional)
+  --role                         Supervisor role: barge|whisper|monitor (switch-supervisor-role, required)
+                    Generated optional JSON, scalar, boolean, and dotted inner flags for these actions
+                    are forwarded unchanged to the Go CLI (for example --assistant.id).
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -279,6 +293,12 @@ Examples:
   telnyx-agent call-control --action send-sip-info --call-control-id <id> --body "hello" --content-type application/dtmf-relay
   telnyx-agent call-control --action update-client-state --call-control-id <id> --client-state state-2
   telnyx-agent call-control --action reject --call-control-id <id> --cause USER_BUSY
+  telnyx-agent call-control --action gather-using-ai --call-control-id <id> --parameters '{"type":"object","properties":{"name":{"type":"string"}}}'
+  telnyx-agent call-control --action gather-using-speak --call-control-id <id> --payload "Enter your PIN" --voice Telnyx.KokoroTTS.af
+  telnyx-agent call-control --action join-ai-assistant --call-control-id <id> --conversation-id <conversation-id> --participant '{"id":"call-2","role":"user"}'
+  telnyx-agent call-control --action start-ai-assistant --call-control-id <id> --assistant.id <assistant-id>
+  telnyx-agent call-control --action start-conversation-relay --call-control-id <id> --url wss://example.com/relay
+  telnyx-agent call-control --action switch-supervisor-role --call-control-id <id> --role whisper
   telnyx-agent call-status --call-control-id <id> --json
   telnyx-agent stt --audio-url https://example.com/audio.mp3
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json

@@ -6,8 +6,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -72,6 +72,22 @@ function run(args: string[], env?: NodeJS.ProcessEnv): string {
     env: env ?? { ...process.env },
     timeout: 30000,
   });
+}
+
+function runFailure(args: string[], env: NodeJS.ProcessEnv): string {
+  const result = spawnSync("npx", ["tsx", cliBin, ...args], {
+    cwd: cliRoot,
+    encoding: "utf8",
+    env,
+    timeout: 30000,
+  });
+  assert.notEqual(result.status, 0, `expected command to fail: ${args.join(" ")}`);
+  assert.equal(result.error, undefined);
+  return result.stderr;
+}
+
+function assertNoLoggedCalls(logPath: string): void {
+  assert.ok(!existsSync(logPath) || readFileSync(logPath, "utf8") === "", "validation must fail before invoking telnyx");
 }
 
 function assertFlagValue(args: string[], flag: string, value: string): void {
@@ -485,5 +501,145 @@ describe("Voice API action commands", () => {
     const output = run(["help"]);
     assert.ok(output.includes("--privacy"), "help should document --privacy flag");
     assert.ok(output.includes("number masking") || output.includes("Number masking") || output.includes("caller ID"), "help should mention number masking");
+  });
+
+  const newActionDispatches: Array<{
+    action: string;
+    flags: string[];
+    values: Array<[string, string]>;
+    bare?: string[];
+  }> = [
+    {
+      action: "add-ai-assistant-messages",
+      flags: ["--message", '[{"role":"user","content":"hello"}]', "--client-state", "state-1", "--command-id", "cmd-1"],
+      values: [["--message", '[{"role":"user","content":"hello"}]'], ["--client-state", "state-1"], ["--command-id", "cmd-1"]],
+    },
+    {
+      action: "gather-using-ai",
+      flags: ["--parameters", '{"type":"object"}', "--greeting", "What is your name?", "--assistant.model", "openai/gpt-4o", "--send-partial-results"],
+      values: [["--parameters", '{"type":"object"}'], ["--greeting", "What is your name?"], ["--assistant.model", "openai/gpt-4o"]],
+      bare: ["--send-partial-results"],
+    },
+    {
+      action: "gather-using-audio",
+      flags: ["--audio-url", "https://example.com/menu.wav", "--maximum-digits", "4", "--valid-digits", "1234"],
+      values: [["--audio-url", "https://example.com/menu.wav"], ["--maximum-digits", "4"], ["--valid-digits", "1234"]],
+    },
+    {
+      action: "gather-using-speak",
+      flags: ["--payload", "Enter your PIN", "--voice", "Telnyx.KokoroTTS.af", "--invalid-payload", "Try again", "--minimum-digits", "4"],
+      values: [["--payload", "Enter your PIN"], ["--voice", "Telnyx.KokoroTTS.af"], ["--invalid-payload", "Try again"], ["--minimum-digits", "4"]],
+    },
+    {
+      action: "join-ai-assistant",
+      flags: ["--conversation-id", "conv-1", "--participant", '{"id":"call-2","role":"user"}', "--participant.name", "Caller"],
+      values: [["--conversation-id", "conv-1"], ["--participant", '{"id":"call-2","role":"user"}'], ["--participant.name", "Caller"]],
+    },
+    {
+      action: "start-ai-assistant",
+      flags: ["--assistant.id", "assistant-1", "--greeting", "Hello", "--send-message-history-updates"],
+      values: [["--assistant.id", "assistant-1"], ["--greeting", "Hello"]],
+      bare: ["--send-message-history-updates"],
+    },
+    {
+      action: "stop-ai-assistant",
+      flags: ["--client-state", "state-stop", "--command-id", "cmd-stop"],
+      values: [["--client-state", "state-stop"], ["--command-id", "cmd-stop"]],
+    },
+    {
+      action: "start-conversation-relay",
+      flags: ["--url", "wss://example.com/relay", "--voice", "Telnyx.KokoroTTS.af", "--conversation-relay-settings.url", "wss://nested.example.com/relay", "--dtmf-detection"],
+      values: [["--url", "wss://example.com/relay"], ["--voice", "Telnyx.KokoroTTS.af"], ["--conversation-relay-settings.url", "wss://nested.example.com/relay"]],
+      bare: ["--dtmf-detection"],
+    },
+    {
+      action: "stop-conversation-relay",
+      flags: ["--client-state", "relay-state", "--command-id", "relay-stop"],
+      values: [["--client-state", "relay-state"], ["--command-id", "relay-stop"]],
+    },
+    {
+      action: "switch-supervisor-role",
+      flags: ["--role", "whisper"],
+      values: [["--role", "whisper"]],
+    },
+  ];
+
+  for (const testCase of newActionDispatches) {
+    it(`call-control --action ${testCase.action} dispatches the generated Go command and flags`, () => {
+      const fake = setupFakeTelnyx();
+      run(
+        ["call-control", "--action", testCase.action, "--call-control-id", "call-ai-1", ...testCase.flags, "--json"],
+        fake.env,
+      );
+
+      const calls = readLoggedArgs(fake.logPath);
+      const actionCall = calls.find((a) => a.slice(0, 2).join(" ") === `calls:actions ${testCase.action}`);
+      assert.ok(actionCall, `should invoke calls:actions ${testCase.action}`);
+      assertFlagValue(actionCall!, "--call-control-id", "call-ai-1");
+      for (const [flag, value] of testCase.values) assertFlagValue(actionCall!, flag, value);
+      for (const flag of testCase.bare ?? []) assert.ok(actionCall!.includes(flag), `expected ${flag}`);
+    });
+  }
+
+  const actionsWithOnlyCallIdRequired = [
+    "add-ai-assistant-messages",
+    "gather-using-audio",
+    "start-ai-assistant",
+    "stop-ai-assistant",
+    "start-conversation-relay",
+    "stop-conversation-relay",
+  ];
+  for (const action of actionsWithOnlyCallIdRequired) {
+    it(`call-control --action ${action} does not invent optional Go flags`, () => {
+      const fake = setupFakeTelnyx();
+      run(["call-control", "--action", action, "--call-control-id", "call-ai-1", "--json"], fake.env);
+      const calls = readLoggedArgs(fake.logPath);
+      const actionCall = calls.find((a) => a.slice(0, 2).join(" ") === `calls:actions ${action}`);
+      assert.ok(actionCall);
+      assert.deepEqual(actionCall!.slice(0, -2), ["calls:actions", action, "--call-control-id", "call-ai-1"]);
+    });
+  }
+
+  const newActionsWithRequiredCallId = newActionDispatches.map(({ action, flags }) => ({ action, flags }));
+  for (const testCase of newActionsWithRequiredCallId) {
+    it(`call-control --action ${testCase.action} validates --call-control-id before dispatch`, () => {
+      const fake = setupFakeTelnyx();
+      const stderr = runFailure(["call-control", "--action", testCase.action, ...testCase.flags, "--json"], fake.env);
+      assert.match(stderr, /--call-control-id is required/);
+      assertNoLoggedCalls(fake.logPath);
+    });
+  }
+
+  const actionSpecificRequiredFlags = [
+    { action: "gather-using-ai", missing: "parameters", flags: [] },
+    { action: "gather-using-speak", missing: "payload", flags: ["--voice", "Telnyx.KokoroTTS.af"] },
+    { action: "gather-using-speak", missing: "voice", flags: ["--payload", "Enter digits"] },
+    { action: "join-ai-assistant", missing: "conversation-id", flags: ["--participant", '{"id":"call-2"}'] },
+    { action: "join-ai-assistant", missing: "participant", flags: ["--conversation-id", "conv-1"] },
+    { action: "switch-supervisor-role", missing: "role", flags: [] },
+  ];
+  for (const testCase of actionSpecificRequiredFlags) {
+    it(`call-control --action ${testCase.action} validates required --${testCase.missing}`, () => {
+      const fake = setupFakeTelnyx();
+      const stderr = runFailure(
+        ["call-control", "--action", testCase.action, "--call-control-id", "call-ai-1", ...testCase.flags, "--json"],
+        fake.env,
+      );
+      assert.match(stderr, new RegExp(`--${testCase.missing} is required for ${testCase.action}`));
+      assertNoLoggedCalls(fake.logPath);
+    });
+  }
+
+  it("help and capabilities advertise all ten AI/relay Call Control actions", () => {
+    const help = run(["help"]);
+    for (const testCase of newActionDispatches) assert.ok(help.includes(testCase.action), `help should include ${testCase.action}`);
+
+    const fake = setupFakeTelnyx();
+    const capabilities = JSON.parse(run(["capabilities", "--json"], fake.env));
+    const actions = capabilities.api_capabilities["📞 Voice"][0].actions as string[];
+    for (const testCase of newActionDispatches) {
+      const capability = testCase.action.replaceAll("-", "_");
+      assert.ok(actions.includes(capability), `capabilities should include ${capability}`);
+    }
   });
 });

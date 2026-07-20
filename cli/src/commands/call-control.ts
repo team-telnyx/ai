@@ -11,7 +11,11 @@
  *   gather, stop-gather, start-playback, stop-playback, start-transcription,
  *   stop-transcription, pause-recording, resume-recording, start-forking,
  *   stop-forking, start-siprec, stop-siprec, start-streaming, stop-streaming,
- *   enqueue, leave-queue, send-sip-info, update-client-state
+ *   enqueue, leave-queue, send-sip-info, update-client-state,
+ *   add-ai-assistant-messages, gather-using-ai, gather-using-audio,
+ *   gather-using-speak, join-ai-assistant, start-ai-assistant,
+ *   stop-ai-assistant, start-conversation-relay, stop-conversation-relay,
+ *   switch-supervisor-role
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
@@ -31,8 +35,79 @@ const ACTIONS = [
   "start-streaming", "stop-streaming",
   "enqueue", "leave-queue",
   "send-sip-info", "update-client-state",
+  "add-ai-assistant-messages",
+  "gather-using-ai", "gather-using-audio", "gather-using-speak",
+  "join-ai-assistant", "start-ai-assistant", "stop-ai-assistant",
+  "start-conversation-relay", "stop-conversation-relay",
+  "switch-supervisor-role",
 ] as const;
 type Action = (typeof ACTIONS)[number];
+
+/**
+ * Flags exposed by the generated Go commands for the ten AI/relay actions.
+ * Values are forwarded exactly as supplied; omitted optional flags are left to
+ * the Go CLI/API defaults. This includes the generated inner (dotted) flags.
+ */
+const NEW_ACTION_FLAGS: Partial<Record<Action, readonly string[]>> = {
+  "add-ai-assistant-messages": [
+    "client-state", "command-id", "message",
+  ],
+  "gather-using-ai": [
+    "parameters", "assistant", "client-state", "command-id", "gather-ended-speech", "greeting",
+    "interruption-settings", "language", "message-history", "send-message-history-updates",
+    "send-partial-results", "transcription", "user-response-timeout-ms", "voice", "voice-settings",
+    "assistant.instructions", "assistant.model", "assistant.openai-api-key-ref", "assistant.tools",
+    "interruption-settings.enable", "message-history.content", "message-history.role",
+    "transcription.language", "transcription.model",
+  ],
+  "gather-using-audio": [
+    "audio-url", "client-state", "command-id", "inter-digit-timeout-millis", "invalid-audio-url",
+    "invalid-media-name", "maximum-digits", "maximum-tries", "media-name", "minimum-digits",
+    "terminating-digit", "timeout-millis", "valid-digits",
+  ],
+  "gather-using-speak": [
+    "payload", "voice", "client-state", "command-id", "inter-digit-timeout-millis", "invalid-payload",
+    "language", "maximum-digits", "maximum-tries", "minimum-digits", "payload-type", "service-level",
+    "terminating-digit", "timeout-millis", "valid-digits", "voice-settings",
+  ],
+  "join-ai-assistant": [
+    "conversation-id", "participant", "client-state", "command-id", "participant.id", "participant.role",
+    "participant.name", "participant.on-hangup",
+  ],
+  "start-ai-assistant": [
+    "assistant", "client-state", "command-id", "greeting", "interruption-settings", "message-history",
+    "participant", "send-message-history-updates", "transcription", "voice", "voice-settings",
+    "assistant.id", "assistant.dynamic-variables", "assistant.external-llm", "assistant.fallback-config",
+    "assistant.greeting", "assistant.instructions", "assistant.llm-api-key-ref", "assistant.mcp-servers",
+    "assistant.model", "assistant.name", "assistant.observability-settings", "assistant.openai-api-key-ref",
+    "assistant.tools", "interruption-settings.enable", "participant.id", "participant.role",
+    "participant.name", "participant.on-hangup", "transcription.language", "transcription.model",
+  ],
+  "stop-ai-assistant": ["client-state", "command-id"],
+  "start-conversation-relay": [
+    "assistant", "client-state", "command-id", "conversation-relay-dtmf-detection",
+    "conversation-relay-settings", "conversation-relay-url", "custom-parameters", "dtmf-detection",
+    "greeting", "interruptible", "interruptible-greeting", "interruption-settings", "language", "provider",
+    "structured-provider", "transcription", "transcription-engine", "transcription-engine-config", "tts-provider",
+    "url", "voice", "voice-settings", "assistant.dynamic-variables", "conversation-relay-settings.url",
+    "conversation-relay-settings.dtmf-detection", "conversation-relay-settings.interruptible",
+    "conversation-relay-settings.interruptible-greeting", "conversation-relay-settings.languages",
+    "interruption-settings.enable", "interruption-settings.interruptible",
+    "interruption-settings.interruptible-greeting", "interruption-settings.welcome-greeting-interruptible",
+    "language.language", "language.speech-model", "language.transcription-engine",
+    "language.transcription-engine-config", "language.transcription-provider", "language.tts-provider",
+    "language.voice", "language.voice-settings",
+  ],
+  "stop-conversation-relay": ["client-state", "command-id"],
+  "switch-supervisor-role": ["role"],
+};
+
+const NEW_ACTION_REQUIRED_FLAGS: Partial<Record<Action, readonly string[]>> = {
+  "gather-using-ai": ["parameters"],
+  "gather-using-speak": ["payload", "voice"],
+  "join-ai-assistant": ["conversation-id", "participant"],
+  "switch-supervisor-role": ["role"],
+};
 
 /** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
 const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
@@ -162,6 +237,13 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     printError(`Invalid --cause: ${cause}. Must be one of: ${REJECT_CAUSES.join(", ")}`);
     process.exit(1);
   }
+  for (const requiredFlag of NEW_ACTION_REQUIRED_FLAGS[act] ?? []) {
+    const value = flags[requiredFlag];
+    if (typeof value !== "string" || value.length === 0) {
+      printError(`--${requiredFlag} is required for ${act}`);
+      process.exit(1);
+    }
+  }
 
   const args = buildActionArgs(act, {
     callControlId,
@@ -186,6 +268,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     forkTx,
     forkStreamType,
     cause,
+    actionFlags: flags,
   });
 
   try {
@@ -245,6 +328,7 @@ function buildActionArgs(
     forkTx?: string;
     forkStreamType?: string;
     cause: string;
+    actionFlags: Record<string, string | boolean>;
   },
 ): string[] {
   switch (action) {
@@ -358,7 +442,35 @@ function buildActionArgs(
         "--call-control-id", opts.callControlId,
         "--client-state", opts.clientState!,
       ];
+    case "add-ai-assistant-messages":
+    case "gather-using-ai":
+    case "gather-using-audio":
+    case "gather-using-speak":
+    case "join-ai-assistant":
+    case "start-ai-assistant":
+    case "stop-ai-assistant":
+    case "start-conversation-relay":
+    case "stop-conversation-relay":
+    case "switch-supervisor-role":
+      return buildGeneratedActionArgs(action, opts.callControlId, opts.actionFlags);
   }
+}
+
+function buildGeneratedActionArgs(
+  action: Action,
+  callControlId: string,
+  flags: Record<string, string | boolean>,
+): string[] {
+  const args = ["calls:actions", action, "--call-control-id", callControlId];
+  for (const flag of NEW_ACTION_FLAGS[action] ?? []) {
+    const value = flags[flag];
+    if (typeof value === "string") {
+      args.push(`--${flag}`, value);
+    } else if (value === true) {
+      args.push(`--${flag}`);
+    }
+  }
+  return args;
 }
 
 function errorMsg(err: unknown): string {
