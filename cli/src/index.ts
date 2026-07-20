@@ -28,6 +28,8 @@ import { faxSendCommand } from "./commands/fax-send.ts";
 import { sendGroupMmsCommand } from "./commands/send-group-mms.ts";
 import { scheduleSmsCommand } from "./commands/schedule-sms.ts";
 import { smsStatusCommand } from "./commands/sms-status.ts";
+import { rcsSendCommand } from "./commands/rcs-send.ts";
+import { rcsCapabilitiesCommand } from "./commands/rcs-capabilities.ts";
 import { callDialCommand } from "./commands/call-dial.ts";
 import { callControlCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
@@ -76,6 +78,8 @@ Commands:
   send-group-mms    Send a group MMS to multiple recipients (--to comma-separated)
   schedule-sms      Schedule an SMS for future delivery (--send-at ISO 8601)
   sms-status        Check SMS delivery status, or cancel a scheduled message (--cancel)
+  rcs-send          Send a text RCS message
+  rcs-capabilities  Check RCS capabilities for a recipient
   call-dial         Make an outbound call via Call Control
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-status       Get the status of a call by call-control-id
@@ -180,6 +184,15 @@ Fax Action Flags:
   --store-preview        Store a fax preview on a temporary URL (fax-send)
   --preview-format <fmt> Preview format: pdf|tiff (fax-send)
   --t38-enabled <bool>   Enable or disable T.38 (fax-send)
+
+RCS Action Flags:
+  --agent-id <id>        RCS agent ID (rcs-send, rcs-capabilities — required)
+  --messaging-profile-id <id> Messaging profile ID (rcs-send — required)
+  --to <e164>            Recipient number, E.164 (rcs-send — required)
+  --phone-number <e164>  Recipient number, E.164 (rcs-capabilities — required)
+  --text <msg>           Text content (rcs-send — required)
+  --ttl <duration>       Message lifetime ending in s, e.g. 300s (rcs-send)
+  --webhook-url <url>    Webhook for message events (rcs-send)
 
 WhatsApp Flags:
   --waba-id <id>    WhatsApp Business Account id (setup-whatsapp, whatsapp-templates)
@@ -348,6 +361,8 @@ Examples:
   telnyx-agent schedule-sms --from +131****0000 --to +131****0001 --text "Later" --send-at 2024-12-31T00:00:00Z
   telnyx-agent sms-status --id 3fa85f64-5717-4562-b3fc-2c963f66afa6
   telnyx-agent sms-status --id 3fa85f64-5717-4562-b3fc-2c963f66afa6 --cancel
+  telnyx-agent rcs-capabilities --agent-id <agent-id> --phone-number +131****0001 --json
+  telnyx-agent rcs-send --agent-id <agent-id> --messaging-profile-id <id> --to +131****0001 --text "Hello from RCS"
   telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234
   telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --answering-machine-detection --json
   telnyx-agent call-control --action hangup --call-control-id <id>
@@ -426,6 +441,8 @@ const COMMANDS: Record<string, (
   "send-group-mms": sendGroupMmsCommand,
   "schedule-sms": scheduleSmsCommand,
   "sms-status": smsStatusCommand,
+  "rcs-send": rcsSendCommand,
+  "rcs-capabilities": rcsCapabilitiesCommand,
   "call-dial": callDialCommand,
   "call-control": callControlCommand,
   "call-status": callStatusCommand,

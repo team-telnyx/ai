@@ -14,6 +14,9 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
     { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile"] },
   ],
+  "💬 RCS": [
+    { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
+  ],
   "📞 Voice": [
     { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection", "number_masking", "from_display_name", "time_limit", "media_encryption", "transcription", "gather", "stop_gather", "start_playback", "stop_playback", "start_transcription", "stop_transcription", "pause_recording", "resume_recording", "start_forking", "stop_forking", "start_siprec", "stop_siprec", "start_streaming", "stop_streaming", "enqueue", "leave_queue", "send_sip_info", "update_client_state", "add_ai_assistant_messages", "gather_using_ai", "gather_using_audio", "gather_using_speak", "join_ai_assistant", "start_ai_assistant", "stop_ai_assistant", "start_conversation_relay", "stop_conversation_relay", "switch_supervisor_role"] },
   ],
@@ -81,6 +84,8 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent send-group-mms", description: "Send a group MMS to multiple recipients (--to comma-separated E.164 numbers)" },
   { name: "telnyx-agent schedule-sms", description: "Schedule an SMS for future delivery at a given ISO 8601 time" },
   { name: "telnyx-agent sms-status", description: "Check SMS delivery status, or cancel a scheduled message with --cancel" },
+  { name: "telnyx-agent rcs-send", description: "Send a text message from an RCS agent" },
+  { name: "telnyx-agent rcs-capabilities", description: "Check the RCS features available for a recipient" },
   { name: "telnyx-agent setup-voice", description: "Zero to voice: creates SIP connection, buys number, assigns it" },
   { name: "telnyx-agent setup-iot", description: "Zero to IoT: lists SIMs, creates group, activates SIM" },
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },

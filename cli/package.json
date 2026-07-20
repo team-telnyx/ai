@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "tsx bin/telnyx-agent.ts",
-    "test": "tsx --test tests/ai.test.ts tests/edge-handoff.test.ts tests/fax.test.ts tests/integration.test.ts tests/numbers.test.ts tests/setup-10dlc.test.ts tests/sms.test.ts tests/stt.test.ts tests/telnyx-cli-flags.test.ts tests/tts.test.ts tests/verify.test.ts tests/voice.test.ts tests/whatsapp.test.ts",
+    "test": "tsx --test tests/ai.test.ts tests/edge-handoff.test.ts tests/fax.test.ts tests/integration.test.ts tests/numbers.test.ts tests/rcs.test.ts tests/setup-10dlc.test.ts tests/sms.test.ts tests/stt.test.ts tests/telnyx-cli-flags.test.ts tests/tts.test.ts tests/verify.test.ts tests/voice.test.ts tests/whatsapp.test.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "tsx scripts/postinstall.ts",
     "build": "npm run typecheck"
