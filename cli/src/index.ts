@@ -250,7 +250,7 @@ Numbers Action Flags:
   --page-number     Result page (list-phone-numbers)
   --page-size       Results per page (list-phone-numbers)
   --sort            Owned-number sort order (list-phone-numbers)
-  --type            local|toll_free|national|mobile (search); carrier|caller-name (lookup)
+  --type            local|toll_free|national|mobile (search); carrier|caller-name (lookup, required)
   --features        Comma-separated features, e.g. sms,voice,mms (search-phone-numbers)
   --limit           Maximum search results (search-phone-numbers)
   --area-code       Area/national destination code (search-phone-numbers)
@@ -345,6 +345,7 @@ Examples:
   telnyx-agent search-phone-numbers --country US --area-code 312 --features sms,voice --limit 5 --json
   telnyx-agent buy-phone-number --phone-number +131****0000 --messaging-profile-id <id> --json
   telnyx-agent lookup-number --phone-number +131****0000 --type carrier --json
+  telnyx-agent lookup-number --phone-number +131****0000 --type caller-name --json
 `;
 
 const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Promise<void>> = {

@@ -67,7 +67,7 @@ if (args[0] === "phone-numbers" && args[1] === "list") {
 }
 
 function runAgent(args: string[], env: NodeJS.ProcessEnv = process.env): string {
-  return execFileSync("npx", ["tsx", cliBin, ...args], {
+  return execFileSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
     cwd: cliRoot,
     encoding: "utf8",
     env,
@@ -215,6 +215,29 @@ describe("Numbers action commands", () => {
     assertFlag(args, "--format", "json");
   });
 
+  it("rejects a lookup without --type before invoking telnyx", () => {
+    const fake = setupFakeTelnyx();
+
+    assert.throws(() => runAgent([
+      "lookup-number",
+      "--phone-number", "+131****0000",
+      "--json",
+    ], fake.env));
+    assert.deepEqual(loggedArgs(fake.logPath), []);
+  });
+
+  it("rejects an unsupported lookup --type before invoking telnyx", () => {
+    const fake = setupFakeTelnyx();
+
+    assert.throws(() => runAgent([
+      "lookup-number",
+      "--phone-number", "+131****0000",
+      "--type", "formatting",
+      "--json",
+    ], fake.env));
+    assert.deepEqual(loggedArgs(fake.logPath), []);
+  });
+
   it("advertises all four commands in help and capabilities", () => {
     const help = runAgent(["help"]);
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"]));
@@ -226,5 +249,8 @@ describe("Numbers action commands", () => {
         `capabilities should advertise ${command}`,
       );
     }
+    assert.match(help, /carrier\|caller-name \(lookup, required\)/);
+    assert.match(help, /lookup-number .* --type carrier --json/);
+    assert.match(help, /lookup-number .* --type caller-name --json/);
   });
 });

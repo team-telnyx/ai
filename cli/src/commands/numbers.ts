@@ -155,12 +155,11 @@ export async function lookupNumberCommand(flags: Flags): Promise<void> {
   const phoneNumber = stringFlag(flags, "phone-number");
   const lookupType = stringFlag(flags, "type");
   if (!phoneNumber) fail("--phone-number is required (E.164 format, e.g., +131****0000)", jsonOutput);
-  if (lookupType && lookupType !== "carrier" && lookupType !== "caller-name") {
-    fail('--type must be "carrier" or "caller-name"', jsonOutput);
+  if (lookupType !== "carrier" && lookupType !== "caller-name") {
+    fail('--type is required and must be "carrier" or "caller-name"', jsonOutput);
   }
 
-  const args = ["number-lookup", "retrieve", "--phone-number", phoneNumber];
-  if (lookupType) args.push("--type", lookupType);
+  const args = ["number-lookup", "retrieve", "--phone-number", phoneNumber, "--type", lookupType];
 
   try {
     const response = await telnyxCli(args);
