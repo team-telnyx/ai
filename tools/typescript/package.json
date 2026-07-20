@@ -1,6 +1,6 @@
 {
   "name": "@telnyx/agent-toolkit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Telnyx Agent Toolkit for TypeScript — tools for OpenAI, Vercel AI SDK, and LangChain.js",
   "type": "module",
   "main": "./dist/index.js",
