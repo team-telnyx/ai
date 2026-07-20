@@ -322,17 +322,20 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 2: Create campaign via CLI
+    // Step 2: Submit campaign via CLI
     const description = (flags.description as string) || "Agent-provisioned campaign for customer communications";
     const step2Start = Date.now();
     try {
       const campaignArgs = [
-        "messaging-10dlc:campaign", "create",
+        "messaging-10dlc:campaign-builder", "submit",
         "--brand-id", brandId,
         "--usecase", usecase,
         "--description", description,
         "--sample1", sample1,
         "--message-flow", messageFlow,
+        "--help-message", helpMsg,
+        "--optout-message", stopMsg,
+        "--optin-message", startMsg,
       ];
       if (sample2) campaignArgs.push("--sample2", sample2);
       const campaignRes = await telnyxCli(campaignArgs);
