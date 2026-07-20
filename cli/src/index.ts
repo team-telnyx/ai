@@ -32,6 +32,12 @@ import { callControlCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
 import { sttCommand } from "./commands/stt.ts";
 import { sttProvidersCommand } from "./commands/stt-providers.ts";
+import {
+  buyPhoneNumberCommand,
+  listPhoneNumbersCommand,
+  lookupNumberCommand,
+  searchPhoneNumbersCommand,
+} from "./commands/numbers.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -71,6 +77,10 @@ Commands:
   call-status       Get the status of a call by call-control-id
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
+  list-phone-numbers List phone numbers owned by the account
+  search-phone-numbers Search available phone numbers to purchase
+  buy-phone-number  Purchase/order one phone number
+  lookup-number     Look up carrier and caller-name information
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -229,6 +239,33 @@ STT-providers Flags:
   --provider        Filter providers by name (optional)
   --service-type    Filter providers by service type (optional)
 
+Numbers Action Flags:
+  --phone-number    Phone number filter, number to buy, or E.164 number to look up
+  --country         ISO alpha-2 country code (list, search; search default: US)
+  --status          Owned-number status filter (list-phone-numbers)
+  --connection-id   Connection filter (list) or connection assignment (buy)
+  --tag             Tag filter (list-phone-numbers)
+  --source          Source filter: ported or purchased (list-phone-numbers)
+  --number-type     Number type equality filter (list-phone-numbers)
+  --page-number     Result page (list-phone-numbers)
+  --page-size       Results per page (list-phone-numbers)
+  --sort            Owned-number sort order (list-phone-numbers)
+  --type            local|toll_free|national|mobile (search); carrier|caller-name (lookup)
+  --features        Comma-separated features, e.g. sms,voice,mms (search-phone-numbers)
+  --limit           Maximum search results (search-phone-numbers)
+  --area-code       Area/national destination code (search-phone-numbers)
+  --national-destination-code Exact alias for --area-code (search-phone-numbers)
+  --locality        City/locality filter (search-phone-numbers)
+  --administrative-area State/province filter (search-phone-numbers)
+  --contains        Number pattern that must occur (search-phone-numbers)
+  --starts-with     Number pattern prefix (search-phone-numbers)
+  --ends-with       Number pattern suffix (search-phone-numbers)
+  --messaging-profile-id Messaging profile assignment (buy-phone-number)
+  --billing-group-id Billing group filter (list) or assignment (buy)
+  --customer-reference Customer reference filter (list) or value (buy)
+  --bundle-id       Bundle for the ordered number (buy-phone-number)
+  --requirement-group-id Requirement group for the ordered number (buy-phone-number)
+
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
 
@@ -304,6 +341,10 @@ Examples:
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
   telnyx-agent stt-providers --json
   telnyx-agent stt-providers --provider telnyx --service-type transcription --json
+  telnyx-agent list-phone-numbers --status active --page-size 50 --json
+  telnyx-agent search-phone-numbers --country US --area-code 312 --features sms,voice --limit 5 --json
+  telnyx-agent buy-phone-number --phone-number +131****0000 --messaging-profile-id <id> --json
+  telnyx-agent lookup-number --phone-number +131****0000 --type carrier --json
 `;
 
 const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Promise<void>> = {
@@ -337,6 +378,10 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
   "call-status": callStatusCommand,
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
+  "list-phone-numbers": listPhoneNumbersCommand,
+  "search-phone-numbers": searchPhoneNumbersCommand,
+  "buy-phone-number": buyPhoneNumberCommand,
+  "lookup-number": lookupNumberCommand,
 };
 
 export async function run(argv: string[]): Promise<void> {

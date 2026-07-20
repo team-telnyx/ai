@@ -104,6 +104,10 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent call-dial", description: "Make an outbound call via Call Control (AMD, deepfake detection, recording optional)" },
   { name: "telnyx-agent call-control", description: "Call Control actions: answer, hangup, transfer, DTMF, recording, noise suppression, speak (TTS), bridge, refer, reject, gather, playback, transcription, forking, siprec, streaming, enqueue, send-sip-info, update-client-state, AI assistant lifecycle/messages/gather/join, Conversation Relay, supervisor roles" },
   { name: "telnyx-agent call-status", description: "Get the status of a call by call-control-id" },
+  { name: "telnyx-agent list-phone-numbers", description: "List account-owned phone numbers with core filters and pagination" },
+  { name: "telnyx-agent search-phone-numbers", description: "Search available phone numbers by country, type, features, location, or number pattern" },
+  { name: "telnyx-agent buy-phone-number", description: "Purchase one phone number and optionally assign its connection or messaging profile" },
+  { name: "telnyx-agent lookup-number", description: "Look up carrier or caller-name information for an E.164 phone number" },
 ];
 
 export async function capabilitiesCommand(flags: Record<string, string | boolean>): Promise<void> {
