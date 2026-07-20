@@ -238,6 +238,22 @@ describe("CLI — Edge Compute handoff", () => {
     assert.ok(data.next_steps.some((step: string) => step.includes("HMAC-sign")));
   });
 
+  it("setup handoffs omit inspect from executable flows when the authenticated CLI does not support it", () => {
+    const fake = withFakeEdgeCli({ auth: "api_key", inspect: false });
+    for (const [command, name] of [
+      ["setup-edge-mcp", "demo-mcp"],
+      ["setup-edge-webhook", "demo-webhook"],
+    ]) {
+      const data = JSON.parse(run([command, "--json", "--name", name], fake.env));
+      assert.equal(data.authenticated, true);
+      assert.equal(data.ready, true);
+      assert.equal(data.inspect_supported, false);
+      assert.ok(data.deploy_command.includes("telnyx-edge ship"));
+      assert.ok(!data.deploy_command.includes("telnyx-edge inspect"));
+      assert.ok(!data.setup_commands.some((step: string) => step.includes("telnyx-edge inspect")));
+    }
+  });
+
   it("setup handoffs conservatively reject unknown auth output", () => {
     const fake = withFakeEdgeCli({ auth: "unknown" });
     for (const command of ["setup-edge-mcp", "setup-edge-webhook"]) {

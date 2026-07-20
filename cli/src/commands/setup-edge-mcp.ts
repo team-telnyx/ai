@@ -63,18 +63,20 @@ export async function setupEdgeMcpCommand(flags: Record<string, string | boolean
     `telnyx-edge secrets add TELNYX_API_KEY "$TELNYX_API_KEY"`,
     `telnyx-edge secrets add SHARED_SECRET "$SHARED_SECRET"`,
     "telnyx-edge ship",
-    `telnyx-edge inspect ${name}`,
   ];
+  if (inspectSupported) {
+    setupCommands.push(`telnyx-edge inspect ${name}`);
+  }
   const deployCommand = setupCommands.join(" && ");
 
   const notes = [
     "The source path is inside a team-telnyx/edge-compute checkout; this flow clones that repository before using --from-dir.",
     "SHARED_SECRET is required inbound bearer authentication. Never expose this MCP endpoint without it.",
     "Keep TELNYX_API_KEY and SHARED_SECRET in environment variables or a secret manager; do not paste their values into source or logs.",
-    "The flow installs dependencies, builds TypeScript, adds both runtime secrets, ships, and inspects the deployed function.",
+    `The flow installs dependencies, builds TypeScript, adds both runtime secrets, and ships the function${inspectSupported ? ", then inspects the deployment" : ""}.`,
   ];
   if (!inspectSupported && hasEdge) {
-    notes.push("This installed CLI did not expose inspect --help; upgrade telnyx-edge before running the final inspect step.");
+    notes.push("This installed CLI did not expose inspect --help; upgrade telnyx-edge to inspect the function after deployment.");
   }
   if (statefulActorsSupported) {
     notes.push("For per-user state, actor scaffolding is available via telnyx-edge new-func --actor --language ts.");
@@ -90,7 +92,7 @@ export async function setupEdgeMcpCommand(flags: Record<string, string | boolean
       : [
           "Export TELNYX_API_KEY and a high-entropy SHARED_SECRET (for example, openssl rand -hex 32).",
           "Run deploy_command from the directory where you want the function project created.",
-          "Configure the MCP client to send Authorization: Bearer <SHARED_SECRET> to the inspected invoke URL.",
+          `Configure the MCP client to send Authorization: Bearer <SHARED_SECRET> to the ${inspectSupported ? "inspected" : "deployed function's"} invoke URL.`,
         ];
 
   const result: SetupEdgeMcpResult = {

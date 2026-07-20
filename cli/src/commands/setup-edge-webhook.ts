@@ -59,8 +59,10 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
     `cd ${name}`,
     `telnyx-edge secrets add WEBHOOK_SECRET "$WEBHOOK_SECRET"`,
     "telnyx-edge ship",
-    `telnyx-edge inspect ${name}`,
   ];
+  if (inspectSupported) {
+    setupCommands.push(`telnyx-edge inspect ${name}`);
+  }
   const deployCommand = setupCommands.join(" && ");
 
   const notes = [
@@ -70,7 +72,7 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
     "Sign the exact request bytes and send x-webhook-signature as sha256=<hex digest>; reject requests whose HMAC does not verify.",
   ];
   if (!inspectSupported && hasEdge) {
-    notes.push("This installed CLI did not expose inspect --help; upgrade telnyx-edge before running the final inspect step.");
+    notes.push("This installed CLI did not expose inspect --help; upgrade telnyx-edge to inspect the function after deployment.");
   }
   if (statefulActorsSupported) {
     notes.push("For per-entity webhook state, actor scaffolding is available via telnyx-edge new-func --actor --language ts.");
