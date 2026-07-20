@@ -72,6 +72,29 @@ describe("guide ↔ agent.json parity", () => {
   });
 });
 
+describe("Verify discovery parity", () => {
+  const verifyCapability = agentJson.capabilities.find((c: any) => c.id === "verify");
+  const verifyGuide = readFileSync(join(GUIDES_DIR, "phone-verification.md"), "utf-8");
+
+  it("advertises WhatsApp with the current endpoint and generated CLI command", () => {
+    assert.ok(verifyCapability, 'agent.json missing the "verify" capability');
+    assert.match(verifyCapability.description, /SMS.*voice call.*flash call.*WhatsApp/i);
+    assert.equal(verifyCapability.api, "POST /v2/verifications/whatsapp");
+    assert.equal(
+      verifyCapability.cli,
+      "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp"
+    );
+
+    assert.match(verifyGuide, /SMS.*voice call.*flash call.*WhatsApp/i);
+    assert.match(verifyGuide, /### Send WhatsApp Verification/);
+    assert.match(verifyGuide, /POST \/v2\/verifications\/whatsapp/);
+    assert.ok(
+      verifyGuide.includes(verifyCapability.cli),
+      "phone verification guide must include the canonical Verify CLI example"
+    );
+  });
+});
+
 describe("guide content requirements", () => {
   for (const file of guideFiles) {
     const filepath = join(GUIDES_DIR, file);

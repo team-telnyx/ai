@@ -67,10 +67,10 @@
     {
       "id": "verify",
       "name": "Phone Verification (2FA)",
-      "description": "Send and verify codes via SMS, voice call, or flash call.",
+      "description": "Send and verify codes via SMS, voice call, flash call, or WhatsApp.",
       "guide": "/guides/phone-verification.md",
-      "cli": "telnyx verify send --phone-number +15551234567",
-      "api": "POST /v2/verifications",
+      "cli": "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp",
+      "api": "POST /v2/verifications/whatsapp",
       "docs": "https://developers.telnyx.com/docs/verify",
       "requires": ["verify_profile"]
     },
