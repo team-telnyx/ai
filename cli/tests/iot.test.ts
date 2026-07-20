@@ -46,7 +46,9 @@ if (args[0] === "sim-cards" && args[1] === "list") {
     id: "action-" + args[1],
     sim_card_id: flag("--id"),
     action_type: args[1],
-    status: "in-progress"
+    status: process.env.TELNYX_FAKE_STRING_STATUS === "true"
+      ? "in-progress"
+      : { value: "in-progress" }
   } }));
 } else {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
@@ -153,7 +155,7 @@ describe("IoT SIM action commands", () => {
   });
 
   for (const action of ["enable", "disable"] as const) {
-    it(`${action}s a SIM card through sim-cards:actions`, () => {
+    it(`${action}s a SIM card and normalizes the documented status object`, () => {
       const fake = setupFakeTelnyx();
       const output = runAgent([`${action}-sim-card`, "--id", "sim-1", "--json"], fake.env);
 
@@ -169,7 +171,23 @@ describe("IoT SIM action commands", () => {
       assertFlag(args, "--id", "sim-1");
       assertFlag(args, "--format", "json");
     });
+
+    it(`prints the normalized ${action} status in human output`, () => {
+      const fake = setupFakeTelnyx();
+      const output = runAgent([`${action}-sim-card`, "--id", "sim-1"], fake.env);
+
+      assert.match(output, /Status\s+in-progress/);
+      assert.doesNotMatch(output, /\[object Object\]/);
+    });
   }
+
+  it("preserves compatibility with string action statuses", () => {
+    const fake = setupFakeTelnyx();
+    fake.env.TELNYX_FAKE_STRING_STATUS = "true";
+    const output = runAgent(["enable-sim-card", "--id", "sim-1", "--json"], fake.env);
+
+    assert.equal(JSON.parse(output).status, "in-progress");
+  });
 
   it("advertises all direct SIM commands in help and capabilities", () => {
     const help = runAgent(["help"]);

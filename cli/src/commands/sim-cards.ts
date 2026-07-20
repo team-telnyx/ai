@@ -103,7 +103,7 @@ async function runSimAction(action: SimAction, flags: Flags): Promise<void> {
       action_id: stringValue(data.id),
       sim_card_id: stringValue(data.sim_card_id) || simCardId,
       action,
-      status: stringValue(data.status) || "pending",
+      status: simStatus(data) || "pending",
     };
 
     if (jsonOutput) {
