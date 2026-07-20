@@ -43,6 +43,12 @@ import {
 } from "./commands/numbers.ts";
 import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
+import {
+  disableSimCardCommand,
+  enableSimCardCommand,
+  listSimCardsCommand,
+  retrieveSimCardCommand,
+} from "./commands/sim-cards.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -55,6 +61,10 @@ Commands:
   setup-sms         Zero to SMS: create profile, buy number, assign it
   setup-voice       Zero to voice: create connection, buy number, assign it
   setup-iot         Zero to IoT: list SIMs, create group, activate SIM
+  list-sim-cards    List IoT SIM cards with filters and pagination
+  retrieve-sim-card Retrieve one IoT SIM card by ID
+  enable-sim-card   Enable an IoT SIM card (asynchronous action)
+  disable-sim-card  Disable an IoT SIM card (asynchronous action)
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
   setup-verify      Zero to verification: create profile, buy number
@@ -322,6 +332,18 @@ AI Embed Flags:
   --encoding-format Embedding encoding format (Go CLI default: float)
   --user            End-user identifier for monitoring and abuse detection
 
+IoT SIM Action Flags:
+  --id <sim-card-id> SIM card ID (retrieve-sim-card, enable-sim-card, disable-sim-card — required)
+  --iccid           Partial ICCID filter (list-sim-cards)
+  --msisdn          MSISDN filter (list-sim-cards)
+  --status          Comma-separated SIM statuses (list-sim-cards)
+  --tags            Comma-separated tags that all matching SIMs must have (list-sim-cards)
+  --sim-card-group-id SIM card group filter (list-sim-cards)
+  --include-sim-card-group Include the associated SIM card group (list, retrieve)
+  --page-number     Result page (list-sim-cards)
+  --page-size       Results per page (list-sim-cards)
+  --sort            Sort field; prefix with - for descending (list-sim-cards)
+
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
 
@@ -409,6 +431,10 @@ Examples:
   telnyx-agent ai-chat --message '{"role":"user","content":"Return JSON"}' --response-format '{"type":"json_object"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
+  telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
+  telnyx-agent retrieve-sim-card --id <sim-card-id> --json
+  telnyx-agent enable-sim-card --id <sim-card-id> --json
+  telnyx-agent disable-sim-card --id <sim-card-id> --json
 `;
 
 const COMMANDS: Record<string, (
@@ -454,6 +480,10 @@ const COMMANDS: Record<string, (
   "lookup-number": lookupNumberCommand,
   "ai-chat": aiChatCommand,
   "ai-embed": aiEmbedCommand,
+  "list-sim-cards": listSimCardsCommand,
+  "retrieve-sim-card": retrieveSimCardCommand,
+  "enable-sim-card": enableSimCardCommand,
+  "disable-sim-card": disableSimCardCommand,
 };
 
 export async function run(argv: string[]): Promise<void> {
