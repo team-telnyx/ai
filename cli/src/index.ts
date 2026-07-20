@@ -39,6 +39,8 @@ import {
   lookupNumberCommand,
   searchPhoneNumbersCommand,
 } from "./commands/numbers.ts";
+import { aiChatCommand } from "./commands/ai-chat.ts";
+import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -83,6 +85,8 @@ Commands:
   search-phone-numbers Search available phone numbers to purchase
   buy-phone-number  Purchase/order one phone number
   lookup-number     Look up carrier and caller-name information
+  ai-chat           Create an OpenAI-compatible chat completion
+  ai-embed          Create OpenAI-compatible text embeddings
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -285,6 +289,27 @@ Numbers Action Flags:
   --bundle-id       Bundle for the ordered number (buy-phone-number)
   --requirement-group-id Requirement group for the ordered number (buy-phone-number)
 
+AI Chat Flags:
+  --message <json>  Chat message JSON object (required; role: system|user|assistant|tool)
+  --model           Language model ID (optional; Go CLI default is Meta-Llama-3.1-8B-Instruct)
+  --max-tokens      Maximum completion tokens
+  --temperature     Sampling temperature
+  --top-p           Nucleus sampling probability
+  --stop <json>     Stop string or JSON array, passed through to the Go CLI
+  --response-format <json> OpenAI response-format object, passed through as JSON
+  --guided-choice   Constrain output to one exact choice
+  --guided-json <json> JSON schema for constrained output
+  --tool <json>     OpenAI-compatible tool object
+  --tool-choice     Tool selection: none, auto, or required
+  --stream          Request a streaming completion
+
+AI Embed Flags:
+  --input <value>   Text or JSON array of strings to embed (required)
+  --model <id>      Embedding model ID (required)
+  --dimensions      Requested embedding dimensions (model support varies)
+  --encoding-format Embedding encoding format (Go CLI default: float)
+  --user            End-user identifier for monitoring and abuse detection
+
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
 
@@ -366,6 +391,10 @@ Examples:
   telnyx-agent buy-phone-number --phone-number +131****0000 --messaging-profile-id <id> --json
   telnyx-agent lookup-number --phone-number +131****0000 --type carrier --json
   telnyx-agent lookup-number --phone-number +131****0000 --type caller-name --json
+  telnyx-agent ai-chat --message '{"role":"user","content":"Hello"}' --json
+  telnyx-agent ai-chat --message '{"role":"user","content":"Return JSON"}' --response-format '{"type":"json_object"}' --json
+  telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
+  telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
 `;
 
 const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Promise<void>> = {
@@ -404,6 +433,8 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
   "search-phone-numbers": searchPhoneNumbersCommand,
   "buy-phone-number": buyPhoneNumberCommand,
   "lookup-number": lookupNumberCommand,
+  "ai-chat": aiChatCommand,
+  "ai-embed": aiEmbedCommand,
 };
 
 export async function run(argv: string[]): Promise<void> {

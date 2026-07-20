@@ -21,8 +21,8 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
   ],
   "🤖 AI": [
-    { name: "Chat Completions", description: "LLM inference via Telnyx AI", actions: ["ai_chat"] },
-    { name: "Embeddings", description: "Generate text embeddings", actions: ["ai_embed"] },
+    { name: "Chat Completions", description: "LLM inference via Telnyx AI (executable with telnyx-agent ai-chat)", actions: ["ai_chat"] },
+    { name: "Embeddings", description: "Generate text embeddings (executable with telnyx-agent ai-embed)", actions: ["ai_embed"] },
     { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant"] },
   ],
   "🔊 Text-to-Speech": [
@@ -84,6 +84,8 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-voice", description: "Zero to voice: creates SIP connection, buys number, assigns it" },
   { name: "telnyx-agent setup-iot", description: "Zero to IoT: lists SIMs, creates group, activates SIM" },
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },
+  { name: "telnyx-agent ai-chat", description: "Create an OpenAI-compatible chat completion via Telnyx AI inference" },
+  { name: "telnyx-agent ai-embed", description: "Create OpenAI-compatible embeddings for text or a JSON array of texts" },
   { name: "telnyx-agent setup-wireguard", description: "Zero to VPN: creates network, WireGuard interface, peer — outputs ready-to-use WG config" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },
