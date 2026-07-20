@@ -48,6 +48,10 @@ telnyx-agent edge-doctor --json
 
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
 
+## Quick Start
+
+Use one of the repository-aware handoff commands below for a complete clone, build, secrets, deploy, and inspect sequence. The expanded manual flows show exactly what each helper emits.
+
 ## Secure MCP server handoff
 
 The TypeScript MCP example requires two distinct secrets:
@@ -151,7 +155,7 @@ curl -X POST "https://<your-edge-endpoint>/" \
 
 Do not put `WEBHOOK_SECRET` in the request body or an Authorization header unless your own handler explicitly defines that separate protocol. Its purpose in this example is HMAC verification.
 
-## CLI lifecycle reference
+## API Reference
 
 ### Create, deploy, inspect, and recover
 
@@ -310,6 +314,22 @@ console.log(await response.json());
 ```
 
 If the function does not implement authentication, an Authorization header does not make it secure. Add and verify bearer-token or signature logic in the function, and use HTTPS.
+
+Python equivalent:
+
+```python
+import os
+import requests
+
+response = requests.post(
+    "https://<your-edge-endpoint>/",
+    headers={"Authorization": f"Bearer {os.environ['EDGE_ENDPOINT_TOKEN']}"},
+    json={"task": "redact_pii", "payload": {"text": "Call me at +1 555 123 4567"}},
+    timeout=30,
+)
+response.raise_for_status()
+print(response.json())
+```
 
 ## Practical end-to-end test
 
