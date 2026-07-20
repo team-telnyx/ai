@@ -134,12 +134,8 @@ describe("fax-send command", () => {
         "--client-state", "c3RhdGU=",
         "--from-display-name", "Example Fax",
         "--quality", "ultra_dark",
-        "--monochrome",
         "--black-threshold", "90",
-        "--store-media",
-        "--store-preview",
         "--preview-format", "pdf",
-        "--t38-enabled", "false",
         "--json",
       ],
       fake.env,
@@ -155,12 +151,72 @@ describe("fax-send command", () => {
       "--client-state", "c3RhdGU=",
       "--from-display-name", "Example Fax",
       "--quality", "ultra_dark",
-      "--monochrome",
       "--black-threshold", "90",
+      "--preview-format", "pdf",
+      "--format", "json",
+    ]);
+  });
+
+  it("forwards explicit false values for every fax boolean in equals form", () => {
+    const fake = setupFakeTelnyx();
+    runCli(
+      [
+        "fax-send",
+        "--connection-id", "conn-123",
+        "--from", "+131****0000",
+        "--to", "+131****0001",
+        "--media-url", "https://example.com/document.pdf",
+        "--monochrome", "false",
+        "--store-media", "false",
+        "--store-preview", "false",
+        "--t38-enabled", "false",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    assert.deepEqual(readLoggedArgs(fake.logPath)[0], [
+      "faxes", "create",
+      "--connection-id", "conn-123",
+      "--from", "+131****0000",
+      "--to", "+131****0001",
+      "--media-url", "https://example.com/document.pdf",
+      "--monochrome=false",
+      "--store-media=false",
+      "--store-preview=false",
+      "--t38-enabled=false",
+      "--format", "json",
+    ]);
+  });
+
+  it("preserves bare true fax booleans", () => {
+    const fake = setupFakeTelnyx();
+    runCli(
+      [
+        "fax-send",
+        "--connection-id", "conn-123",
+        "--from", "+131****0000",
+        "--to", "+131****0001",
+        "--media-url", "https://example.com/document.pdf",
+        "--monochrome",
+        "--store-media",
+        "--store-preview",
+        "--t38-enabled",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    assert.deepEqual(readLoggedArgs(fake.logPath)[0], [
+      "faxes", "create",
+      "--connection-id", "conn-123",
+      "--from", "+131****0000",
+      "--to", "+131****0001",
+      "--media-url", "https://example.com/document.pdf",
+      "--monochrome",
       "--store-media",
       "--store-preview",
-      "--preview-format", "pdf",
-      "--t38-enabled", "false",
+      "--t38-enabled",
       "--format", "json",
     ]);
   });
@@ -198,6 +254,24 @@ describe("fax-send command", () => {
       ],
       fake.env,
       /--media-url and --media-name cannot be used together/,
+    );
+    assert.deepEqual(readLoggedArgs(fake.logPath), []);
+  });
+
+  it("rejects media-name and store-media together before invoking telnyx", () => {
+    const fake = setupFakeTelnyx();
+    expectFailure(
+      [
+        "fax-send",
+        "--connection-id", "conn-123",
+        "--from", "+131****0000",
+        "--to", "+131****0001",
+        "--media-name", "uploaded-document.pdf",
+        "--store-media",
+        "--json",
+      ],
+      fake.env,
+      /--media-name and --store-media cannot be used together/,
     );
     assert.deepEqual(readLoggedArgs(fake.logPath), []);
   });

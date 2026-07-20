@@ -30,6 +30,13 @@ const OPTIONAL_FLAGS = [
   "t38-enabled",
 ] as const;
 
+const BOOLEAN_FLAGS = new Set([
+  "monochrome",
+  "store-media",
+  "store-preview",
+  "t38-enabled",
+]);
+
 export async function faxSendCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
   const connectionId = flags["connection-id"] as string | undefined;
@@ -52,6 +59,10 @@ export async function faxSendCommand(flags: Record<string, string | boolean>): P
     printError("--media-url and --media-name cannot be used together");
     process.exit(1);
   }
+  if (flags["media-name"] && flags["store-media"]) {
+    printError("--media-name and --store-media cannot be used together");
+    process.exit(1);
+  }
 
   const args: string[] = [
     "faxes", "create",
@@ -63,7 +74,11 @@ export async function faxSendCommand(flags: Record<string, string | boolean>): P
   for (const flag of OPTIONAL_FLAGS) {
     const value = flags[flag];
     if (typeof value === "string") {
-      args.push(`--${flag}`, value);
+      if (BOOLEAN_FLAGS.has(flag)) {
+        args.push(`--${flag}=${value}`);
+      } else {
+        args.push(`--${flag}`, value);
+      }
     } else if (value === true) {
       args.push(`--${flag}`);
     }
