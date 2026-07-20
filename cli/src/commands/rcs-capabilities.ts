@@ -12,7 +12,9 @@ interface RcsCapabilitiesResult {
   agent_id: string;
   agent_name: string;
   phone_number: string;
-  features: string[];
+  features: string[] | null;
+  status: string;
+  rcs_enabled: boolean;
 }
 
 export async function rcsCapabilitiesCommand(flags: Record<string, string | boolean>): Promise<void> {
@@ -38,11 +40,14 @@ export async function rcsCapabilitiesCommand(flags: Record<string, string | bool
       "--phone-number", phoneNumber,
     ]);
     const data = (response?.data ?? response) as Record<string, unknown>;
+    const features = Array.isArray(data.features) ? data.features.map(String) : null;
     const result: RcsCapabilitiesResult = {
       agent_id: String(data.agent_id ?? agentId),
       agent_name: String(data.agent_name ?? ""),
       phone_number: String(data.phone_number ?? phoneNumber),
-      features: Array.isArray(data.features) ? data.features.map(String) : [],
+      features,
+      status: String(data.status ?? ""),
+      rcs_enabled: features !== null,
     };
 
     if (jsonOutput) {
@@ -52,7 +57,11 @@ export async function rcsCapabilitiesCommand(flags: Record<string, string | bool
         "Agent ID": result.agent_id,
         "Agent name": result.agent_name || "—",
         "Phone number": result.phone_number,
-        Features: result.features.length > 0 ? result.features.join(", ") : "None reported",
+        Status: result.status || "Unknown",
+        "RCS enabled": result.rcs_enabled ? "Yes" : "No",
+        Features: result.features === null
+          ? "Unavailable"
+          : result.features.length > 0 ? result.features.join(", ") : "None reported",
       });
     }
   } catch (err) {

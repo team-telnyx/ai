@@ -26,6 +26,16 @@
       "requires": ["messaging_profile", "phone_number", "10dlc_registration"]
     },
     {
+      "id": "rcs",
+      "name": "RCS Messaging",
+      "description": "Send rich business messages and check recipient RCS capabilities before choosing content or fallback behavior.",
+      "guide": "/guides/rcs-messaging.md",
+      "cli": "telnyx-agent rcs-send --agent-id AGENT_ID --messaging-profile-id PROFILE_ID --to +15559876543 --text 'Hello from RCS'",
+      "api": "POST /v2/messages/rcs",
+      "docs": "https://developers.telnyx.com/docs/messaging/messages/rcs-capabilities",
+      "requires": ["rcs_agent", "messaging_profile"]
+    },
+    {
       "id": "voice",
       "name": "Voice & Call Control",
       "description": "Programmable voice calls with real-time call control, conferencing, IVR, recording.",

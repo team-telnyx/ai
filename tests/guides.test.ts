@@ -40,6 +40,21 @@ describe("agent.json validity", () => {
       );
     }
   });
+
+  it("keeps canonical RCS discovery synchronized", () => {
+    const rcs = agentJson.capabilities.find((capability: any) => capability.id === "rcs");
+    assert.ok(rcs, "agent.json missing RCS capability");
+    assert.equal(rcs.guide, "/guides/rcs-messaging.md");
+    assert.equal(rcs.api, "POST /v2/messages/rcs");
+    assert.match(rcs.cli, /telnyx-agent rcs-send/);
+
+    const guide = readFileSync(join(GUIDES_DIR, "rcs-messaging.md"), "utf-8");
+    assert.match(guide, /POST \/v2\/messages\/rcs/);
+    assert.match(guide, /GET \/v2\/messaging\/rcs\/capabilities\/\{agent_id\}\/\{phone_number\}/);
+    assert.match(guide, /telnyx-agent rcs-send/);
+    assert.match(guide, /telnyx-agent rcs-capabilities/);
+    assert.match(guide, /skills\/telnyx-messaging-hosted-curl\/SKILL\.md/);
+  });
 });
 
 describe("guide ↔ agent.json parity", () => {

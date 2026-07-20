@@ -41,12 +41,13 @@ if (args[0] === "messages:rcs" && args[1] === "send") {
     to: [{ phone_number: flag("--to"), status: "queued" }]
   } }));
 } else if (args[0] === "messaging:rcs" && args[1] === "retrieve-capabilities") {
-  console.log(JSON.stringify({ data: {
+  console.log(process.env.TELNYX_FAKE_RCS_CAPABILITIES || JSON.stringify({ data: {
     agent_id: flag("--agent-id"),
     agent_name: "Example Agent",
     phone_number: flag("--phone-number"),
     record_type: "rcs.capabilities",
-    features: ["RICHCARD_STANDALONE", "ACTION_OPEN_URL"]
+    features: ["RICHCARD_STANDALONE", "ACTION_OPEN_URL"],
+    status: "Success"
   } }));
 } else {
   console.log(JSON.stringify({ data: {} }));
@@ -67,7 +68,7 @@ if (args[0] === "messages:rcs" && args[1] === "send") {
 }
 
 function runAgent(args: string[], env: NodeJS.ProcessEnv): string {
-  return execFileSync("npx", ["tsx", cliBin, ...args], {
+  return execFileSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
     cwd: cliRoot,
     encoding: "utf8",
     env,
@@ -83,7 +84,7 @@ function loggedArgs(logPath: string): string[][] {
 }
 
 function expectFailure(args: string[], env: NodeJS.ProcessEnv, expected: RegExp): void {
-  const result = spawnSync("npx", ["tsx", cliBin, ...args], {
+  const result = spawnSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
     cwd: cliRoot,
     encoding: "utf8",
     env,
@@ -164,6 +165,8 @@ describe("RCS action commands", () => {
       agent_name: "Example Agent",
       phone_number: "+131****0001",
       features: ["RICHCARD_STANDALONE", "ACTION_OPEN_URL"],
+      status: "Success",
+      rcs_enabled: true,
     });
     assert.deepEqual(loggedArgs(fake.logPath), [[
       "messaging:rcs", "retrieve-capabilities",
@@ -171,6 +174,66 @@ describe("RCS action commands", () => {
       "--phone-number", "+131****0001",
       "--format", "json",
     ]]);
+  });
+
+  it("rcs-capabilities preserves disabled status and null features in JSON", () => {
+    const fake = setupFakeTelnyx();
+    fake.env.TELNYX_FAKE_RCS_CAPABILITIES = JSON.stringify({ data: {
+      features: null,
+      status: "RCS is disabled or agent is not provisioned for the carrier",
+    } });
+
+    const output = runAgent([
+      "rcs-capabilities",
+      "--agent-id", "agent-123",
+      "--phone-number", "+131****0001",
+      "--json",
+    ], fake.env);
+
+    assert.deepEqual(JSON.parse(output), {
+      agent_id: "agent-123",
+      agent_name: "",
+      phone_number: "+131****0001",
+      features: null,
+      status: "RCS is disabled or agent is not provisioned for the carrier",
+      rcs_enabled: false,
+    });
+  });
+
+  it("rcs-capabilities distinguishes an empty supported feature set in human output", () => {
+    const fake = setupFakeTelnyx();
+    fake.env.TELNYX_FAKE_RCS_CAPABILITIES = JSON.stringify({ data: {
+      features: [],
+      status: "Success",
+    } });
+
+    const output = runAgent([
+      "rcs-capabilities",
+      "--agent-id", "agent-123",
+      "--phone-number", "+131****0001",
+    ], fake.env);
+
+    assert.match(output, /Status\s+Success/);
+    assert.match(output, /RCS enabled\s+Yes/);
+    assert.match(output, /Features\s+None reported/);
+  });
+
+  it("rcs-capabilities shows disabled status in human output for non-array features", () => {
+    const fake = setupFakeTelnyx();
+    fake.env.TELNYX_FAKE_RCS_CAPABILITIES = JSON.stringify({ data: {
+      features: "unavailable",
+      status: "RCS is disabled or agent is not provisioned for the carrier",
+    } });
+
+    const output = runAgent([
+      "rcs-capabilities",
+      "--agent-id", "agent-123",
+      "--phone-number", "+131****0001",
+    ], fake.env);
+
+    assert.match(output, /Status\s+RCS is disabled or agent is not provisioned for the carrier/);
+    assert.match(output, /RCS enabled\s+No/);
+    assert.match(output, /Features\s+Unavailable/);
   });
 
   it("validates required RCS flags before invoking the Go CLI", () => {
