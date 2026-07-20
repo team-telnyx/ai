@@ -18,7 +18,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -96,9 +96,9 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `from` | string (E.164) | Yes | Sending address (+E.164 formatted phone number, alphanumeric... |
 | `text` | string | Yes | Message body (i.e., content) as a non-empty string. |
-| `messagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -130,10 +130,10 @@ Common sender variant that requires different request shape.
 | `from` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `text` | string | Yes | The message body. |
-| `messagingProfileId` | string (UUID) | Yes | The messaging profile ID to use. |
-| `webhookUrl` | string (URL) | No | Callback URL for delivery status updates. |
-| `webhookFailoverUrl` | string (URL) | No | Failover callback URL for delivery status updates. |
-| `useProfileWebhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| `messaging_profile_id` | string (UUID) | Yes | The messaging profile ID to use. |
+| `webhook_url` | string (URL) | No | Callback URL for delivery status updates. |
+| `webhook_failover_url` | string (URL) | No | Failover callback URL for delivery status updates. |
+| `use_profile_webhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
 
 ```javascript
 const response = await client.messages.sendWithAlphanumericSender({
@@ -226,9 +226,9 @@ Send one MMS payload to multiple recipients.
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
 | `to` | array[object] | Yes | A list of destinations. |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
 | ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -259,9 +259,9 @@ Force a long-code sending path instead of the generic send endpoint.
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -289,11 +289,11 @@ Let a messaging profile or number pool choose the sender for you.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `messagingProfileId` | string (UUID) | Yes | Unique identifier for a messaging profile. |
+| `messaging_profile_id` | string (UUID) | Yes | Unique identifier for a messaging profile. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -324,9 +324,9 @@ Force a short-code sending path when the sender must be a short code.
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
 | ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -355,9 +355,9 @@ Queue a message for future delivery instead of sending immediately.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
-| `messagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
-| `mediaUrls` | array[string] | No | A list of media URLs. |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
+| `media_urls` | array[string] | No | A list of media URLs. |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -365,7 +365,7 @@ const response = await client.messages.schedule({
     to: '+18445550001',
     from: '+18005550101',
     text: 'Appointment reminder',
-    sendAt: '2025-07-01T15:00:00Z',
+    send_at: '2025-07-01T15:00:00Z',
 });
 
 console.log(response.data);
@@ -389,10 +389,10 @@ Send WhatsApp traffic instead of SMS/MMS.
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
 | `to` | string (E.164) | Yes | Phone number in +E.164 format |
-| `whatsappMessage` | object | Yes |  |
+| `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
-| `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| `messagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
 
 ```javascript
 const response = await client.messages.sendWhatsapp({
@@ -424,10 +424,10 @@ Before using any operation below, read [the optional-parameters section](referen
 | Retrieve a message | `client.messages.retrieve()` | `GET /messages/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Cancel a scheduled message | `client.messages.cancelScheduled()` | `DELETE /messages/{id}` | Remove, detach, or clean up an existing resource. | `id` |
 | List alphanumeric sender IDs | `client.alphanumericSenderIDs.list()` | `GET /alphanumeric_sender_ids` | Inspect available resources or choose an existing resource before mutating it. | None |
-| Create an alphanumeric sender ID | `client.alphanumericSenderIDs.create()` | `POST /alphanumeric_sender_ids` | Create or provision an additional resource when the core tasks do not cover this flow. | `alphanumericSenderId`, `messagingProfileId` |
+| Create an alphanumeric sender ID | `client.alphanumericSenderIDs.create()` | `POST /alphanumeric_sender_ids` | Create or provision an additional resource when the core tasks do not cover this flow. | `alphanumeric_sender_id`, `messaging_profile_id` |
 | Retrieve an alphanumeric sender ID | `client.alphanumericSenderIDs.retrieve()` | `GET /alphanumeric_sender_ids/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Delete an alphanumeric sender ID | `client.alphanumericSenderIDs.delete()` | `DELETE /alphanumeric_sender_ids/{id}` | Remove, detach, or clean up an existing resource. | `id` |
-| Retrieve group MMS messages | `client.messages.retrieveGroupMessages()` | `GET /messages/group/{message_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `messageId` |
+| Retrieve group MMS messages | `client.messages.retrieveGroupMessages()` | `GET /messages/group/{message_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `message_id` |
 | List messaging hosted numbers | `client.messagingHostedNumbers.list()` | `GET /messaging_hosted_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Retrieve a messaging hosted number | `client.messagingHostedNumbers.retrieve()` | `GET /messaging_hosted_numbers/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Update a messaging hosted number | `client.messagingHostedNumbers.update()` | `PATCH /messaging_hosted_numbers/{id}` | Modify an existing resource without recreating it. | `id` |
@@ -436,11 +436,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Regenerate messaging profile secret | `client.messagingProfiles.actions.regenerateSecret()` | `POST /messaging_profiles/{id}/actions/regenerate_secret` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `id` |
 | List alphanumeric sender IDs for a messaging profile | `client.messagingProfiles.listAlphanumericSenderIDs()` | `GET /messaging_profiles/{id}/alphanumeric_sender_ids` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Get detailed messaging profile metrics | `client.messagingProfiles.retrieveMetrics()` | `GET /messaging_profiles/{id}/metrics` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
-| List Auto-Response Settings | `client.messagingProfiles.autorespConfigs.list()` | `GET /messaging_profiles/{profile_id}/autoresp_configs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `profileId` |
-| Create auto-response setting | `client.messagingProfiles.autorespConfigs.create()` | `POST /messaging_profiles/{profile_id}/autoresp_configs` | Create or provision an additional resource when the core tasks do not cover this flow. | `op`, `keywords`, `countryCode`, `profileId` |
-| Get Auto-Response Setting | `client.messagingProfiles.autorespConfigs.retrieve()` | `GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `profileId`, `autorespCfgId` |
-| Update Auto-Response Setting | `client.messagingProfiles.autorespConfigs.update()` | `PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Modify an existing resource without recreating it. | `op`, `keywords`, `countryCode`, `profileId`, +1 more |
-| Delete Auto-Response Setting | `client.messagingProfiles.autorespConfigs.delete()` | `DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Remove, detach, or clean up an existing resource. | `profileId`, `autorespCfgId` |
+| List Auto-Response Settings | `client.messagingProfiles.autorespConfigs.list()` | `GET /messaging_profiles/{profile_id}/autoresp_configs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `profile_id` |
+| Create auto-response setting | `client.messagingProfiles.autorespConfigs.create()` | `POST /messaging_profiles/{profile_id}/autoresp_configs` | Create or provision an additional resource when the core tasks do not cover this flow. | `op`, `keywords`, `country_code`, `profile_id` |
+| Get Auto-Response Setting | `client.messagingProfiles.autorespConfigs.retrieve()` | `GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `profile_id`, `autoresp_cfg_id` |
+| Update Auto-Response Setting | `client.messagingProfiles.autorespConfigs.update()` | `PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Modify an existing resource without recreating it. | `op`, `keywords`, `country_code`, `profile_id`, +1 more |
+| Delete Auto-Response Setting | `client.messagingProfiles.autorespConfigs.delete()` | `DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}` | Remove, detach, or clean up an existing resource. | `profile_id`, `autoresp_cfg_id` |
 
 ### Other Webhook Events
 

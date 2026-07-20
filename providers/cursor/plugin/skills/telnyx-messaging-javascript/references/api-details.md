@@ -199,32 +199,32 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `usLongCodeFallback` | string | A US long code number to use as fallback when sending to US destinations. |
+| `us_long_code_fallback` | string | A US long code number to use as fallback when sending to US destinations. |
 
 ### Send a message — `client.messages.send()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `from` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
-| `messagingProfileId` | string (UUID) | Unique identifier for a messaging profile. |
+| `messaging_profile_id` | string (UUID) | Unique identifier for a messaging profile. |
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
-| `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 
 ### Send a message using an alphanumeric sender ID — `client.messages.sendWithAlphanumericSender()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `webhookUrl` | string (URL) | Callback URL for delivery status updates. |
-| `webhookFailoverUrl` | string (URL) | Failover callback URL for delivery status updates. |
-| `useProfileWebhooks` | boolean | If true, use the messaging profile's webhook settings. |
+| `webhook_url` | string (URL) | Callback URL for delivery status updates. |
+| `webhook_failover_url` | string (URL) | Failover callback URL for delivery status updates. |
+| `use_profile_webhooks` | boolean | If true, use the messaging profile's webhook settings. |
 
 ### Send a group MMS message — `client.messages.sendGroupMms()`
 
@@ -232,10 +232,10 @@
 |-----------|------|-------------|
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 
 ### Send a long code message — `client.messages.sendLongCode()`
 
@@ -243,12 +243,12 @@
 |-----------|------|-------------|
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 
 ### Send a message using number pool — `client.messages.sendNumberPool()`
@@ -257,12 +257,12 @@
 |-----------|------|-------------|
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 
 ### Schedule a message — `client.messages.schedule()`
@@ -270,16 +270,16 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `from` | string (E.164) | Sending address (+E.164 formatted phone number, alphanumeric sender ID, or sh... |
-| `messagingProfileId` | string (UUID) | Unique identifier for a messaging profile. |
+| `messaging_profile_id` | string (UUID) | Unique identifier for a messaging profile. |
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
-| `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 
 ### Send a short code message — `client.messages.sendShortCode()`
 
@@ -287,12 +287,12 @@
 |-----------|------|-------------|
 | `text` | string | Message body (i.e., content) as a non-empty string. |
 | `subject` | string | Subject of multimedia message |
-| `mediaUrls` | array[string] | A list of media URLs. |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
-| `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `media_urls` | array[string] | A list of media URLs. |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
+| `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 
 ### Send a WhatsApp message — `client.messages.sendWhatsapp()`
@@ -300,17 +300,17 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
-| `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
-| `messagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+| `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
+| `messaging_profile_id` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
 
 ### Update a messaging hosted number — `client.messagingHostedNumbers.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `messagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to:
+| `messaging_profile_id` | string (UUID) | Configure the messaging profile this phone number is assigned to:
 
 * Omit thi... |
-| `messagingProduct` | string | Configure the messaging product for this number:
+| `messaging_product` | string | Configure the messaging product for this number:
 
 * Omit this field or set it... |
 | `tags` | array[string] | Tags to set on this phone number. |
@@ -319,13 +319,13 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `respText` | string |  |
+| `resp_text` | string |  |
 
 ### Update Auto-Response Setting — `client.messagingProfiles.autorespConfigs.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `respText` | string |  |
+| `resp_text` | string |  |
 
 ## Webhook Payload Fields
 

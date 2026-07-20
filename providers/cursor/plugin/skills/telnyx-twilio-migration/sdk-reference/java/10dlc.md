@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.58.0</version>
+    <version>6.82.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.58.0")
+implementation("com.telnyx.sdk:telnyx:6.82.0")
 ```
 
 ## Setup
@@ -137,7 +137,7 @@ CampaignBuilderSubmitParams params = CampaignBuilderSubmitParams.builder()
     .brandId("BXXXXXX")
     .description("Two-factor authentication messages")
     .usecase("2FA")
-    .sampleMessages(java.util.List.of("Your verification code is {{code}}"))
+    .sample1("Your verification code is {{code}}")
     .build();
 TelnyxCampaignCsp telnyxCampaignCsp = client.messaging10dlc().campaignBuilder().submit(params);
 ```

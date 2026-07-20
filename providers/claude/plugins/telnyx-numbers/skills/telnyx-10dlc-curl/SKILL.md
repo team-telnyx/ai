@@ -136,12 +136,10 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-      "brandId": "BXXX001",
+      "brandId": "BXXXXXX",
       "description": "Two-factor authentication messages",
       "usecase": "2FA",
-      "sample_messages": [
-          "Your verification code is {{code}}"
-      ]
+      "sample1": "Your verification code is {{code}}"
   }' \
   "https://api.telnyx.com/v2/10dlc/campaignBuilder"
 ```

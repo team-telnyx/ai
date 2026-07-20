@@ -18,7 +18,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -145,7 +145,7 @@ const telnyxCampaignCsp = await client.messaging10dlc.campaignBuilder.submit({
   brandId: 'BXXXXXX',
   description: 'Two-factor authentication messages',
   usecase: '2FA',
-    sampleMessages: ["Your verification code is {{code}}"],
+    sample1: 'Your verification code is {{code}}',
 });
 
 console.log(telnyxCampaignCsp.brandId);
@@ -408,7 +408,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get Campaign Cost | `client.messaging10dlc.campaign.usecase.getCost()` | `GET /10dlc/campaign/usecase/cost` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Update campaign | `client.messaging10dlc.campaign.update()` | `PUT /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
 | Deactivate campaign | `client.messaging10dlc.campaign.deactivate()` | `DELETE /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
-| Submit campaign appeal for manual review | `client.messaging10dlc.campaign.submitAppeal()` | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appealReason`, `campaignId` |
+| Submit campaign appeal for manual review | `client.messaging10dlc.campaign.submitAppeal()` | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appeal_reason`, `campaignId` |
 | Get Campaign Mno Metadata | `client.messaging10dlc.campaign.getMnoMetadata()` | `GET /10dlc/campaign/{campaignId}/mnoMetadata` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | Get campaign operation status | `client.messaging10dlc.campaign.getOperationStatus()` | `GET /10dlc/campaign/{campaignId}/operationStatus` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | Get OSR campaign attributes | `client.messaging10dlc.campaign.osr.getAttributes()` | `GET /10dlc/campaign/{campaignId}/osr/attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |

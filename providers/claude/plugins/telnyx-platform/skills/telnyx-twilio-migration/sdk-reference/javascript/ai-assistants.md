@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -107,8 +107,8 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `content` | string | Yes | The message content sent by the client to the assistant |
-| `conversationId` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
-| `assistantId` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
 
 ```javascript
@@ -136,8 +136,8 @@ Test creation is the main validation path for production assistant behavior befo
 | `instructions` | string | Yes | Detailed instructions that define the test scenario and what... |
 | `rubric` | array[object] | Yes | Evaluation criteria used to assess the assistant's performan... |
 | `description` | string | No | Optional detailed description of what this test evaluates an... |
-| `telnyxConversationChannel` | object | No | The communication channel through which the test will be con... |
-| `maxDurationSeconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
+| `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
+| `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
 | ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
@@ -177,9 +177,9 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `assistantId` | string (UUID) | Yes | Unique identifier of the assistant. |
-| `callControlId` | string (UUID) | No | Filter results by call control id. |
-| `fetchDynamicVariablesFromWebhook` | boolean | No | Whether to fetch dynamic variables from the configured webho... |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `call_control_id` | string (UUID) | No | Filter results by call control id. |
+| `fetch_dynamic_variables_from_webhook` | boolean | No | Whether to fetch dynamic variables from the configured webho... |
 | `from` | string (E.164) | No | Start of the filter range. |
 | ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
@@ -205,7 +205,7 @@ Create or provision an additional resource when the core tasks do not cover this
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `assistantId` | string (UUID) | Yes | Unique identifier of the assistant. |
+| `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
@@ -257,12 +257,12 @@ Import existing assistants from an external provider instead of creating from sc
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
-| `apiKeyRef` | string | Yes | Integration secret pointer that refers to the API key for th... |
-| `importIds` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
+| `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
 
 ```javascript
 const assistantsList = await client.ai.assistants.imports({
-  api_key_ref: 'api_key_ref',
+  api_key_ref: 'my-openai-key',
   provider: 'elevenlabs',
 });
 
@@ -303,8 +303,8 @@ Inspect available resources or choose an existing resource before mutating it.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `testSuite` | string | No | Filter tests by test suite name |
-| `telnyxConversationChannel` | string | No | Filter tests by communication channel (e.g., 'web_chat', 'sm... |
+| `test_suite` | string | No | Filter tests by test suite name |
+| `telnyx_conversation_channel` | string | No | Filter tests by communication channel (e.g., 'web_chat', 'sm... |
 | `destination` | string | No | Filter tests by destination (phone number, webhook URL, etc.... |
 | ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
@@ -353,8 +353,8 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `suiteName` | string | Yes | Name of the suite. |
-| `testSuiteRunId` | string (UUID) | No | Filter runs by specific suite execution batch ID |
+| `suite_name` | string | Yes | Name of the suite. |
+| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
 | `status` | string | No | Filter runs by execution status (pending, running, completed... |
 | `page` | object | No | Consolidated page parameter (deepObject style). |
 
@@ -386,46 +386,46 @@ Before using any operation below, read the Optional Parameters section below and
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
-| Trigger test suite execution | `client.ai.assistants.tests.testSuites.runs.trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suiteName` |
-| Get assistant test by ID | `client.ai.assistants.tests.retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `testId` |
-| Update an assistant test | `client.ai.assistants.tests.update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `testId` |
-| Delete an assistant test | `client.ai.assistants.tests.delete()` | `DELETE /ai/assistants/tests/{test_id}` | Remove, detach, or clean up an existing resource. | `testId` |
-| Get test run history for a specific test | `client.ai.assistants.tests.runs.list()` | `GET /ai/assistants/tests/{test_id}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `testId` |
-| Trigger a manual test run | `client.ai.assistants.tests.runs.trigger()` | `POST /ai/assistants/tests/{test_id}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `testId` |
-| Get specific test run details | `client.ai.assistants.tests.runs.retrieve()` | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `testId`, `runId` |
-| Delete an assistant | `client.ai.assistants.delete()` | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistantId` |
-| Get Canary Deploy | `client.ai.assistants.canaryDeploys.retrieve()` | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
-| Create Canary Deploy | `client.ai.assistants.canaryDeploys.create()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId` |
-| Update Canary Deploy | `client.ai.assistants.canaryDeploys.update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistantId` |
-| Delete Canary Deploy | `client.ai.assistants.canaryDeploys.delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistantId` |
-| Assistant Sms Chat | `client.ai.assistants.sendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistantId` |
-| Clone Assistant | `client.ai.assistants.clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId` |
-| Enhance Assistant Instructions | `client.ai.assistants.instructions.enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId` |
-| List scheduled events | `client.ai.assistants.scheduledEvents.list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
-| Create a scheduled event | `client.ai.assistants.scheduledEvents.create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyxConversationChannel`, `telnyxEndUserTarget`, `telnyxAgentTarget`, `scheduledAtFixedDatetime`, +1 more |
-| Get a scheduled event | `client.ai.assistants.scheduledEvents.retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId`, `eventId` |
-| Delete a scheduled event | `client.ai.assistants.scheduledEvents.delete()` | `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Remove, detach, or clean up an existing resource. | `assistantId`, `eventId` |
-| Add Assistant Tag | `client.ai.assistants.tags.add()` | `POST /ai/assistants/{assistant_id}/tags` | Create or provision an additional resource when the core tasks do not cover this flow. | `tag`, `assistantId` |
-| Remove Assistant Tag | `client.ai.assistants.tags.remove()` | `DELETE /ai/assistants/{assistant_id}/tags/{tag}` | Remove, detach, or clean up an existing resource. | `assistantId`, `tag` |
-| Get assistant texml | `client.ai.assistants.getTexml()` | `GET /ai/assistants/{assistant_id}/texml` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
-| Add Assistant Tool | `client.ai.assistants.tools.add()` | `PUT /ai/assistants/{assistant_id}/tools/{tool_id}` | Modify an existing resource without recreating it. | `assistantId`, `toolId` |
-| Remove Assistant Tool | `client.ai.assistants.tools.remove()` | `DELETE /ai/assistants/{assistant_id}/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `assistantId`, `toolId` |
-| Test Assistant Tool | `client.ai.assistants.tools.test()` | `POST /ai/assistants/{assistant_id}/tools/{tool_id}/test` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId`, `toolId` |
-| Get all versions of an assistant | `client.ai.assistants.versions.list()` | `GET /ai/assistants/{assistant_id}/versions` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
-| Get a specific assistant version | `client.ai.assistants.versions.retrieve()` | `GET /ai/assistants/{assistant_id}/versions/{version_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId`, `versionId` |
-| Update a specific assistant version | `client.ai.assistants.versions.update()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId`, `versionId` |
-| Delete a specific assistant version | `client.ai.assistants.versions.delete()` | `DELETE /ai/assistants/{assistant_id}/versions/{version_id}` | Remove, detach, or clean up an existing resource. | `assistantId`, `versionId` |
-| Promote an assistant version to main | `client.ai.assistants.versions.promote()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId`, `versionId` |
+| Trigger test suite execution | `client.ai.assistants.tests.testSuites.runs.trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
+| Get assistant test by ID | `client.ai.assistants.tests.retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Update an assistant test | `client.ai.assistants.tests.update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
+| Delete an assistant test | `client.ai.assistants.tests.delete()` | `DELETE /ai/assistants/tests/{test_id}` | Remove, detach, or clean up an existing resource. | `test_id` |
+| Get test run history for a specific test | `client.ai.assistants.tests.runs.list()` | `GET /ai/assistants/tests/{test_id}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
+| Trigger a manual test run | `client.ai.assistants.tests.runs.trigger()` | `POST /ai/assistants/tests/{test_id}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `test_id` |
+| Get specific test run details | `client.ai.assistants.tests.runs.retrieve()` | `GET /ai/assistants/tests/{test_id}/runs/{run_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id`, `run_id` |
+| Delete an assistant | `client.ai.assistants.delete()` | `DELETE /ai/assistants/{assistant_id}` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Get Canary Deploy | `client.ai.assistants.canaryDeploys.retrieve()` | `GET /ai/assistants/{assistant_id}/canary-deploys` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create Canary Deploy | `client.ai.assistants.canaryDeploys.create()` | `POST /ai/assistants/{assistant_id}/canary-deploys` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Update Canary Deploy | `client.ai.assistants.canaryDeploys.update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
+| Delete Canary Deploy | `client.ai.assistants.canaryDeploys.delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
+| Assistant Sms Chat | `client.ai.assistants.sendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Clone Assistant | `client.ai.assistants.clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Enhance Assistant Instructions | `client.ai.assistants.instructions.enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| List scheduled events | `client.ai.assistants.scheduledEvents.list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Create a scheduled event | `client.ai.assistants.scheduledEvents.create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
+| Get a scheduled event | `client.ai.assistants.scheduledEvents.retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |
+| Delete a scheduled event | `client.ai.assistants.scheduledEvents.delete()` | `DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `event_id` |
+| Add Assistant Tag | `client.ai.assistants.tags.add()` | `POST /ai/assistants/{assistant_id}/tags` | Create or provision an additional resource when the core tasks do not cover this flow. | `tag`, `assistant_id` |
+| Remove Assistant Tag | `client.ai.assistants.tags.remove()` | `DELETE /ai/assistants/{assistant_id}/tags/{tag}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `tag` |
+| Get assistant texml | `client.ai.assistants.getTexml()` | `GET /ai/assistants/{assistant_id}/texml` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Add Assistant Tool | `client.ai.assistants.tools.add()` | `PUT /ai/assistants/{assistant_id}/tools/{tool_id}` | Modify an existing resource without recreating it. | `assistant_id`, `tool_id` |
+| Remove Assistant Tool | `client.ai.assistants.tools.remove()` | `DELETE /ai/assistants/{assistant_id}/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `tool_id` |
+| Test Assistant Tool | `client.ai.assistants.tools.test()` | `POST /ai/assistants/{assistant_id}/tools/{tool_id}/test` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `tool_id` |
+| Get all versions of an assistant | `client.ai.assistants.versions.list()` | `GET /ai/assistants/{assistant_id}/versions` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
+| Get a specific assistant version | `client.ai.assistants.versions.retrieve()` | `GET /ai/assistants/{assistant_id}/versions/{version_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `version_id` |
+| Update a specific assistant version | `client.ai.assistants.versions.update()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id`, `version_id` |
+| Delete a specific assistant version | `client.ai.assistants.versions.delete()` | `DELETE /ai/assistants/{assistant_id}/versions/{version_id}` | Remove, detach, or clean up an existing resource. | `assistant_id`, `version_id` |
+| Promote an assistant version to main | `client.ai.assistants.versions.promote()` | `POST /ai/assistants/{assistant_id}/versions/{version_id}/promote` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id`, `version_id` |
 | List MCP Servers | `client.ai.mcpServers.list()` | `GET /ai/mcp_servers` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Create MCP Server | `client.ai.mcpServers.create()` | `POST /ai/mcp_servers` | Create or provision an additional resource when the core tasks do not cover this flow. | `name`, `type`, `url` |
-| Get MCP Server | `client.ai.mcpServers.retrieve()` | `GET /ai/mcp_servers/{mcp_server_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `mcpServerId` |
-| Update MCP Server | `client.ai.mcpServers.update()` | `PUT /ai/mcp_servers/{mcp_server_id}` | Modify an existing resource without recreating it. | `mcpServerId` |
-| Delete MCP Server | `client.ai.mcpServers.delete()` | `DELETE /ai/mcp_servers/{mcp_server_id}` | Remove, detach, or clean up an existing resource. | `mcpServerId` |
+| Get MCP Server | `client.ai.mcpServers.retrieve()` | `GET /ai/mcp_servers/{mcp_server_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `mcp_server_id` |
+| Update MCP Server | `client.ai.mcpServers.update()` | `PUT /ai/mcp_servers/{mcp_server_id}` | Modify an existing resource without recreating it. | `mcp_server_id` |
+| Delete MCP Server | `client.ai.mcpServers.delete()` | `DELETE /ai/mcp_servers/{mcp_server_id}` | Remove, detach, or clean up an existing resource. | `mcp_server_id` |
 | List Tools | `client.ai.tools.list()` | `GET /ai/tools` | Inspect available resources or choose an existing resource before mutating it. | None |
-| Create Tool | `client.ai.tools.create()` | `POST /ai/tools` | Create or provision an additional resource when the core tasks do not cover this flow. | `type`, `displayName` |
-| Get Tool | `client.ai.tools.retrieve()` | `GET /ai/tools/{tool_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `toolId` |
-| Update Tool | `client.ai.tools.update()` | `PATCH /ai/tools/{tool_id}` | Modify an existing resource without recreating it. | `toolId` |
-| Delete Tool | `client.ai.tools.delete()` | `DELETE /ai/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `toolId` |
+| Create Tool | `client.ai.tools.create()` | `POST /ai/tools` | Create or provision an additional resource when the core tasks do not cover this flow. | `type`, `display_name` |
+| Get Tool | `client.ai.tools.retrieve()` | `GET /ai/tools/{tool_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `tool_id` |
+| Update Tool | `client.ai.tools.update()` | `PATCH /ai/tools/{tool_id}` | Modify an existing resource without recreating it. | `tool_id` |
+| Delete Tool | `client.ai.tools.delete()` | `DELETE /ai/tools/{tool_id}` | Remove, detach, or clean up an existing resource. | `tool_id` |
 
 ---
 
@@ -442,51 +442,51 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 |-----------|------|-------------|
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Import assistants from external provider — `client.ai.assistants.imports()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `importIds` | array[string] | Optional list of assistant IDs to import from the external provider. |
+| `import_ids` | array[string] | Optional list of assistant IDs to import from the external provider. |
 
 ### Create a new assistant test — `client.ai.assistants.tests.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `description` | string | Optional detailed description of what this test evaluates and its purpose. |
-| `telnyxConversationChannel` | object | The communication channel through which the test will be conducted. |
-| `maxDurationSeconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
-| `testSuite` | string | Optional test suite name to group related tests together. |
+| `telnyx_conversation_channel` | object | The communication channel through which the test will be conducted. |
+| `max_duration_seconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
+| `test_suite` | string | Optional test suite name to group related tests together. |
 
 ### Trigger test suite execution — `client.ai.assistants.tests.testSuites.runs.trigger()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `destinationVersionId` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
+| `destination_version_id` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
 
 ### Update an assistant test — `client.ai.assistants.tests.update()`
 
@@ -494,10 +494,10 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 |-----------|------|-------------|
 | `name` | string | Updated name for the assistant test. |
 | `description` | string | Updated description of the test's purpose and evaluation criteria. |
-| `telnyxConversationChannel` | enum (phone_call, web_call, sms_chat, web_chat) |  |
+| `telnyx_conversation_channel` | enum (phone_call, web_call, sms_chat, web_chat) |  |
 | `destination` | string | Updated target destination for test conversations. |
-| `maxDurationSeconds` | integer | Updated maximum test duration in seconds. |
-| `testSuite` | string | Updated test suite assignment for better organization. |
+| `max_duration_seconds` | integer | Updated maximum test duration in seconds. |
+| `test_suite` | string | Updated test suite assignment for better organization. |
 | `instructions` | string | Updated test scenario instructions and objectives. |
 | `rubric` | array[object] | Updated evaluation criteria for assessing assistant performance. |
 
@@ -505,7 +505,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `destinationVersionId` | string (UUID) | Optional assistant version ID to use for this test run. |
+| `destination_version_id` | string (UUID) | Optional assistant version ID to use for this test run. |
 
 ### Update an assistant — `client.ai.assistants.update()`
 
@@ -515,32 +515,32 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `versionName` | string | Human-readable name for the assistant version. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
-| `promoteToMain` | boolean | Indicates whether the assistant should be promoted to the main version. |
+| `version_name` | string | Human-readable name for the assistant version. |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
+| `promote_to_main` | boolean | Indicates whether the assistant should be promoted to the main version. |
 
 ### Create Canary Deploy — `client.ai.assistants.canaryDeploys.create()`
 
@@ -565,14 +565,14 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `text` | string |  |
-| `conversationMetadata` | object |  |
-| `shouldCreateConversation` | boolean |  |
+| `conversation_metadata` | object |  |
+| `should_create_conversation` | boolean |  |
 
 ### Enhance Assistant Instructions — `client.ai.assistants.instructions.enhance()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `enhancementPrompt` | object | Optional guidance describing how the instructions should be enhanced. |
+| `enhancement_prompt` | object | Optional guidance describing how the instructions should be enhanced. |
 | `instructions` | object | The instructions to enhance. |
 
 ### Create a scheduled event — `client.ai.assistants.scheduledEvents.create()`
@@ -580,11 +580,11 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `text` | string | Required for sms scheduled events. |
-| `conversationMetadata` | object | Metadata associated with the conversation. |
-| `dynamicVariables` | object | A map of dynamic variable names to values. |
-| `maxRetriesClientErrors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
-| `retryIntervalSecs` | integer |  |
-| `callSettings` | object | Per-call telephony overrides applied when a scheduled phone-call event
+| `conversation_metadata` | object | Metadata associated with the conversation. |
+| `dynamic_variables` | object | A map of dynamic variable names to values. |
+| `max_retries_client_errors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
+| `retry_interval_secs` | integer |  |
+| `call_settings` | object | Per-call telephony overrides applied when a scheduled phone-call event
 dispat... |
 
 ### Test Assistant Tool — `client.ai.assistants.tools.test()`
@@ -592,7 +592,7 @@ dispat... |
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `arguments` | object | Key-value arguments to use for the webhook test |
-| `dynamicVariables` | object | Key-value dynamic variables to use for the webhook test |
+| `dynamic_variables` | object | Key-value dynamic variables to use for the webhook test |
 
 ### Update a specific assistant version — `client.ai.assistants.versions.update()`
 
@@ -602,38 +602,38 @@ dispat... |
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `versionName` | string | Human-readable name for the assistant version. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
+| `version_name` | string | Human-readable name for the assistant version. |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Create MCP Server — `client.ai.mcpServers.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apiKeyRef` | string |  |
-| `allowedTools` | array[string] |  |
+| `api_key_ref` | string |  |
+| `allowed_tools` | array[string] |  |
 
 ### Update MCP Server — `client.ai.mcpServers.update()`
 
@@ -643,9 +643,9 @@ dispat... |
 | `name` | string |  |
 | `type` | string |  |
 | `url` | string (URL) |  |
-| `apiKeyRef` | string |  |
-| `allowedTools` | array[string] |  |
-| `createdAt` | string (date-time) |  |
+| `api_key_ref` | string |  |
+| `allowed_tools` | array[string] |  |
+| `created_at` | string (date-time) |  |
 
 ### Create Tool — `client.ai.tools.create()`
 
@@ -656,17 +656,19 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
-| `timeoutMs` | integer |  |
+| `client_side_tool` | object |  |
+| `timeout_ms` | integer |  |
 
 ### Update Tool — `client.ai.tools.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `type` | string |  |
-| `displayName` | string |  |
+| `display_name` | string |  |
 | `function` | object |  |
 | `retrieval` | object |  |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
-| `timeoutMs` | integer |  |
+| `client_side_tool` | object |  |
+| `timeout_ms` | integer |  |
