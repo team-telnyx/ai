@@ -6,7 +6,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -16,7 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(campaignResponse?: unknown): { logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-10dlc-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -33,7 +33,9 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 if (args[0] === "messaging-10dlc:brand" && args[1] === "create") {
   console.log(JSON.stringify({ data: { id: "brand-123", status: "PENDING" } }));
 } else if (args[0] === "messaging-10dlc:campaign-builder" && args[1] === "submit") {
-  console.log(JSON.stringify({ data: { id: "campaign-456", status: "PENDING" } }));
+  console.log(process.env.TELNYX_FAKE_CAMPAIGN_RESPONSE || JSON.stringify({ data: { id: "campaign-456", status: "PENDING" } }));
+} else if (args[0] === "messaging-10dlc:phone-number-campaigns" && args[1] === "create") {
+  console.log(JSON.stringify({ data: { phone_number: args[3] } }));
 } else {
   console.error("Unexpected telnyx command: " + args.join(" "));
   process.exit(2);
@@ -49,12 +51,24 @@ if (args[0] === "messaging-10dlc:brand" && args[1] === "create") {
       PATH: `${binDir}:${process.env.PATH}`,
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
+      ...(campaignResponse === undefined
+        ? {}
+        : { TELNYX_FAKE_CAMPAIGN_RESPONSE: JSON.stringify(campaignResponse) }),
     },
   };
 }
 
+function runFailure(args: string[], env: NodeJS.ProcessEnv) {
+  return spawnSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
+    cwd: cliRoot,
+    encoding: "utf8",
+    env,
+    timeout: 30000,
+  });
+}
+
 function run(args: string[], env: NodeJS.ProcessEnv): string {
-  return execFileSync("npx", ["tsx", cliBin, ...args], {
+  return execFileSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
     cwd: cliRoot,
     encoding: "utf8",
     env,
@@ -71,6 +85,58 @@ function readLoggedArgs(logPath: string): string[][] {
 }
 
 describe("setup-10dlc campaign submission", () => {
+  it("uses the campaign id from the real campaign-builder response for output and assignment", () => {
+    const fixture = JSON.parse(
+      readFileSync(join(__dirname, "fixtures", "campaign-builder-submit.json"), "utf8"),
+    );
+    const fake = setupFakeTelnyx(fixture);
+
+    const output = run(
+      [
+        "setup-10dlc",
+        "--phone", "+15551234567",
+        "--email", "ops@acme.example",
+        "--brand-name", "Acme",
+        "--phone-number-id", "+15559876543",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    assert.equal(JSON.parse(output).campaign_id, "campaign-builder-789");
+    const calls = readLoggedArgs(fake.logPath);
+    assert.deepEqual(calls[2], [
+      "messaging-10dlc:phone-number-campaigns",
+      "create",
+      "--phone-number", "+15559876543",
+      "--campaign-id", "campaign-builder-789",
+      "--format", "json",
+    ]);
+  });
+
+  it("fails before phone-number assignment when campaign submission returns no id", () => {
+    const fake = setupFakeTelnyx({ status: "PENDING" });
+
+    const result = runFailure(
+      [
+        "setup-10dlc",
+        "--phone", "+15551234567",
+        "--email", "ops@acme.example",
+        "--brand-name", "Acme",
+        "--phone-number-id", "+15559876543",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    assert.equal(result.status, 1);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.status, "failed");
+    assert.equal(output.campaign_id, null);
+    assert.match(output.error, /campaign id/i);
+    assert.equal(readLoggedArgs(fake.logPath).length, 2);
+  });
+
   it("uses campaign-builder submit and maps every explicit campaign value to its generated flag", () => {
     const fake = setupFakeTelnyx();
     const messageFlow =
