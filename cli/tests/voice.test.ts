@@ -511,8 +511,8 @@ describe("Voice API action commands", () => {
   }> = [
     {
       action: "add-ai-assistant-messages",
-      flags: ["--message", '[{"role":"user","content":"hello"}]', "--client-state", "state-1", "--command-id", "cmd-1"],
-      values: [["--message", '[{"role":"user","content":"hello"}]'], ["--client-state", "state-1"], ["--command-id", "cmd-1"]],
+      flags: ["--message", '{"role":"user","content":"hello"}', "--client-state", "state-1", "--command-id", "cmd-1"],
+      values: [["--message", '{"role":"user","content":"hello"}'], ["--client-state", "state-1"], ["--command-id", "cmd-1"]],
     },
     {
       action: "gather-using-ai",
@@ -578,6 +578,37 @@ describe("Voice API action commands", () => {
       assertFlagValue(actionCall!, "--call-control-id", "call-ai-1");
       for (const [flag, value] of testCase.values) assertFlagValue(actionCall!, flag, value);
       for (const flag of testCase.bare ?? []) assert.ok(actionCall!.includes(flag), `expected ${flag}`);
+    });
+  }
+
+  const repeatedObjectFlags = [
+    { action: "add-ai-assistant-messages", flag: "message" },
+    { action: "gather-using-ai", flag: "message-history", required: ["--parameters", '{"type":"object"}'] },
+    { action: "gather-using-ai", flag: "assistant.tools", required: ["--parameters", '{"type":"object"}'] },
+    { action: "start-ai-assistant", flag: "message-history" },
+    { action: "start-ai-assistant", flag: "assistant.mcp-servers" },
+    { action: "start-ai-assistant", flag: "assistant.tools" },
+    { action: "start-conversation-relay", flag: "conversation-relay-settings.languages" },
+  ];
+  for (const testCase of repeatedObjectFlags) {
+    it(`call-control --action ${testCase.action} expands a JSON array into repeated --${testCase.flag} flags`, () => {
+      const fake = setupFakeTelnyx();
+      run(
+        [
+          "call-control", "--action", testCase.action, "--call-control-id", "call-ai-1",
+          ...(testCase.required ?? []),
+          `--${testCase.flag}`, '[{"id":"one"},{"id":"two"}]', "--json",
+        ],
+        fake.env,
+      );
+
+      const calls = readLoggedArgs(fake.logPath);
+      const actionCall = calls.find((a) => a.slice(0, 2).join(" ") === `calls:actions ${testCase.action}`);
+      assert.ok(actionCall);
+      const values = actionCall!
+        .map((arg, index) => arg === `--${testCase.flag}` ? actionCall![index + 1] : undefined)
+        .filter((value): value is string => value !== undefined);
+      assert.deepEqual(values, ['{"id":"one"}', '{"id":"two"}']);
     });
   }
 

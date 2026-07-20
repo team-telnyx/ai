@@ -109,6 +109,14 @@ const NEW_ACTION_REQUIRED_FLAGS: Partial<Record<Action, readonly string[]>> = {
   "switch-supervisor-role": ["role"],
 };
 
+const REPEATED_OBJECT_FLAGS = new Set([
+  "message",
+  "message-history",
+  "assistant.mcp-servers",
+  "assistant.tools",
+  "conversation-relay-settings.languages",
+]);
+
 /** Valid causes for the Reject API (required by POST /calls/{id}/actions/reject). */
 const REJECT_CAUSES = ["CALL_REJECTED", "USER_BUSY"] as const;
 
@@ -465,12 +473,25 @@ function buildGeneratedActionArgs(
   for (const flag of NEW_ACTION_FLAGS[action] ?? []) {
     const value = flags[flag];
     if (typeof value === "string") {
-      args.push(`--${flag}`, value);
+      const values = REPEATED_OBJECT_FLAGS.has(flag) ? parseObjectArray(value) : undefined;
+      for (const item of values ?? [value]) args.push(`--${flag}`, item);
     } else if (value === true) {
       args.push(`--${flag}`);
     }
   }
   return args;
+}
+
+function parseObjectArray(value: string): string[] | undefined {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))) {
+      return parsed.map((item) => JSON.stringify(item));
+    }
+  } catch {
+    // Preserve non-JSON values for the generated CLI to handle as before.
+  }
+  return undefined;
 }
 
 function errorMsg(err: unknown): string {
