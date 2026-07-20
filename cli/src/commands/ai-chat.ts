@@ -36,24 +36,23 @@ const BOOLEAN_FLAGS = [
   "early-stopping",
   "enable-thinking",
   "logprobs",
-  "stream",
   "use-beam-search",
 ] as const;
 
-export async function aiChatCommand(flags: Record<string, string | boolean>): Promise<void> {
+export async function aiChatCommand(
+  flags: Record<string, string | boolean>,
+  occurrences: Record<string, Array<string | boolean>> = {},
+): Promise<void> {
   const jsonOutput = flags.json === true;
-  const message = flags.message;
+  const messageValues = occurrences.message ?? (flags.message === undefined ? [] : [flags.message]);
 
-  if (typeof message !== "string" || !message) {
-    fail("--message is required as a JSON object (for example: '{\"role\":\"user\",\"content\":\"Hello\"}')", jsonOutput);
+  if (flags.stream === true || flags.stream === "true") {
+    fail("Streaming is not supported by ai-chat yet; omit --stream to request a JSON completion", jsonOutput);
   }
 
-  const args: string[] = [
-    "ai:openai:chat",
-    "create-completion",
-    "--message",
-    message,
-  ];
+  const messages = expandMessages(messageValues, jsonOutput);
+  const args: string[] = ["ai:openai:chat", "create-completion"];
+  for (const message of messages) args.push("--message", message);
 
   forwardValueFlags(args, flags, VALUE_FLAGS);
   forwardBooleanFlags(args, flags, BOOLEAN_FLAGS);
@@ -87,6 +86,36 @@ export async function aiChatCommand(flags: Record<string, string | boolean>): Pr
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
   }
+}
+
+function expandMessages(values: Array<string | boolean>, jsonOutput: boolean): string[] {
+  if (values.length === 0) {
+    fail("--message is required as a JSON object (for example: '{\"role\":\"user\",\"content\":\"Hello\"}')", jsonOutput);
+  }
+
+  const messages: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string" || value === "") {
+      fail("--message requires a JSON object or an array of JSON objects", jsonOutput);
+    }
+
+    if (!value.trimStart().startsWith("[")) {
+      messages.push(value);
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      fail("--message array must be valid JSON", jsonOutput);
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some((item) => !item || typeof item !== "object" || Array.isArray(item))) {
+      fail("--message array must contain at least one JSON object", jsonOutput);
+    }
+    messages.push(...parsed.map((item) => JSON.stringify(item)));
+  }
+  return messages;
 }
 
 function forwardValueFlags(

@@ -76,7 +76,7 @@ function readLoggedArgs(logPath: string): string[][] {
 
 function runCli(args: string[], env: NodeJS.ProcessEnv = process.env): { stdout: string; stderr: string; status: number } {
   try {
-    const stdout = execFileSync("npx", ["tsx", cliBin, ...args], {
+    const stdout = execFileSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
       cwd: cliRoot,
       encoding: "utf8",
       env,
@@ -117,7 +117,6 @@ describe("AI inference action commands", () => {
       "--guided-json", guidedJson,
       "--tool", tool,
       "--tool-choice", "auto",
-      "--stream",
       "--json",
     ], fake.env);
 
@@ -140,8 +139,46 @@ describe("AI inference action commands", () => {
     assertFlagValue(call, "--guided-json", guidedJson);
     assertFlagValue(call, "--tool", tool);
     assertFlagValue(call, "--tool-choice", "auto");
-    assert.ok(call.includes("--stream"));
     assert.deepEqual(call.slice(-2), ["--format", "json"]);
+  });
+
+  it("ai-chat preserves repeated messages and expands a JSON message array", () => {
+    const fake = setupFakeTelnyx();
+    const system = '{"role":"system","content":"Be concise"}';
+    const user = '{"role":"user","content":"Hello"}';
+    const assistant = { role: "assistant", content: "Hi" };
+
+    const result = runCli([
+      "ai-chat",
+      "--message", system,
+      "--message", user,
+      "--message", JSON.stringify([assistant, { role: "user", content: "Continue" }]),
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    const call = readLoggedArgs(fake.logPath)[0];
+    const messages = call.flatMap((arg, index) => arg === "--message" ? [call[index + 1]] : []);
+    assert.deepEqual(messages, [
+      system,
+      user,
+      JSON.stringify(assistant),
+      JSON.stringify({ role: "user", content: "Continue" }),
+    ]);
+  });
+
+  it("ai-chat rejects streaming locally without invoking the Go CLI", () => {
+    const fake = setupFakeTelnyx();
+    const result = runCli([
+      "ai-chat",
+      "--message", '{"role":"user","content":"Hello"}',
+      "--stream",
+      "--json",
+    ], fake.env);
+
+    assert.notEqual(result.status, 0);
+    assert.match(JSON.parse(result.stdout).error, /streaming.*not supported/i);
+    assert.deepEqual(readLoggedArgs(fake.logPath), []);
   });
 
   it("ai-chat forwards an explicit false boolean in Go CLI-compatible form", () => {
@@ -211,6 +248,7 @@ describe("AI inference action commands", () => {
     assert.match(help.stdout, /ai-chat/);
     assert.match(help.stdout, /ai-embed/);
     assert.match(help.stdout, /--message <json>/);
+    assert.doesNotMatch(help.stdout, /--stream\s+Request a streaming completion/);
     assert.match(help.stdout, /--input <value>/);
 
     const capabilities = runCli(["capabilities", "--json"]);

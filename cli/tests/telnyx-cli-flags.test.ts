@@ -8,6 +8,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseFlags } from "../src/utils/output.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
@@ -78,6 +79,23 @@ function assertFlagValue(args: string[], flag: string, value: string): void {
 }
 
 describe("telnyx CLI flag compatibility", () => {
+  it("parseFlags tracks inherited flag names without breaking repeated flags", () => {
+    const parsed = parseFlags([
+      "ai-chat",
+      "--constructor", "first",
+      "--__proto__", "second",
+      "--message", "one",
+      "--message", "two",
+      "--model", "old",
+      "--model", "new",
+    ]);
+
+    assert.deepEqual(parsed.occurrences.constructor, ["first"]);
+    assert.deepEqual(parsed.occurrences.__proto__, ["second"]);
+    assert.deepEqual(parsed.occurrences.message, ["one", "two"]);
+    assert.equal(parsed.flags.model, "new");
+  });
+
   it("status uses --page-size for paginated list commands and no page-size for ai:assistants", () => {
     const fake = setupFakeTelnyx();
 

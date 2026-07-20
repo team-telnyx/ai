@@ -67,9 +67,14 @@ function isSensitiveKey(key: string): boolean {
   return /(^|_)(password|passphrase|secret|token|api_key)$/i.test(key) || /^sipPassword$/i.test(key);
 }
 
-export function parseFlags(args: string[]): { command: string; flags: Record<string, string | boolean> } {
+export function parseFlags(args: string[]): {
+  command: string;
+  flags: Record<string, string | boolean>;
+  occurrences: Record<string, Array<string | boolean>>;
+} {
   const command = args[0] ?? "help";
   const flags: Record<string, string | boolean> = {};
+  const occurrences: Record<string, Array<string | boolean>> = Object.create(null);
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
@@ -78,12 +83,14 @@ export function parseFlags(args: string[]): { command: string; flags: Record<str
       const next = args[i + 1];
       if (next && !next.startsWith("--")) {
         flags[key] = next;
+        (occurrences[key] ??= []).push(next);
         i++;
       } else {
         flags[key] = true;
+        (occurrences[key] ??= []).push(true);
       }
     }
   }
 
-  return { command, flags };
+  return { command, flags, occurrences };
 }

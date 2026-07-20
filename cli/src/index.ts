@@ -290,7 +290,7 @@ Numbers Action Flags:
   --requirement-group-id Requirement group for the ordered number (buy-phone-number)
 
 AI Chat Flags:
-  --message <json>  Chat message JSON object (required; role: system|user|assistant|tool)
+  --message <json>  Chat message JSON object (repeatable), or an array of message objects (required)
   --model           Language model ID (optional; Go CLI default is Meta-Llama-3.1-8B-Instruct)
   --max-tokens      Maximum completion tokens
   --temperature     Sampling temperature
@@ -301,7 +301,6 @@ AI Chat Flags:
   --guided-json <json> JSON schema for constrained output
   --tool <json>     OpenAI-compatible tool object
   --tool-choice     Tool selection: none, auto, or required
-  --stream          Request a streaming completion
 
 AI Embed Flags:
   --input <value>   Text or JSON array of strings to embed (required)
@@ -397,7 +396,10 @@ Examples:
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
 `;
 
-const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Promise<void>> = {
+const COMMANDS: Record<string, (
+  flags: Record<string, string | boolean>,
+  occurrences?: Record<string, Array<string | boolean>>,
+) => Promise<void>> = {
   "setup-sms": setupSmsCommand,
   "setup-voice": setupVoiceCommand,
   "setup-iot": setupIotCommand,
@@ -438,7 +440,7 @@ const COMMANDS: Record<string, (flags: Record<string, string | boolean>) => Prom
 };
 
 export async function run(argv: string[]): Promise<void> {
-  const { command, flags } = parseFlags(argv);
+  const { command, flags, occurrences } = parseFlags(argv);
 
   if (command === "help" || command === "--help" || command === "-h" || !command) {
     console.log(HELP);
@@ -452,5 +454,5 @@ export async function run(argv: string[]): Promise<void> {
     process.exit(1);
   }
 
-  await handler(flags);
+  await handler(flags, occurrences);
 }
