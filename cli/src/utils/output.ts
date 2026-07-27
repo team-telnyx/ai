@@ -71,17 +71,23 @@ export function parseFlags(args: string[]): {
   command: string;
   flags: Record<string, string | boolean>;
   occurrences: Record<string, Array<string | boolean>>;
+  helpRequested: boolean;
 } {
   const command = args[0] ?? "help";
   const flags: Record<string, string | boolean> = {};
   const occurrences: Record<string, Array<string | boolean>> = Object.create(null);
+  let helpRequested = false;
 
   for (let i = 1; i < args.length; i++) {
     const arg = args[i];
+    if (arg === "--help" || arg === "-h") {
+      helpRequested = true;
+      continue;
+    }
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const next = args[i + 1];
-      if (next && !next.startsWith("--")) {
+      if (next !== undefined && next !== null && !next.startsWith("--")) {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);
         i++;
@@ -92,5 +98,5 @@ export function parseFlags(args: string[]): {
     }
   }
 
-  return { command, flags, occurrences };
+  return { command, flags, occurrences, helpRequested };
 }

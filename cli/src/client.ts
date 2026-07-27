@@ -11,6 +11,14 @@
  * 7. POST /x402/credit_account/quote (fund-account)
  * 8. POST /x402/credit_account (fund-account)
  *
+ * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
+ * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)
+ * - POST /messages (schedule-sms — Go CLI hits nonexistent /messages/schedule endpoint)
+ * - POST /verify_profiles (setup-verify — Go CLI sends no channel settings)
+ * - PATCH /phone_numbers/:id (setup-voice, setup-sms — Go CLI doesn't support --force / --messaging-profile-id)
+ * - POST /call_control_applications (setup-voice — Go CLI creates credential connections, not Call Control Apps)
+ * - GET /outbound_voice_profiles (setup-voice — needed to resolve default outbound profile)
+ *
  * All other operations go through the telnyx CLI wrapper (see telnyx-cli.ts).
  */
 
@@ -47,7 +55,7 @@ export class TelnyxClient {
 
   constructor(apiKey?: string, baseUrl?: string, timeout?: number) {
     this.apiKey = apiKey || resolveApiKey();
-    this.baseUrl = (baseUrl ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
+    this.baseUrl = (baseUrl ?? process.env.TELNYX_API_BASE_URL ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
     this.timeout = timeout ?? 30000;
     this.telemetry = new TelemetryReporter();
     this.friction = new FrictionReporter();
