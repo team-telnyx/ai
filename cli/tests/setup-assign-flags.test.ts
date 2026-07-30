@@ -49,15 +49,21 @@ function startMockServer(): Promise<void> {
         const captured: CapturedRequest = { method: req.method ?? "", path: req.url ?? "", body: parsedBody };
         capturedRequests.push(captured);
 
-        // POST /credential_connections (setup-voice step 1)
-        if (req.method === "POST" && req.url === "/v2/credential_connections") {
+        // GET /outbound_voice_profiles (setup-voice step 1 — AIF-328 flow)
+        if (req.method === "GET" && req.url === "/v2/outbound_voice_profiles") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: [{ id: "ovp_abc123", name: "default" }] }));
+          return;
+        }
+
+        // POST /call_control_applications (setup-voice step 2 — AIF-328 flow;
+        // setup-voice now creates a Call Control App, not a credential connection)
+        if (req.method === "POST" && req.url === "/v2/call_control_applications") {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({
             data: {
               id: "conn_abc123",
-              name: (parsedBody as Record<string, unknown>)?.name ?? "test",
-              user_name: "agentuser",
-              password: "agentpass",
+              application_name: (parsedBody as Record<string, unknown>)?.application_name ?? "test",
             },
           }));
           return;
@@ -205,7 +211,7 @@ describe("setup-voice step 4 (AIF-329: REST PATCH instead of Go CLI)", () => {
     }
   });
 
-  it("reports ready=true and 4 completed steps", async () => {
+  it("reports ready=true and assigns the number as the final step", async () => {
     capturedRequests = [];
     const fake = setupFakeTelnyx();
     const r = await runAsync(["setup-voice", "--json"], fake.env);
@@ -213,9 +219,12 @@ describe("setup-voice step 4 (AIF-329: REST PATCH instead of Go CLI)", () => {
     assert.equal(r.status, 0);
     const data = JSON.parse(r.stdout);
     assert.equal(data.ready, true);
-    assert.equal(data.steps.length, 4);
-    assert.equal(data.steps[3].status, "completed");
-    assert.equal(data.steps[3].name, "Assign number to connection");
+    // AIF-328 changed setup-voice to a 5-step Call Control App flow; the final
+    // step is the REST assign (AIF-329). Assert on the last step by identity
+    // rather than a hard-coded count so the two fixes stay compatible.
+    const last = data.steps[data.steps.length - 1];
+    assert.equal(last.status, "completed");
+    assert.equal(last.name, "Assign number to Call Control App");
   });
 });
 
