@@ -47,7 +47,7 @@ export class TelnyxClient {
 
   constructor(apiKey?: string, baseUrl?: string, timeout?: number) {
     this.apiKey = apiKey || resolveApiKey();
-    this.baseUrl = (baseUrl ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
+    this.baseUrl = (baseUrl ?? process.env.TELNYX_API_BASE_URL ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
     this.timeout = timeout ?? 30000;
     this.telemetry = new TelemetryReporter();
     this.friction = new FrictionReporter();
