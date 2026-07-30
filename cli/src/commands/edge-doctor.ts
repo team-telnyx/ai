@@ -7,7 +7,7 @@
  */
 
 import { outputJson, printError, printSuccess, printWarning } from "../utils/output.ts";
-import { getEdgeAuthStatus, getEdgeHelp, hasEdgeCli, supportsApiKeyAuth } from "../edge-cli.ts";
+import { getEdgeAuthStatus, getEdgeCommandSurface, getEdgeHelp, hasEdgeCli, supportsApiKeyAuth } from "../edge-cli.ts";
 
 interface EdgeDoctorResult {
   ready: boolean;
@@ -16,6 +16,7 @@ interface EdgeDoctorResult {
   authenticated: boolean;
   auth_mode: "api_key" | "oauth" | "none" | "unknown";
   api_key_auth_supported: boolean;
+  edge_command_surface: string[];
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -29,6 +30,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let authenticated = false;
   let authMode: EdgeDoctorResult["auth_mode"] = "none";
   let apiKeyAuthSupported = false;
+  let edgeCommandSurface: string[] = [];
 
   try {
     const out = getEdgeHelp();
@@ -43,11 +45,17 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   }
 
   if (installed) {
+    edgeCommandSurface = getEdgeCommandSurface();
     apiKeyAuthSupported = supportsApiKeyAuth();
     checks.push({
       name: "API-key auth supported",
       ok: apiKeyAuthSupported,
       detail: apiKeyAuthSupported ? "auth api-key set is available" : "no auth api-key set support detected",
+    });
+    checks.push({
+      name: "Detected Edge command surface",
+      ok: edgeCommandSurface.length > 0,
+      detail: edgeCommandSurface.length > 0 ? edgeCommandSurface.join(", ") : "no commands parsed from --help output",
     });
 
     try {
@@ -104,6 +112,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     authenticated,
     auth_mode: authMode,
     api_key_auth_supported: apiKeyAuthSupported,
+    edge_command_surface: edgeCommandSurface,
     checks,
     next_steps: nextSteps,
   };

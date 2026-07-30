@@ -101,7 +101,7 @@ Requirements:
 ### Edge Compute handoff commands
 
 These are **thin executable bridges**, not native Edge lifecycle support.
-They make Edge Compute usable from `telnyx-agent` while keeping real deploy/auth/secrets/bindings ownership in `telnyx-edge`. They now prefer API-key auth for agent use when the installed Edge CLI supports it.
+They make Edge Compute usable from `telnyx-agent` while keeping real deploy/auth/secrets/bindings/actors/inspect/types/storage ownership in `telnyx-edge`. They now prefer API-key auth for agent use when the installed Edge CLI supports it.
 
 ```bash
 telnyx-agent edge-doctor --json
@@ -114,6 +114,7 @@ What they do:
 - check whether Edge auth is already configured
 - prefer `telnyx-edge auth api-key set <your-api-key>` for agents when supported
 - point you at a real Edge example
+- keep storage and inspection workflows honest by handing off `telnyx-edge inspect`, `telnyx-edge types`, and `telnyx-edge storage sqldb ...` to the upstream CLI
 - give you the concrete next deploy command
 - preserve an honest handoff instead of pretending `telnyx-agent` owns Edge lifecycle
 

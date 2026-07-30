@@ -149,6 +149,16 @@ describe("CLI — capabilities", () => {
     }
   });
 
+  it("surfaces the upstream Edge storage and inspect handoff actions", () => {
+    const data = runJson("capabilities --json");
+    const edgeCategory = Object.keys(data.api_capabilities || {}).find((name) => name.includes("Edge Compute"));
+    assert.ok(edgeCategory, "Missing Edge Compute category");
+    const actions = data.api_capabilities[edgeCategory].flatMap((cap: { actions?: string[] }) => cap.actions || []);
+    assert.ok(actions.includes("telnyx_edge_inspect"), "Missing Edge inspect handoff");
+    assert.ok(actions.includes("telnyx_edge_types"), "Missing Edge types handoff");
+    assert.ok(actions.includes("telnyx_edge_storage_sqldb"), "Missing Edge storage sqldb handoff");
+  });
+
   it("composite_commands includes all setup commands", () => {
     const data = runJson("capabilities --json");
     const names = data.composite_commands.map((c: any) => c.name || c.command || c);

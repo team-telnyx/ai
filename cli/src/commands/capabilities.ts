@@ -42,7 +42,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "⚡ Edge Compute": [
     { name: "Edge Functions", description: "Pair Telnyx AI workflows with Telnyx Edge Compute. telnyx-agent now provides an executable handoff and prefers API-key auth for agent use when supported by telnyx-edge.", actions: ["see_guides_edge_compute"] },
-    { name: "Deployment Handoff", description: "Use team-telnyx/ai for orchestration patterns and telnyx-edge for deploy, secrets, bindings, and lifecycle management.", actions: ["telnyx_edge_ship", "telnyx_edge_secrets", "telnyx_edge_bindings"] },
+    { name: "Deployment Handoff", description: "Use team-telnyx/ai for orchestration patterns and telnyx-edge for deploy, secrets, bindings, actors, inspect, generated types, storage sqldb, and lifecycle management.", actions: ["telnyx_edge_ship", "telnyx_edge_secrets", "telnyx_edge_bindings", "telnyx_edge_actors", "telnyx_edge_inspect", "telnyx_edge_types", "telnyx_edge_storage_sqldb"] },
     { name: "Edge CLI Bridge", description: "Thin executable handoff from telnyx-agent into telnyx-edge for real MCP and webhook starting points.", actions: ["edge_doctor", "setup_edge_mcp", "setup_edge_webhook"] },
   ],
   "📋 10DLC Compliance": [

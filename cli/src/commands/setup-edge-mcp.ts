@@ -46,7 +46,7 @@ export async function setupEdgeMcpCommand(flags: Record<string, string | boolean
     ],
     notes: [
       "team-telnyx/ai provides the integration pattern, not the Edge lifecycle.",
-      "Use telnyx-edge for auth, deploy, secrets, bindings, and lifecycle management.",
+      "Use telnyx-edge for auth, deploy, secrets, bindings, actors, inspect, storage sqldb, generated types, and lifecycle management.",
       "After deploy, connect the exposed MCP or HTTP boundary back into your AI workflow.",
     ],
   };

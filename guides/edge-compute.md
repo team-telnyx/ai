@@ -12,7 +12,7 @@ This repo helps you discover where Edge Compute fits into an AI workflow, but th
 - the `telnyx-edge` CLI
 
 That means:
-- build/deploy/delete/secrets/bindings live in `telnyx-edge`
+- build/deploy/delete/secrets/bindings/actors/inspect/types/storage sqldb live in `telnyx-edge`
 - agent/orchestration logic can live in `team-telnyx/ai`
 - `team-telnyx/ai` should not pretend to replace Edge Compute
 
@@ -34,8 +34,11 @@ Good bridge use cases:
 ## Quick Start
 
 ```bash
-# Authenticate with the dedicated Edge CLI (preferred for agents)
-telnyx-edge auth api-key set <your-api-key>
+# Authenticate with the dedicated Edge CLI
+telnyx-edge auth login
+
+# If your installed CLI exposes API-key auth, agents can use it non-interactively instead
+# telnyx-edge auth api-key set <your-api-key>
 
 # Start from the MCP server example
 telnyx-edge new-func --from-dir=examples/ts/mcp-server --name=my-mcp-server
@@ -55,20 +58,33 @@ Edge Compute lifecycle is owned by the separate `telnyx-edge` CLI rather than th
 Common lifecycle commands:
 
 ```bash
+telnyx-edge --version
 telnyx-edge auth status
+telnyx-edge status
 telnyx-edge list
+telnyx-edge actors
+telnyx-edge inspect my-mcp-server
 telnyx-edge secrets list
 telnyx-edge bindings get
+telnyx-edge types
+telnyx-edge storage sqldb list
 ```
 
 | Command | Purpose |
 |---------|---------|
-| `telnyx-edge auth api-key set` | Authenticate the Edge CLI non-interactively |
+| `telnyx-edge auth login` | Authenticate the Edge CLI with the public upstream flow |
+| `telnyx-edge --version` | Verify which Edge CLI build is installed before debugging auth or deploy failures |
+| `telnyx-edge auth status` | Show whether the CLI is authenticated and whether the auth state is still usable |
+| `telnyx-edge status` | Check CLI configuration and connectivity before or after a deployment handoff |
 | `telnyx-edge new-func` | Scaffold a new function or clone an example |
 | `telnyx-edge ship` | Deploy the current function |
 | `telnyx-edge list` | List deployed functions |
+| `telnyx-edge actors` | Manage account-scoped StatefulActor types that can be bound into functions |
+| `telnyx-edge inspect` | Show a function's full details and actor bindings during handoff/debugging |
 | `telnyx-edge secrets` | Manage runtime secrets |
 | `telnyx-edge bindings` | Manage Telnyx API key bindings |
+| `telnyx-edge types` | Generate TypeScript binding types from the Edge project config |
+| `telnyx-edge storage sqldb` | Manage Edge SQL database resources from the upstream CLI |
 
 ## Prerequisites
 
@@ -84,8 +100,11 @@ Edge Compute is managed through the separate CLI:
 # See the edge-compute repo for install/setup details
 # https://github.com/team-telnyx/edge-compute
 
-telnyx-edge auth api-key set <your-api-key>
+telnyx-edge auth login
 telnyx-edge auth status
+
+# If your installed CLI exposes API-key auth, agents can use it non-interactively instead
+# telnyx-edge auth api-key set <your-api-key>
 ```
 
 Typical lifecycle commands live there:
@@ -94,9 +113,13 @@ Typical lifecycle commands live there:
 telnyx-edge new-func
 telnyx-edge ship
 telnyx-edge list
+telnyx-edge actors
+telnyx-edge inspect
 telnyx-edge delete-func
 telnyx-edge secrets
 telnyx-edge bindings
+telnyx-edge types
+telnyx-edge storage sqldb
 ```
 
 ## Reference architecture
@@ -111,7 +134,7 @@ A practical pattern looks like this:
 2. Use `team-telnyx/edge-compute` for:
    - function scaffolding
    - deployment
-   - secrets and bindings
+   - secrets, bindings, actors, inspect, generated types, and storage sqldb
    - running webhook/MCP edge endpoints
 3. Connect them with a stable boundary:
    - HTTP webhook
@@ -159,6 +182,19 @@ That keeps ownership clear and avoids duplicating deployment tooling.
 - add richer examples for webhook handlers, MCP adapters, and AI post-processing functions
 - add copy-paste scaffolds for how an AI app should call a deployed edge endpoint
 - document required secrets/bindings patterns
+
+## Surface drift note
+
+The live `telnyx-edge --help` output available in this workspace on July 29, 2026 also exposes:
+
+```bash
+telnyx-edge actors
+telnyx-edge inspect <function-name>
+telnyx-edge types
+telnyx-edge storage sqldb ...
+```
+
+That matches the delegated issue's monitoring note and keeps this guide aligned with the current upstream CLI surface. Upstream `v0.2.5`, published on July 14, 2026, also adds actor-instance visibility in its release notes. `team-telnyx/ai` should acknowledge that surface, including the SQL storage handoff, but lifecycle execution still belongs to `telnyx-edge`.
 
 ### Phase 3 — CLI bridge
 Only if ownership stays clear:

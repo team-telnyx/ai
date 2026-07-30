@@ -46,7 +46,7 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
     ],
     notes: [
       "Use this when your AI workflow needs an HTTP ingress point at the edge.",
-      "The deployed function lifecycle is still owned by telnyx-edge.",
+      "The deployed function lifecycle plus actors, inspect, storage sqldb, and generated types are still owned by telnyx-edge.",
       "After deploy, point your webhook-producing system at the Edge endpoint and let team-telnyx/ai handle orchestration guidance.",
     ],
   };
