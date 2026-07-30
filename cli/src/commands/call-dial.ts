@@ -1,11 +1,18 @@
 /**
  * telnyx-agent call-dial — Make an outbound call via Telnyx Call Control.
  *
- * Wraps the Go CLI's `calls dial` subcommand. Returns the new call-control-id so
- * the agent can immediately drive the call with `call-control`.
+ * Direct REST call to POST /v2/calls (AIF-327).
+ *
+ * The pinned Go CLI's `calls dial` subcommand mangled the `--to` value: a valid
+ * +E.164 number (e.g. +94771280314) was rejected with 422 error 10016
+ * ("'to' must be a phone number in +E164 format or a SIP endpoint") even though
+ * the CLI echoed the value correctly. The identical payload via raw POST /v2/calls
+ * succeeds, so we bypass the Go CLI and call the REST API directly. Returns the
+ * new call-control-id so the agent can immediately drive the call with
+ * `call-control`.
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
 interface CallDialResult {
@@ -91,30 +98,30 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
     process.exit(1);
   }
 
-  const args: string[] = [
-    "calls", "dial",
-    "--connection-id", connectionId,
-    "--from", from,
-    "--to", to,
-  ];
-  if (answeringMachineDetection) args.push("--answering-machine-detection", answeringMachineDetection);
-  if (deepfakeDetection) args.push("--deepfake-detection.enabled");
-  // --record takes the event to record from (default: record-from-answer).
-  if (record) args.push("--record", "record-from-answer");
-  if (webhookUrl) args.push("--webhook-url", webhookUrl);
-  if (audioUrl) args.push("--audio-url", audioUrl);
-  if (timeoutSecs) args.push("--timeout-secs", timeoutSecs);
-  // --privacy is supported by the v0.21 Go CLI (BodyPath: "privacy").
-  if (privacy) args.push("--privacy", privacy);
-  if (fromDisplayName) args.push("--from-display-name", fromDisplayName);
-  if (timeLimitSecs) args.push("--time-limit-secs", timeLimitSecs);
-  if (transcription) args.push("--transcription");
-  if (mediaEncryption) args.push("--media-encryption", mediaEncryption);
-  if (clientState) args.push("--client-state", clientState);
-  if (commandId) args.push("--command-id", commandId);
+  // Build the REST request body (snake_case, per POST /v2/calls).
+  const body: Record<string, unknown> = {
+    connection_id: connectionId,
+    from,
+    to,
+  };
+  if (answeringMachineDetection) body.answering_machine_detection = answeringMachineDetection;
+  // deepfake_detection is an object on the API.
+  if (deepfakeDetection) body.deepfake_detection = { enabled: true };
+  // `record` takes the event to record from (default: record-from-answer).
+  if (record) body.record = "record-from-answer";
+  if (webhookUrl) body.webhook_url = webhookUrl;
+  if (audioUrl) body.audio_url = audioUrl;
+  if (timeoutSecs) body.timeout_secs = Number(timeoutSecs);
+  if (privacy) body.privacy = privacy;
+  if (fromDisplayName) body.from_display_name = fromDisplayName;
+  if (timeLimitSecs) body.time_limit_secs = Number(timeLimitSecs);
+  if (transcription) body.transcription = true;
+  if (mediaEncryption) body.media_encryption = mediaEncryption;
+  if (clientState) body.client_state = clientState;
+  if (commandId) body.command_id = commandId;
   // Forward the normalized uppercase value so the API receives POST/GET, not post/get.
-  if (webhookUrlMethod) args.push("--webhook-url-method", webhookUrlMethod.toUpperCase());
-  if (webhookUrls) args.push("--webhook-urls", webhookUrls);
+  if (webhookUrlMethod) body.webhook_url_method = webhookUrlMethod.toUpperCase();
+  if (webhookUrls) body.webhook_urls = webhookUrls;
 
   try {
     if (!jsonOutput) {
@@ -127,7 +134,8 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
       console.log();
     }
 
-    const res = await telnyxCli(args);
+    const client = new TelnyxClient();
+    const res = await client.post("/calls", body);
     const data = (res?.data ?? res ?? {}) as Record<string, unknown>;
     const callControlId = String(data.call_control_id ?? "");
 
@@ -167,7 +175,7 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
 }
 
 function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
 }

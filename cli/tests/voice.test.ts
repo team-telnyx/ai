@@ -146,89 +146,125 @@ function assertFlagValue(args: string[], flag: string, value: string): void {
 }
 
 describe("Voice API action commands", () => {
-  it("call-dial passes the correct flags to `calls dial`", () => {
-    const fake = setupFakeTelnyx();
-    const output = run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--json"],
-      fake.env,
-    );
-
-    const data = JSON.parse(output);
-    assert.equal(data.call_control_id, "call-dial-123");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    assertFlagValue(dialCall!, "--connection-id", "conn-1");
-    assertFlagValue(dialCall!, "--from", "+13125550000");
-    assertFlagValue(dialCall!, "--to", "+13125551234");
-    // Boolean/detection flags should NOT be present when not requested.
-    assert.ok(!dialCall!.includes("--answering-machine-detection"));
-    assert.ok(!dialCall!.includes("--deepfake-detection"));
+  it("call-dial POSTs /v2/calls with a +E.164 `to` intact (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      assert.equal(req.method, "POST");
+      assert.equal(req.url, "/calls");
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123", call_leg_id: "leg-1", call_session_id: "sess-1", is_alive: true } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(
+        ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+94771280314", "--json"],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_control_id, "call-dial-123");
+      // The +E.164 number must reach the API body verbatim (the AIF-327 bug).
+      assert.equal(received?.to, "+94771280314");
+      assert.equal(received?.from, "+13125550000");
+      assert.equal(received?.connection_id, "conn-1");
+      // Detection fields absent when not requested.
+      assert.equal(received?.answering_machine_detection, undefined);
+      assert.equal(received?.deepfake_detection, undefined);
+      // Must NOT shell out to the Go CLI anymore.
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
   });
 
-  it("call-dial forwards AMD mode, deepfake and record flags in Go CLI syntax", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      [
-        "call-dial",
-        "--connection-id", "conn-1",
-        "--from", "+13125550000",
-        "--to", "+13125551234",
-        "--answering-machine-detection",
-        "--deepfake-detection",
-        "--record",
-        "--json",
-      ],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    // Bare --answering-machine-detection defaults to the "detect" mode value.
-    assertFlagValue(dialCall!, "--answering-machine-detection", "detect");
-    // deepfake_detection is an object; the Go CLI takes the inner --deepfake-detection.enabled flag.
-    assert.ok(dialCall!.includes("--deepfake-detection.enabled"), "must include --deepfake-detection.enabled");
-    // --record takes the event to record from, not a boolean.
-    assertFlagValue(dialCall!, "--record", "record-from-answer");
-  });
-
-  it("call-dial forwards an explicit --answering-machine-detection mode", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      [
-        "call-dial",
-        "--connection-id", "conn-1",
-        "--from", "+13125550000",
-        "--to", "+13125551234",
-        "--answering-machine-detection", "premium",
-        "--json",
-      ],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    assertFlagValue(dialCall!, "--answering-machine-detection", "premium");
-  });
-
-  it("call-dial rejects an invalid --answering-machine-detection mode", () => {
-    const fake = setupFakeTelnyx();
-    assert.throws(() =>
-      run(
+  it("call-dial maps AMD (bare), deepfake and record into the REST body (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
         [
           "call-dial",
           "--connection-id", "conn-1",
           "--from", "+13125550000",
           "--to", "+13125551234",
-          "--answering-machine-detection", "bogus",
+          "--answering-machine-detection",
+          "--deepfake-detection",
+          "--record",
           "--json",
         ],
-        fake.env,
-      ),
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      // Bare --answering-machine-detection defaults to "detect".
+      assert.equal(received?.answering_machine_detection, "detect");
+      // deepfake_detection is an object on the API.
+      assert.deepEqual(received?.deepfake_detection, { enabled: true });
+      // record takes the event to record from, not a boolean.
+      assert.equal(received?.record, "record-from-answer");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial forwards an explicit --answering-machine-detection mode (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial",
+          "--connection-id", "conn-1",
+          "--from", "+13125550000",
+          "--to", "+13125551234",
+          "--answering-machine-detection", "premium",
+          "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.answering_machine_detection, "premium");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial rejects an invalid --answering-machine-detection mode (no network call)", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(
+      [
+        "call-dial",
+        "--connection-id", "conn-1",
+        "--from", "+13125550000",
+        "--to", "+13125551234",
+        "--answering-machine-detection", "bogus",
+        "--json",
+      ],
+      { ...fake.env, TELNYX_API_KEY: "***" },
     );
+    assert.ok(/Invalid --answering-machine-detection mode/.test(stderr));
   });
 
   it("call-control --action hangup calls `calls:actions hangup`", () => {
@@ -471,44 +507,33 @@ describe("Voice API action commands", () => {
 
   // === Gap PR tests: number masking + advanced call-control actions ===
 
-  it("call-dial with --privacy id passes number masking flag to Go CLI", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--privacy", "id", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    // The v0.21 Go CLI exposes --privacy (BodyPath: "privacy").
-    assertFlagValue(dialCall!, "--privacy", "id");
-  });
-
-  it("call-dial with --from-display-name passes the flag through", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--from-display-name", "Acme Corp", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall);
-    assertFlagValue(dialCall!, "--from-display-name", "Acme Corp");
-  });
-
-  it("call-dial with --transcription flag passes through", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--transcription", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall);
-    assert.ok(dialCall!.includes("--transcription"), "should include --transcription flag");
+  it("call-dial maps --privacy, --from-display-name and --transcription into the REST body (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234",
+          "--privacy", "id", "--from-display-name", "Acme Corp", "--transcription", "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.privacy, "id");
+      assert.equal(received?.from_display_name, "Acme Corp");
+      assert.equal(received?.transcription, true);
+    } finally {
+      await mock.close();
+    }
   });
 
   it("call-control --action gather calls `calls:actions gather` and forwards client-state/command-id", () => {
