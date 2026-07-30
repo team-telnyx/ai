@@ -1,7 +1,7 @@
 /**
  * Telnyx API client — ONLY for operations with no CLI equivalent.
  *
- * The following 8 operations have no `telnyx` CLI command and must use direct API calls:
+ * The following 9 operations have no `telnyx` CLI command and must use direct API calls:
  * 1. POST /texml_applications (setup-ai)
  * 2. POST /sim_card_groups (setup-iot)
  * 3. PATCH /sim_cards/:id (setup-iot)
@@ -10,6 +10,11 @@
  * 6. POST /wireguard_peers (setup-wireguard)
  * 7. POST /x402/credit_account/quote (fund-account)
  * 8. POST /x402/credit_account (fund-account)
+ * 9. POST /verify_profiles (setup-verify)
+ *
+ * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
+ * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)
+ * - POST /messages (schedule-sms — Go CLI hits nonexistent /messages/schedule endpoint)
  *
  * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
  * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)

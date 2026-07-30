@@ -82,6 +82,20 @@ telnyx-agent setup-iot --json
 
 Output: `{ sim_id, group_id, status, apn_config }`
 
+### `telnyx-agent setup-verify`
+
+**One command: zero to phone verification.**
+
+Creates a verify profile with SMS channel settings (default timeout 300s, code length 6, whitelisted destinations US), searches for an available number with SMS capability, buys it, and outputs everything you need to start sending verifications.
+
+```bash
+telnyx-agent setup-verify
+telnyx-agent setup-verify --destinations US,GB,LK
+telnyx-agent setup-verify --profile-name "My Verify Profile" --json
+```
+
+Output: `{ profile_id, profile_name, phone_number, phone_number_id, timeout_secs, test_command, ready }`
+
 ### `telnyx-agent setup-ai`
 
 **One command: zero to AI assistant on a phone number.**

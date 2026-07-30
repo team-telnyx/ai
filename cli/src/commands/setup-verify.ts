@@ -8,7 +8,8 @@
  * 4. Output profile + number for use
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchNumbers, orderNumber } from "../utils/number-order.ts";
 
@@ -41,13 +42,26 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
     profileName = (flags["profile-name"] as string) || `Agent Verify Profile - ${ts}`;
     if (!jsonOutput) console.log("\n🚀 Setting up Phone Verification...\n");
 
-    // Step 1: Create verify profile via CLI
+    // Step 1: Create verify profile via REST API (AIF-330: Go CLI sends no
+    // channel settings → 400 "No channel setting provided: sms, call, etc")
     const step1Start = Date.now();
     try {
-      const profileRes = await telnyxCli([
-        "verify-profiles", "create",
-        "--name", profileName,
-      ]);
+      const destinations = ((flags.destinations as string) || "US")
+        .split(",")
+        .map((d) => d.trim().toUpperCase())
+        .filter(Boolean);
+
+      const client = new TelnyxClient();
+      const profileBody: Record<string, unknown> = {
+        name: profileName,
+        sms: {
+          default_verification_timeout_secs: timeoutSecs,
+          code_length: 6,
+          whitelisted_destinations: destinations,
+        },
+      };
+
+      const profileRes = await client.post("/verify_profiles", profileBody);
       const profileData = profileRes.data as Record<string, unknown>;
       profileId = String(profileData.id);
       steps.push({ step: 1, name: "Create verify profile", status: "completed", resourceId: profileId, detail: profileName, elapsedMs: Date.now() - step1Start });
@@ -138,6 +152,7 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
 }
 
 function errorMsg(err: unknown): string {
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof TelnyxCLIError) return err.stderr || err.message;
   if (err instanceof Error) return err.message;
   return String(err);

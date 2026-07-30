@@ -113,6 +113,7 @@ Setup-specific Flags:
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
   --profile-name    Custom verify profile name (setup-verify)
+  --destinations    Whitelisted destination countries for verify (setup-verify, default: US)
 
 Verify Flags:
   --phone-number    E.164 number to verify (verify-send, required)
@@ -354,6 +355,8 @@ Examples:
   telnyx-agent capabilities
   telnyx-agent setup-sms --country US
   telnyx-agent setup-voice
+  telnyx-agent setup-verify
+  telnyx-agent setup-verify --destinations US,GB,LK
   telnyx-agent setup-voice --webhook https://example.com/calls
   telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
