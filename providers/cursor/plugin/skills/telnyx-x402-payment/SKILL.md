@@ -195,8 +195,8 @@ PaymentPayload v2:
 {
   "x402Version": 2,
   "resource": {
-    "url": "https://api.telnyx.com/v2/x402/credit_account",
-    "description": "Credit account via x402 payment",
+    "url": "payment:quote_abc123",
+    "description": "Payment of $50.00 USD",
     "mimeType": "application/json"
   },
   "accepted": {
@@ -227,7 +227,7 @@ PaymentPayload v2:
 }
 ```
 
-> **Note:** The `resource` field is optional per the `@x402/core` schema, but the working e2e implementation includes it. It describes the API endpoint being paid for.
+> **Note:** The `resource` field is optional per the `@x402/core` schema, but the working e2e implementation includes it. When you include it, copy `payment_requirements.resource` **verbatim** from the quote response — do not substitute the API endpoint URL or any other value. The v2 client constructs the payload's `resource` by copying the quoted one, and a mismatched `resource` can fail verification.
 
 ### Full Flow: Quote → PaymentPayload → Submit
 
@@ -239,6 +239,11 @@ PaymentPayload v2:
     "id": "quote_78ab4393-b7c1-4949-a6df-9ffa56642252",
     "amount_crypto": "50000000",
     "payment_requirements": {
+      "resource": {
+        "url": "payment:quote_78ab4393-b7c1-4949-a6df-9ffa56642252",
+        "description": "Payment of $50.00 USD",
+        "mimeType": "application/json"
+      },
       "accepts": [{
         "scheme": "exact",
         "network": "eip155:8453",
@@ -269,12 +274,12 @@ PaymentPayload v2:
 | `payload.authorization.validBefore` | Unix timestamp (quote expiry) |
 | `payload.authorization.nonce` | Random 32-byte hex (`0x`-prefixed) |
 
-**`resource`** *(optional)* — The working e2e implementation includes a top-level `resource` object describing the API endpoint being paid for. The `@x402/core` schema considers this optional, but including it is recommended.
+**`resource`** *(optional)* — Copy `payment_requirements.resource` from your quote response **exactly**, the same way you copy `accepts[0]` into `accepted`. The `@x402/core` schema considers this optional, but including the verbatim quoted value is recommended. Never replace it with the API endpoint URL.
 
 **3. Base64-encode and submit:**
 
 ```bash
-PAYMENT_PAYLOAD='{"x402Version":2,"resource":{"url":"https://api.telnyx.com/v2/x402/credit_account","description":"Credit account via x402 payment","mimeType":"application/json"},"accepted":{"scheme":"exact","network":"eip155:8453","amount":"50000000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","payTo":"0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97","maxTimeoutSeconds":300,"extra":{"quoteId":"quote_78ab4393-b7c1-4949-a6df-9ffa56642252","facilitatorUrl":"https://www.x402.org/facilitator","name":"USD Coin","version":"2"}},"payload":{"signature":"0xe0fbde58a3c04dc2bae26f25ed36c7802f9214c88b3e26e6e9f79a2838a9c4651d2f7e8a90b45c31d8e5f720ca9d9b13f6d8a2e5c1b4f7e8d9a0b3c6d5e4f2a71b","authorization":{"from":"0x71C7656EC7ab88b098defB751B7401B5f6d8976F","to":"0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97","value":"50000000","validAfter":"0","validBefore":"1773166865","nonce":"0x8a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0a1b"}}}'
+PAYMENT_PAYLOAD='{"x402Version":2,"resource":{"url":"payment:quote_78ab4393-b7c1-4949-a6df-9ffa56642252","description":"Payment of $50.00 USD","mimeType":"application/json"},"accepted":{"scheme":"exact","network":"eip155:8453","amount":"50000000","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","payTo":"0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97","maxTimeoutSeconds":300,"extra":{"quoteId":"quote_78ab4393-b7c1-4949-a6df-9ffa56642252","facilitatorUrl":"https://www.x402.org/facilitator","name":"USD Coin","version":"2"}},"payload":{"signature":"0xe0fbde58a3c04dc2bae26f25ed36c7802f9214c88b3e26e6e9f79a2838a9c4651d2f7e8a90b45c31d8e5f720ca9d9b13f6d8a2e5c1b4f7e8d9a0b3c6d5e4f2a71b","authorization":{"from":"0x71C7656EC7ab88b098defB751B7401B5f6d8976F","to":"0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97","value":"50000000","validAfter":"0","validBefore":"1773166865","nonce":"0x8a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c4d6e8f0a1b"}}}'
 
 # tr strips the line wraps GNU base64 inserts at 76 chars — they would corrupt the JSON below
 ENCODED=$(echo -n "$PAYMENT_PAYLOAD" | base64 | tr -d '\n')
@@ -340,7 +345,7 @@ Settlement is nearly instant (~2 seconds on Base L2). Platform credit is applied
 | `amount_usd must not exceed 10000.00` | 422 | Above maximum | Use $10,000.00 or less |
 | `insufficient_balance` | 422 | Wallet lacks USDC | Fund the wallet with USDC on Base |
 | `insufficient_funds` | 422 | Wallet lacks USDC (alias) | Fund the wallet with USDC on Base |
-| `insufficient_allowance` | 422 | USDC token allowance insufficient | Approve USDC spending for the facilitator contract |
+| `insufficient_allowance` | 422 | Facilitator reported an allowance problem | Not expected in this flow — EIP-3009 `transferWithAuthorization` does not use ERC-20 allowances, and no spender address is published to approve. Do not grant token approvals. Verify the authorization fields match the quote, then contact Telnyx Support with the response details if it persists |
 | `expired_authorization` | 400 | Quote/authorization expired | Request a new quote |
 | `invalid_signature` | 400 | Signature check failed | Verify EIP-712 domain, types, and signing parameters |
 | `invalid_nonce` | 400 | Authorization already used or cancelled | Generate a new nonce and re-sign |

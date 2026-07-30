@@ -75,7 +75,7 @@ npx --yes @stripe/link-cli@0.11.0 mpp pay "$MPP_ENDPOINT" \
 ### Pay with Tempo USDC
 
 ```bash
-npx mppx --include --network mainnet --account my-telnyx-payer \
+npx mppx@0.8.15 --include --network mainnet --account my-telnyx-payer \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H 'Content-Type: application/json' \
   -J "{\"amount_usd\":\"$MPP_AMOUNT_USD\"}" \

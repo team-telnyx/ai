@@ -47,7 +47,7 @@ The first request returns HTTP `402 Payment Required`. This is an expected part 
 
 ## Setup
 
-You need Node.js, npm, `curl`, and a Telnyx API key. Link payments use `@stripe/link-cli@0.11.0`. Tempo payments use `mppx` and a funded Tempo wallet.
+You need Node.js, npm, `curl`, and a Telnyx API key. Link payments use `@stripe/link-cli@0.11.0`. Tempo payments use `mppx@0.8.15` and a funded Tempo wallet. The version is pinned for the same reason as the Link CLI: an unpinned `npx` invocation would execute whatever the registry serves that day, which is unacceptable in a flow that signs payments.
 
 ## Environment variables
 
@@ -193,13 +193,13 @@ A repeat of an already completed payment can return HTTP `200` with `created: fa
 Create a named mainnet wallet if you do not already have one:
 
 ```sh
-npx mppx account create --account my-telnyx-payer --network mainnet
+npx mppx@0.8.15 account create --account my-telnyx-payer --network mainnet
 ```
 
 Back up the wallet and keep its private key secret. Transfer enough USDC to cover the payment and network fees, then check the wallet:
 
 ```sh
-npx mppx account view --account my-telnyx-payer --network mainnet
+npx mppx@0.8.15 account view --account my-telnyx-payer --network mainnet
 ```
 
 ### Pay
@@ -208,7 +208,7 @@ npx mppx account view --account my-telnyx-payer --network mainnet
 umask 077
 TEMPO_RESULT="$(mktemp /tmp/telnyx-mpp-tempo-result.XXXXXX.json)"
 
-npx mppx \
+npx mppx@0.8.15 \
   --include \
   --network mainnet \
   --account my-telnyx-payer \
