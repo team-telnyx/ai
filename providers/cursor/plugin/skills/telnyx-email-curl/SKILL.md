@@ -194,6 +194,9 @@ Scheduling uses the normal create endpoint. Confirm `.data.status == "scheduled"
 an invalid or past timestamp is silently treated as an immediate send.
 
 ```bash
+# Schedule for a future time (compute dynamically so the value is always in the future)
+SCHEDULED_AT=$(date -u -v+1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+1 hour' '+%Y-%m-%dT%H:%M:%SZ')
+
 curl --fail-with-body \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
@@ -203,7 +206,7 @@ curl --fail-with-body \
     "to": ["customer@example.net"],
     "subject": "Appointment reminder",
     "text_body": "Your appointment is tomorrow.",
-    "scheduled_at": "2026-08-01T15:00:00Z"
+    "scheduled_at": "'$SCHEDULED_AT'"
   }' \
   "https://api.telnyx.com/v2/email_messages"
 ```

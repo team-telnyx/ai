@@ -33,7 +33,7 @@ export EMAIL_WEBHOOK_ID="123e4567-e89b-12d3-a456-426614174003"
 Every request requires:
 
 ```bash
--H "Authorization: Bearer ***"
+-H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
 Mutation requests with JSON also require:
@@ -157,7 +157,7 @@ enums.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X POST \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "domain": "example.com",
@@ -189,7 +189,7 @@ Expected status: `201`. Save `.data.id` as `EMAIL_DOMAIN_ID`. Do not send until
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID/dns_records"
 ```
 
@@ -210,7 +210,7 @@ are required for this domain's sending and inbound configuration.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X POST \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID/verify"
 ```
 
@@ -228,7 +228,7 @@ that every record verified.
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID/health"
 ```
 
@@ -252,7 +252,7 @@ booleans rather than treating every non-`verified` value as fatal.
 
 ```bash
 curl --fail-with-body --silent --show-error --get \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   --data-urlencode "page[number]=1" \
   --data-urlencode "page[size]=25" \
   --data-urlencode "sort=-created_at" \
@@ -275,7 +275,7 @@ and cursor pagination; inspect the returned `.meta` shape.
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID"
 ```
 
@@ -301,7 +301,7 @@ value, and verify again.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X PATCH \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "inbound_enabled": true,
@@ -330,13 +330,13 @@ Expected status: `200`. A non-owner cannot mutate a shared domain (`403`, code
 # For a pending or unverified custom domain:
 curl --fail-with-body --silent --show-error \
   -X DELETE \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID"
 
 # For a verified custom domain, explicitly confirm deletion:
 curl --fail-with-body --silent --show-error --get \
   -X DELETE \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   --data-urlencode "force=true" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID"
 ```
@@ -401,7 +401,7 @@ include the complete desired allowlist.
 
 ```bash
 curl --fail-with-body --silent --show-error --get \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   --data-urlencode "page[number]=1" \
   --data-urlencode "page[size]=25" \
   --data-urlencode "sort=-created_at" \
@@ -424,7 +424,7 @@ pagination only.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X POST \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com/webhooks/email",
@@ -454,7 +454,7 @@ Expected status: `201`. Save `.data.id` as `EMAIL_WEBHOOK_ID`.
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID/webhooks/$EMAIL_WEBHOOK_ID"
 ```
 
@@ -477,7 +477,7 @@ and cannot be changed.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X PATCH \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "events": [
@@ -508,7 +508,7 @@ desired allowlist.
 ```bash
 curl --fail-with-body --silent --show-error \
   -X DELETE \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   "$TELNYX_API_BASE/email_domains/$EMAIL_DOMAIN_ID/webhooks/$EMAIL_WEBHOOK_ID"
 ```
 

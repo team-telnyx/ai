@@ -18,6 +18,9 @@ metadata:
 
 ```text
 # curl is pre-installed on macOS, Linux, and Windows 10+
+# jq is required for the import polling examples below:
+#   macOS: brew install jq
+#   Debian/Ubuntu: sudo apt-get install jq
 ```
 
 ## Setup
@@ -430,7 +433,7 @@ names in the current OpenAPI `EmailWebhookEvent` enum are:
 DOMAIN_ID="00000000-0000-0000-0000-000000000000"
 curl --silent --show-error \
   -X POST \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com/webhooks/email",
