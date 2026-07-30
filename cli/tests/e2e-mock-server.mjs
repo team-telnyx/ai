@@ -63,6 +63,45 @@ const server = createServer((req, res) => {
       return ok({ data: { call_control_id: path.split("/").pop(), is_alive: false, call_session_id: "sess_1" } });
     }
 
+    // --- Go-CLI shell-out paths (send-sms, sms-status, number search/order) ---
+    // These are hit by the bundled telnyx Go CLI when pointed at the mock via
+    // the --base-url shim, so the FULL e2e exercises the shell-out path too.
+    if (req.method === "POST" && path === "/messages") {
+      const id = nextId("msg");
+      const row = { id, record_type: "message", type: body?.media_url ? "MMS" : "SMS",
+        from: { phone_number: body?.from }, to: [{ phone_number: body?.to, status: "queued" }],
+        text: body?.text };
+      state.messages ??= []; state.messages.push(row);
+      return ok({ data: row });
+    }
+    if (req.method === "GET" && /^\/messages\/msg_[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const row = (state.messages ?? []).find((m) => m.id === id);
+      return row ? ok({ data: { ...row, to: [{ phone_number: row.to?.[0]?.phone_number, status: "delivered" }] } })
+                 : ok({ errors: [{ code: "40303", detail: "Message not found" }] }, 404);
+    }
+    if (req.method === "GET" && path === "/available_phone_numbers") {
+      return ok({ data: [
+        { phone_number: "+13125557001", record_type: "available_phone_number", features: [{ name: "sms" }, { name: "mms" }, { name: "voice" }] },
+        { phone_number: "+13125557002", record_type: "available_phone_number", features: [{ name: "sms" }, { name: "voice" }] },
+      ], meta: { total_results: 2 } });
+    }
+    if (req.method === "POST" && path === "/number_orders") {
+      const id = nextId("ord");
+      const pn = body?.phone_numbers?.[0]?.phone_number ?? body?.phone_number?.[0]?.["phone-number"] ?? "+13125557001";
+      const nid = nextId("pn");
+      state.phoneNumbers.push({ id: nid, phone_number: pn,
+        messaging_profile_id: body?.messaging_profile_id, connection_id: body?.connection_id });
+      return ok({ data: { id, status: "success", phone_numbers: [{ phone_number: pn, id: nid }] } });
+    }
+    // GET /phone_numbers/{id-or-e164} — Go CLI resolvePhoneNumberId lookup.
+    if (req.method === "GET" && /^\/phone_numbers\/.+$/.test(path)) {
+      const key = decodeURIComponent(path.replace("/phone_numbers/", ""));
+      const row = state.phoneNumbers.find((n) => n.phone_number === key || n.id === key)
+        ?? { id: nextId("pn"), phone_number: key };
+      return ok({ data: row });
+    }
+
     // --- Group MMS (AIF-335) ---
     if (req.method === "POST" && path === "/messages/group_mms") {
       const recipients = (body?.to ?? []).map((p) => ({ phone_number: p, status: "queued" }));
