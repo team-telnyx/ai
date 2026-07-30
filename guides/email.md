@@ -257,9 +257,13 @@ Install with:
 npx skills add team-telnyx/ai --skill telnyx-email-curl --agent cursor
 ```
 
-For _XqCCod (the `telnyx-email` plugin bundles all four skills):
+For Claude Code (the `telnyx-email` plugin bundles all four skills):
 
 ```bash
+# Register the Telnyx marketplace first (one-time setup)
+/plugin marketplace add team-telnyx/ai
+
+# Then install the plugin
 /plugin install telnyx-email@telnyx
 ```
 
