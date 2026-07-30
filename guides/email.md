@@ -58,7 +58,8 @@ curl -X POST "https://api.telnyx.com/v2/email_domains/$DOMAIN_ID/verify" \
 **`POST /v2/email_messages`**
 
 ```bash
-curl -X POST "https://api.telnyx.com/v2/email_messages" \
+# Capture the message ID for use in tracking and cancellation examples below
+EMAIL_ID=$(curl -s -X POST "https://api.telnyx.com/v2/email_messages" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -67,7 +68,7 @@ curl -X POST "https://api.telnyx.com/v2/email_messages" \
     "subject": "Your verification code",
     "html_body": "<p>Your code is <strong>123456</strong></p>",
     "text_body": "Your code is 123456"
-  }'
+  }' | jq -r '.data.id')
 ```
 
 | Parameter | Type | Required | Description |
@@ -164,6 +165,10 @@ curl "https://api.telnyx.com/v2/email_events/stats" \
 ```
 
 ### Python
+
+```bash
+pip install httpx
+```
 
 ```python
 import os

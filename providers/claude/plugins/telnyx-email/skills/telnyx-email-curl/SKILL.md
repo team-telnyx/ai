@@ -197,7 +197,8 @@ an invalid or past timestamp is silently treated as an immediate send.
 # Schedule for a future time (compute dynamically so the value is always in the future)
 SCHEDULED_AT=$(date -u -v+1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+1 hour' '+%Y-%m-%dT%H:%M:%SZ')
 
-curl --fail-with-body \
+# Capture the scheduled message ID for cancellation below
+EMAIL_ID=$(curl -s --fail-with-body \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
@@ -208,7 +209,7 @@ curl --fail-with-body \
     "text_body": "Your appointment is tomorrow.",
     "scheduled_at": "'$SCHEDULED_AT'"
   }' \
-  "https://api.telnyx.com/v2/email_messages"
+  "https://api.telnyx.com/v2/email_messages" | jq -r '.data.id')
 ```
 
 Cancel only while the message is still scheduled:
