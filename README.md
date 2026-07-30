@@ -1,6 +1,6 @@
 # Telnyx AI
 
-This repo is the one-stop shop for AI Agents and AI-first developers building with Telnyx — everything an agent needs to sign up, fund an account, and ship production integrations.
+This repo is the one-stop shop for AI Agents and AI-first developers building with Telnyx — everything an agent needs to build production-grade applications and manage its account, from signup to funding.
 
 > [!NOTE]
 > This repository is a work in progress under active development. We are continuously improving based on testing and feedback. Contributions and feedback encouraged!

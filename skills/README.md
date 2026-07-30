@@ -4,7 +4,7 @@ Official Agent Skills for building on Telnyx and managing your Telnyx account.
 
 These skills give agents structured, up-to-date context to generate correct, production-ready code — and to handle account management like signup and payments — without relying on pre-training or fragile doc retrieval.
 
-They include accurate schemas, SDK patterns, workflows, and API references, so agents can implement Telnyx APIs reliably in real-world applications — from first signup to funded, production accounts.
+They include accurate schemas, SDK patterns, workflows, and API references, so agents can build production-grade applications on Telnyx — with account management (signup, funding, payments) covered alongside.
 
 Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.io/specification) and are compatible with coding agents like Claude Code, Cursor, Windsurf, and others.
 
