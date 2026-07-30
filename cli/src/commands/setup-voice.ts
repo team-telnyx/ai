@@ -16,6 +16,7 @@ import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
+import { findReusablePair, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupVoiceResult {
   connection_id: string;
@@ -25,6 +26,7 @@ interface SetupVoiceResult {
   webhook_url: string;
   outbound_voice_profile_id: string;
   ready: boolean;
+  reused: boolean;
   steps: StepResult[];
 }
 
@@ -34,6 +36,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   const country = (flags.country as string) || "US";
   const webhookUrl = (flags["webhook-url"] as string) || (flags.webhook as string) || "https://example.com/webhook";
   const outboundProfileIdFlag = (flags["outbound-voice-profile-id"] as string) || "";
+  // AIF-336: reuse a previously agent-created Call Control App + number by
+  // default so re-runs don't silently buy another ~$1/mo number. Pass --force
+  // to always provision a fresh app and number.
+  const force = flags.force === true;
   const totalSteps = 5;
   const steps: StepResult[] = [];
   const startTime = Date.now();
@@ -43,9 +49,61 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   let phoneNumber = "";
   let phoneNumberId = "";
   let outboundProfileId = "";
+  let reused = false;
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up Voice...\n");
+
+    // AIF-336: idempotency — reuse an existing agent-created Call Control App +
+    // assigned number unless --force was passed.
+    if (!force) {
+      const existing = await findReusablePair(
+        client,
+        "/call_control_applications",
+        "application_name",
+        AGENT_VOICE_APP_PREFIX,
+        "connection_id",
+      );
+      if (existing) {
+        connectionId = existing.resource.id;
+        connectionName = existing.resource.name;
+        phoneNumber = existing.phoneNumber;
+        phoneNumberId = existing.phoneNumberId;
+        reused = true;
+        steps.push({ step: 1, name: "Reuse existing Call Control App + number", status: "completed", resourceId: connectionId, detail: `${connectionName} → ${phoneNumber}`, elapsedMs: 0 });
+
+        const result: SetupVoiceResult = {
+          connection_id: connectionId,
+          connection_name: connectionName,
+          phone_number: phoneNumber,
+          phone_number_id: phoneNumberId,
+          webhook_url: webhookUrl,
+          outbound_voice_profile_id: outboundProfileId,
+          ready: true,
+          reused: true,
+          steps,
+        };
+        if (jsonOutput) {
+          outputJson(result);
+        } else {
+          printStep(steps[0], totalSteps);
+          printSuccess("Voice already set up — reusing existing resources", {
+            "Connection ID": connectionId,
+            "App Name": connectionName,
+            "Phone Number": phoneNumber,
+            Ready: "✓",
+            "Reused": "✓ (pass --force to provision a new app + number)",
+          });
+          console.log("  💡 Use the Connection ID above with: telnyx-agent call-dial --connection-id " + connectionId + " ...\n");
+        }
+        return;
+      }
+      if (!jsonOutput) {
+        // fall through to a fresh setup below
+      }
+    } else if (!jsonOutput) {
+      console.log("  ⚠ --force: provisioning a NEW Call Control App + number (this buys a ~$1/mo number).\n");
+    }
 
     // Step 1: Resolve outbound voice profile
     const step1Start = Date.now();
@@ -72,7 +130,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     const step2Start = Date.now();
     try {
       const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
-      connectionName = `Agent Voice App - ${ts}`;
+      connectionName = `${AGENT_VOICE_APP_PREFIX}${ts}`;
       const appBody: Record<string, unknown> = {
         application_name: connectionName,
         webhook_event_url: webhookUrl,
@@ -134,6 +192,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       webhook_url: webhookUrl,
       outbound_voice_profile_id: outboundProfileId,
       ready: true,
+      reused: false,
       steps,
     };
 

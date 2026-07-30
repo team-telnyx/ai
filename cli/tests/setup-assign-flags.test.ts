@@ -12,7 +12,7 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +35,12 @@ interface CapturedRequest {
 let mockServer: Server;
 let mockPort: number;
 let capturedRequests: CapturedRequest[] = [];
+
+// AIF-336 idempotency fixtures: when populated, the mock returns an existing
+// agent-created messaging profile + assigned number so setup-sms can reuse
+// them. Default empty => fresh-setup path (existing AIF-329 tests unaffected).
+let existingSmsProfiles: Array<Record<string, unknown>> = [];
+let assignedSmsNumbers: Array<Record<string, unknown>> = [];
 
 function startMockServer(): Promise<void> {
   return new Promise((resolve) => {
@@ -66,6 +72,20 @@ function startMockServer(): Promise<void> {
               application_name: (parsedBody as Record<string, unknown>)?.application_name ?? "test",
             },
           }));
+          return;
+        }
+
+        // AIF-336: GET /messaging_profiles (idempotency reuse lookup)
+        if (req.method === "GET" && req.url?.startsWith("/v2/messaging_profiles")) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: existingSmsProfiles }));
+          return;
+        }
+
+        // AIF-336: GET /phone_numbers?filter[messaging_profile_id]=... (assigned number)
+        if (req.method === "GET" && req.url?.startsWith("/v2/phone_numbers?")) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: assignedSmsNumbers }));
           return;
         }
 
@@ -269,6 +289,54 @@ describe("setup-sms step 4 (AIF-329: REST PATCH instead of Go CLI)", () => {
     assert.equal(data.steps.length, 4);
     assert.equal(data.steps[3].status, "completed");
     assert.equal(data.steps[3].name, "Assign number to profile");
+  });
+
+  // ------------------------------------------------------------------
+  // AIF-336: idempotency — reuse existing agent resources, --force to renew
+  // ------------------------------------------------------------------
+
+  it("reuses an existing agent SMS profile + number instead of buying again (AIF-336)", async () => {
+    capturedRequests = [];
+    existingSmsProfiles = [{ id: "prof_existing", name: "Agent SMS Profile - 2026-07-24 02:29:55" }];
+    assignedSmsNumbers = [{ id: "num_existing", phone_number: "+13125558888" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-sms", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true, "should report reused=true");
+      assert.equal(data.profile_id, "prof_existing");
+      assert.equal(data.phone_number, "+13125558888");
+      assert.equal(data.ready, true);
+
+      // Must NOT create a new profile, must NOT buy or PATCH a number.
+      const profilePosts = capturedRequests.filter((c) => c.method === "POST" && c.path === "/v2/messaging_profiles");
+      assert.equal(profilePosts.length, 0, "must not POST a new profile when reusing");
+      assert.equal(patchRequests().length, 0, "must not PATCH a number when reusing");
+      const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+      assert.ok(!cliLog.includes("number-orders"), "must not order a number when reusing");
+    } finally {
+      existingSmsProfiles = [];
+      assignedSmsNumbers = [];
+    }
+  });
+
+  it("--force provisions a fresh profile + number even when an agent profile already exists (AIF-336)", async () => {
+    capturedRequests = [];
+    existingSmsProfiles = [{ id: "prof_existing", name: "Agent SMS Profile - 2026-07-24 02:29:55" }];
+    assignedSmsNumbers = [{ id: "num_existing", phone_number: "+13125558888" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-sms", "--force", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, false, "--force must not reuse");
+      const profilePosts = capturedRequests.filter((c) => c.method === "POST" && c.path === "/v2/messaging_profiles");
+      assert.equal(profilePosts.length, 1, "--force must POST a new profile");
+    } finally {
+      existingSmsProfiles = [];
+      assignedSmsNumbers = [];
+    }
   });
 });
 

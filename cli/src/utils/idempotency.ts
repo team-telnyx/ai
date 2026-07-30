@@ -1,0 +1,103 @@
+/**
+ * Idempotency helpers for the setup-* commands (AIF-336).
+ *
+ * The setup-sms / setup-voice commands used to create a fresh messaging profile
+ * or Call Control Application AND buy a fresh phone number on every run — with
+ * no reuse detection, no cost warning, and no confirmation gate. Re-running the
+ * command (or even a `--help` that accidentally executed, see AIF-325) silently
+ * accumulated duplicate ~$1/mo numbers and duplicate profiles/apps.
+ *
+ * These helpers let the setup commands:
+ *   1. Detect a previously agent-created resource by its stable name prefix, and
+ *   2. Find a phone number already assigned to it,
+ * so the command can reuse the existing pair instead of buying again — unless
+ * the caller explicitly passes --force to provision a brand-new set.
+ */
+
+import type { TelnyxClient } from "../client.ts";
+
+/** Stable name prefixes the setup commands stamp on the resources they create. */
+export const AGENT_SMS_PROFILE_PREFIX = "Agent SMS Profile - ";
+export const AGENT_VOICE_APP_PREFIX = "Agent Voice App - ";
+
+export interface ExistingResource {
+  id: string;
+  name: string;
+}
+
+export interface ReusablePair {
+  resource: ExistingResource;
+  phoneNumber: string;
+  phoneNumberId: string;
+}
+
+/**
+ * Find the most recent existing resource whose name starts with `prefix`.
+ * `listPath` is a paged list endpoint (e.g. "/messaging_profiles"); `nameField`
+ * is the property holding the human name ("name" or "application_name").
+ * Returns undefined when none match (or on any lookup error — reuse is a
+ * best-effort optimization and must never block a fresh setup).
+ */
+export async function findExistingByPrefix(
+  client: TelnyxClient,
+  listPath: string,
+  nameField: string,
+  prefix: string,
+): Promise<ExistingResource | undefined> {
+  try {
+    const res = await client.get(listPath, { "page[size]": 250 });
+    const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
+    const matches = rows
+      .filter((r) => typeof r[nameField] === "string" && (r[nameField] as string).startsWith(prefix))
+      .map((r) => ({ id: String(r.id), name: String(r[nameField]) }));
+    if (matches.length === 0) return undefined;
+    // Names carry a trailing timestamp, so the lexicographically largest name
+    // is the most recently created one.
+    matches.sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+    return matches[0];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Find a phone number already assigned to the given resource.
+ * `filterKey` is the phone_numbers list filter to scope by
+ * ("messaging_profile_id" or "connection_id").
+ * Returns undefined when the resource has no assigned number (or on error).
+ */
+export async function findAssignedNumber(
+  client: TelnyxClient,
+  filterKey: string,
+  resourceId: string,
+): Promise<{ phoneNumber: string; phoneNumberId: string } | undefined> {
+  try {
+    const res = await client.get("/phone_numbers", { [`filter[${filterKey}]`]: resourceId, "page[size]": 1 });
+    const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
+    if (rows.length === 0) return undefined;
+    const n = rows[0];
+    return { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? "") };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Look for a fully reusable (resource + assigned number) pair for the given
+ * name prefix. Returns undefined unless BOTH an existing resource and a number
+ * assigned to it are found — a bare resource with no number is not reusable for
+ * "zero to sending" and would still require a purchase.
+ */
+export async function findReusablePair(
+  client: TelnyxClient,
+  listPath: string,
+  nameField: string,
+  prefix: string,
+  filterKey: string,
+): Promise<ReusablePair | undefined> {
+  const resource = await findExistingByPrefix(client, listPath, nameField, prefix);
+  if (!resource) return undefined;
+  const number = await findAssignedNumber(client, filterKey, resource.id);
+  if (!number) return undefined;
+  return { resource, phoneNumber: number.phoneNumber, phoneNumberId: number.phoneNumberId };
+}

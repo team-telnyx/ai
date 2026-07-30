@@ -12,6 +12,7 @@ import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
+import { findReusablePair, AGENT_SMS_PROFILE_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupSmsResult {
   profile_id: string;
@@ -19,12 +20,17 @@ interface SetupSmsResult {
   phone_number: string;
   phone_number_id: string;
   ready: boolean;
+  reused: boolean;
   steps: StepResult[];
 }
 
 export async function setupSmsCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
   const country = (flags.country as string) || "US";
+  // AIF-336: reuse a previously agent-created profile+number by default so
+  // re-runs don't silently buy another ~$1/mo number. Pass --force to always
+  // provision a fresh profile and number.
+  const force = flags.force === true;
   const totalSteps = 4;
   const steps: StepResult[] = [];
   const startTime = Date.now();
@@ -33,17 +39,64 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
   let profileName = "";
   let phoneNumber = "";
   let phoneNumberId = "";
+  let reused = false;
 
   try {
-    // Step 1: Create messaging profile via direct API
-    // (CLI doesn't support --whitelisted-destinations which the API requires)
-    const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
-    profileName = `Agent SMS Profile - ${ts}`;
     if (!jsonOutput) console.log("\n🚀 Setting up SMS...\n");
 
     const apiKey = process.env.TELNYX_API_KEY;
     if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
     const client = new TelnyxClient(apiKey);
+
+    // AIF-336: idempotency — reuse an existing agent-created profile + assigned
+    // number unless --force was passed.
+    if (!force) {
+      const existing = await findReusablePair(
+        client,
+        "/messaging_profiles",
+        "name",
+        AGENT_SMS_PROFILE_PREFIX,
+        "messaging_profile_id",
+      );
+      if (existing) {
+        profileId = existing.resource.id;
+        profileName = existing.resource.name;
+        phoneNumber = existing.phoneNumber;
+        phoneNumberId = existing.phoneNumberId;
+        reused = true;
+        steps.push({ step: 1, name: "Reuse existing SMS profile + number", status: "completed", resourceId: profileId, detail: `${profileName} → ${phoneNumber}`, elapsedMs: 0 });
+
+        const result: SetupSmsResult = {
+          profile_id: profileId,
+          profile_name: profileName,
+          phone_number: phoneNumber,
+          phone_number_id: phoneNumberId,
+          ready: true,
+          reused: true,
+          steps,
+        };
+        if (jsonOutput) {
+          outputJson(result);
+        } else {
+          printStep(steps[0], totalSteps);
+          printSuccess("SMS already set up — reusing existing resources", {
+            "Profile ID": profileId,
+            "Profile Name": profileName,
+            "Phone Number": phoneNumber,
+            Ready: "✓",
+            "Reused": "✓ (pass --force to provision a new profile + number)",
+            "Test command": `telnyx-agent send-sms --from ${phoneNumber} --to <number> --text "Hello!"`,
+          });
+        }
+        return;
+      }
+    }
+
+    // Step 1: Create messaging profile via direct API
+    // (CLI doesn't support --whitelisted-destinations which the API requires)
+    const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
+    profileName = `${AGENT_SMS_PROFILE_PREFIX}${ts}`;
+    if (!jsonOutput && force) console.log("  ⚠ --force: provisioning a NEW profile + number (this buys a ~$1/mo number).\n");
 
     const step1Start = Date.now();
     try {
@@ -103,6 +156,7 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       phone_number: phoneNumber,
       phone_number_id: phoneNumberId,
       ready: true,
+      reused: false,
       steps,
     };
 
