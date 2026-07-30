@@ -6,7 +6,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -57,12 +58,60 @@ if (command[0] === "calls" && command[1] === "dial") {
   };
 }
 
+/**
+ * Async variants of run()/runFailure(). Required for the call-status tests, which
+ * stand up an in-process mock HTTP server: a synchronous execFileSync/spawnSync
+ * would block the event loop so the mock could never accept the child's request
+ * (deadlock -> timeout). These spawn asynchronously and await exit.
+ */
+function runAsync(args: string[], env: NodeJS.ProcessEnv): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("npx", ["tsx", cliBin, ...args], { cwd: cliRoot, env });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d.toString()));
+    child.stderr.on("data", (d) => (stderr += d.toString()));
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error(`timeout running: ${args.join(" ")}`));
+    }, 30000);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+
 function readLoggedArgs(logPath: string): string[][] {
   return readFileSync(logPath, "utf8")
     .trim()
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+}
+
+interface MockApi {
+  baseUrl: string;
+  close: () => Promise<void>;
+}
+
+/** Start a throwaway local HTTP server to stand in for the Telnyx REST API. */
+function startMockApi(handler: (req: IncomingMessage, res: ServerResponse) => void): Promise<MockApi> {
+  return new Promise((resolve) => {
+    const server = createServer(handler);
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}`,
+        close: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
 }
 
 function run(args: string[], env?: NodeJS.ProcessEnv): string {
@@ -321,17 +370,77 @@ describe("Voice API action commands", () => {
     assertFlagValue(answerCall!, "--record", "record-from-answer");
   });
 
-  it("call-status calls `calls retrieve-status`", () => {
+  it("call-status derives 'active' from is_alive:true via REST GET /calls/:id (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      assert.equal(req.method, "GET");
+      assert.equal(req.url, "/calls/call-1");
+      res.writeHead(200, { "content-type": "application/json" });
+      // Real Telnyx retrieve-status shape: is_alive only, NO call_status field.
+      res.end(JSON.stringify({ data: { record_type: "call", call_control_id: "call-1", call_session_id: "sess-9", is_alive: true } }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(["call-status", "--call-control-id", "call-1", "--json"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_status, "active");
+      assert.equal(data.is_alive, true);
+      assert.equal(data.call_control_id, "call-1");
+      // Must NOT shell out to the Go CLI anymore.
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status derives 'ended' from is_alive:false for a completed call (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ data: { record_type: "call", call_control_id: "call-2", is_alive: false } }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(["call-status", "--call-control-id", "call-2", "--json"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_status, "ended");
+      assert.equal(data.is_alive, false);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status surfaces the API error detail on 422 (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      res.writeHead(422, { "content-type": "application/json" });
+      res.end(JSON.stringify({ errors: [{ code: "90015", title: "Invalid Call Control ID", detail: "The call_control_id provided was not valid." }] }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stderr } = await runAsync(["call-status", "--call-control-id", "bad-id"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.notEqual(status, 0, "expected command to fail on 422");
+      assert.ok(/call_control_id provided was not valid/.test(stderr), `expected API detail in stderr, got: ${stderr}`);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status requires --call-control-id", () => {
     const fake = setupFakeTelnyx();
-    const output = run(["call-status", "--call-control-id", "call-1", "--json"], fake.env);
-
-    const data = JSON.parse(output);
-    assert.equal(data.call_status, "active");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const statusCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls retrieve-status");
-    assert.ok(statusCall, "should invoke `calls retrieve-status`");
-    assertFlagValue(statusCall!, "--call-control-id", "call-1");
+    const stderr = runFailure(["call-status"], { ...fake.env, TELNYX_API_KEY: "KEYtest" });
+    assert.ok(/--call-control-id is required/.test(stderr));
   });
 
   it("help text includes the voice commands", () => {
