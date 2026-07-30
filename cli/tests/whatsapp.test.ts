@@ -1,10 +1,18 @@
 /**
- * Tests for WhatsApp commands — verify correct Go CLI subcommand invocations
- * and flag passing without making real API calls.
+ * Tests for WhatsApp commands.
+ *
+ * whatsapp-send still shells out to the Go CLI (`messages send-whatsapp`), so
+ * those tests use the fake `telnyx` binary and assert flag passing.
+ *
+ * whatsapp-templates and setup-whatsapp now call the Telnyx REST API directly
+ * (AIF-326: the pinned Go CLI built a doubled `/v2/v2/whatsapp/...` path that
+ * 404'd every whatsapp:* resource command). Those tests stand up a throwaway
+ * local HTTP server as the API and assert on the requests it receives.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -125,59 +133,6 @@ else {
   };
 }
 
-/**
- * Variant that returns an existing WhatsApp phone number with status "connected"
- * so the setup-whatsapp command can skip number purchase and test the
- * verified-number reuse path.
- */
-function setupFakeTelnyxWithNumbers(status: string = "connected"): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
-  const base = setupFakeTelnyx();
-  // Overwrite the fake binary to return an existing number with the given status
-  writeFileSync(
-    base.fakeTelnyx,
-    `#!/usr/bin/env node
-const fs = require("node:fs");
-const args = process.argv.slice(2);
-fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
-
-const fmtIdx = args.indexOf("--format");
-const format = fmtIdx >= 0 ? args[fmtIdx + 1] : "json";
-const cmd = args.filter((a, i) => i !== fmtIdx && i !== fmtIdx + 1);
-
-// Same list emulation as the base fake: --format raw returns the REST
-// envelope; --format json streams concatenated per-item JSON documents.
-function printList(items) {
-  if (format === "raw") {
-    console.log(JSON.stringify({ data: items, meta: { total_results: items.length } }));
-  } else {
-    for (const item of items) console.log(JSON.stringify(item, null, 2));
-  }
-}
-
-if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
-  printList([{ id: "waba_test123", name: "Test WABA" }]);
-}
-else if (cmd[0] === "whatsapp:business-accounts:phone-numbers" && cmd[1] === "list") {
-  printList([{ phone_number: "+155****4567", status: "${status}", enabled: true }]);
-}
-else if (cmd[0] === "whatsapp:phone-numbers" && cmd[1] === "verify") {
-  console.log(JSON.stringify({ data: { phone_number: "+155****4567", status: "verified" } }));
-}
-else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "retrieve") {
-  console.log(JSON.stringify({ data: { display_name: "Test", about: "Hello" } }));
-}
-else if (cmd[0] === "whatsapp:phone-numbers:profile" && cmd[1] === "update") {
-  console.log(JSON.stringify({ data: { display_name: "Updated", status: "updated" } }));
-}
-else {
-  console.log(JSON.stringify({ data: {} }));
-}
-`,
-  );
-  chmodSync(base.fakeTelnyx, 0o755);
-  return base;
-}
-
 function readLoggedArgs(logPath: string): string[][] {
   return readFileSync(logPath, "utf8")
     .trim()
@@ -193,6 +148,134 @@ function runCli(args: string[], env: NodeJS.ProcessEnv): string {
     env,
     timeout: 30000,
   });
+}
+
+/**
+ * Async spawn of the CLI. Required for the REST tests: the mock HTTP server runs
+ * in this same process, so the CLI must be spawned asynchronously (a synchronous
+ * execFileSync would block the event loop and the in-process server could never
+ * accept the connection).
+ */
+function runCliAsync(args: string[], env: NodeJS.ProcessEnv): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("npx", ["tsx", cliBin, ...args], { cwd: cliRoot, env });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d.toString()));
+    child.stderr.on("data", (d) => (stderr += d.toString()));
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error(`timeout running: ${args.join(" ")}`));
+    }, 30000);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+
+interface RecordedRequest {
+  method: string;
+  url: string;
+  path: string;
+  query: URLSearchParams;
+  body: Record<string, unknown> | undefined;
+}
+
+interface MockApi {
+  baseUrl: string;
+  requests: RecordedRequest[];
+  close: () => Promise<void>;
+}
+
+type RouteResponder = (req: RecordedRequest) => { status?: number; json: unknown } | undefined;
+
+/**
+ * Stand up a throwaway local HTTP server that stands in for the Telnyx REST API.
+ * Every request is recorded (method, path, query, parsed JSON body) and the
+ * responder decides the reply. An unmatched route returns 404 with a
+ * Telnyx-shaped error envelope so a regression to the doubled `/v2/v2` path or
+ * a wrong endpoint fails loudly (this is exactly the AIF-326 symptom).
+ */
+function startMockApi(responder: RouteResponder): Promise<MockApi> {
+  const requests: RecordedRequest[] = [];
+  return new Promise((resolve) => {
+    const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        const parsed = new URL(req.url ?? "/", "http://127.0.0.1");
+        const record: RecordedRequest = {
+          method: req.method ?? "GET",
+          url: req.url ?? "/",
+          path: parsed.pathname,
+          query: parsed.searchParams,
+          body: raw ? (JSON.parse(raw) as Record<string, unknown>) : undefined,
+        };
+        requests.push(record);
+        const out = responder(record);
+        if (out) {
+          res.writeHead(out.status ?? 200, { "content-type": "application/json" });
+          res.end(JSON.stringify(out.json));
+        } else {
+          res.writeHead(404, { "content-type": "application/json" });
+          res.end(JSON.stringify({ errors: [{ code: "10005", title: "Resource not found", detail: `no route for ${record.method} ${record.path}` }] }));
+        }
+      });
+    });
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}`,
+        requests,
+        close: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
+}
+
+/** Env for REST-path tests: point the client at the mock and give it a key. */
+function restEnv(mock: MockApi): NodeJS.ProcessEnv {
+  return { ...process.env, TELNYX_API_KEY: "KEY_fake_test", TELNYX_API_BASE_URL: mock.baseUrl };
+}
+
+/**
+ * Responder for the setup-whatsapp happy path with a single existing phone
+ * number in the given status ("connected" reuses+verifies; "pending" requires a
+ * --code). Covers WABA list, phone-number list, verify, and profile
+ * retrieve/update endpoints — all on the un-doubled /v2/whatsapp/... paths.
+ */
+function setupWhatsappResponder(numberStatus: string): RouteResponder {
+  const phone = "+155****4567";
+  return (req) => {
+    if (req.method === "GET" && req.path === "/whatsapp/business_accounts") {
+      return { json: { data: [{ id: "waba_test123", name: "Test WABA" }] } };
+    }
+    if (req.method === "GET" && req.path === "/whatsapp/business_accounts/waba_test123/phone_numbers") {
+      return { json: { data: [{ phone_number: phone, status: numberStatus, enabled: true }] } };
+    }
+    if (req.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/verify$/.test(req.path)) {
+      return { json: { data: { phone_number: phone, status: "verified" } } };
+    }
+    if (req.method === "POST" && /\/whatsapp\/business_accounts\/.+\/phone_numbers$/.test(req.path)) {
+      return { json: { data: { id: "wa_ph_test", status: "pending" } } };
+    }
+    if (req.method === "PATCH" && /\/whatsapp\/phone_numbers\/.+\/profile$/.test(req.path)) {
+      return { json: { data: { display_name: "Updated", status: "updated" } } };
+    }
+    if (req.method === "GET" && /\/whatsapp\/phone_numbers\/.+\/profile$/.test(req.path)) {
+      return { json: { data: { display_name: "Test", about: "Hello" } } };
+    }
+    if (req.method === "POST" && req.path === "/messaging_profiles") {
+      return { json: { data: { id: "mp_test123" } } };
+    }
+    return undefined;
+  };
 }
 
 describe("WhatsApp commands", () => {
@@ -270,141 +353,175 @@ describe("WhatsApp commands", () => {
     }
   });
 
-  it("whatsapp-templates list passes --filter-waba-id to Go CLI", () => {
-    const fake = setupFakeTelnyx();
-    const output = runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], fake.env);
-
-    const data = JSON.parse(output);
-    assert.equal(data.waba_id, "waba_abc");
-    assert.ok(data.templates.length > 0, "should return templates");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
-    assert.ok(listCall, "must call whatsapp:templates list");
-    const filterIdx = listCall.indexOf("--filter-waba-id");
-    assert.notEqual(filterIdx, -1, "must include --filter-waba-id");
-    assert.equal(listCall[filterIdx + 1], "waba_abc");
-  });
-
-  it("whatsapp-templates list passes --filter-status when provided", () => {
-    const fake = setupFakeTelnyx();
-    runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--status", "APPROVED", "--json"], fake.env);
-
-    const calls = readLoggedArgs(fake.logPath);
-    const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
-    assert.ok(listCall, "must call whatsapp:templates list");
-    assert.ok(listCall!.includes("--filter-status"), "must include --filter-status");
-    assert.equal(listCall![listCall!.indexOf("--filter-status") + 1], "APPROVED");
-  });
-
-  it("whatsapp-templates create passes all required flags", () => {
-    const fake = setupFakeTelnyx();
-    const component = '[{"type":"BODY","text":"Your order is ready"}]';
-    const output = runCli(
-      ["whatsapp-templates", "--waba-id", "waba_abc", "--create", "--name", "order_ready", "--language", "en_US", "--category", "UTILITY", "--component", component, "--json"],
-      fake.env,
-    );
-
-    const data = JSON.parse(output);
-    assert.equal(data.name, "order_ready");
-    assert.equal(data.category, "UTILITY");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const createCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates create");
-    assert.ok(createCall, "must call whatsapp:templates create");
-    assert.equal(createCall[createCall.indexOf("--waba-id") + 1], "waba_abc");
-    assert.equal(createCall[createCall.indexOf("--name") + 1], "order_ready");
-    assert.equal(createCall[createCall.indexOf("--category") + 1], "UTILITY");
-    // Go CLI v0.21: --component is Flag[[]map[string]any] — each object gets its own --component flag
-    const componentIdxs = createCall.reduce((acc: number[], val, i) => val === "--component" ? [...acc, i] : acc, []);
-    assert.equal(componentIdxs.length, 1, "one --component per object in the array");
-    const compVal = createCall[componentIdxs[0] + 1];
-    const parsed = JSON.parse(compVal);
-    assert.equal(parsed.type, "BODY");
-    assert.equal(parsed.text, "Your order is ready");
-  });
-
-  it("setup-whatsapp lists WABAs and picks the first one", () => {
-    const fake = setupFakeTelnyxWithNumbers("connected");
-    const output = runCli(["setup-whatsapp", "--json"], fake.env);
-
-    const data = JSON.parse(output);
-    assert.equal(data.waba_id, "waba_test123");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const wabaListCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:business-accounts list");
-    assert.ok(wabaListCall, "must call whatsapp:business-accounts list");
-  });
-
-  it("setup-whatsapp with --code verifies a pending number", () => {
-    const fake = setupFakeTelnyxWithNumbers("pending");
-    runCli(["setup-whatsapp", "--code", "123456", "--json"], fake.env);
-
-    const calls = readLoggedArgs(fake.logPath);
-    const verifyCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:phone-numbers verify");
-    assert.ok(verifyCall, "must call whatsapp:phone-numbers verify when --code is provided");
-    assert.equal(verifyCall![verifyCall!.indexOf("--code") + 1], "123456");
-  });
-
-  it("setup-whatsapp with --display-name and --category updates the profile", () => {
-    const fake = setupFakeTelnyxWithNumbers("connected");
-    runCli(["setup-whatsapp", "--display-name", "Acme", "--category", "RETAIL", "--json"], fake.env);
-
-    const calls = readLoggedArgs(fake.logPath);
-    const profileCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:phone-numbers:profile update");
-    assert.ok(profileCall, "must call profile update when profile flags are provided");
-    assert.equal(profileCall![profileCall!.indexOf("--display-name") + 1], "Acme");
-    assert.equal(profileCall![profileCall!.indexOf("--category") + 1], "RETAIL");
-  });
-
-  it("setup-whatsapp reports ready=true when number is connected (no --code needed)", () => {
-    const fake = setupFakeTelnyxWithNumbers("connected");
-    const output = runCli(["setup-whatsapp", "--json"], fake.env);
-    const data = JSON.parse(output);
-    assert.equal(data.verified, true);
-    assert.equal(data.ready, true);
-  });
-
-  it("setup-whatsapp reports ready=false when number is pending and no --code", () => {
-    const fake = setupFakeTelnyxWithNumbers("pending");
-    const output = runCli(["setup-whatsapp", "--json"], fake.env);
-    const data = JSON.parse(output);
-    assert.equal(data.verified, false);
-    assert.equal(data.ready, false);
-  });
-
-  it("setup-whatsapp requests --format raw for list commands (json list output is concatenated docs)", () => {
-    const fake = setupFakeTelnyxWithNumbers("connected");
-    const output = runCli(["setup-whatsapp", "--json"], fake.env);
-
-    // The fake CLI mirrors the real one: list commands only return the
-    // { data: [...] } envelope with --format raw. If the command regressed
-    // to --format json, the WABA list would parse as a single bare item
-    // (or fail entirely with multiple items) and setup would find no WABA.
-    const data = JSON.parse(output);
-    assert.equal(data.waba_id, "waba_test123");
-
-    const calls = readLoggedArgs(fake.logPath);
-    for (const subcommand of ["whatsapp:business-accounts", "whatsapp:business-accounts:phone-numbers"]) {
-      const call = calls.find((a) => a[0] === subcommand && a[1] === "list");
-      assert.ok(call, `must call ${subcommand} list`);
-      const fmtIdx = call!.indexOf("--format");
-      assert.notEqual(fmtIdx, -1, `${subcommand} list must pass --format`);
-      assert.equal(call![fmtIdx + 1], "raw", `${subcommand} list must use --format raw`);
+  it("whatsapp-templates list GETs /v2/whatsapp/message_templates with filter[waba_id] (AIF-326)", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
+        return { json: { data: [{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }] } };
+      }
+      return undefined;
+    });
+    try {
+      const { status, stdout } = await runCliAsync(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], restEnv(mock));
+      assert.equal(status, 0, `expected success, stderr present? stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.waba_id, "waba_abc");
+      assert.ok(data.templates.length > 0, "should return templates");
+      // The single request must hit the un-doubled resource path (the AIF-326 bug
+      // was a doubled `/v2/v2/...`; the mock base URL already carries the /v2).
+      assert.equal(mock.requests.length, 1);
+      assert.equal(mock.requests[0].path, "/whatsapp/message_templates");
+      assert.equal(mock.requests[0].query.get("filter[waba_id]"), "waba_abc");
+    } finally {
+      await mock.close();
     }
   });
 
-  it("whatsapp-templates list requests --format raw and parses the data envelope", () => {
-    const fake = setupFakeTelnyx();
-    const output = runCli(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], fake.env);
+  it("whatsapp-templates list forwards filter[status] when --status is provided (AIF-326)", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
+        return { json: { data: [] } };
+      }
+      return undefined;
+    });
+    try {
+      const { status } = await runCliAsync(["whatsapp-templates", "--waba-id", "waba_abc", "--status", "APPROVED", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      assert.equal(mock.requests[0].query.get("filter[waba_id]"), "waba_abc");
+      assert.equal(mock.requests[0].query.get("filter[status]"), "APPROVED");
+    } finally {
+      await mock.close();
+    }
+  });
 
-    const data = JSON.parse(output);
-    assert.equal(data.templates.length, 2, "must parse all templates from the data envelope");
+  it("whatsapp-templates create POSTs /v2/whatsapp/message_templates with the components array (AIF-326)", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "POST" && req.path === "/whatsapp/message_templates") {
+        return { json: { data: { id: "tpl_new", name: (req.body?.name as string) ?? "", status: "PENDING" } } };
+      }
+      return undefined;
+    });
+    try {
+      const component = '[{"type":"BODY","text":"Your order is ready"}]';
+      const { status, stdout } = await runCliAsync(
+        ["whatsapp-templates", "--waba-id", "waba_abc", "--create", "--name", "order_ready", "--language", "en_US", "--category", "UTILITY", "--component", component, "--json"],
+        restEnv(mock),
+      );
+      assert.equal(status, 0);
+      const data = JSON.parse(stdout);
+      assert.equal(data.name, "order_ready");
+      assert.equal(data.category, "UTILITY");
 
-    const calls = readLoggedArgs(fake.logPath);
-    const listCall = calls.find((a) => a.slice(0, 2).join(" ") === "whatsapp:templates list");
-    assert.ok(listCall, "must call whatsapp:templates list");
-    const fmtIdx = listCall!.indexOf("--format");
-    assert.equal(listCall![fmtIdx + 1], "raw", "templates list must use --format raw");
+      assert.equal(mock.requests.length, 1);
+      const body = mock.requests[0].body!;
+      assert.equal(body.waba_id, "waba_abc");
+      assert.equal(body.name, "order_ready");
+      assert.equal(body.language, "en_US");
+      assert.equal(body.category, "UTILITY");
+      const components = body.components as Array<Record<string, unknown>>;
+      assert.ok(Array.isArray(components), "components must be a JSON array");
+      assert.equal(components.length, 1);
+      assert.equal(components[0].type, "BODY");
+      assert.equal(components[0].text, "Your order is ready");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp GETs the un-doubled WABA + phone-number REST paths and picks the first WABA (AIF-326)", async () => {
+    const mock = await startMockApi(setupWhatsappResponder("connected"));
+    try {
+      const { status, stdout } = await runCliAsync(["setup-whatsapp", "--json"], restEnv(mock));
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.waba_id, "waba_test123");
+
+      // Both list calls must hit the singular /v2/whatsapp/... path (no /v2/v2).
+      assert.ok(mock.requests.some((r) => r.method === "GET" && r.path === "/whatsapp/business_accounts"), "must GET /whatsapp/business_accounts");
+      assert.ok(
+        mock.requests.some((r) => r.method === "GET" && r.path === "/whatsapp/business_accounts/waba_test123/phone_numbers"),
+        "must GET the WABA phone_numbers subresource",
+      );
+      // No request path may contain a doubled /v2 segment.
+      assert.ok(!mock.requests.some((r) => r.path.includes("/v2/")), "no request path should contain a doubled /v2");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp with --code POSTs the verify endpoint with the code (AIF-326)", async () => {
+    const mock = await startMockApi(setupWhatsappResponder("pending"));
+    try {
+      const { status } = await runCliAsync(["setup-whatsapp", "--code", "123456", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const verify = mock.requests.find((r) => r.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/verify$/.test(r.path));
+      assert.ok(verify, "must POST the whatsapp verify endpoint when --code is provided");
+      assert.equal(verify!.body?.code, "123456");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp with --display-name and --category PATCHes the profile (AIF-326)", async () => {
+    const mock = await startMockApi(setupWhatsappResponder("connected"));
+    try {
+      const { status } = await runCliAsync(["setup-whatsapp", "--display-name", "Acme", "--category", "RETAIL", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const profile = mock.requests.find((r) => r.method === "PATCH" && /\/whatsapp\/phone_numbers\/.+\/profile$/.test(r.path));
+      assert.ok(profile, "must PATCH the profile endpoint when profile flags are provided");
+      assert.equal(profile!.body?.display_name, "Acme");
+      assert.equal(profile!.body?.category, "RETAIL");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp reports ready=true when number is connected (no --code needed)", async () => {
+    const mock = await startMockApi(setupWhatsappResponder("connected"));
+    try {
+      const { status, stdout } = await runCliAsync(["setup-whatsapp", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const data = JSON.parse(stdout);
+      assert.equal(data.verified, true);
+      assert.equal(data.ready, true);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp reports ready=false when number is pending and no --code", async () => {
+    const mock = await startMockApi(setupWhatsappResponder("pending"));
+    try {
+      const { status, stdout } = await runCliAsync(["setup-whatsapp", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const data = JSON.parse(stdout);
+      assert.equal(data.verified, false);
+      assert.equal(data.ready, false);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("whatsapp-templates list parses the full data envelope (AIF-326)", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
+        return {
+          json: {
+            data: [
+              { id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" },
+              { id: "tpl_2", name: "order_shipped", language: "en_US", category: "UTILITY", status: "PENDING" },
+            ],
+          },
+        };
+      }
+      return undefined;
+    });
+    try {
+      const { status, stdout } = await runCliAsync(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const data = JSON.parse(stdout);
+      assert.equal(data.templates.length, 2, "must parse all templates from the data envelope");
+    } finally {
+      await mock.close();
+    }
   });
 });

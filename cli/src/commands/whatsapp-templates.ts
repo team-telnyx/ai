@@ -3,9 +3,15 @@
  *
  * Default (list) mode lists templates for a WABA, optionally filtered by status.
  * Create mode (--create) submits a new template for approval.
+ *
+ * Direct REST (AIF-326): the pinned Go CLI (v0.21.0) built a doubled URL path
+ * `/v2/v2/whatsapp/message_templates`, so every whatsapp resource-listing/create
+ * command 404'd (error 10005). The base URL already ends in `/v2`, so we call
+ * the resource paths (`/whatsapp/message_templates`) directly and avoid the Go
+ * CLI entirely for these commands.
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
 interface WhatsappTemplate {
@@ -71,19 +77,14 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         process.exit(1);
       }
 
-      const createArgs = [
-        "whatsapp:templates", "create",
-        "--waba-id", wabaId,
-        "--name", name,
-        "--language", language,
-        "--category", category,
-      ];
-      // Emit one --component flag per component object (Go CLI slice semantics)
-      for (const comp of components) {
-        createArgs.push("--component", JSON.stringify(comp));
-      }
-
-      const res = await telnyxCli(createArgs);
+      const client = new TelnyxClient();
+      const res = await client.post("/whatsapp/message_templates", {
+        waba_id: wabaId,
+        name,
+        language,
+        category,
+        components,
+      });
       const data = (res.data ?? res) as Record<string, unknown>;
       const templateId = String(data.id ?? "");
 
@@ -109,14 +110,12 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         });
       }
     } else {
-      // List mode (default)
-      const args = ["whatsapp:templates", "list", "--filter-waba-id", wabaId];
-      if (status) args.push("--filter-status", status);
-
-      // format: "raw" — list output via --format json is concatenated per-item
-      // JSON documents, not a parseable array (see telnyxCli docs).
-      const res = await telnyxCli(args, { format: "raw" });
-      const raw = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
+      // List mode (default) — GET /v2/whatsapp/message_templates?filter[waba_id]=...
+      const client = new TelnyxClient();
+      const params: Record<string, unknown> = { "filter[waba_id]": wabaId };
+      if (status) params["filter[status]"] = status;
+      const res = await client.get("/whatsapp/message_templates", params);
+      const raw = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
       const templates: WhatsappTemplate[] = raw.map((t) => ({
         name: String(t.name ?? ""),
         language: String(t.language ?? ""),
@@ -153,7 +152,7 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
 }
 
 function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
 }

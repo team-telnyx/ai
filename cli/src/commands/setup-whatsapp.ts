@@ -9,7 +9,7 @@
  * 5. Configure (or retrieve) the WhatsApp business profile
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
@@ -43,17 +43,21 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
   let verified = false;
   let profileConfigured = false;
 
+  // Direct REST client (AIF-326): the pinned Go CLI built doubled `/v2/v2/whatsapp`
+  // paths so every whatsapp:* resource command 404'd. All WhatsApp management
+  // calls below go through the REST API directly.
+  const client = new TelnyxClient();
+
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up WhatsApp...\n");
 
     // Step 1: List WhatsApp business accounts and pick one
     const step1Start = Date.now();
     try {
-      // format: "raw" — list commands need the raw REST envelope; with
-      // --format json the Go CLI emits concatenated per-item JSON documents
-      // that can't be parsed as a single value (see telnyxCli docs).
-      const res = await telnyxCli(["whatsapp:business-accounts", "list"], { format: "raw" });
-      const wabas = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
+      // Direct REST (AIF-326): the Go CLI built a doubled `/v2/v2/whatsapp/...`
+      // path and 404'd. GET /v2/whatsapp/business_accounts works directly.
+      const wabaRes = await client.get("/whatsapp/business_accounts");
+      const wabas = ((wabaRes.data as Array<Record<string, unknown>>) ?? (Array.isArray(wabaRes) ? wabaRes : [])) as Array<Record<string, unknown>>;
       if (!wabas.length) {
         throw new Error(
           "No WhatsApp Business Accounts found. Create one via the Telnyx portal: https://portal.telnyx.com/whatsapp",
@@ -86,8 +90,9 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const step2Start = Date.now();
     let reusedExisting = false;
     try {
-      const res = await telnyxCli(["whatsapp:business-accounts:phone-numbers", "list", "--id", wabaId], { format: "raw" });
-      const numbers = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
+      // Direct REST (AIF-326): GET /v2/whatsapp/business_accounts/{id}/phone_numbers.
+      const numRes = await client.get(`/whatsapp/business_accounts/${encodeURIComponent(wabaId)}/phone_numbers`);
+      const numbers = ((numRes.data as Array<Record<string, unknown>>) ?? (Array.isArray(numRes) ? numRes : [])) as Array<Record<string, unknown>>;
       if (numbers.length) {
         // Scan the full list for a connected/verified number before
         // falling back to a pending one, so we don't buy unnecessarily.
@@ -155,9 +160,6 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       try {
         // Create a messaging profile first (required for WhatsApp verification
         // — the SMS verification code needs an inbound route via the profile).
-        // TelnyxClient resolves TELNYX_API_KEY or ~/.config/telnyx/config.json,
-        // matching the auth options supported by the telnyx CLI calls above.
-        const client = new TelnyxClient();
         const profileRes = await client.post("/messaging_profiles", {
           name: `WhatsApp Profile - ${new Date().toISOString().slice(0, 19).replace("T", " ")}`,
           whitelisted_destinations: [country || "US"],
@@ -193,7 +195,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     } else if (reusedExisting && !verified && code) {
       // Existing number that needs verification with user-supplied code
       try {
-        await telnyxCli(["whatsapp:phone-numbers", "verify", "--phone-number", phoneNumber, "--code", code]);
+        await client.post(`/whatsapp/phone_numbers/${encodeURIComponent(phoneNumber)}/verify`, { code });
         verified = true;
         steps.push({
           step: 4,
@@ -209,16 +211,14 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
       }
     } else if (!reusedExisting) {
       try {
-        await telnyxCli([
-          "whatsapp:business-accounts:phone-numbers", "initialize-verification",
-          "--id", wabaId,
-          "--display-name", displayName,
-          "--phone-number", phoneNumber,
-          "--language", "en_US",
-          "--verification-method", "sms",
-        ]);
+        await client.post(`/whatsapp/business_accounts/${encodeURIComponent(wabaId)}/phone_numbers`, {
+          display_name: displayName,
+          phone_number: phoneNumber,
+          language: "en_US",
+          verification_method: "sms",
+        });
         if (code) {
-          await telnyxCli(["whatsapp:phone-numbers", "verify", "--phone-number", phoneNumber, "--code", code]);
+          await client.post(`/whatsapp/phone_numbers/${encodeURIComponent(phoneNumber)}/verify`, { code });
           verified = true;
           steps.push({
             step: 4,
@@ -245,14 +245,12 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     } else {
       // Existing number, unverified, no --code provided — initialize verification
       try {
-        await telnyxCli([
-          "whatsapp:business-accounts:phone-numbers", "initialize-verification",
-          "--id", wabaId,
-          "--display-name", displayName,
-          "--phone-number", phoneNumber,
-          "--language", "en_US",
-          "--verification-method", "sms",
-        ]);
+        await client.post(`/whatsapp/business_accounts/${encodeURIComponent(wabaId)}/phone_numbers`, {
+          display_name: displayName,
+          phone_number: phoneNumber,
+          language: "en_US",
+          verification_method: "sms",
+        });
         steps.push({
           step: 4,
           name: "Re-initialize WhatsApp verification",
@@ -268,8 +266,8 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
     if (!verified && !code && !jsonOutput) {
-      console.log("  ℹ Verification code sent via SMS. Run again with --code <code> to verify, or use:");
-      console.log(`    telnyx whatsapp:phone-numbers verify --phone-number ${phoneNumber} --code <code>`);
+      console.log("  ℹ Verification code sent via SMS. Run again with --code <code> to verify:");
+      console.log(`    telnyx-agent setup-whatsapp --waba-id ${wabaId} --code <code>`);
     }
 
     // Step 5: Configure (or retrieve) the WhatsApp profile
@@ -277,11 +275,11 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const hasProfileFlags = Boolean(displayNameFlag || about || category);
     try {
       if (hasProfileFlags) {
-        const profileArgs = ["whatsapp:phone-numbers:profile", "update", "--phone-number", phoneNumber];
-        if (displayNameFlag) profileArgs.push("--display-name", displayNameFlag);
-        if (about) profileArgs.push("--about", about);
-        if (category) profileArgs.push("--category", category);
-        await telnyxCli(profileArgs);
+        const profileBody: Record<string, unknown> = {};
+        if (displayNameFlag) profileBody.display_name = displayNameFlag;
+        if (about) profileBody.about = about;
+        if (category) profileBody.category = category;
+        await client.patch(`/whatsapp/phone_numbers/${encodeURIComponent(phoneNumber)}/profile`, profileBody);
         profileConfigured = true;
         steps.push({
           step: 5,
@@ -292,7 +290,7 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
           elapsedMs: Date.now() - step5Start,
         });
       } else {
-        await telnyxCli(["whatsapp:phone-numbers:profile", "retrieve", "--phone-number", phoneNumber]);
+        await client.get(`/whatsapp/phone_numbers/${encodeURIComponent(phoneNumber)}/profile`);
         steps.push({
           step: 5,
           name: "Retrieve WhatsApp profile",
