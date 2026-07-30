@@ -113,6 +113,9 @@ Global Flags:
 Setup-specific Flags:
   --webhook-url <url>          Webhook URL for setup-voice (alias: --webhook; default: https://example.com/webhook)
   --outbound-voice-profile-id  Outbound voice profile ID (setup-voice, default: auto-detect first available)
+  --force                      Provision a NEW profile/app + number even if an agent-created one
+                               already exists (setup-sms, setup-voice; default: reuse existing to
+                               avoid buying duplicate ~$1/mo numbers)
   --instructions    AI assistant instructions (setup-ai)
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)

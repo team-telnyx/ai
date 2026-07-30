@@ -45,9 +45,15 @@ Creates a messaging profile, searches for a number with SMS capability, buys it,
 telnyx-agent setup-sms                    # Default: US number
 telnyx-agent setup-sms --country GB       # UK number
 telnyx-agent setup-sms --json             # JSON output
+telnyx-agent setup-sms --force            # Provision a NEW profile + number
 ```
 
-Output: `{ profile_id, phone_number, ready: true }`
+Output: `{ profile_id, phone_number, ready: true, reused }`
+
+**Idempotent by default.** If a previous `setup-sms` already created an
+`Agent SMS Profile - …` with an assigned number, this command **reuses** it
+instead of buying another (`reused: true`). Pass `--force` to always provision a
+fresh profile and number (this buys a new ~$1/mo number).
 
 ### `telnyx-agent setup-voice`
 
@@ -60,11 +66,17 @@ telnyx-agent setup-voice
 telnyx-agent setup-voice --webhook https://example.com/calls
 telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
 telnyx-agent setup-voice --country US --json
+telnyx-agent setup-voice --force   # Provision a NEW app + number
 ```
+
+**Idempotent by default.** Reuses a previous `Agent Voice App - …` (and its
+assigned number) when one exists (`reused: true`); pass `--force` to provision a
+fresh Call Control App and number.
 
 **Flags:**
 - `--webhook-url` (or `--webhook`) — Webhook URL for call events (default: `https://example.com/webhook`)
 - `--outbound-voice-profile-id` — Outbound voice profile ID (default: auto-detect first available)
+- `--force` — Always provision a new app + number instead of reusing an existing agent-created one
 - `--country` — ISO country code for number search (default: `US`)
 
 Output: `{ connection_id, connection_name, phone_number, phone_number_id, webhook_url, outbound_voice_profile_id, ready }`
@@ -178,6 +190,35 @@ telnyx-agent whatsapp-templates --waba-id waba_123 --create \
 - `--category` — UTILITY, MARKETING, or AUTHENTICATION (create mode, required)
 - `--component` — Template components as JSON array string (create mode, required)
 - `--status` — Filter by status: APPROVED, PENDING, REJECTED (list mode)
+
+### Voice: `call-dial`, `call-control`, `call-status`
+
+**Place and manage outbound calls via Call Control.** Use the `connection_id`
+from `setup-voice`.
+
+```bash
+telnyx-agent call-dial --connection-id <id> --from +13125550000 --to +447700900123 --json
+telnyx-agent call-status --call-control-id <id> --json
+telnyx-agent call-control --call-control-id <id> --action hangup
+```
+
+- `call-dial` accepts any valid `+E.164` `--to` (posts directly to `POST /v2/calls`).
+- `call-status` reports `active` / `ended`, derived from the live call's
+  `is_alive` state.
+
+### `telnyx-agent send-group-mms`
+
+**Send one MMS to multiple recipients.**
+
+```bash
+telnyx-agent send-group-mms --from +13125550000 --to "+13125550001,+13125550002" --text "Hi team"
+telnyx-agent send-group-mms --from +13125550000 --to "+1...,+1..." --media-url https://example.com/pic.jpg
+```
+
+⚠ **Delivery verification caveat:** the group MMS returns a *group-level*
+message id that is **not** resolvable via `sms-status` / `GET /v2/messages/{id}`.
+Confirm delivery via the per-recipient statuses in the response (`recipient_statuses`)
+and/or message webhooks — not by polling the returned id.
 
 ### Edge Compute handoff commands
 
