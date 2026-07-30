@@ -51,6 +51,10 @@ import {
 } from "./commands/sim-cards.ts";
 import { parseFlags } from "./utils/output.ts";
 
+// Version is read lazily so that `--version` works without loading any command modules.
+import { createRequire } from "node:module";
+const VERSION = createRequire(import.meta.url)("../package.json").version as string;
+
 const HELP = `
 telnyx-agent — Agent-friendly CLI for Telnyx API v2
 
@@ -516,17 +520,17 @@ function isHelpRequested(argv: string[]): boolean {
 export async function run(argv: string[]): Promise<void> {
   const { command, flags, occurrences, helpRequested } = parseFlags(argv);
 
+  // Version flag (AIF-333): `telnyx-agent --version` / `-V`.
+  if (command === "--version" || command === "-V") {
+    console.log(VERSION);
+    return;
+  }
+
   // Intercept help BEFORE dispatching to any command handler. setup-* handlers
   // make live API calls and purchase billable resources (numbers, connections)
   // before hitting an unknown flag, so a `--help`/`-h` request must never fall
   // through to a handler. See isHelpRequested for flag-position vs value nuance.
   if (!command || command === "help" || isHelpRequested(argv)) {
-    console.log(HELP);
-    return;
-  }
-
-  // Per-command help: `telnyx-agent tts --help` or `telnyx-agent tts -h`
-  if (helpRequested) {
     console.log(HELP);
     return;
   }

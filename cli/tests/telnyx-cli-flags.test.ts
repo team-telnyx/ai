@@ -96,36 +96,9 @@ describe("telnyx CLI flag compatibility", () => {
     assert.equal(parsed.flags.model, "new");
   });
 
-  it("status uses --page-size for paginated list commands and no page-size for ai:assistants", () => {
-    const fake = setupFakeTelnyx();
-
-    const output = execFileSync("npx", ["tsx", cliBin, "status", "--json"], {
-      cwd: cliRoot,
-      encoding: "utf8",
-      env: fake.env,
-      timeout: 30000,
-    });
-
-    const data = JSON.parse(output);
-    assert.equal(data.ai_assistants.total, 2);
-
-    const calls = readLoggedArgs(fake.logPath);
-    assert.ok(calls.every((args) => !args.includes("--page.size")), "must not use unsupported --page.size flag");
-
-    const numbersCall = calls.find((args) => args.slice(0, 2).join(" ") === "phone-numbers list");
-    const profilesCall = calls.find((args) => args.slice(0, 2).join(" ") === "messaging-profiles list");
-    const connectionsCall = calls.find((args) => args.slice(0, 2).join(" ") === "credential-connections list");
-    assert.ok(numbersCall, "status should query phone-numbers list");
-    assert.ok(profilesCall, "status should query messaging-profiles list");
-    assert.ok(connectionsCall, "status should query credential-connections list");
-    assertFlagValue(numbersCall, "--page-size", "1");
-    assertFlagValue(profilesCall, "--page-size", "1");
-    assertFlagValue(connectionsCall, "--page-size", "1");
-
-    const assistantsCall = calls.find((args) => args.slice(0, 2).join(" ") === "ai:assistants list");
-    assert.ok(assistantsCall, "status should query ai:assistants list");
-    assert.ok(!assistantsCall.includes("--page-size"), "ai:assistants list does not support pagination flags");
-  });
+  // NOTE: `status` was REST-swapped from Go CLI to TelnyxClient (direct fetch)
+  // and no longer shells out to `telnyx`. Its Go CLI flag compat is no longer
+  // relevant. See tests/status-rest.test.ts for the new REST-based tests.
 
   it("searchNumbers uses the Go CLI's --filter.limit flag for limits", async () => {
     const fake = setupFakeTelnyx();
