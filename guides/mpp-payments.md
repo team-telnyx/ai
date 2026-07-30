@@ -38,11 +38,31 @@ curl -sS -X POST "$MPP_ENDPOINT" \
 ### Pay with Stripe Link
 
 ```bash
-# Sign in and pick an eligible card
+# Sign in and pick a card marked eligible for agentic payments (US/CA-issued only)
 npx --yes @stripe/link-cli@0.11.0 auth login --client-name 'Telnyx MPP payer' --timeout 600
 npx --yes @stripe/link-cli@0.11.0 payment-methods list --format json
+export LINK_PAYMENT_METHOD_ID='<csmrpd-id>'
 
-# Decode the 402 challenge, create + approve a one-time spend request, then pay
+# Decode the 402 challenge (the WWW-Authenticate: Payment header from Step 1)
+# and copy methodDetails.networkId from the output
+npx --yes @stripe/link-cli@0.11.0 mpp decode \
+  --challenge '<complete Stripe Payment challenge header value>'
+export LINK_NETWORK_ID='<networkId-from-current-challenge>'
+
+# Create a one-time spend request (amount in cents), approve it in the
+# browser URL it prints, then wait for status "approved"
+npx --yes @stripe/link-cli@0.11.0 spend-request create \
+  --payment-method-id "$LINK_PAYMENT_METHOD_ID" \
+  --credential-type shared_payment_token \
+  --network-id "$LINK_NETWORK_ID" \
+  --amount '<amount-in-cents>' \
+  --currency usd \
+  --context 'Add USD credit to my Telnyx account via MPP.' \
+  --request-approval
+export LINK_SPEND_REQUEST_ID='<lsrq-id>'
+npx --yes @stripe/link-cli@0.11.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID"
+
+# Pay (each spend request is single-use)
 npx --yes @stripe/link-cli@0.11.0 mpp pay "$MPP_ENDPOINT" \
   --spend-request-id "$LINK_SPEND_REQUEST_ID" \
   --method POST \
