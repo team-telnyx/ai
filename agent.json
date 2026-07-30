@@ -158,6 +158,15 @@
       "requires": []
     },
     {
+      "id": "mpp_payments",
+      "name": "MPP Payments",
+      "description": "Fund account via Machine Payment Protocol (HTTP 402) with Stripe Link or Tempo USDC.",
+      "guide": "/guides/mpp-payments.md",
+      "api": "POST /v2/machine-payments/account-credit",
+      "docs": "https://developers.telnyx.com/docs/account/billing",
+      "requires": []
+    },
+    {
       "id": "porting",
       "name": "Number Porting",
       "description": "Check portability, create and manage port-in orders, upload LOA and supporting documents, track requirements and activation status, and monitor port-out activity.",
