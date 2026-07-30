@@ -16,6 +16,9 @@ metadata:
 
 ```text
 # curl is pre-installed on macOS, Linux, and Windows 10+
+# jq is required for examples that capture IDs from responses:
+#   macOS: brew install jq
+#   Debian/Ubuntu: sudo apt-get install jq
 ```
 
 ## Setup
