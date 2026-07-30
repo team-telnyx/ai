@@ -5,15 +5,22 @@ Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce mu
 ## Quick Start
 
 ```bash
+# Install
+npm install -g @telnyx/agent-cli
+
 # Set your API key
 export TELNYX_API_KEY="KEY_xxx"
 
 # Check account status
-npx tsx bin/telnyx-agent.ts status
+telnyx-agent status
 
 # See all capabilities
-npx tsx bin/telnyx-agent.ts capabilities
+telnyx-agent capabilities
 ```
+
+> **Contributors / from-source:** run the CLI with `node bin/telnyx-agent.mjs <command>`
+> (the published `bin`). The older `npx tsx bin/telnyx-agent.ts` form is dev-only and
+> is **not** what an installed user runs.
 
 ## Commands
 
@@ -312,6 +319,35 @@ telnyx-agent tts-voices --provider elevenlabs --json
 
 Output: `{ provider, count, voices: [...] }`
 
+## Cookbook Adjustments for Denise
+
+> **Status:** proposed cookbook copy changes, tested here in the README first per
+> Oliver's Jul 27 direction. **Do not request cookbook updates from Denise until the
+> team confirms end-to-end functionality.** Review requests go via **Slack** (not GitHub
+> email). These reflect the 12 fixes (AIF-325–AIF-336) consolidated on
+> `integration/agent-cli-fixes`.
+
+What changed vs. the current cookbook copy, and the exact wording adjustments Denise
+should make once verified:
+
+| Area | Old cookbook behaviour | New behaviour to document |
+|------|------------------------|---------------------------|
+| **Outbound calls** (`call-dial`) | Rejected some valid `+E.164` `--to` numbers (422). | Accepts any valid `+E.164`, incl. non-US intl (`+44…`, `+94…`). Posts to `POST /v2/calls`. |
+| **Call status** (`call-status`) | Unreliable/absent status. | Returns `active` / `ended`, derived from the live call's `is_alive`. |
+| **Group MMS** (`send-group-mms`) | Implied the returned id was queryable. | Returns per-recipient `recipient_statuses`; the **group id is not** resolvable via `sms-status` / `GET /v2/messages/{id}` — confirm delivery via recipient statuses or webhooks. Output carries this caveat. |
+| **WhatsApp** (`whatsapp-templates`, `setup-whatsapp`) | 404 from a doubled `/v2/v2/whatsapp…` path. | Correct single-`/v2` paths; templates list/create works. |
+| **`setup-sms` / `setup-voice`** | Bought a new number on every run (duplicate ~$1/mo charges). | **Idempotent by default** — reuses an existing `Agent SMS Profile - …` / `Agent Voice App - …` **and** its assigned number; adds `reused: true`. Use `--force` to provision fresh. |
+| **`--help` / `-h`** | Running help on `setup-*` could execute the flow and buy resources. | Help is intercepted before dispatch — never provisions anything. |
+| **Linux/portability** | Non-portable shebang; `setup-verify` profile + `schedule-sms` / `tts` failed. | Portable `#!/usr/bin/env node` launcher, `--version`, and REST swaps (AIF-330/331/332/333). |
+
+**New flag to add to the cookbook:** `--force` (on `setup-sms` and `setup-voice`) —
+provisions a brand-new profile/app + number instead of reusing an agent-created one.
+
+**Prerequisite to call out in the cookbook:** these commands rely on the bundled Telnyx
+Go CLI installed to `vendor/` during `npm install`. If SMS/number commands report
+`command …:… not found`, the environment resolved a different `telnyx` binary — re-run
+`npm install`. (Tracked separately from AIF-325–336.)
+
 ## Authentication
 
 The CLI looks for an API key in this order:
@@ -328,10 +364,16 @@ The CLI looks for an API key in this order:
 
 ## Architecture
 
-- **Hybrid execution** — wraps `telnyx-cli` where available, falls back to native `fetch()` for operations without CLI support
-- **No CLI framework** — simple `process.argv` parsing for 17 commands
-- **TypeScript + tsx** — direct execution, no build step
-- **Error handling** — composite commands report what succeeded and what failed
+- **Hybrid execution** — most commands call the Telnyx REST API v2 directly via native
+  `fetch()`; a subset (number search/order, `send-sms`, `sms-status`, WhatsApp send)
+  shell out to the bundled `telnyx` Go CLI (`@telnyx/telnyx-cli`, pinned by
+  `scripts/postinstall.ts`). The Go CLI is installed into `vendor/` on `npm install`.
+- **CLI dependency** — the shell-out path expects the pinned Go CLI in `vendor/`. If it
+  is missing and an **incompatible** `telnyx` is found on `PATH`, those specific commands
+  can fail with `command …:… not found`. Re-run `npm install` (or `npm rebuild`) to
+  restore `vendor/telnyx`. (See Cookbook Adjustments below.)
+- **No CLI framework** — simple `process.argv` parsing.
+- **Error handling** — composite commands report what succeeded and what failed.
 
 ## Development
 
@@ -339,8 +381,10 @@ The CLI looks for an API key in this order:
 cd cli
 npm install
 
-# Run directly
+# Run directly (from source, dev mode)
 npx tsx bin/telnyx-agent.ts status
+# ...or drive the published launcher exactly as an installed user would:
+node bin/telnyx-agent.mjs status
 
 # Run tests
 npm test
