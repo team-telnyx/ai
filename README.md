@@ -1,6 +1,6 @@
 # Telnyx AI
 
-This repo is the one-stop shop for AI Agents and AI-first developers building with Telnyx.
+This repo is the one-stop shop for AI Agents and AI-first developers building with Telnyx — everything an agent needs to sign up, fund an account, and ship production integrations.
 
 > [!NOTE]
 > This repository is a work in progress under active development. We are continuously improving based on testing and feedback. Contributions and feedback encouraged!
@@ -11,7 +11,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
   
-- [Agent Skills](#agent-skills) - give AI coding assistants accurate, up-to-date context about Telnyx APIs and SDKs.
+- [Agent Skills](#agent-skills) - give AI agents accurate, up-to-date context about Telnyx APIs and SDKs, plus account-management skills for signup and payments (MPP and x402 account funding).
   
 - [Agent CLI](#agent-cli) - provision and build on Telnyx infrastructure in a single command.
 
@@ -20,11 +20,11 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 - [Guides](#guides) - step-by-step tutorials for common workflows
  
 
-## Plugins and Extenstion
+## Plugins and Extensions
 
-Install the unified Telnyx plugin to give your AI coding assistant Telnyx MCP server access and 228 Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, and more. 
+Install the unified Telnyx plugin to give your AI coding assistant Telnyx MCP server access and 238 Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. 
 
-Empowers coding agents to generate correct, production-ready code without relying on pre-training or fragile doc retrieval.
+Empowers agents to generate correct, production-ready code — and to manage their own accounts — without relying on pre-training or fragile doc retrieval.
 
 ### Claude Code Plugin
 
@@ -174,8 +174,12 @@ Install individual skills for your coding assistant via the [Skills CLI](https:/
 npx skills add team-telnyx/ai --skill <SKILL> --agent <AGENT>
 ```
 
+Skills cover two areas: **building with Telnyx** (messaging, voice, numbers, AI inference, WebRTC, Twilio migration, and more) and **account management** (programmatic [signup](https://telnyx.com/agent-signup.md), plus funding an account via MPP or x402 payments).
+
+Skills are also published on telnyx.com for runtime discovery at [`/.well-known/agent-skills/index.json`](https://telnyx.com/.well-known/agent-skills/index.json).
+
 > [!NOTE]
-> See [Skills](/skills/README.md) for full install instrcuctions and comprehensive list of available skills
+> See [Skills](/skills/README.md) for full install instructions and a comprehensive list of available skills
 
 
 ## Agent CLI
@@ -221,7 +225,7 @@ From `tools/mcp-apps`, use `npm install`, `npm run typecheck`, `npm run build`, 
 
 ## Guides
 
-Curl-first operational guides for common Telnyx workflows — SMS messaging, voice call control, AI assistants, phone numbers, porting, verification, webhooks, 10DLC registration, WireGuard networking, x402 payments, and Edge Compute handoff patterns.
+Curl-first operational guides for common Telnyx workflows — SMS messaging, voice call control, AI assistants, phone numbers, porting, verification, webhooks, 10DLC registration, WireGuard networking, MPP and x402 account payments, and Edge Compute handoff patterns.
 
 For Edge Compute specifically, the goal is to make the handoff testable fast: start from a real `telnyx-edge` example, deploy it, and let `team-telnyx/ai` orchestrate against that live endpoint.
 

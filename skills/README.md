@@ -1,10 +1,10 @@
 # Telnyx Agent Skills
 
-Official Agent Skills for building on Telnyx.
+Official Agent Skills for building on Telnyx and managing your Telnyx account.
 
-These skills give coding agents structured, up-to-date context to generate correct, production-ready code without relying on pre-training or fragile doc retrieval.
+These skills give agents structured, up-to-date context to generate correct, production-ready code — and to handle account management like signup and payments — without relying on pre-training or fragile doc retrieval.
 
-They include accurate schemas, SDK patterns, workflows, and API references, so agents can implement Telnyx APIs reliably in real-world applications.
+They include accurate schemas, SDK patterns, workflows, and API references, so agents can implement Telnyx APIs reliably in real-world applications — from first signup to funded, production accounts.
 
 Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.io/specification) and are compatible with coding agents like Claude Code, Cursor, Windsurf, and others.
 
@@ -181,7 +181,9 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 
 ## Payments
 
-Fund a Telnyx account programmatically — built for agentic payment flows where an AI agent adds account credit on your behalf:
+Fund a Telnyx account programmatically — built for agentic payment flows where an AI agent adds account credit on your behalf. No account yet? Agents can sign up programmatically first via the [bot signup skill](https://telnyx.com/agent-signup.md).
+
+Available payment skills:
 
 | Skill | Description |
 |-------|-------------|
