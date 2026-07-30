@@ -59,7 +59,7 @@ Usage:
 
 Commands:
   setup-sms         Zero to SMS: create profile, buy number, assign it
-  setup-voice       Zero to voice: create connection, buy number, assign it
+  setup-voice       Zero to voice: create Call Control App, buy number, assign it
   setup-iot         Zero to IoT: list SIMs, create group, activate SIM
   list-sim-cards    List IoT SIM cards with filters and pagination
   retrieve-sim-card Retrieve one IoT SIM card by ID
@@ -107,7 +107,8 @@ Global Flags:
   --country <code>  Country code for number search (default: US)
 
 Setup-specific Flags:
-  --webhook <url>   Webhook URL (setup-voice)
+  --webhook-url <url>          Webhook URL for setup-voice (alias: --webhook; default: https://example.com/webhook)
+  --outbound-voice-profile-id  Outbound voice profile ID (setup-voice, default: auto-detect first available)
   --instructions    AI assistant instructions (setup-ai)
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
@@ -352,7 +353,9 @@ Examples:
   telnyx-agent status --json
   telnyx-agent capabilities
   telnyx-agent setup-sms --country US
+  telnyx-agent setup-voice
   telnyx-agent setup-voice --webhook https://example.com/calls
+  telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
   telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
@@ -508,13 +511,19 @@ function isHelpRequested(argv: string[]): boolean {
 }
 
 export async function run(argv: string[]): Promise<void> {
-  const { command, flags, occurrences } = parseFlags(argv);
+  const { command, flags, occurrences, helpRequested } = parseFlags(argv);
 
   // Intercept help BEFORE dispatching to any command handler. setup-* handlers
   // make live API calls and purchase billable resources (numbers, connections)
   // before hitting an unknown flag, so a `--help`/`-h` request must never fall
   // through to a handler. See isHelpRequested for flag-position vs value nuance.
   if (!command || command === "help" || isHelpRequested(argv)) {
+    console.log(HELP);
+    return;
+  }
+
+  // Per-command help: `telnyx-agent tts --help` or `telnyx-agent tts -h`
+  if (helpRequested) {
     console.log(HELP);
     return;
   }

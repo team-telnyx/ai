@@ -53,15 +53,21 @@ Output: `{ profile_id, phone_number, ready: true }`
 
 **One command: zero to making/receiving calls.**
 
-Creates a SIP credential connection, searches for a voice-capable number, buys it, and assigns it to the connection.
+Creates a Call Control Application (with webhook URL + outbound voice profile), searches for a voice-capable number, buys it, and assigns it to the app. The output `connection_id` works directly with `call-dial`.
 
 ```bash
 telnyx-agent setup-voice
 telnyx-agent setup-voice --webhook https://example.com/calls
+telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
 telnyx-agent setup-voice --country US --json
 ```
 
-Output: `{ connection_id, phone_number, sip_username, sip_password }`
+**Flags:**
+- `--webhook-url` (or `--webhook`) — Webhook URL for call events (default: `https://example.com/webhook`)
+- `--outbound-voice-profile-id` — Outbound voice profile ID (default: auto-detect first available)
+- `--country` — ISO country code for number search (default: `US`)
+
+Output: `{ connection_id, connection_name, phone_number, phone_number_id, webhook_url, outbound_voice_profile_id, ready }`
 
 ### `telnyx-agent setup-iot`
 

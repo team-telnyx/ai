@@ -2,14 +2,18 @@
  * telnyx-agent setup-voice — Zero to making/receiving calls in one command.
  *
  * Steps:
- * 1. Create a credential connection (direct API — CLI doesn't expose user_name/password for SIP creds)
- * 2. Search for a phone number with voice capability (via telnyx CLI)
- * 3. Buy the number (via telnyx CLI)
- * 4. Assign number to connection (via telnyx CLI)
+ * 1. Resolve outbound voice profile (GET /outbound_voice_profiles, or use --outbound-voice-profile-id)
+ * 2. Create a Call Control Application (POST /call_control_applications with webhook + outbound profile)
+ * 3. Search for a phone number with voice capability (via telnyx CLI)
+ * 4. Buy the number (via telnyx CLI)
+ * 5. Assign number to the Call Control App (PATCH /phone_numbers/:id)
+ *
+ * AIF-328: Previously created a credential connection which call-dial cannot
+ * use. call-dial requires a Call Control Application with a valid webhook URL.
  */
 
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
 
@@ -18,9 +22,8 @@ interface SetupVoiceResult {
   connection_name: string;
   phone_number: string;
   phone_number_id: string;
-  sip_username: string;
-  sip_password: string;
-  webhook_url: string | null;
+  webhook_url: string;
+  outbound_voice_profile_id: string;
   ready: boolean;
   steps: StepResult[];
 }
@@ -29,8 +32,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   const client = new TelnyxClient();
   const jsonOutput = flags.json === true;
   const country = (flags.country as string) || "US";
-  const webhookUrl = (flags.webhook as string) || null;
-  const totalSteps = 4;
+  const webhookUrl = (flags["webhook-url"] as string) || (flags.webhook as string) || "https://example.com/webhook";
+  const outboundProfileIdFlag = (flags["outbound-voice-profile-id"] as string) || "";
+  const totalSteps = 5;
   const steps: StepResult[] = [];
   const startTime = Date.now();
 
@@ -38,43 +42,56 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   let connectionName = "";
   let phoneNumber = "";
   let phoneNumberId = "";
-  let sipUsername = "";
-  let sipPassword = "";
+  let outboundProfileId = "";
 
   try {
-    // Step 1: Create credential connection (direct API — need SIP username/password)
-    const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
-    connectionName = `Agent Voice Connection - ${ts}`;
     if (!jsonOutput) console.log("\n🚀 Setting up Voice...\n");
 
+    // Step 1: Resolve outbound voice profile
     const step1Start = Date.now();
     try {
-      // Generate SIP credentials — username must be alphanumeric only
-      const generatedUser = "agent" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const generatedPass = "Ag" + Math.random().toString(36).slice(2, 10) + "1!";
-      const connBody: Record<string, unknown> = {
-        connection_name: connectionName,
-        active: true,
-        user_name: generatedUser,
-        password: generatedPass,
-      };
-      if (webhookUrl) {
-        connBody.webhook_event_url = webhookUrl;
+      if (outboundProfileIdFlag) {
+        outboundProfileId = outboundProfileIdFlag;
+      } else {
+        // Fetch the first available outbound voice profile
+        const profilesRes = await client.get("/outbound_voice_profiles");
+        const profilesData = profilesRes.data as Record<string, unknown>[];
+        if (!profilesData || profilesData.length === 0) {
+          throw new Error("No outbound voice profiles found. Create one in the Telnyx portal or pass --outbound-voice-profile-id.");
+        }
+        outboundProfileId = String(profilesData[0].id);
       }
-      const connRes = await client.post("/credential_connections", connBody);
-      const connData = connRes.data as Record<string, unknown>;
-      connectionId = String(connData.id);
-      sipUsername = String(connData.user_name ?? generatedUser);
-      sipPassword = String(connData.password ?? generatedPass);
-      steps.push({ step: 1, name: "Create credential connection", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: Date.now() - step1Start });
+      steps.push({ step: 1, name: "Resolve outbound voice profile", status: "completed", resourceId: outboundProfileId, elapsedMs: Date.now() - step1Start });
     } catch (err) {
-      steps.push({ step: 1, name: "Create credential connection", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step1Start });
+      steps.push({ step: 1, name: "Resolve outbound voice profile", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step1Start });
       throw err;
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Steps 2+3: Search and buy number via CLI (handles 409 retries automatically)
+    // Step 2: Create Call Control Application
     const step2Start = Date.now();
+    try {
+      const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
+      connectionName = `Agent Voice App - ${ts}`;
+      const appBody: Record<string, unknown> = {
+        application_name: connectionName,
+        webhook_event_url: webhookUrl,
+        outbound: {
+          outbound_voice_profile_id: outboundProfileId,
+        },
+      };
+      const appRes = await client.post("/call_control_applications", appBody);
+      const appData = appRes.data as Record<string, unknown>;
+      connectionId = String(appData.id);
+      steps.push({ step: 2, name: "Create Call Control Application", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: Date.now() - step2Start });
+    } catch (err) {
+      steps.push({ step: 2, name: "Create Call Control Application", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
+      throw err;
+    }
+    if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
+
+    // Steps 3+4: Search and buy number via CLI
+    const step3Start = Date.now();
     try {
       const result = await searchAndBuyNumber(country, {
         features: "voice",
@@ -83,10 +100,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       });
       phoneNumber = result.phoneNumber;
       phoneNumberId = result.phoneNumberId;
-      steps.push({ step: 2, name: "Search for number", status: "completed", detail: phoneNumber, elapsedMs: Date.now() - step2Start });
-      steps.push({ step: 3, name: "Buy number", status: "completed", resourceId: phoneNumberId, detail: phoneNumber, elapsedMs: 0 });
+      steps.push({ step: 3, name: "Search for number", status: "completed", detail: phoneNumber, elapsedMs: Date.now() - step3Start });
+      steps.push({ step: 4, name: "Buy number", status: "completed", resourceId: phoneNumberId, detail: phoneNumber, elapsedMs: 0 });
     } catch (err) {
-      steps.push({ step: 2, name: "Search & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
+      steps.push({ step: 3, name: "Search & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step3Start });
       throw err;
     }
     if (!jsonOutput) {
@@ -94,20 +111,17 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       printStep(steps[steps.length - 1], totalSteps);
     }
 
-    // Step 4: Assign number to connection via CLI
-    const step4Start = Date.now();
+    // Step 5: Assign number to Call Control Application
+    const step5Start = Date.now();
     try {
-      if (phoneNumber) {
-        await telnyxCli([
-          "phone-numbers", "update",
-          "--phone-number-id", phoneNumber,
-          "--connection-id", connectionId,
-          "--force",
-        ]);
+      if (phoneNumberId) {
+        await client.patch(`/phone_numbers/${phoneNumberId}`, {
+          connection_id: connectionId,
+        });
       }
-      steps.push({ step: 4, name: "Assign number to connection", status: "completed", elapsedMs: Date.now() - step4Start });
+      steps.push({ step: 5, name: "Assign number to Call Control App", status: "completed", elapsedMs: Date.now() - step5Start });
     } catch (err) {
-      steps.push({ step: 4, name: "Assign number to connection", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
+      steps.push({ step: 5, name: "Assign number to Call Control App", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step5Start });
       throw err;
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
@@ -117,9 +131,8 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       connection_name: connectionName,
       phone_number: phoneNumber,
       phone_number_id: phoneNumberId,
-      sip_username: sipUsername,
-      sip_password: sipPassword,
       webhook_url: webhookUrl,
+      outbound_voice_profile_id: outboundProfileId,
       ready: true,
       steps,
     };
@@ -129,14 +142,13 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     } else {
       printSuccess("Voice setup complete!", {
         "Connection ID": connectionId,
-        "Connection Name": connectionName,
+        "App Name": connectionName,
         "Phone Number": phoneNumber,
-        "SIP Username": sipUsername || "(see portal)",
-        "SIP Password": sipPassword || "(see portal)",
-        "Webhook URL": webhookUrl || "(none)",
+        "Webhook URL": webhookUrl,
+        "Outbound Profile": outboundProfileId,
         Ready: "✓",
       });
-      console.log("  ⚠️  Save your SIP credentials — they cannot be retrieved later.\n");
+      console.log("  💡 Use the Connection ID above with: telnyx-agent call-dial --connection-id " + connectionId + " ...\n");
     }
   } catch (err) {
     const result = {
