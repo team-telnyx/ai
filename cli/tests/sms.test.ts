@@ -284,35 +284,8 @@ describe("SMS action commands", () => {
     );
   });
 
-  it("schedule-sms passes --send-at to messages schedule", () => {
-    const fake = setupFakeTelnyx();
-
-    const out = runAgent(
-      [
-        "schedule-sms",
-        "--from", "+13125550000",
-        "--to", "+13125550001",
-        "--text", "later",
-        "--send-at", "2024-12-31T00:00:00Z",
-        "--json",
-      ],
-      fake.env,
-    );
-
-    const data = JSON.parse(out);
-    assert.equal(data.message_id, "sched-456");
-    assert.equal(data.status, "scheduled");
-    assert.equal(data.send_at, "2024-12-31T00:00:00Z");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const schedCall = calls.find((a) => a.slice(0, 2).join(" ") === "messages schedule");
-    assert.ok(schedCall, "should call messages schedule");
-    assertFlagValue(schedCall, "--from", "+13125550000");
-    assertFlagValue(schedCall, "--to", "+13125550001");
-    assertFlagValue(schedCall, "--text", "later");
-    assertFlagValue(schedCall, "--send-at", "2024-12-31T00:00:00Z");
-    assert.ok(!schedCall.includes("--type"), "schedule should not include --type");
-  });
+  // schedule-sms was REST-swapped from Go CLI to POST /v2/messages with send_at.
+  // Tests for the REST path are in tests/schedule-sms-rest.test.ts
 
   it("sms-status retrieve calls messages retrieve", () => {
     const fake = setupFakeTelnyx();
