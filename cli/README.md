@@ -218,6 +218,45 @@ telnyx-agent fund-account --amount 50.00 --json              # JSON output
 **Output (without --wallet-key):**
 Returns `payment_requirements` JSON for external signing by agents or wallets.
 
+### `telnyx-agent tts`
+
+**Generate speech from text (text-to-speech).**
+
+Supports multiple providers (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai). Returns base64-encoded audio.
+
+```bash
+telnyx-agent tts --text "Hello world" --voice Telnyx.Bayan.Amanda
+telnyx-agent tts --text "Bonjour" --voice Amy --provider aws --language fr
+telnyx-agent tts --text "Hello" --provider elevenlabs --json
+telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml
+```
+
+**Flags:**
+- `--text` — Text to synthesize (required)
+- `--voice` — Voice ID (e.g., `Telnyx.Bayan.Amanda`, `Amy`)
+- `--provider` — TTS provider (default: `telnyx`)
+- `--language` — Language code (default: `en`)
+- `--output-type` — Output format: `base64` (default). `binary_output` is not supported by this wrapper.
+- `--text-type` — `text` (default) or `ssml`
+- `--disable-cache` — Skip TTS cache
+
+Output: `{ text, voice, provider, output_type, audio_data, has_audio_data }`
+
+### `telnyx-agent tts-voices`
+
+**List available TTS voices, optionally filtered by provider.**
+
+```bash
+telnyx-agent tts-voices
+telnyx-agent tts-voices --provider aws
+telnyx-agent tts-voices --provider elevenlabs --json
+```
+
+**Flags:**
+- `--provider` — Filter by provider (default: `telnyx`)
+
+Output: `{ provider, count, voices: [...] }`
+
 ## Authentication
 
 The CLI looks for an API key in this order:

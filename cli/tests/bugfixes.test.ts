@@ -1,0 +1,192 @@
+/**
+ * Tests for pre-existing bug fixes:
+ * - Bug 1: --help/-h passed to commands now shows help instead of running the command
+ * - Bug 2: --flag "" (empty string) now stored as "" not true
+ * - Bug 3: README has tts/tts-voices sections
+ */
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseFlags } from "../src/utils/output.ts";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cliRoot = join(__dirname, "..");
+const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
+
+function runCli(args: string[], env?: NodeJS.ProcessEnv): { stdout: string; status: number } {
+  try {
+    const stdout = execFileSync("npx", ["tsx", cliBin, ...args], {
+      cwd: cliRoot,
+      encoding: "utf8",
+      env: env ?? { ...process.env },
+      timeout: 30000,
+    });
+    return { stdout, status: 0 };
+  } catch (err: any) {
+    return { stdout: err.stdout?.toString() ?? "", status: err.status ?? 1 };
+  }
+}
+
+describe("Bug fix: --help/-h shows help instead of running the command", () => {
+  it("tts --help shows help and exits 0", () => {
+    const { stdout, status } = runCli(["tts", "--help"]);
+    assert.equal(status, 0, "expected --help to exit 0");
+    assert.match(stdout, /Usage:/);
+    assert.match(stdout, /tts/);
+  });
+
+  it("tts -h shows help and exits 0", () => {
+    const { stdout, status } = runCli(["tts", "-h"]);
+    assert.equal(status, 0, "expected -h to exit 0");
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("setup-voice --help shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-voice", "--help"]);
+    assert.equal(status, 0);
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("setup-sms --help shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-sms", "--help"]);
+    assert.equal(status, 0);
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("tts --help does NOT make an API call (no auth error)", () => {
+    const { stdout, status } = runCli(["tts", "--help"], { ...process.env, TELNYX_API_KEY: "" });
+    assert.equal(status, 0, "expected --help to exit 0 without API key");
+    // If the command ran, it would fail with auth error, not show help
+    assert.doesNotMatch(stdout, /error/i);
+    assert.match(stdout, /Usage:/);
+  });
+});
+
+describe("Bug fix: parseFlags handles empty string values", () => {
+  it('stores empty string for --flag ""', () => {
+    const parsed = parseFlags(["cmd", "--text", ""]);
+    assert.equal(parsed.flags.text, "", 'expected flags.text to be "" not true');
+  });
+
+  it("stores empty string for --text with explicit empty value", () => {
+    const parsed = parseFlags(["tts", "--text", "", "--voice", "Amy"]);
+    assert.equal(parsed.flags.text, "");
+    assert.equal(parsed.flags.voice, "Amy");
+  });
+
+  it("still stores boolean true for bare --flag", () => {
+    const parsed = parseFlags(["cmd", "--json"]);
+    assert.equal(parsed.flags.json, true);
+  });
+
+  it("still stores string for --flag value", () => {
+    const parsed = parseFlags(["cmd", "--text", "hello"]);
+    assert.equal(parsed.flags.text, "hello");
+  });
+
+  it("occurrences track empty strings correctly", () => {
+    const parsed = parseFlags(["cmd", "--text", ""]);
+    assert.deepEqual(parsed.occurrences.text, [""]);
+  });
+
+  it("helpRequested is true when --help is passed", () => {
+    const parsed = parseFlags(["cmd", "--help"]);
+    assert.equal(parsed.helpRequested, true);
+  });
+
+  it("helpRequested is true when -h is passed", () => {
+    const parsed = parseFlags(["cmd", "-h"]);
+    assert.equal(parsed.helpRequested, true);
+  });
+
+  it("helpRequested is false when --help is not passed", () => {
+    const parsed = parseFlags(["cmd", "--json"]);
+    assert.equal(parsed.helpRequested, false);
+  });
+
+  it("--help does not create a flags.help entry", () => {
+    const parsed = parseFlags(["cmd", "--help", "--json"]);
+    assert.equal(parsed.flags.help, undefined);
+    assert.equal(parsed.flags.json, true);
+  });
+});
+
+describe("Bug fix: --json validation errors output JSON not human text", () => {
+  it("rcs-send --json with missing --agent-id outputs JSON error", () => {
+    const { stdout, status } = runCli(["rcs-send", "--json"], { ...process.env });
+    assert.notEqual(status, 0, "expected non-zero exit");
+    const data = JSON.parse(stdout);
+    assert.ok(data.error, "expected error field in JSON");
+    assert.match(data.error, /agent-id is required/i);
+  });
+
+  it("rcs-capabilities --json with missing --agent-id outputs JSON error", () => {
+    const { stdout, status } = runCli(["rcs-capabilities", "--json"], { ...process.env });
+    assert.notEqual(status, 0);
+    const data = JSON.parse(stdout);
+    assert.ok(data.error);
+    assert.match(data.error, /agent-id is required/i);
+  });
+
+  it("whatsapp-send --json with missing --from/--to outputs JSON error", () => {
+    const { stdout, status } = runCli(["whatsapp-send", "--json"], { ...process.env });
+    assert.notEqual(status, 0);
+    const data = JSON.parse(stdout);
+    assert.ok(data.error);
+    assert.match(data.error, /from and --to are required/i);
+  });
+
+  it("whatsapp-send --json with no --text or --template-name outputs JSON error", () => {
+    const { stdout, status } = runCli(["whatsapp-send", "--from", "+13125550001", "--to", "+13125550002", "--json"], { ...process.env });
+    assert.notEqual(status, 0);
+    const data = JSON.parse(stdout);
+    assert.ok(data.error);
+    assert.match(data.error, /text.*template-name/i);
+  });
+
+  it("setup-10dlc --json with missing --phone/--email outputs JSON error", () => {
+    const { stdout, status } = runCli(["setup-10dlc", "--json"], { ...process.env });
+    assert.notEqual(status, 0);
+    const data = JSON.parse(stdout);
+    assert.ok(data.error);
+    assert.match(data.error, /phone and --email are required/i);
+  });
+
+  it("setup-10dlc --json with invalid --usecase outputs JSON error", () => {
+    const { stdout, status } = runCli(["setup-10dlc", "--phone", "+13125550001", "--email", "test@test.com", "--usecase", "INVALID", "--json"], { ...process.env });
+    assert.notEqual(status, 0);
+    const data = JSON.parse(stdout);
+    assert.ok(data.error);
+    assert.match(data.error, /invalid use case/i);
+  });
+
+  it("rcs-send without --json still outputs human-readable error", () => {
+    const { stdout, status } = runCli(["rcs-send"], { ...process.env });
+    assert.notEqual(status, 0);
+    // Without --json, output goes to stderr as human text, stdout should be empty or non-JSON
+    if (stdout.trim()) {
+      assert.throws(() => JSON.parse(stdout), "expected non-JSON output without --json");
+    }
+  });
+});
+
+describe("Bug fix: README has tts and tts-voices sections", () => {
+  it("README contains a tts section", () => {
+    const readme = readFileSync(join(cliRoot, "README.md"), "utf8");
+    assert.match(readme, /### `telnyx-agent tts`/);
+  });
+
+  it("README contains a tts-voices section", () => {
+    const readme = readFileSync(join(cliRoot, "README.md"), "utf8");
+    assert.match(readme, /### `telnyx-agent tts-voices`/);
+  });
+
+  it("README tts section mentions --text and --voice flags", () => {
+    const readme = readFileSync(join(cliRoot, "README.md"), "utf8");
+    assert.match(readme, /--text/);
+    assert.match(readme, /--voice/);
+  });
+});

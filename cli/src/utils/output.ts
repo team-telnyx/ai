@@ -35,6 +35,19 @@ export function printError(message: string, remediation?: string): void {
   console.error();
 }
 
+/**
+ * Print an error in the correct format based on --json flag, then exit(1).
+ * Use this for validation errors in command handlers.
+ */
+export function failWith(message: string, jsonOutput: boolean): never {
+  if (jsonOutput) {
+    outputJson({ error: message });
+  } else {
+    printError(message);
+  }
+  process.exit(1);
+}
+
 export function printWarning(message: string): void {
   console.error(`⚠️  ${message}`);
 }
@@ -87,6 +100,8 @@ export function parseFlags(args: string[]): {
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const next = args[i + 1];
+      // Treat `--flag ""` as an empty string value, not a boolean.
+      // The old code used `next && ...` which treated `""` as falsy.
       if (next !== undefined && next !== null && !next.startsWith("--")) {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);

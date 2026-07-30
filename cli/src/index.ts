@@ -528,6 +528,12 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
 
+  // Per-command help: `telnyx-agent tts --help` or `telnyx-agent tts -h`
+  if (helpRequested) {
+    console.log(HELP);
+    return;
+  }
+
   const handler = COMMANDS[command];
   if (!handler) {
     console.error(`Unknown command: ${command}\n`);

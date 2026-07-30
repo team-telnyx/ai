@@ -8,8 +8,8 @@
  * 4. Assign number to the messaging profile (via telnyx CLI)
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { TelnyxClient } from "../client.ts";
+import { TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
 
@@ -81,16 +81,14 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       printStep(steps[steps.length - 1], totalSteps);
     }
 
-    // Step 4: Assign number to messaging profile via CLI
+    // Step 4: Assign number to messaging profile via REST (AIF-329: Go CLI
+    // doesn't support --messaging-profile-id or --force on phone-numbers update)
     const step4Start = Date.now();
     try {
-      if (phoneNumber) {
-        await telnyxCli([
-          "phone-numbers", "update",
-          "--phone-number-id", phoneNumber,
-          "--messaging-profile-id", profileId,
-          "--force",
-        ]);
+      if (phoneNumberId) {
+        await client.patch(`/phone_numbers/${phoneNumberId}`, {
+          messaging_profile_id: profileId,
+        });
       }
       steps.push({ step: 4, name: "Assign number to profile", status: "completed", elapsedMs: Date.now() - step4Start });
     } catch (err) {
@@ -143,6 +141,7 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
 }
 
 function errorMsg(err: unknown): string {
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof TelnyxCLIError) return err.stderr || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
