@@ -350,6 +350,28 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("does NOT claim a --webhook was applied when reusing an existing app (honesty)", async () => {
+    // Newcomer passes --webhook but an existing agent app is reused: the reused
+    // app keeps its own webhook, so we must not echo the requested one as if set.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00" },
+    ];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--webhook", "https://mine.example.com/hook", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true);
+      assert.equal(data.webhook_not_applied, true, "should flag that the requested webhook was not applied");
+      assert.notEqual(data.webhook_url, "https://mine.example.com/hook", "must not echo an unapplied webhook as if it were set");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("--force provisions a fresh app + number even when an agent app already exists (AIF-336)", async () => {
     capturedRequests = [];
     existingVoiceApps = [

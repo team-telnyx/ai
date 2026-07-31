@@ -319,6 +319,40 @@ telnyx-agent tts-voices --provider elevenlabs --json
 
 Output: `{ provider, count, voices: [...] }`
 
+### `telnyx-agent stt`
+
+**Transcribe audio to text (speech-to-text).**
+
+Transcription requires the audio at a **publicly reachable URL** — the command
+cannot upload a local file. Host the audio (any public URL or a Telnyx storage
+bucket) first, then pass it with `--audio-url`. Note: `tts` returns base64 audio
+data, not a URL, so you cannot pipe `tts` straight into `stt` — host the audio in
+between.
+
+```bash
+telnyx-agent stt --audio-url https://example.com/audio.wav
+telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
+```
+
+**Flags:**
+- `--audio-url` — Public URL of the audio file to transcribe (required)
+- `--model` — Transcription model (default: `distil-whisper/distil-large-v2`; also `openai/whisper-large-v3-turbo`, `deepgram/nova-3`)
+- `--language` — Language hint (optional)
+- `--response-format` — `json` or `verbose_json` (optional)
+
+Output: `{ audio_url, model, transcription }`
+
+### `telnyx-agent stt-providers`
+
+**List available speech-to-text providers.**
+
+```bash
+telnyx-agent stt-providers
+telnyx-agent stt-providers --provider telnyx --service-type transcription --json
+```
+
+Output: `{ providers: [...] }`
+
 ## Cookbook Adjustments for Denise
 
 > **Status:** proposed cookbook copy changes, tested here in the README first per

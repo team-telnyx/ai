@@ -106,6 +106,34 @@ echo "AIF-325 help never provisions:"
 run setup-sms --help >/dev/null 2>&1
 if grep -qE '"method":"POST"' "$LOG"; then bad "help triggered a POST (provisioned!)"; else ok "setup-sms --help made no POSTs"; fi
 
+# ================= Previously-unreachable products: verify / tts / stt / schedule =================
+# These were only covered by unit tests before; the full mock now has routes so
+# they get real end-to-end coverage here too.
+start_mock
+echo "AIF-332 schedule-sms (REST, scheduled state):"
+OUT="$(run schedule-sms --from +13125550000 --to +13125550009 --text later --send-at 2026-08-01T10:00:00Z --json 2>&1)"
+echo "$OUT" | grep -q '"scheduled": *true' && ok "schedule-sms reports scheduled=true" || bad "schedule-sms not scheduled: $(echo "$OUT"|tail -1)"
+grep -q '"send_at":"2026-08-01T10:00:00Z"' "$LOG" && ok "send_at reached POST /messages" || bad "send_at not sent"
+
+echo "AIF-330 setup-verify (profile w/ SMS channel):"
+OUT="$(run setup-verify --json 2>&1)"
+echo "$OUT" | grep -q '"profile_id": *"vp_e2e_1"' && ok "verify profile created" || bad "verify profile not created: $(echo "$OUT"|head -3|tail -1)"
+echo "$OUT" | grep -q '"ready": *true' && ok "setup-verify ready=true (all 4 steps)" || bad "setup-verify not ready: $(echo "$OUT"|tail -2|head -1)"
+grep -q '"path":"/verify_profiles"' "$LOG" && ok "POST /verify_profiles" || bad "did not POST /verify_profiles"
+# Note: setup-verify DOES buy a number (step 3) — documents the Deniz DECISION item.
+grep -q '"path":"/number_orders"' "$LOG" && ok "(confirms) setup-verify buys a number — Deniz copy DECISION" || echo "  ℹ setup-verify did not order a number this run"
+
+echo "AIF-331 tts (base64 audio, not a url):"
+OUT="$(run tts --text "hello e2e" --provider telnyx --voice Telnyx.Bayan.Amanda --json 2>&1)"
+echo "$OUT" | grep -q '"audio_data"' && ok "tts returned audio_data (base64)" || bad "tts no audio_data: $(echo "$OUT"|head -1)"
+if echo "$OUT" | grep -qiE '"(audio_)?url"'; then bad "tts leaked a url field (it returns base64, not a url)"; else ok "tts did not return a url (matches reality)"; fi
+grep -q '"path":"/text-to-speech/speech"' "$LOG" && ok "POST /text-to-speech/speech" || bad "wrong tts endpoint"
+
+echo "stt (needs public audio-url):"
+OUT="$(run stt --audio-url https://example.com/a.wav --json 2>&1)"
+echo "$OUT" | grep -qiE 'transcription|"text"' && ok "stt transcribed via public url" || bad "stt failed: $(echo "$OUT"|head -1)"
+grep -q '"path":"/ai/audio/transcriptions"' "$LOG" && ok "POST /ai/audio/transcriptions" || bad "wrong stt endpoint"
+
 echo
 echo "=================================="
 echo "FULL E2E: PASS=$PASS FAIL=$FAIL"

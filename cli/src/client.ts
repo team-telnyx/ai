@@ -119,7 +119,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("GET", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("GET", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("GET", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("GET", path, httpStatus, error);
@@ -143,7 +144,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("POST", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("POST", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("POST", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("POST", path, httpStatus, error);
@@ -167,7 +169,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("PATCH", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("PATCH", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("PATCH", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("PATCH", path, httpStatus, error);
@@ -190,7 +193,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("DELETE", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("DELETE", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("DELETE", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("DELETE", path, httpStatus, error);
@@ -198,6 +202,34 @@ export class TelnyxClient {
     } finally {
       clearTimeout(tid);
     }
+  }
+
+  /**
+   * Turn an opaque low-level fetch failure into an actionable message. Node's
+   * fetch throws a bare `TypeError: fetch failed` with the real reason buried in
+   * `.cause`, which surfaced to newcomers as just "fetch failed". This unwraps
+   * the cause (ECONNREFUSED / ENOTFOUND / abort/timeout) into plain guidance and
+   * leaves already-structured errors (TelnyxAPIError) untouched.
+   */
+  private normalizeNetworkError(method: string, path: string, error: unknown): unknown {
+    if (error instanceof TelnyxAPIError) return error;
+    const url = `${this.baseUrl}${path}`;
+    // AbortController fires on timeout.
+    if (error instanceof Error && error.name === "AbortError") {
+      return new Error(`Request timed out after ${this.timeout}ms: ${method} ${url}. Check your network or increase the timeout.`);
+    }
+    if (error instanceof Error && error.message === "fetch failed") {
+      const cause = (error as any).cause;
+      const code = cause?.code as string | undefined;
+      const hint =
+        code === "ECONNREFUSED" ? "connection refused — is the API base URL correct and reachable?"
+        : code === "ENOTFOUND" ? "DNS lookup failed — check the API host / your internet connection."
+        : code === "ETIMEDOUT" ? "connection timed out — check your network."
+        : code === "CERT_HAS_EXPIRED" || code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE" ? "TLS certificate problem contacting the API."
+        : cause?.message || "could not reach the API.";
+      return new Error(`Network error calling ${method} ${url}: ${hint}${code ? ` (${code})` : ""}`);
+    }
+    return error;
   }
 
   private reportFriction(method: string, path: string, httpStatus: number, error: unknown): void {

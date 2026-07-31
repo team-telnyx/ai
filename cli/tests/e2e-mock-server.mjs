@@ -42,7 +42,15 @@ const server = createServer((req, res) => {
   let raw = "";
   req.on("data", (c) => (raw += c.toString()));
   req.on("end", () => {
-    const body = raw ? JSON.parse(raw) : undefined;
+    // Body may be non-JSON (e.g. multipart uploads, malformed retries). A bare
+    // JSON.parse here used to throw and crash the ENTIRE mock, taking down every
+    // subsequent request. Parse defensively and keep serving.
+    let body;
+    try {
+      body = raw ? JSON.parse(raw) : undefined;
+    } catch {
+      body = undefined; // non-JSON body; routes that need it will just 404/echo empty
+    }
     log({ method: req.method, path, query: url.search, body });
     const ok = (json, status = 200) => {
       res.writeHead(status, { "content-type": "application/json" });
@@ -52,6 +60,7 @@ const server = createServer((req, res) => {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ errors: [{ code: "10005", detail: `no route ${req.method} ${path}` }] }));
     };
+    try {
 
     // --- Voice: call-dial (AIF-327), call-status (AIF-334) ---
     if (req.method === "POST" && path === "/calls") {
@@ -68,8 +77,14 @@ const server = createServer((req, res) => {
     // the --base-url shim, so the FULL e2e exercises the shell-out path too.
     if (req.method === "POST" && path === "/messages") {
       const id = nextId("msg");
+      // Model the real API: a message with send_at comes back with recipient
+      // status "scheduled" (and send_at may echo null) — this is what lets
+      // schedule-sms be tested end-to-end. Immediate sends are "queued".
+      const scheduled = !!body?.send_at;
       const row = { id, record_type: "message", type: body?.media_url ? "MMS" : "SMS",
-        from: { phone_number: body?.from }, to: [{ phone_number: body?.to, status: "queued" }],
+        from: { phone_number: body?.from },
+        to: [{ phone_number: body?.to, status: scheduled ? "scheduled" : "queued" }],
+        send_at: scheduled ? null : undefined,
         text: body?.text };
       state.messages ??= []; state.messages.push(row);
       return ok({ data: row });
@@ -151,6 +166,25 @@ const server = createServer((req, res) => {
     if (req.method === "GET" && path === "/outbound_voice_profiles") {
       return ok({ data: [{ id: "ovp_e2e", name: "default" }] });
     }
+
+    // --- Verify (AIF-330): setup-verify step 1 creates a profile w/ SMS channel ---
+    if (req.method === "POST" && path === "/verify_profiles") {
+      return ok({ data: { id: "vp_e2e_1", name: body?.name ?? "Agent Verify Profile", ...body } });
+    }
+
+    // --- TTS (AIF-331): returns base64 audio, NOT a url/file. WAV, not MP3. ---
+    if (req.method === "POST" && path === "/text-to-speech/speech") {
+      // "RIFF....WAVE" header base64 so the shape matches reality (wav bytes).
+      return ok({ data: { audio: Buffer.from("RIFF\u0000\u0000\u0000\u0000WAVEfmt ").toString("base64"), content_type: "audio/wav" } });
+    }
+
+    // --- STT: transcription needs a PUBLIC audio url (can't take a local file) ---
+    if (req.method === "POST" && path === "/ai/audio/transcriptions") {
+      return ok({ data: { text: "hello world", model: body?.model ?? "distil-whisper/distil-large-v2" } });
+    }
+    if (req.method === "GET" && path === "/speech-to-text/providers") {
+      return ok({ data: [{ provider: "telnyx" }, { provider: "deepgram" }, { provider: "openai" }] });
+    }
     if (req.method === "GET" && path === "/phone_numbers") {
       // Honour filter[messaging_profile_id] / filter[connection_id].
       const mp = url.searchParams.get("filter[messaging_profile_id]");
@@ -169,8 +203,20 @@ const server = createServer((req, res) => {
     }
 
     return notFound();
+    } catch (err) {
+      // Never let a handler exception kill the server mid-suite.
+      if (!res.headersSent) {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({ errors: [{ code: "90000", detail: String(err && err.message || err) }] }));
+      }
+    }
   });
 });
+
+// Last-resort guards so a stray error/rejection can't take the mock down
+// (a dead mock silently breaks every downstream command in the walkthrough).
+process.on("uncaughtException", (err) => { console.error("[mock] uncaughtException:", err?.message || err); });
+process.on("unhandledRejection", (err) => { console.error("[mock] unhandledRejection:", err?.message || err); });
 
 server.listen(0, "127.0.0.1", () => {
   const { port } = server.address();

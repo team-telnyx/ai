@@ -27,6 +27,7 @@ interface SetupVoiceResult {
   outbound_voice_profile_id: string;
   ready: boolean;
   reused: boolean;
+  webhook_not_applied?: boolean;
   steps: StepResult[];
 }
 
@@ -34,6 +35,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   const client = new TelnyxClient();
   const jsonOutput = flags.json === true;
   const country = (flags.country as string) || "US";
+  const webhookExplicit = !!((flags["webhook-url"] as string) || (flags.webhook as string));
   const webhookUrl = (flags["webhook-url"] as string) || (flags.webhook as string) || "https://example.com/webhook";
   const outboundProfileIdFlag = (flags["outbound-voice-profile-id"] as string) || "";
   // AIF-336: reuse a previously agent-created Call Control App + number by
@@ -70,6 +72,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         phoneNumber = existing.phoneNumber;
         phoneNumberId = existing.phoneNumberId;
         reused = true;
+        // When reusing, the existing app keeps its OWN webhook — a --webhook
+        // passed on this run is NOT applied. Report honestly instead of echoing
+        // a webhook we didn't set, and tell the user how to apply a new one.
+        const webhookApplied = !webhookExplicit;
         steps.push({ step: 1, name: "Reuse existing Call Control App + number", status: "completed", resourceId: connectionId, detail: `${connectionName} → ${phoneNumber}`, elapsedMs: 0 });
 
         const result: SetupVoiceResult = {
@@ -77,10 +83,12 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           connection_name: connectionName,
           phone_number: phoneNumber,
           phone_number_id: phoneNumberId,
-          webhook_url: webhookUrl,
+          // Do not claim the requested webhook was set on a reused app.
+          webhook_url: webhookApplied ? webhookUrl : "(existing app's webhook — unchanged)",
           outbound_voice_profile_id: outboundProfileId,
           ready: true,
           reused: true,
+          ...(webhookExplicit ? { webhook_not_applied: true } : {}),
           steps,
         };
         if (jsonOutput) {
@@ -94,6 +102,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
             Ready: "✓",
             "Reused": "✓ (pass --force to provision a new app + number)",
           });
+          if (webhookExplicit) {
+            console.log("  ⚠ Your --webhook was NOT applied — the reused app keeps its existing webhook. Use --force to create a new app with your webhook.");
+          }
           console.log("  💡 Use the Connection ID above with: telnyx-agent call-dial --connection-id " + connectionId + " ...\n");
         }
         return;
