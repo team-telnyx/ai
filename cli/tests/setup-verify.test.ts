@@ -34,6 +34,9 @@ interface CapturedRequest {
 let mockServer: Server;
 let mockPort: number;
 let lastRequest: CapturedRequest | null = null;
+// Idempotency fixture: existing agent verify profiles returned by GET
+// /verify_profiles. Default empty => fresh-create path (existing tests).
+let existingVerifyProfiles: Array<Record<string, unknown>> = [];
 
 function startMockServer(): Promise<void> {
   return new Promise((resolve) => {
@@ -46,6 +49,12 @@ function startMockServer(): Promise<void> {
           parsedBody = body ? JSON.parse(body) : null;
         } catch { /* ignore */ }
         lastRequest = { method: req.method ?? "", path: req.url ?? "", body: parsedBody };
+
+        if (req.method === "GET" && req.url?.startsWith("/v2/verify_profiles")) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: existingVerifyProfiles }));
+          return;
+        }
 
         if (req.method === "POST" && req.url === "/v2/verify_profiles") {
           res.writeHead(200, { "Content-Type": "application/json" });
@@ -176,6 +185,46 @@ describe("setup-verify (AIF-330: profile with SMS channel settings)", () => {
 
   after(async () => {
     await stopMockServer();
+  });
+
+  it("reuses an existing agent verify profile instead of creating a new one", async () => {
+    lastRequest = null;
+    existingVerifyProfiles = [
+      { id: "prof_existing", name: "Agent Verify Profile - 2026-07-24 10:00:00", record_type: "verify_profile" },
+    ];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runSetupVerifyAsync(["--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true, "should reuse the existing profile");
+      assert.equal(data.profile_id, "prof_existing");
+      // Must NOT POST a new profile when reusing.
+      const last = lastRequest as CapturedRequest | null;
+      const postedNew = !!last && last.method === "POST" && last.path === "/v2/verify_profiles";
+      assert.equal(postedNew, false, "must not create a new profile when reusing");
+    } finally {
+      existingVerifyProfiles = [];
+    }
+  });
+
+  it("--force creates a new profile even when one already exists", async () => {
+    lastRequest = null;
+    existingVerifyProfiles = [
+      { id: "prof_existing", name: "Agent Verify Profile - 2026-07-24 10:00:00", record_type: "verify_profile" },
+    ];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runSetupVerifyAsync(["--force", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, false, "--force must not reuse");
+      const last = lastRequest as CapturedRequest | null;
+      assert.equal(last?.method, "POST");
+      assert.equal(last?.path, "/v2/verify_profiles");
+    } finally {
+      existingVerifyProfiles = [];
+    }
   });
 
   it("POSTs to /verify_profiles with SMS channel block and default US destination", async () => {

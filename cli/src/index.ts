@@ -499,6 +499,47 @@ const COMMANDS: Record<string, (
   "disable-sim-card": disableSimCardCommand,
 };
 
+// Union of every flag any command reads (kept in sync with src/commands/*).
+// Used ONLY to emit a non-blocking warning for unrecognized flags so a typo
+// like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
+// This never fails the run — a missing entry just costs a spurious warning.
+const KNOWN_FLAGS = new Set<string>([
+  "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "amount",
+  "answering-machine-detection", "api-key", "area-code", "assistant", "audio-url",
+  "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body",
+  "brand-id", "brand-name", "bundle-id", "call-control-id", "call-control-id-2",
+  "call-control-id-to-bridge", "call-control-id-to-bridge-with", "campaign-id", "cancel",
+  "category", "cause", "channels", "client-state", "code", "command-id", "company-name",
+  "component", "connection-id", "contains", "content-type", "conversation-id", "country",
+  "create", "custom-code", "customer-name", "customer-reference", "deepfake-detection", "depth",
+  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
+  "dtmf-detection", "email", "encoding-format", "ends-with", "extension", "features", "file-url",
+  "filter", "filter-sim-card-group-id", "flag", "force", "fork-rx", "fork-stream-type", "fork-tx",
+  "format", "from", "from-dir", "from-display-name", "greeting", "guided-choice", "guided-json",
+  "help", "help-message", "iccid", "id", "include-sim-card-group", "input", "instructions",
+  "json", "language", "limit", "locality", "max-tokens", "media-encryption", "media-name",
+  "media-url", "message", "message-flow", "messaging-profile-id", "method", "model", "monochrome",
+  "msisdn", "name", "national-destination-code", "network-id", "number-type", "numbers",
+  "old-provider", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
+  "output", "output-file", "output-type", "page-number", "page-size", "parameters", "participant",
+  "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "preview-format",
+  "privacy", "profile-name", "provider", "quality", "queue-name", "record", "requirement-group-id",
+  "response-format", "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2",
+  "send-at", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
+  "start-message", "starts-with", "status", "stop", "stop-message", "store-media", "store-preview",
+  "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature",
+  "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
+  "to", "tool", "tool-choice", "top-p", "transcription", "ttl", "tx", "type", "url", "usecase",
+  "user", "verification-id", "verify-profile-id", "version", "vertical", "voice", "waba-id",
+  "wallet-key", "webhook", "webhook-url", "webhook-url-method", "webhook-urls", "website",
+  "whatsapp-message", "whitelisted-destinations",
+]);
+
+// Commands that accept an arbitrary/generated flag surface, where an
+// unknown-flag warning would produce false positives. These forward flags
+// through to the Go CLI or maintain their own extensible flag lists.
+const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "ai-chat"]);
+
 // Detect a help request in FLAG position only. A help token counts when it is
 // the command itself (`help`, `--help`, `-h`) or a standalone flag on a
 // subcommand (`setup-voice --help`, `setup-voice -h`). It must NOT count when
@@ -549,6 +590,22 @@ export async function run(argv: string[]): Promise<void> {
     console.error(`Unknown command: ${command}\n`);
     console.log(HELP);
     process.exit(1);
+  }
+
+  // Non-blocking warning for unrecognized flags so typos don't silently no-op
+  // (e.g. `tts --output-typ base64`). We never fail the run on this.
+  // Skip commands that legitimately accept arbitrary/generated flags:
+  //  - call-control forwards a large generated Go-CLI flag surface, incl. nested
+  //    dotted flags (e.g. --assistant.model, --participant.name);
+  //  - ai-webchat maintains its own extensible sampling-flag set.
+  // Also always ignore dotted flags (nested payload builders) anywhere.
+  if (!FLAG_WARN_EXEMPT_COMMANDS.has(command)) {
+    const unknownFlags = Object.keys(flags).filter(
+      (f) => f !== "_" && !f.includes(".") && !KNOWN_FLAGS.has(f),
+    );
+    if (unknownFlags.length > 0) {
+      console.error(`⚠ Ignoring unrecognized flag${unknownFlags.length > 1 ? "s" : ""}: ${unknownFlags.map((f) => `--${f}`).join(", ")} (run \`telnyx-agent ${command} --help\`)`);
+    }
   }
 
   await handler(flags, occurrences);

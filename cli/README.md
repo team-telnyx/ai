@@ -105,15 +105,21 @@ Output: `{ sim_id, group_id, status, apn_config }`
 
 **One command: zero to phone verification.**
 
-Creates a verify profile with SMS channel settings (default timeout 300s, code length 6, whitelisted destinations US), searches for an available number with SMS capability, buys it, and outputs everything you need to start sending verifications.
+Creates a verify profile with SMS channel settings (default timeout 300s, code length 6, whitelisted destinations US) and outputs everything you need to start sending verifications. **No number is purchased** — Telnyx delivers OTPs from its own managed sender pool, and `verify-send` only takes the phone number being verified. Re-running reuses an existing agent-created verify profile (`reused: true`) unless you pass `--force` or a custom `--profile-name`.
 
 ```bash
 telnyx-agent setup-verify
 telnyx-agent setup-verify --destinations US,GB,LK
 telnyx-agent setup-verify --profile-name "My Verify Profile" --json
+telnyx-agent setup-verify --force   # Always create a new profile
 ```
 
-Output: `{ profile_id, profile_name, phone_number, phone_number_id, timeout_secs, test_command, ready }`
+**Flags:**
+- `--destinations` — Comma-separated ISO country codes to whitelist (default: `US`)
+- `--profile-name` — Custom profile name (also forces creating a distinct profile)
+- `--force` — Always create a new profile instead of reusing an existing agent-created one
+
+Output: `{ profile_id, profile_name, timeout_secs, test_command, ready, reused }`
 
 ### `telnyx-agent setup-ai`
 
@@ -301,8 +307,9 @@ telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml
 - `--output-type` — Output format: `base64` (default). `binary_output` is not supported by this wrapper.
 - `--text-type` — `text` (default) or `ssml`
 - `--disable-cache` — Skip TTS cache
+- `--output <file>` — Also decode the audio and write it straight to this file (e.g. `speech.wav`)
 
-Output: `{ text, voice, provider, output_type, audio_data, has_audio_data }`
+Output: `{ text, voice, provider, output_type, audio_data, has_audio_data, output_file? }`
 
 ### `telnyx-agent tts-voices`
 

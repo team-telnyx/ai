@@ -263,6 +263,19 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.equal(body!.disable_cache, undefined);
   });
 
+  it("writes decoded audio to a file when --output is given", async () => {
+    lastRequest = null;
+    const outDir = mkdtempSync(join(tmpdir(), "telnyx-agent-tts-out-"));
+    const outFile = join(outDir, "speech.wav");
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--output", outFile, "--json"]);
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.output_file, outFile);
+    assert.ok(existsSync(outFile), "expected the audio file to be written");
+    // Mock returns base64 "SGVsbG8gYXVkaW8=" => "Hello audio".
+    assert.equal(readFileSync(outFile, "utf8"), "Hello audio");
+  });
+
   it("rejects unsupported output types without calling the API", async () => {
     lastRequest = null;
     for (const bad of ["url", "binary_output"]) {

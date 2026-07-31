@@ -350,6 +350,33 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("adopts an existing BARE app (no number) and buys+assigns a number instead of creating a new app", async () => {
+    // Earlier failed run left an app with no number. setup-voice should adopt it
+    // rather than spawn yet another app.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_bare", application_name: "Agent Voice App - 2026-07-27 09:00:00" },
+    ];
+    assignedVoiceNumbers = []; // no number assigned => not a full reusable pair
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.connection_id, "cca_bare", "should adopt the existing bare app");
+      assert.equal(data.reused, true, "adopting a bare app counts as reuse");
+      // Must NOT create a new app...
+      assert.equal(postRequests(/\/v2\/call_control_applications$/).length, 0, "must not POST a new app when adopting");
+      // ...but MUST buy + assign a number to the adopted app.
+      const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+      assert.ok(cliLog.includes("number-order"), "should buy a number for the adopted app");
+      assert.ok(patchRequests().some((p) => p.path.includes("/phone_numbers/")), "should assign the number to the adopted app");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("does NOT claim a --webhook was applied when reusing an existing app (honesty)", async () => {
     // Newcomer passes --webhook but an existing agent app is reused: the reused
     // app keeps its own webhook, so we must not echo the requested one as if set.

@@ -19,6 +19,7 @@
  * transported through the JSON pipeline.
  */
 
+import { writeFileSync } from "node:fs";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
@@ -41,6 +42,7 @@ interface TtsResult {
   output_type: string;
   audio_data?: string;
   has_audio_data: boolean;
+  output_file?: string;
 }
 
 /**
@@ -70,6 +72,8 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
   const outputTypeFlag = (flags["output-type"] as string) || "base64";
   const textType = (flags["text-type"] as string) || "text";
   const disableCache = flags["disable-cache"] === true;
+  // Optional: write the decoded audio straight to a playable file.
+  const outputFile = (flags.output as string) || (flags["output-file"] as string) || "";
 
   if (!text) {
     printError("--text is required (e.g., --text \"Hello world\")");
@@ -119,6 +123,14 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
     const { audioData } = extractAudio(response);
     const hasAudioData = !!audioData;
 
+    // If --output was given, decode the base64 audio to the file so callers get
+    // a playable artifact instead of having to pipe base64 themselves.
+    let writtenFile = "";
+    if (outputFile && hasAudioData) {
+      writeFileSync(outputFile, Buffer.from(audioData!, "base64"));
+      writtenFile = outputFile;
+    }
+
     const result: TtsResult = {
       text,
       voice,
@@ -126,6 +138,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       output_type: outputType,
       audio_data: audioData,
       has_audio_data: hasAudioData,
+      ...(writtenFile ? { output_file: writtenFile } : {}),
     };
 
     if (jsonOutput) {
@@ -141,6 +154,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       if (hasAudioData) {
         details["Audio Data"] = `${audioData!.length} chars (base64)`;
       }
+      if (writtenFile) details["Saved To"] = writtenFile;
       printSuccess("Speech generated!", details);
     }
   } catch (err) {

@@ -9,11 +9,16 @@
  * `verify-send` only takes the phone number being VERIFIED — never a from-number.
  * So setup-verify no longer searches for / buys a number (that was a recurring
  * ~$1/mo charge for a number the verify flow never used).
+ *
+ * Idempotency (E2E follow-up): like setup-sms/setup-voice, re-running reuses an
+ * existing agent-created verify profile by name prefix instead of creating a
+ * new one every time. Pass --force to always create a fresh profile.
  */
 
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
+import { findExistingByPrefix, AGENT_VERIFY_PROFILE_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupVerifyResult {
   profile_id: string;
@@ -21,11 +26,14 @@ interface SetupVerifyResult {
   timeout_secs: number;
   test_command: string;
   ready: boolean;
+  reused: boolean;
   steps: StepResult[];
 }
 
 export async function setupVerifyCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
+  const force = flags.force === true;
+  const customName = (flags["profile-name"] as string) || "";
   const totalSteps = 1;
   const steps: StepResult[] = [];
   const startTime = Date.now();
@@ -35,8 +43,45 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
   let profileName = "";
 
   try {
+    const client = new TelnyxClient();
+
+    // Idempotency: reuse an existing agent-created verify profile unless --force
+    // or a custom --profile-name was given (a custom name signals intent to
+    // create a distinct profile).
+    if (!force && !customName) {
+      const existing = await findExistingByPrefix(client, "/verify_profiles", "name", AGENT_VERIFY_PROFILE_PREFIX);
+      if (existing) {
+        profileId = existing.id;
+        profileName = existing.name;
+        steps.push({ step: 1, name: "Reuse existing verify profile", status: "completed", resourceId: profileId, detail: profileName, elapsedMs: 0 });
+        const testCommand = `telnyx-agent verify-send --phone-number <your_phone_number> --verify-profile-id ${profileId} --method sms`;
+        const reusedResult: SetupVerifyResult = {
+          profile_id: profileId,
+          profile_name: profileName,
+          timeout_secs: timeoutSecs,
+          test_command: testCommand,
+          ready: true,
+          reused: true,
+          steps,
+        };
+        if (jsonOutput) {
+          outputJson(reusedResult);
+        } else {
+          printStep(steps[0], totalSteps);
+          printSuccess("Phone Verification already set up — reusing existing profile", {
+            "Profile ID": profileId,
+            "Profile Name": profileName,
+            Ready: "✓",
+            "Reused": "✓ (pass --force to create a new profile)",
+            "Test command": testCommand,
+          });
+        }
+        return;
+      }
+    }
+
     const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
-    profileName = (flags["profile-name"] as string) || `Agent Verify Profile - ${ts}`;
+    profileName = customName || `${AGENT_VERIFY_PROFILE_PREFIX}${ts}`;
     if (!jsonOutput) console.log("\n🚀 Setting up Phone Verification...\n");
 
     // Step 1: Create verify profile via REST API (AIF-330: Go CLI sends no
@@ -48,7 +93,6 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
         .map((d) => d.trim().toUpperCase())
         .filter(Boolean);
 
-      const client = new TelnyxClient();
       const profileBody: Record<string, unknown> = {
         name: profileName,
         sms: {
@@ -78,6 +122,7 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
       timeout_secs: timeoutSecs,
       test_command: testCommand,
       ready: true,
+      reused: false,
       steps,
     };
 

@@ -19,6 +19,7 @@ import type { TelnyxClient } from "../client.ts";
 /** Stable name prefixes the setup commands stamp on the resources they create. */
 export const AGENT_SMS_PROFILE_PREFIX = "Agent SMS Profile - ";
 export const AGENT_VOICE_APP_PREFIX = "Agent Voice App - ";
+export const AGENT_VERIFY_PROFILE_PREFIX = "Agent Verify Profile - ";
 
 export interface ExistingResource {
   id: string;

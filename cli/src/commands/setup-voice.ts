@@ -10,13 +10,21 @@
  *
  * AIF-328: Previously created a credential connection which call-dial cannot
  * use. call-dial requires a Call Control Application with a valid webhook URL.
+ *
+ * E2E follow-up (orphan handling): setup-voice now mirrors setup-sms —
+ * (a) if the number search/buy/assign fails after the app is created, the app
+ *     created THIS run is rolled back so failed retries don't pile up orphaned
+ *     Call Control Apps; and
+ * (b) on reuse, if a prefix-matched app exists but has NO assigned number (a
+ *     bare orphan), we ADOPT it and just buy+assign a number, instead of
+ *     creating yet another app every run.
  */
 
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber } from "../utils/number-order.ts";
-import { findReusablePair, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
+import { findReusablePair, findExistingByPrefix, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupVoiceResult {
   connection_id: string;
@@ -52,6 +60,12 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   let phoneNumberId = "";
   let outboundProfileId = "";
   let reused = false;
+  // Track a Call Control App we CREATE this run (not one we adopt) so we can
+  // roll it back if a later step fails and leaves it with no number.
+  let createdAppId = "";
+  // True when we adopt a pre-existing bare (number-less) prefix-matched app
+  // instead of creating a new one.
+  let adoptedApp = false;
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up Voice...\n");
@@ -72,6 +86,14 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         phoneNumber = existing.phoneNumber;
         phoneNumberId = existing.phoneNumberId;
         reused = true;
+        // Cosmetic fix: surface the reused app's real outbound profile id instead
+        // of "". Best-effort — never block reuse on this lookup.
+        try {
+          const appRes = await client.get(`/call_control_applications/${connectionId}`);
+          const appData = (appRes.data ?? appRes) as Record<string, unknown>;
+          const outbound = (appData.outbound ?? {}) as Record<string, unknown>;
+          outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
+        } catch { /* leave outboundProfileId as-is */ }
         // When reusing, the existing app keeps its OWN webhook — a --webhook
         // passed on this run is NOT applied. Report honestly instead of echoing
         // a webhook we didn't set, and tell the user how to apply a new one.
@@ -109,19 +131,45 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         }
         return;
       }
-      if (!jsonOutput) {
-        // fall through to a fresh setup below
+
+      // No fully-reusable pair. Before provisioning a brand-new app, check for a
+      // BARE prefix-matched app (created by an earlier failed run: app exists
+      // but never got a number). Adopt it and just buy+assign a number, so
+      // repeated failures don't spawn a new app every time.
+      const bareApp = await findExistingByPrefix(
+        client,
+        "/call_control_applications",
+        "application_name",
+        AGENT_VOICE_APP_PREFIX,
+      );
+      if (bareApp) {
+        connectionId = bareApp.id;
+        connectionName = bareApp.name;
+        adoptedApp = true;
+        // Resolve the adopted app's outbound profile for the final output.
+        try {
+          const appRes = await client.get(`/call_control_applications/${connectionId}`);
+          const appData = (appRes.data ?? appRes) as Record<string, unknown>;
+          const outbound = (appData.outbound ?? {}) as Record<string, unknown>;
+          outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
+        } catch { /* resolved below if still empty */ }
+        steps.push({ step: 1, name: "Adopt existing bare Call Control App", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: 0 });
+        if (!jsonOutput) {
+          printStep(steps[steps.length - 1], totalSteps);
+          console.log("  ↩ Adopting an existing app with no number (from an earlier incomplete run) instead of creating a new one.\n");
+        }
       }
     } else if (!jsonOutput) {
       console.log("  ⚠ --force: provisioning a NEW Call Control App + number (this buys a ~$1/mo number).\n");
     }
 
-    // Step 1: Resolve outbound voice profile
+    // Step 1: Resolve outbound voice profile. When we adopted a bare app that
+    // already carries an outbound profile, keep it; otherwise resolve one.
     const step1Start = Date.now();
     try {
       if (outboundProfileIdFlag) {
         outboundProfileId = outboundProfileIdFlag;
-      } else {
+      } else if (!(adoptedApp && outboundProfileId)) {
         // Fetch the first available outbound voice profile
         const profilesRes = await client.get("/outbound_voice_profiles");
         const profilesData = profilesRes.data as Record<string, unknown>[];
@@ -137,27 +185,33 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 2: Create Call Control Application
+    // Step 2: Create Call Control Application — skipped when adopting a bare app.
     const step2Start = Date.now();
-    try {
-      const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
-      connectionName = `${AGENT_VOICE_APP_PREFIX}${ts}`;
-      const appBody: Record<string, unknown> = {
-        application_name: connectionName,
-        webhook_event_url: webhookUrl,
-        outbound: {
-          outbound_voice_profile_id: outboundProfileId,
-        },
-      };
-      const appRes = await client.post("/call_control_applications", appBody);
-      const appData = appRes.data as Record<string, unknown>;
-      connectionId = String(appData.id);
-      steps.push({ step: 2, name: "Create Call Control Application", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: Date.now() - step2Start });
-    } catch (err) {
-      steps.push({ step: 2, name: "Create Call Control Application", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
-      throw err;
+    if (adoptedApp) {
+      steps.push({ step: 2, name: "Reuse adopted Call Control App", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: 0 });
+      if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
+    } else {
+      try {
+        const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
+        connectionName = `${AGENT_VOICE_APP_PREFIX}${ts}`;
+        const appBody: Record<string, unknown> = {
+          application_name: connectionName,
+          webhook_event_url: webhookUrl,
+          outbound: {
+            outbound_voice_profile_id: outboundProfileId,
+          },
+        };
+        const appRes = await client.post("/call_control_applications", appBody);
+        const appData = appRes.data as Record<string, unknown>;
+        connectionId = String(appData.id);
+        createdAppId = connectionId;
+        steps.push({ step: 2, name: "Create Call Control Application", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: Date.now() - step2Start });
+      } catch (err) {
+        steps.push({ step: 2, name: "Create Call Control Application", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
+        throw err;
+      }
+      if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
     }
-    if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
     // Steps 3+4: Search and buy number via CLI
     const step3Start = Date.now();
@@ -203,7 +257,8 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       webhook_url: webhookUrl,
       outbound_voice_profile_id: outboundProfileId,
       ready: true,
-      reused: false,
+      // Adopting a bare app is a partial reuse (existing app + new number).
+      reused: adoptedApp,
       steps,
     };
 
@@ -221,12 +276,29 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       console.log("  💡 Use the Connection ID above with: telnyx-agent call-dial --connection-id " + connectionId + " ...\n");
     }
   } catch (err) {
+    // Mirror setup-sms: if we CREATED a Call Control App this run but never got a
+    // number assigned to it, roll it back so failed retries don't leave orphaned
+    // apps. Only clean up an app we created here (not an adopted/reused one) and
+    // only when it has no number (phoneNumberId unset).
+    let cleanup: "deleted" | "kept" | "failed" | undefined;
+    if (createdAppId && !phoneNumberId) {
+      try {
+        await client.delete(`/call_control_applications/${createdAppId}`);
+        cleanup = "deleted";
+      } catch {
+        cleanup = "failed";
+      }
+    } else if (createdAppId && phoneNumberId) {
+      cleanup = "kept";
+    }
+
     const result = {
       status: "failed",
       connection_id: connectionId || null,
       phone_number: phoneNumber || null,
       ready: false,
       steps,
+      ...(cleanup ? { orphan_cleanup: cleanup } : {}),
       error: errorMsg(err),
       elapsed_ms: Date.now() - startTime,
     };
@@ -237,6 +309,8 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       printError(errorMsg(err));
       console.log("  Steps completed before failure:");
       for (const s of steps) printStep(s, totalSteps);
+      if (cleanup === "deleted") console.log("  ↩ Rolled back the Call Control App created this run (no orphan left).");
+      else if (cleanup === "failed") console.log(`  ⚠ Could not roll back Call Control App ${createdAppId} — delete it manually.`);
       console.log();
     }
     process.exit(1);
