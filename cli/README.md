@@ -353,34 +353,117 @@ telnyx-agent stt-providers --provider telnyx --service-type transcription --json
 
 Output: `{ providers: [...] }`
 
-## Cookbook Adjustments for Denise
+## Cookbook Copy Changes (for Denise)
 
-> **Status:** proposed cookbook copy changes, tested here in the README first per
-> Oliver's Jul 27 direction. **Do not request cookbook updates from Denise until the
-> team confirms end-to-end functionality.** Review requests go via **Slack** (not GitHub
-> email). These reflect the 12 fixes (AIF-325–AIF-336) consolidated on
-> `integration/agent-cli-fixes`.
+> **Status:** proposed copy changes for the *Communication API Cookbook v2* (the
+> "vibe-code your comms stack" PDF). Tested against the real CLI first, per Oliver's
+> Jul 27 direction. **Please don't publish these until (a) the team confirms one full
+> end-to-end re-test pass, and (b) the two "Needs a decision" items at the bottom are
+> settled.** Send the review to Denise via **Slack** (not GitHub email). These reflect
+> the fixes on branch `integration/agent-cli-fixes`.
+>
+> **How to read this:** the cookbook has 6 one-page scripts (Voice, SMS, WhatsApp,
+> Verify, Text-to-Speech, Speech-to-Text). Below, each script lists the exact wording to
+> change and why, in plain English. "✅ works now, just re-test" means the command was
+> broken before and is fixed — no wording change, just run it once to confirm.
 
-What changed vs. the current cookbook copy, and the exact wording adjustments Denise
-should make once verified:
+### Applies to every script
 
-| Area | Old cookbook behaviour | New behaviour to document |
-|------|------------------------|---------------------------|
-| **Outbound calls** (`call-dial`) | Rejected some valid `+E.164` `--to` numbers (422). | Accepts any valid `+E.164`, incl. non-US intl (`+44…`, `+94…`). Posts to `POST /v2/calls`. |
-| **Call status** (`call-status`) | Unreliable/absent status. | Returns `active` / `ended`, derived from the live call's `is_alive`. |
-| **Group MMS** (`send-group-mms`) | Implied the returned id was queryable. | Returns per-recipient `recipient_statuses`; the **group id is not** resolvable via `sms-status` / `GET /v2/messages/{id}` — confirm delivery via recipient statuses or webhooks. Output carries this caveat. |
-| **WhatsApp** (`whatsapp-templates`, `setup-whatsapp`) | 404 from a doubled `/v2/v2/whatsapp…` path. | Correct single-`/v2` paths; templates list/create works. |
-| **`setup-sms` / `setup-voice`** | Bought a new number on every run (duplicate ~$1/mo charges). | **Idempotent by default** — reuses an existing `Agent SMS Profile - …` / `Agent Voice App - …` **and** its assigned number; adds `reused: true`. Use `--force` to provision fresh. |
-| **`--help` / `-h`** | Running help on `setup-*` could execute the flow and buy resources. | Help is intercepted before dispatch — never provisions anything. |
-| **Linux/portability** | Non-portable shebang; `setup-verify` profile + `schedule-sms` / `tts` failed. | Portable `#!/usr/bin/env node` launcher, `--version`, and REST swaps (AIF-330/331/332/333). |
+- **Two dashes on every flag.** Make sure flags always show two dashes — `--connection-id`,
+  not `-connection-id`. There are ~40 of these; a few lost a dash to PDF line-wrapping. Put
+  every command in a code block so it can't happen again.
+- **Fix words that got glued together by line wraps:** `callcontrol-id` → `call-control-id`,
+  `telnyxagent` → `telnyx-agent`, `verifycheck` → `verify-check`, `sendgroup-mms` →
+  `send-group-mms`, `Text-toSpeech` → `Text-to-Speech`.
+- **Add a cost note anywhere a script buys a phone number** (Voice, SMS, and — pending a
+  decision — Verify): *"Buying a number is a small recurring monthly charge. If you run the
+  setup again, it reuses the number it already bought instead of buying another."*
+- **Mention the "run again safely" behaviour.** `setup-sms` and `setup-voice` are now safe to
+  re-run: they reuse the number/profile they created before instead of buying a new one each
+  time. If someone genuinely wants a brand-new number, add `--force`.
+- **`--help` is safe.** Add a one-line reassurance (e.g. in the intro): running any command
+  with `--help` only shows help — it never buys anything or sets anything up.
 
-**New flag to add to the cookbook:** `--force` (on `setup-sms` and `setup-voice`) —
-provisions a brand-new profile/app + number instead of reusing an agent-created one.
+### Script 1 — Voice API (page 5)
 
-**Prerequisite to call out in the cookbook:** these commands rely on the bundled Telnyx
-Go CLI installed to `vendor/` during `npm install`. If SMS/number commands report
-`command …:… not found`, the environment resolved a different `telnyx` binary — re-run
-`npm install`. (Tracked separately from AIF-325–336.)
+- **Important wording fix:** Step 5 says setup-voice creates a *"SIP credential connection."*
+  Change to *"**Call Control Application**"* — that's the correct type the calling example
+  actually needs. (The old name is simply wrong.)
+- **Webhook caveat:** the script tells the reader to pass `--webhook <url>`. Add: *"If you've
+  already set Voice up before, re-running reuses your existing app and your `--webhook` is
+  **not** re-applied to it. Add `--force` if you want a fresh app that uses your new webhook."*
+- **Soften two promises:** answering-machine detection accuracy *"varies by carrier/route,"*
+  and hiding your caller ID *"depends on the receiving carrier"* (it isn't guaranteed).
+- **✅ works now, just re-test:** the outbound-call example and `call-status` (now correctly
+  reports whether a call is active or ended).
+
+### Script 2 — SMS & Messaging (page 6)
+
+- **✅ works now, just re-test:** `schedule-sms` (scheduling a message for later) was pointing
+  at the wrong place before; it's fixed. Keep the example, just re-run it.
+- **Keep the group-MMS caveat — don't remove it:** the group-MMS *send* works, but the system
+  genuinely **can't confirm** whether each person received it. Keep wording like: *"Group MMS
+  sends, but delivery to each person can't be confirmed yet — treat a successful send as
+  'accepted,' not 'delivered.'"* Don't promise the user will "see it land."
+- **Add an international note:** a brand-new number can't text other countries by default.
+
+### Script 3 — WhatsApp (page 7)
+
+- **✅ works now, just re-test:** setup-whatsapp used to break for everyone at step 5; that's
+  fixed. Un-hold the script and re-run it.
+- **One wording fix:** Step 7 shows `telnyx-agent whatsapp-templates`. It needs an id —
+  change it to `telnyx-agent whatsapp-templates --waba-id <id>`.
+- **Add a warning:** Meta's "555" test numbers can't actually send messages — use a real
+  WhatsApp-capable number for the send step.
+
+### Script 4 — Verify API (page 8)  ⚠️ one line is on hold
+
+- **✅ works now, just re-test:** setup-verify used to fail for everyone; the profile step is
+  fixed.
+- **On hold (see decision below):** Step 5 says it *"buys a number for it."* Right now that's
+  **true** — it really does buy a number. Don't change that line until we decide whether the
+  tool should keep buying a number or not (see "Needs a decision").
+- **Nice extras to add:** the same international-SMS note as SMS, and mention the
+  `--method call` option (Telnyx calls the phone and reads the code aloud) as a second way to
+  verify.
+
+### Script 5 — Text-to-Speech (page 9)  ⚠️ provider list is on hold
+
+- **Fix the output description:** Step 6 says *"save the audio URL … and download the file."*
+  That's not what happens — the command returns the audio **as encoded data in the output**
+  (WAV format, not MP3), not a link and not a saved file. Change to something like: *"the
+  command returns the audio as base64 data in its output — save it to a playable file, e.g.
+  by piping it through `base64 -d > speech.wav`."*
+- **Add a voice to the example:** the `tts` example should include a voice, e.g.
+  `--voice Telnyx.Bayan.Amanda`.
+- **On hold (see decision below):** the provider list shows *ElevenLabs*, but the live service
+  didn't return ElevenLabs (and returned a few others the cookbook doesn't list). Don't
+  publish the provider names until engineering confirms the final list.
+
+### Script 6 — Speech-to-Text (page 10)
+
+- **Fix the "chain them together" step:** Step 6 tells the reader to make audio with `tts` and
+  feed it straight into `stt`. That can't work — `tts` gives back encoded data, and `stt`
+  needs a **public web link** to the audio. Change it to: *"Put a sample audio file somewhere
+  public first (any public URL or a Telnyx storage bucket), then run
+  `telnyx-agent stt --audio-url <public_link>`."*
+- **Set expectations:** the transcription providers are correct, but add that brand names and
+  unusual words may come out slightly wrong.
+
+### Needs a decision from us (not a wording fix)
+
+1. **Should `setup-verify` buy a phone number?** It does today. Either engineering removes the
+   number-buy (Verify can use a shared pool), or we keep it and add the cost note. This decides
+   one line of the Verify script.
+2. **Which TTS providers do we list?** The tool's list and the live service's list don't match
+   (ElevenLabs is in the cookbook but wasn't returned live). Engineering should reconcile them
+   before we print any provider names.
+
+### For engineers (not for the cookbook)
+
+The number/SMS/WhatsApp-send commands use a bundled Telnyx Go CLI installed to `vendor/` on
+`npm install`. If a command reports `command …:… not found`, an incompatible `telnyx` was
+found on `PATH` — re-run `npm install` (or `npm rebuild`) to restore `vendor/telnyx`.
 
 ## Authentication
 
@@ -405,7 +488,7 @@ The CLI looks for an API key in this order:
 - **CLI dependency** — the shell-out path expects the pinned Go CLI in `vendor/`. If it
   is missing and an **incompatible** `telnyx` is found on `PATH`, those specific commands
   can fail with `command …:… not found`. Re-run `npm install` (or `npm rebuild`) to
-  restore `vendor/telnyx`. (See Cookbook Adjustments below.)
+  restore `vendor/telnyx`. (See the "Cookbook Copy Changes" section above.)
 - **No CLI framework** — simple `process.argv` parsing.
 - **Error handling** — composite commands report what succeeded and what failed.
 
