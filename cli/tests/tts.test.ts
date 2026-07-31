@@ -290,6 +290,21 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.equal(lastRequest, null, "expected no API calls");
   });
 
+  it("rejects elevenlabs (Decision #2: not in the live provider set)", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--provider", "elevenlabs", "--json"]);
+    assert.notEqual(r.status, 0, "elevenlabs is no longer a valid provider");
+    assert.equal(lastRequest, null, "expected no API calls");
+  });
+
+  it("accepts a live-set provider that used to be missing (inworld)", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "iw-voice", "--provider", "inworld", "--json"]);
+    assert.equal(r.status, 0, `expected exit 0 for inworld, got ${r.status}`);
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.provider, "inworld");
+  });
+
   it("lists the tts command in the help text", () => {
     const { stdout, status } = runCliSync(["help"], { ...process.env });
     assert.equal(status, 0);
@@ -340,19 +355,19 @@ describe("tts-voices (list-voices) command — Go CLI", () => {
   it("tts-voices forwards --api-key to the Go CLI for provider voice lists", () => {
     const fake = setupFakeTelnyx();
     const { stdout, status } = runCliSync(
-      ["tts-voices", "--provider", "elevenlabs", "--api-key", "sk-provider-key", "--json"],
+      ["tts-voices", "--provider", "inworld", "--api-key", "sk-provider-key", "--json"],
       fake.env,
     );
 
     assert.equal(status, 0, `expected exit 0, got ${status}`);
     const data = JSON.parse(stdout);
-    assert.equal(data.provider, "elevenlabs");
+    assert.equal(data.provider, "inworld");
 
     const voicesCall = readLoggedArgs(fake.logPath).find(
       (a) => a.slice(0, 2).join(" ") === "text-to-speech list-voices",
     );
     assert.ok(voicesCall);
-    assertFlagValue(voicesCall, "--provider", "elevenlabs");
+    assertFlagValue(voicesCall, "--provider", "inworld");
     assertFlagValue(voicesCall, "--api-key", "sk-provider-key");
   });
 

@@ -8,7 +8,10 @@
  * `{"errors":{"telnyx":["can't be blank"]}}` even when --voice was explicit.
  * This bypasses the Go CLI and calls the REST API directly.
  *
- * Supported providers: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai
+ * Supported providers (reconciled with the live Telnyx voice service, not a
+ * stale hardcoded guess): telnyx, aws, azure, minimax, inworld, rime, resemble,
+ * fishaudio, humain, xai. Note ElevenLabs is NOT in the live set. Run
+ * `telnyx-agent tts-voices --json` for the authoritative current list.
  *
  * The API's `output_type` enum is `binary_output | base64_output`. This
  * wrapper only supports `base64_output` (exposed as the friendly alias
@@ -19,7 +22,10 @@
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
-const VALID_PROVIDERS = ["telnyx", "aws", "azure", "elevenlabs", "minimax", "resemble", "rime", "xai"] as const;
+// Reconciled with the live voice service (Decision #2). Kept as a typo guard
+// only; the API remains the source of truth. If Telnyx adds a provider, update
+// this list (or run `tts-voices` to see the live set).
+const VALID_PROVIDERS = ["telnyx", "aws", "azure", "minimax", "inworld", "rime", "resemble", "fishaudio", "humain", "xai"] as const;
 // Friendly alias → documented API enum value. `binary_output` is deliberately
 // unsupported: it returns raw audio bytes that would corrupt JSON parsing.
 const OUTPUT_TYPE_MAP: Record<string, string> = {

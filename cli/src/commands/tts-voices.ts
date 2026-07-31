@@ -5,13 +5,16 @@
  * surfaces the available voices (optionally filtered by provider) in either
  * human-readable or JSON form.
  *
- * Supported providers: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai
+ * Supported providers (reconciled with the live Telnyx voice service): telnyx,
+ * aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai.
+ * ElevenLabs is NOT in the live set. This list is a typo guard; the service is
+ * the source of truth.
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
-const VALID_PROVIDERS = ["telnyx", "aws", "azure", "elevenlabs", "minimax", "resemble", "rime", "xai"] as const;
+const VALID_PROVIDERS = ["telnyx", "aws", "azure", "minimax", "inworld", "rime", "resemble", "fishaudio", "humain", "xai"] as const;
 
 interface Voice {
   voice_id?: string;

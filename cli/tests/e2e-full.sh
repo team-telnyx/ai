@@ -115,13 +115,15 @@ OUT="$(run schedule-sms --from +13125550000 --to +13125550009 --text later --sen
 echo "$OUT" | grep -q '"scheduled": *true' && ok "schedule-sms reports scheduled=true" || bad "schedule-sms not scheduled: $(echo "$OUT"|tail -1)"
 grep -q '"send_at":"2026-08-01T10:00:00Z"' "$LOG" && ok "send_at reached POST /messages" || bad "send_at not sent"
 
-echo "AIF-330 setup-verify (profile w/ SMS channel):"
+echo "AIF-330 setup-verify (profile only, no number bought):"
+: > "$LOG"
 OUT="$(run setup-verify --json 2>&1)"
 echo "$OUT" | grep -q '"profile_id": *"vp_e2e_1"' && ok "verify profile created" || bad "verify profile not created: $(echo "$OUT"|head -3|tail -1)"
-echo "$OUT" | grep -q '"ready": *true' && ok "setup-verify ready=true (all 4 steps)" || bad "setup-verify not ready: $(echo "$OUT"|tail -2|head -1)"
+echo "$OUT" | grep -q '"ready": *true' && ok "setup-verify ready=true" || bad "setup-verify not ready: $(echo "$OUT"|tail -2|head -1)"
 grep -q '"path":"/verify_profiles"' "$LOG" && ok "POST /verify_profiles" || bad "did not POST /verify_profiles"
-# Note: setup-verify DOES buy a number (step 3) — documents the Deniz DECISION item.
-grep -q '"path":"/number_orders"' "$LOG" && ok "(confirms) setup-verify buys a number — Deniz copy DECISION" || echo "  ℹ setup-verify did not order a number this run"
+# Decision #1: Verify uses Telnyx's managed sender pool — setup-verify must NOT buy a number.
+if grep -qE '"path":"/(number_orders|available_phone_numbers)"' "$LOG"; then bad "setup-verify bought/searched a number (should not)"; else ok "setup-verify did NOT buy a number (managed pool)"; fi
+echo "$OUT" | grep -q '"phone_number"' && bad "setup-verify still returns a phone_number" || ok "no phone_number in output (correct)"
 
 echo "AIF-331 tts (base64 audio, not a url):"
 OUT="$(run tts --text "hello e2e" --provider telnyx --voice Telnyx.Bayan.Amanda --json 2>&1)"

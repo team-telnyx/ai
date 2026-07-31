@@ -2,22 +2,22 @@
  * telnyx-agent setup-verify — Zero to phone verification in one command.
  *
  * Steps:
- * 1. Create a verify profile (via telnyx CLI)
- * 2. Search for an available number with SMS capability (via telnyx CLI)
- * 3. Buy the number (via telnyx CLI)
- * 4. Output profile + number for use
+ * 1. Create a verify profile (via REST)
+ *
+ * Verify does NOT need a purchased number: Telnyx delivers OTPs from its own
+ * managed sender pool (SMS / voice / flash call across 190+ country codes), and
+ * `verify-send` only takes the phone number being VERIFIED — never a from-number.
+ * So setup-verify no longer searches for / buys a number (that was a recurring
+ * ~$1/mo charge for a number the verify flow never used).
  */
 
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
-import { searchNumbers, orderNumber } from "../utils/number-order.ts";
 
 interface SetupVerifyResult {
   profile_id: string;
   profile_name: string;
-  phone_number: string;
-  phone_number_id: string;
   timeout_secs: number;
   test_command: string;
   ready: boolean;
@@ -26,16 +26,13 @@ interface SetupVerifyResult {
 
 export async function setupVerifyCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
-  const country = (flags.country as string) || "US";
-  const totalSteps = 4;
+  const totalSteps = 1;
   const steps: StepResult[] = [];
   const startTime = Date.now();
   const timeoutSecs = 300;
 
   let profileId = "";
   let profileName = "";
-  let phoneNumber = "";
-  let phoneNumberId = "";
 
   try {
     const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -71,45 +68,13 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 2: Search for available number via CLI
-    const step2Start = Date.now();
-    try {
-      const numbers = await searchNumbers(country, {
-        type: "local",
-        limit: 1,
-      });
-      phoneNumber = String(numbers[0].phone_number);
-      steps.push({ step: 2, name: "Search for number", status: "completed", detail: phoneNumber, elapsedMs: Date.now() - step2Start });
-    } catch (err) {
-      steps.push({ step: 2, name: "Search for number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
-      throw err;
-    }
-    if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
-
-    // Step 3: Buy the number via CLI
-    const step3Start = Date.now();
-    try {
-      const orderResult = await orderNumber(phoneNumber);
-      phoneNumberId = orderResult.phoneNumberId;
-      steps.push({ step: 3, name: "Buy number", status: "completed", resourceId: phoneNumberId, detail: phoneNumber, elapsedMs: Date.now() - step3Start });
-    } catch (err) {
-      steps.push({ step: 3, name: "Buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step3Start });
-      throw err;
-    }
-    if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
-
-    // Step 4: Output profile + number (verify profile uses number when sending)
-    const step4Start = Date.now();
-    steps.push({ step: 4, name: "Link number to verify profile", status: "completed", detail: `${profileId} ↔ ${phoneNumber}`, elapsedMs: Date.now() - step4Start });
-    if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
-
-    const testCommand = `telnyx-agent verify-send --phone-number ${phoneNumber} --verify-profile-id ${profileId} --method sms`;
+    // Verify needs no number — OTPs go out on Telnyx's managed sender pool. The
+    // test command targets whatever phone number the user wants to verify.
+    const testCommand = `telnyx-agent verify-send --phone-number <your_phone_number> --verify-profile-id ${profileId} --method sms`;
 
     const result: SetupVerifyResult = {
       profile_id: profileId,
       profile_name: profileName,
-      phone_number: phoneNumber,
-      phone_number_id: phoneNumberId,
       timeout_secs: timeoutSecs,
       test_command: testCommand,
       ready: true,
@@ -122,9 +87,9 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
       printSuccess("Phone Verification setup complete!", {
         "Profile ID": profileId,
         "Profile Name": profileName,
-        "Phone Number": phoneNumber,
         "Timeout": `${timeoutSecs}s`,
         Ready: "✓",
+        "No number needed": "OTPs send from Telnyx's managed pool",
         "Test command": testCommand,
       });
     }
@@ -132,7 +97,6 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
     const result = {
       status: "failed",
       profile_id: profileId || null,
-      phone_number: phoneNumber || null,
       ready: false,
       steps,
       error: errorMsg(err),

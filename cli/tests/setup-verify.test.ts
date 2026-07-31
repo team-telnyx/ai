@@ -222,7 +222,7 @@ describe("setup-verify (AIF-330: profile with SMS channel settings)", () => {
     assert.equal(body!.name, "My Custom Profile");
   });
 
-  it("returns profile_id and phone_number in JSON output", async () => {
+  it("returns profile_id and ready in JSON output (no number bought)", async () => {
     lastRequest = null;
     const fake = setupFakeTelnyx();
     const r = await runSetupVerifyAsync(["--json"], fake.env);
@@ -230,20 +230,26 @@ describe("setup-verify (AIF-330: profile with SMS channel settings)", () => {
     assert.equal(r.status, 0);
     const data = JSON.parse(r.stdout);
     assert.equal(data.profile_id, "prof_abc123");
-    assert.equal(data.phone_number, "+13125550001");
     assert.equal(data.ready, true);
+    // Verify uses Telnyx's managed sender pool — setup-verify must NOT buy a
+    // number, so no phone_number/phone_number_id fields should appear.
+    assert.equal(data.phone_number, undefined, "setup-verify must not buy/return a number");
+    assert.equal(data.phone_number_id, undefined, "setup-verify must not buy/return a number id");
   });
 
-  it("includes 4 steps in the output", async () => {
+  it("is a single profile-creation step (no search/buy) and never orders a number", async () => {
     lastRequest = null;
     const fake = setupFakeTelnyx();
     const r = await runSetupVerifyAsync(["--json"], fake.env);
 
     assert.equal(r.status, 0);
     const data = JSON.parse(r.stdout);
-    assert.equal(data.steps.length, 4);
+    assert.equal(data.steps.length, 1);
     assert.equal(data.steps[0].name, "Create verify profile");
     assert.equal(data.steps[0].status, "completed");
+    // The fake Go CLI logs any invocation; a number order would shell out to it.
+    const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+    assert.ok(!/number|order|available/i.test(cliLog), "setup-verify must not invoke the number search/order CLI");
   });
 
   it("lists setup-verify in the help text", () => {

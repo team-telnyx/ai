@@ -284,12 +284,12 @@ Returns `payment_requirements` JSON for external signing by agents or wallets.
 
 **Generate speech from text (text-to-speech).**
 
-Supports multiple providers (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai). Returns base64-encoded audio.
+Supports multiple providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai). Returns base64-encoded audio. Run `telnyx-agent tts-voices --json` for the authoritative live list.
 
 ```bash
 telnyx-agent tts --text "Hello world" --voice Telnyx.Bayan.Amanda
 telnyx-agent tts --text "Bonjour" --voice Amy --provider aws --language fr
-telnyx-agent tts --text "Hello" --provider elevenlabs --json
+telnyx-agent tts --text "Hello" --provider minimax --json
 telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml
 ```
 
@@ -311,7 +311,7 @@ Output: `{ text, voice, provider, output_type, audio_data, has_audio_data }`
 ```bash
 telnyx-agent tts-voices
 telnyx-agent tts-voices --provider aws
-telnyx-agent tts-voices --provider elevenlabs --json
+telnyx-agent tts-voices --provider minimax --json
 ```
 
 **Flags:**
@@ -357,10 +357,11 @@ Output: `{ providers: [...] }`
 
 > **Status:** proposed copy changes for the *Communication API Cookbook v2* (the
 > "vibe-code your comms stack" PDF). Tested against the real CLI first, per Oliver's
-> Jul 27 direction. **Please don't publish these until (a) the team confirms one full
-> end-to-end re-test pass, and (b) the two "Needs a decision" items at the bottom are
-> settled.** Send the review to Denise via **Slack** (not GitHub email). These reflect
-> the fixes on branch `integration/agent-cli-fixes`.
+> Jul 27 direction. The two earlier open decisions (Verify buying a number; the TTS
+> provider list) are now **resolved in code** — the copy below is final. **Please still do
+> one full end-to-end re-test pass before publishing.** Send the review to Denise via
+> **Slack** (not GitHub email). These reflect the fixes on branch
+> `integration/agent-cli-fixes`.
 >
 > **How to read this:** the cookbook has 6 one-page scripts (Voice, SMS, WhatsApp,
 > Verify, Text-to-Speech, Speech-to-Text). Below, each script lists the exact wording to
@@ -416,18 +417,20 @@ Output: `{ providers: [...] }`
 - **Add a warning:** Meta's "555" test numbers can't actually send messages — use a real
   WhatsApp-capable number for the send step.
 
-### Script 4 — Verify API (page 8)  ⚠️ one line is on hold
+### Script 4 — Verify API (page 8)
 
 - **✅ works now, just re-test:** setup-verify used to fail for everyone; the profile step is
   fixed.
-- **On hold (see decision below):** Step 5 says it *"buys a number for it."* Right now that's
-  **true** — it really does buy a number. Don't change that line until we decide whether the
-  tool should keep buying a number or not (see "Needs a decision").
+- **Remove the "buys a number" line.** Step 5 currently says it *"creates a verification
+  profile **and buys a number for it**."* Change it to just *"creates a verification
+  profile."* Verify does **not** need a phone number — Telnyx sends the codes from its own
+  managed pool. (The tool no longer buys a number, so there's no cost note needed here —
+  Verify is the one setup that's free to run.)
 - **Nice extras to add:** the same international-SMS note as SMS, and mention the
   `--method call` option (Telnyx calls the phone and reads the code aloud) as a second way to
   verify.
 
-### Script 5 — Text-to-Speech (page 9)  ⚠️ provider list is on hold
+### Script 5 — Text-to-Speech (page 9)
 
 - **Fix the output description:** Step 6 says *"save the audio URL … and download the file."*
   That's not what happens — the command returns the audio **as encoded data in the output**
@@ -436,9 +439,11 @@ Output: `{ providers: [...] }`
   by piping it through `base64 -d > speech.wav`."*
 - **Add a voice to the example:** the `tts` example should include a voice, e.g.
   `--voice Telnyx.Bayan.Amanda`.
-- **On hold (see decision below):** the provider list shows *ElevenLabs*, but the live service
-  didn't return ElevenLabs (and returned a few others the cookbook doesn't list). Don't
-  publish the provider names until engineering confirms the final list.
+- **Use this provider list (ElevenLabs is out):** the correct, live provider list is
+  **telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai**. Remove
+  **ElevenLabs** from the cookbook (the PROVIDERS box, the Step 5 list, and the "ElevenLabs
+  for expressive agents" line in the PRO TIP) — it isn't offered by the live service. If in
+  doubt, `telnyx-agent tts-voices --json` prints the current list.
 
 ### Script 6 — Speech-to-Text (page 10)
 
@@ -450,14 +455,12 @@ Output: `{ providers: [...] }`
 - **Set expectations:** the transcription providers are correct, but add that brand names and
   unusual words may come out slightly wrong.
 
-### Needs a decision from us (not a wording fix)
+### Both earlier open questions are now settled (nothing pending for Denise)
 
-1. **Should `setup-verify` buy a phone number?** It does today. Either engineering removes the
-   number-buy (Verify can use a shared pool), or we keep it and add the cost note. This decides
-   one line of the Verify script.
-2. **Which TTS providers do we list?** The tool's list and the live service's list don't match
-   (ElevenLabs is in the cookbook but wasn't returned live). Engineering should reconcile them
-   before we print any provider names.
+1. **Verify buying a number — RESOLVED.** `setup-verify` no longer buys a number; Verify uses
+   Telnyx's managed sender pool. Copy: drop the "buys a number" line (handled above).
+2. **TTS provider list — RESOLVED.** The tool's list is reconciled to the live set and
+   ElevenLabs is removed. Copy: use the provider list above and drop ElevenLabs.
 
 ### For engineers (not for the cookbook)
 
