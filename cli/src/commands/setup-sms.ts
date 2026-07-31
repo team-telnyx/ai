@@ -40,6 +40,11 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
   let phoneNumber = "";
   let phoneNumberId = "";
   let reused = false;
+  // AIF follow-up: track a profile we create in THIS run so we can roll it back
+  // if a later step (number search/buy/assign) fails — otherwise every failed
+  // retry orphans a messaging profile on the account.
+  let createdProfileId = "";
+  let clientRef: TelnyxClient | undefined;
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up SMS...\n");
@@ -47,6 +52,7 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
     const apiKey = process.env.TELNYX_API_KEY;
     if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
     const client = new TelnyxClient(apiKey);
+    clientRef = client;
 
     // AIF-336: idempotency — reuse an existing agent-created profile + assigned
     // number unless --force was passed.
@@ -106,6 +112,7 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       });
       const profileData = (profileRes.data ?? profileRes) as Record<string, unknown>;
       profileId = String(profileData.id);
+      createdProfileId = profileId;
       steps.push({ step: 1, name: "Create messaging profile", status: "completed", resourceId: profileId, detail: profileName, elapsedMs: Date.now() - step1Start });
     } catch (err) {
       steps.push({ step: 1, name: "Create messaging profile", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step1Start });
@@ -172,12 +179,29 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       });
     }
   } catch (err) {
+    // AIF follow-up: if we created a messaging profile this run but never
+    // finished wiring a number to it, delete it so failed retries don't leave
+    // orphaned profiles piling up on the account. Only clean up a profile we
+    // created here AND that has no number assigned (phoneNumberId unset).
+    let cleanup: "deleted" | "kept" | "failed" | undefined;
+    if (createdProfileId && !phoneNumberId && clientRef) {
+      try {
+        await clientRef.delete(`/messaging_profiles/${createdProfileId}`);
+        cleanup = "deleted";
+      } catch {
+        cleanup = "failed";
+      }
+    } else if (createdProfileId && phoneNumberId) {
+      cleanup = "kept";
+    }
+
     const result = {
       status: "failed",
       profile_id: profileId || null,
       phone_number: phoneNumber || null,
       ready: false,
       steps,
+      ...(cleanup ? { orphan_cleanup: cleanup } : {}),
       error: errorMsg(err),
       elapsed_ms: Date.now() - startTime,
     };
@@ -188,6 +212,8 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       printError(errorMsg(err));
       console.log("  Steps completed before failure:");
       for (const s of steps) printStep(s, totalSteps);
+      if (cleanup === "deleted") console.log("  ↩ Rolled back the messaging profile created this run (no orphan left).");
+      else if (cleanup === "failed") console.log(`  ⚠ Could not roll back messaging profile ${createdProfileId} — delete it manually.`);
       console.log();
     }
     process.exit(1);

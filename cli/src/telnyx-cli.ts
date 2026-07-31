@@ -17,20 +17,89 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 
+/** The Go CLI (telnyx-cli) prints e.g. `telnyx version 0.21.0`. */
+const GO_CLI_VERSION_RE = /telnyx version \d+\.\d+\.\d+/i;
+const INSTALL_HINT =
+  "Reinstall the package (npm install) so postinstall vendors the correct Telnyx Go CLI, " +
+  "or install it manually: go install github.com/team-telnyx/telnyx-cli/cmd/telnyx@latest " +
+  "(or set TELNYX_CLI_PATH to a compatible telnyx binary).";
+
 /**
- * Resolve the telnyx binary path.
- * Checks an explicit env override first, then vendor/ (installed by postinstall), then PATH.
+ * Thrown when the resolved `telnyx` binary is missing or is an incompatible CLI
+ * (e.g. the npm `@telnyx/api-cli`, which uses different, singular command names
+ * and silently breaks send-sms / phone-numbers / number-order flows).
  */
-function findTelnyxBinary(): string {
-  if (process.env.TELNYX_CLI_PATH) return process.env.TELNYX_CLI_PATH;
-  // Check vendor directory first (installed by postinstall)
-  const vendorPath = join(dirname(fileURLToPath(import.meta.url)), "..", "vendor", "telnyx");
-  if (existsSync(vendorPath)) return vendorPath;
-  // Fall back to PATH
-  return "telnyx";
+export class IncompatibleTelnyxCLIError extends Error {
+  constructor(binaryPath: string, versionOutput: string | null) {
+    const detail =
+      versionOutput === null
+        ? `Telnyx Go CLI not found (tried "${binaryPath}").`
+        : `Resolved "${binaryPath}" is not the Telnyx Go CLI (reported: ${versionOutput.split("\n")[0]}).`;
+    super(`${detail} ${INSTALL_HINT}`);
+    this.name = "IncompatibleTelnyxCLIError";
+  }
 }
 
-const TELNYX_BINARY = findTelnyxBinary();
+/**
+ * Resolve the telnyx binary path without verifying it.
+ * Explicit env override first, then vendor/ (installed by postinstall), then PATH.
+ *
+ * `trusted` is true for the env override (tests + the E2E shim rely on it) and
+ * for the vendored binary (postinstall pins a known-good version). A bare PATH
+ * fallback is NOT trusted and must be version-verified before use.
+ */
+function resolveTelnyxBinary(): { path: string; trusted: boolean } {
+  if (process.env.TELNYX_CLI_PATH) return { path: process.env.TELNYX_CLI_PATH, trusted: true };
+  const vendorPath = join(dirname(fileURLToPath(import.meta.url)), "..", "vendor", "telnyx");
+  if (existsSync(vendorPath)) return { path: vendorPath, trusted: true };
+  return { path: "telnyx", trusted: false };
+}
+
+/**
+ * Verify that `binaryPath` is the compatible Telnyx Go CLI by running
+ * `--version` and matching its signature. Throws IncompatibleTelnyxCLIError if
+ * the binary is missing or is a different CLI (e.g. @telnyx/api-cli). Exported
+ * for direct unit testing of the PATH-fallback safeguard.
+ */
+export async function verifyTelnyxGoCli(binaryPath: string): Promise<void> {
+  let out: string;
+  try {
+    const res = await execFileAsync(binaryPath, ["--version"], { timeout: 10000 });
+    out = `${res.stdout ?? ""}${res.stderr ?? ""}`.trim();
+  } catch (err: any) {
+    // ENOENT (not on PATH) or non-zero/failed --version → treat as unusable,
+    // unless the failing process still emitted a Go-CLI version signature.
+    const combined = `${err?.stdout ?? ""}${err?.stderr ?? ""}`.trim();
+    if (err?.code !== "ENOENT" && GO_CLI_VERSION_RE.test(combined)) return;
+    throw new IncompatibleTelnyxCLIError(binaryPath, err?.code === "ENOENT" ? null : combined || null);
+  }
+  if (!GO_CLI_VERSION_RE.test(out)) {
+    throw new IncompatibleTelnyxCLIError(binaryPath, out || null);
+  }
+}
+
+// Memoize only the expensive PATH-fallback verification (keyed on the resolved
+// path). Trusted overrides (TELNYX_CLI_PATH / vendor) are re-resolved fresh each
+// call so in-process callers can point at different binaries between calls.
+let verifiedPathBinary: Promise<string> | null = null;
+let verifiedPathFor: string | null = null;
+
+/**
+ * Resolve AND verify the telnyx binary.
+ *
+ * When falling back to a bare `telnyx` on PATH we run `telnyx --version` and
+ * require the Go-CLI signature. This turns the old silent "command … not found"
+ * crash (from an incompatible CLI on PATH) into a single, actionable error.
+ */
+function getTelnyxBinary(): Promise<string> {
+  const { path, trusted } = resolveTelnyxBinary();
+  if (trusted) return Promise.resolve(path);
+  // Untrusted PATH fallback — verify it is the compatible Telnyx Go CLI (cached).
+  if (verifiedPathBinary && verifiedPathFor === path) return verifiedPathBinary;
+  verifiedPathFor = path;
+  verifiedPathBinary = verifyTelnyxGoCli(path).then(() => path);
+  return verifiedPathBinary;
+}
 
 /**
  * Find the start of JSON in CLI output that may have info messages before it.
@@ -88,8 +157,9 @@ export async function telnyxCli(
   opts?: { timeout?: number; env?: Record<string, string | undefined>; format?: "json" | "raw" },
 ): Promise<any> {
   const timeout = opts?.timeout ?? 60000;
+  const binary = await getTelnyxBinary();
   try {
-    const { stdout } = await execFileAsync(TELNYX_BINARY, [...args, "--format", opts?.format ?? "json"], {
+    const { stdout } = await execFileAsync(binary, [...args, "--format", opts?.format ?? "json"], {
       env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv,
       timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB — some list responses can be large
@@ -105,10 +175,9 @@ export async function telnyxCli(
     return JSON.parse(trimmed.slice(jsonStart));
   } catch (err: any) {
     // execFile error with exit code
+    if (err instanceof IncompatibleTelnyxCLIError) throw err;
     if (err.code === "ENOENT") {
-      throw new Error(
-        "telnyx CLI not found. Install it with: go install github.com/team-telnyx/telnyx-cli/cmd/telnyx@latest",
-      );
+      throw new IncompatibleTelnyxCLIError(binary, null);
     }
     if (err.killed) {
       throw new Error(`telnyx CLI timed out after ${timeout}ms`);

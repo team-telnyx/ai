@@ -101,6 +101,13 @@ function startMockServer(): Promise<void> {
           return;
         }
 
+        // DELETE /messaging_profiles/:id (orphan rollback on failed setup-sms)
+        if (req.method === "DELETE" && req.url?.startsWith("/v2/messaging_profiles/")) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: { id: req.url.split("/").pop() } }));
+          return;
+        }
+
         // PATCH /phone_numbers/:id (step 4 — the AIF-329 fix)
         if (req.method === "PATCH" && req.url?.startsWith("/v2/phone_numbers/")) {
           res.writeHead(200, { "Content-Type": "application/json" });
@@ -135,6 +142,10 @@ function patchRequests(): CapturedRequest[] {
   return capturedRequests.filter((r) => r.method === "PATCH");
 }
 
+function deleteRequests(): CapturedRequest[] {
+  return capturedRequests.filter((r) => r.method === "DELETE");
+}
+
 // ---------------------------------------------------------------------------
 // Fake Go CLI binary for number search/order steps
 // ---------------------------------------------------------------------------
@@ -162,6 +173,12 @@ if (cmd.join(" ").startsWith("available-phone-numbers list")) {
     { phone_number: "+13125550001", country: "US", capabilities: ["sms", "voice"] },
   ] }));
 } else if (cmd.join(" ").startsWith("number-orders create") || cmd.join(" ").startsWith("number-order create")) {
+  // TELNYX_FAKE_ORDER_FAIL simulates the number-buy step crashing AFTER the
+  // messaging profile was already created (the orphan-leak scenario).
+  if (process.env.TELNYX_FAKE_ORDER_FAIL === "1") {
+    console.error(JSON.stringify({ errors: [{ code: "10015", detail: "number order failed" }] }));
+    process.exit(1);
+  }
   console.log(JSON.stringify({ data: { id: "order_123", status: "complete" } }));
 } else if (cmd.join(" ").startsWith("phone-numbers retrieve")) {
   console.log(JSON.stringify({ data: { id: "num_123456", phone_number: "+13125550001" } }));
@@ -337,6 +354,43 @@ describe("setup-sms step 4 (AIF-329: REST PATCH instead of Go CLI)", () => {
       existingSmsProfiles = [];
       assignedSmsNumbers = [];
     }
+  });
+
+  // ------------------------------------------------------------------
+  // Orphan rollback: a profile created this run must be deleted if a later
+  // step (number search/buy) fails — otherwise failed retries pile up
+  // orphaned messaging profiles on the account.
+  // ------------------------------------------------------------------
+
+  it("deletes the messaging profile it created when the number-buy step fails", async () => {
+    capturedRequests = [];
+    const fake = setupFakeTelnyx();
+    const r = await runAsync(["setup-sms", "--json"], { ...fake.env, TELNYX_FAKE_ORDER_FAIL: "1" });
+
+    assert.equal(r.status, 1, "setup-sms should exit non-zero when number-buy fails");
+    // Profile was created...
+    const profilePosts = capturedRequests.filter((c) => c.method === "POST" && c.path === "/v2/messaging_profiles");
+    assert.equal(profilePosts.length, 1, "profile should have been created before the failing step");
+    // ...and then rolled back.
+    const deletes = deleteRequests();
+    assert.equal(deletes.length, 1, "the orphaned profile must be deleted on failure");
+    assert.match(deletes[0].path, /^\/v2\/messaging_profiles\/prof_abc123$/);
+
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.ready, false);
+    assert.equal(data.orphan_cleanup, "deleted");
+  });
+
+  it("does NOT delete the profile when setup-sms succeeds (no false rollback)", async () => {
+    capturedRequests = [];
+    const fake = setupFakeTelnyx();
+    const r = await runAsync(["setup-sms", "--json"], fake.env);
+
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+    assert.equal(deleteRequests().length, 0, "a successful setup must not delete the profile");
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.ready, true);
+    assert.equal(data.orphan_cleanup, undefined);
   });
 });
 
