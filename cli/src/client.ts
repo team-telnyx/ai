@@ -15,10 +15,6 @@
  * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
  * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)
  * - POST /messages (schedule-sms — Go CLI hits nonexistent /messages/schedule endpoint)
- *
- * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
- * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)
- * - POST /messages (schedule-sms — Go CLI hits nonexistent /messages/schedule endpoint)
  * - POST /verify_profiles (setup-verify — Go CLI sends no channel settings)
  * - PATCH /phone_numbers/:id (setup-voice, setup-sms — Go CLI doesn't support --force / --messaging-profile-id)
  * - POST /call_control_applications (setup-voice — Go CLI creates credential connections, not Call Control Apps)

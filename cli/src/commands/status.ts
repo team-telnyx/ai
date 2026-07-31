@@ -34,7 +34,8 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
     client.get("/phone_numbers", { page_size: 1 }),
     client.get("/messaging_profiles", { page_size: 1 }),
     client.get("/credential_connections", { page_size: 1 }),
-    client.get("/ai_assistants", { page_size: 1 }),
+    // Live API path is /ai/assistants (not /ai_assistants, which 404s).
+    client.get("/ai/assistants", { page_size: 1 }),
   ]);
 
   let failureCount = 0;

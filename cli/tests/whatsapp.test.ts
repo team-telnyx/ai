@@ -353,10 +353,12 @@ describe("WhatsApp commands", () => {
     }
   });
 
-  it("whatsapp-templates list GETs /v2/whatsapp/message_templates with filter[waba_id] (AIF-326)", async () => {
+  it("whatsapp-templates list GETs /v2/whatsapp/message_templates WITHOUT the broken filter[waba_id] (AIF-326)", async () => {
     const mock = await startMockApi((req) => {
       if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
-        return { json: { data: [{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED" }] } };
+        // Live API returns waba_id: null on records — the server-side filter would
+        // hide everything, so the CLI must not send it.
+        return { json: { data: [{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED", waba_id: null }] } };
       }
       return undefined;
     });
@@ -365,12 +367,52 @@ describe("WhatsApp commands", () => {
       assert.equal(status, 0, `expected success, stderr present? stdout=${stdout}`);
       const data = JSON.parse(stdout);
       assert.equal(data.waba_id, "waba_abc");
-      assert.ok(data.templates.length > 0, "should return templates");
+      assert.ok(data.templates.length > 0, "should still return templates whose waba_id is null");
       // The single request must hit the un-doubled resource path (the AIF-326 bug
       // was a doubled `/v2/v2/...`; the mock base URL already carries the /v2).
       assert.equal(mock.requests.length, 1);
       assert.equal(mock.requests[0].path, "/whatsapp/message_templates");
-      assert.equal(mock.requests[0].query.get("filter[waba_id]"), "waba_abc");
+      // The broken server-side waba filter must NOT be sent.
+      assert.equal(mock.requests[0].query.get("filter[waba_id]"), null);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("whatsapp-templates list works without --waba-id (list mode no longer requires it)", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
+        return { json: { data: [{ id: "tpl_1", name: "order_ready", language: "en_US", category: "UTILITY", status: "APPROVED", waba_id: null }] } };
+      }
+      return undefined;
+    });
+    try {
+      const { status, stdout } = await runCliAsync(["whatsapp-templates", "--json"], restEnv(mock));
+      assert.equal(status, 0, `expected success without --waba-id; stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.ok(data.templates.length > 0, "should list templates without a waba id");
+      assert.equal(mock.requests[0].query.get("filter[waba_id]"), null);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("whatsapp-templates list narrows client-side when records DO carry a matching waba_id", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "GET" && req.path === "/whatsapp/message_templates") {
+        return { json: { data: [
+          { id: "tpl_1", name: "mine", language: "en_US", category: "UTILITY", status: "APPROVED", waba_id: "waba_abc" },
+          { id: "tpl_2", name: "other", language: "en_US", category: "UTILITY", status: "APPROVED", waba_id: "waba_xyz" },
+        ] } };
+      }
+      return undefined;
+    });
+    try {
+      const { status, stdout } = await runCliAsync(["whatsapp-templates", "--waba-id", "waba_abc", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const data = JSON.parse(stdout);
+      assert.equal(data.templates.length, 1, "should keep only the matching waba_id");
+      assert.equal(data.templates[0].name, "mine");
     } finally {
       await mock.close();
     }
@@ -386,7 +428,8 @@ describe("WhatsApp commands", () => {
     try {
       const { status } = await runCliAsync(["whatsapp-templates", "--waba-id", "waba_abc", "--status", "APPROVED", "--json"], restEnv(mock));
       assert.equal(status, 0);
-      assert.equal(mock.requests[0].query.get("filter[waba_id]"), "waba_abc");
+      // waba filter must not be sent; status filter still is.
+      assert.equal(mock.requests[0].query.get("filter[waba_id]"), null);
       assert.equal(mock.requests[0].query.get("filter[status]"), "APPROVED");
     } finally {
       await mock.close();

@@ -353,13 +353,13 @@ telnyx-agent stt-providers --provider telnyx --service-type transcription --json
 
 Output: `{ providers: [...] }`
 
-## Cookbook Copy Changes (for Denise)
+## Cookbook Copy Changes (for Deniz)
 
 > **Status:** proposed copy changes for the *Communication API Cookbook v2* (the
 > "vibe-code your comms stack" PDF). Tested against the real CLI first, per Oliver's
 > Jul 27 direction. The two earlier open decisions (Verify buying a number; the TTS
 > provider list) are now **resolved in code** — the copy below is final. **Please still do
-> one full end-to-end re-test pass before publishing.** Send the review to Denise via
+> one full end-to-end re-test pass before publishing.** Send the review to Deniz via
 > **Slack** (not GitHub email). These reflect the fixes on branch
 > `integration/agent-cli-fixes`.
 >
@@ -412,8 +412,9 @@ Output: `{ providers: [...] }`
 
 - **✅ works now, just re-test:** setup-whatsapp used to break for everyone at step 5; that's
   fixed. Un-hold the script and re-run it.
-- **One wording fix:** Step 7 shows `telnyx-agent whatsapp-templates`. It needs an id —
-  change it to `telnyx-agent whatsapp-templates --waba-id <id>`.
+- **Keep Step 7 simple:** just `telnyx-agent whatsapp-templates` (lists your templates). You
+  do **not** need to add `--waba-id` — listing works without it. (Earlier drafts said to add
+  `--waba-id <id>`; don't — that made the list come back empty. It's fixed now.)
 - **Add a warning:** Meta's "555" test numbers can't actually send messages — use a real
   WhatsApp-capable number for the send step.
 
@@ -455,7 +456,7 @@ Output: `{ providers: [...] }`
 - **Set expectations:** the transcription providers are correct, but add that brand names and
   unusual words may come out slightly wrong.
 
-### Both earlier open questions are now settled (nothing pending for Denise)
+### Both earlier open questions are now settled (nothing pending for Deniz)
 
 1. **Verify buying a number — RESOLVED.** `setup-verify` no longer buys a number; Verify uses
    Telnyx's managed sender pool. Copy: drop the "buys a number" line (handled above).

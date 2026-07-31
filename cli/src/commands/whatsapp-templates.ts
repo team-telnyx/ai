@@ -9,6 +9,13 @@
  * command 404'd (error 10005). The base URL already ends in `/v2`, so we call
  * the resource paths (`/whatsapp/message_templates`) directly and avoid the Go
  * CLI entirely for these commands.
+ *
+ * List filtering (live-API bug): the API returns `waba_id: null` on template
+ * records, so a server-side `filter[waba_id]=<id>` matches nothing and the list
+ * always came back empty even when approved templates exist. In list mode we no
+ * longer send that filter and `--waba-id` is optional; if an id is given AND the
+ * records actually carry a waba_id we filter client-side, otherwise we list all.
+ * Create mode still requires `--waba-id`.
  */
 
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
@@ -46,8 +53,10 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
   const component = flags.component as string;
   const status = flags.status as string;
 
-  if (!wabaId) {
-    printError("--waba-id is required");
+  // --waba-id is only required for create (see header note on the list-filter
+  // live bug). List mode works without it.
+  if (create && !wabaId) {
+    printError("--waba-id is required for --create");
     process.exit(1);
   }
 
@@ -110,13 +119,27 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         });
       }
     } else {
-      // List mode (default) — GET /v2/whatsapp/message_templates?filter[waba_id]=...
+      // List mode (default) — GET /v2/whatsapp/message_templates.
+      // Do NOT send filter[waba_id]: the API returns waba_id: null on records so
+      // that server-side filter matches nothing (always-empty bug). We fetch
+      // unfiltered and, only if the caller passed --waba-id AND the records
+      // actually carry a matching waba_id, we narrow client-side.
       const client = new TelnyxClient();
-      const params: Record<string, unknown> = { "filter[waba_id]": wabaId };
+      const params: Record<string, unknown> = {};
       if (status) params["filter[status]"] = status;
       const res = await client.get("/whatsapp/message_templates", params);
       const raw = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
-      const templates: WhatsappTemplate[] = raw.map((t) => ({
+
+      let scoped = raw;
+      if (wabaId) {
+        const matched = raw.filter((t) => t.waba_id != null && String(t.waba_id) === wabaId);
+        // Only apply the client-side narrowing when the records actually expose a
+        // waba_id; otherwise (all null) keep the full list rather than hiding
+        // everything, which is the exact bug we're fixing.
+        if (matched.length > 0) scoped = matched;
+      }
+
+      const templates: WhatsappTemplate[] = scoped.map((t) => ({
         name: String(t.name ?? ""),
         language: String(t.language ?? ""),
         category: String(t.category ?? ""),
@@ -124,7 +147,7 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         id: t.id ? String(t.id) : undefined,
       }));
 
-      const result: WhatsappTemplatesListResult = { waba_id: wabaId, templates };
+      const result: WhatsappTemplatesListResult = { waba_id: wabaId ?? "", templates };
 
       if (jsonOutput) {
         outputJson(result);
