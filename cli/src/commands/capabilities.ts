@@ -69,7 +69,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "x402 Crypto Payments", description: "Fund account with USDC on Base blockchain via x402 protocol", actions: ["get_payment_quote", "submit_payment"] },
   ],
   "🔄 Porting": [
-    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "upload_porting_document", "list_porting_requirements"] },
+    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
     { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
   ],
   "💬 WhatsApp": [
@@ -110,6 +110,13 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent verify-check", description: "Submit a code for verification (--code) or retrieve the current verification status" },
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },
   { name: "telnyx-agent setup-porting", description: "Zero to porting: checks portability, creates porting order, lists requirements, optionally submits" },
+  { name: "telnyx-agent list-porting-orders", description: "List port-in orders with core filters, phone-number inclusion, sorting, and pagination" },
+  { name: "telnyx-agent get-porting-order", description: "Retrieve one porting order by ID" },
+  { name: "telnyx-agent update-porting-order", description: "Update references, FOC settings, documents, messaging, and post-port number configuration" },
+  { name: "telnyx-agent submit-porting-order", description: "Confirm and submit a draft porting order" },
+  { name: "telnyx-agent cancel-porting-order", description: "Cancel a porting order after explicit --confirm acknowledgement" },
+  { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
+  { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },

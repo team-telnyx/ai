@@ -12,6 +12,15 @@ import { verifySendCommand } from "./commands/verify-send.ts";
 import { verifyCheckCommand } from "./commands/verify-check.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
+import {
+  attachPortingDocumentCommand,
+  cancelPortingOrderCommand,
+  getPortingOrderCommand,
+  listPortingDocumentsCommand,
+  listPortingOrdersCommand,
+  submitPortingOrderCommand,
+  updatePortingOrderCommand,
+} from "./commands/porting-orders.ts";
 import { edgeDoctorCommand } from "./commands/edge-doctor.ts";
 import { setupEdgeMcpCommand } from "./commands/setup-edge-mcp.ts";
 import { setupEdgeWebhookCommand } from "./commands/setup-edge-webhook.ts";
@@ -84,6 +93,13 @@ Commands:
   verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number
   setup-porting     Zero to porting: check portability, create order, submit
+  list-porting-orders List port-in orders with filters and pagination
+  get-porting-order Retrieve one porting order by ID
+  update-porting-order Update porting order details and number configuration
+  submit-porting-order Confirm and submit a draft porting order
+  cancel-porting-order Cancel a porting order (requires --confirm)
+  attach-porting-document Attach an existing Telnyx document to a porting order
+  list-porting-documents List documents attached to a porting order
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
   setup-edge-mcp    Handoff to an Edge-hosted MCP server example
   setup-edge-webhook Handoff to an Edge-hosted webhook receiver example
@@ -168,6 +184,34 @@ Verify Flags:
   --billing-phone   Billing telephone number on the account (setup-porting)
   --old-provider    Current/losing carrier name (setup-porting)
   --submit          Submit the newly created porting order immediately (setup-porting)
+
+Porting Order Action Flags:
+  --id <id>         Porting order ID (get, update, submit, cancel, attach/list documents — required)
+  --customer-reference Customer bookkeeping reference (list, update)
+  --customer-group-reference Customer group reference (list, update)
+  --parent-support-key Parent support key filter (list-porting-orders)
+  --phone-number    Phone-number substring filter (list-porting-orders)
+  --country-code    Phone-number country filter (list-porting-orders)
+  --carrier-name    Current carrier filter (list-porting-orders)
+  --port-type       full|partial (list, update)
+  --fast-port-eligible <bool> FastPort eligibility filter (list-porting-orders)
+  --foc-after / --foc-before ISO 8601 requested FOC range filters (list-porting-orders)
+  --include-phone-numbers <bool> Include phone-number objects (list, get)
+  --page-number / --page-size Positive pagination values (list orders/documents)
+  --sort            Generated API sort value (list orders/documents)
+  --foc-datetime-requested ISO 8601 requested FOC date-time (update)
+  --enable-messaging <bool> Port messaging capabilities (update)
+  --connection-id / --messaging-profile-id Number assignments after porting (update)
+  --billing-group-id / --emergency-address-id Number configuration (update)
+  --tags            Comma-separated number tags (update)
+  --loa-document-id / --invoice-document-id Primary document IDs (update)
+  --requirement-group-id Requirement group to copy into the order (update)
+  --webhook-url     Porting order webhook URL (update)
+  --remaining-numbers-action keep|disconnect (partial-port update)
+  --new-billing-phone-number Required when keeping remaining numbers (update)
+  --confirm         Required safety acknowledgement (cancel-porting-order)
+  --document-id     Existing Telnyx document ID (attach-porting-document — required)
+  --document-type   loa|invoice|csr|other (attach required; comma-separated list filter)
 
 Fund-account Flags:
   --amount <usd>    Amount to fund in USD (required, e.g., 50.00)
@@ -405,6 +449,13 @@ Examples:
   telnyx-agent setup-voice --webhook https://example.com/calls
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
   telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
+  telnyx-agent list-porting-orders --customer-reference migration-2026 --page-size 25 --json
+  telnyx-agent get-porting-order --id <porting-order-id> --json
+  telnyx-agent update-porting-order --id <porting-order-id> --connection-id <connection-id> --enable-messaging true --json
+  telnyx-agent submit-porting-order --id <porting-order-id> --json
+  telnyx-agent cancel-porting-order --id <porting-order-id> --confirm --json
+  telnyx-agent attach-porting-document --id <porting-order-id> --document-id <document-id> --document-type loa --json
+  telnyx-agent list-porting-documents --id <porting-order-id> --document-type loa,invoice --json
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
   telnyx-agent verify-check --verification-id ver_xxx --code 123456
   telnyx-agent verify-check --verification-id ver_xxx
@@ -509,6 +560,13 @@ const COMMANDS: Record<string, (
   "verify-check": verifyCheckCommand,
   "setup-10dlc": setup10dlcCommand,
   "setup-porting": setupPortingCommand,
+  "list-porting-orders": listPortingOrdersCommand,
+  "get-porting-order": getPortingOrderCommand,
+  "update-porting-order": updatePortingOrderCommand,
+  "submit-porting-order": submitPortingOrderCommand,
+  "cancel-porting-order": cancelPortingOrderCommand,
+  "attach-porting-document": attachPortingDocumentCommand,
+  "list-porting-documents": listPortingDocumentsCommand,
   "edge-doctor": edgeDoctorCommand,
   "setup-edge-mcp": setupEdgeMcpCommand,
   "setup-edge-webhook": setupEdgeWebhookCommand,
