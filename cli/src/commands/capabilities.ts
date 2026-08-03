@@ -26,7 +26,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "🤖 AI": [
     { name: "Chat Completions", description: "LLM inference via Telnyx AI (executable with telnyx-agent ai-chat)", actions: ["ai_chat"] },
     { name: "Embeddings", description: "Generate text embeddings (executable with telnyx-agent ai-embed)", actions: ["ai_embed"] },
-    { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant"] },
+    { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant", "get_ai_assistant", "update_ai_assistant", "delete_ai_assistant"] },
   ],
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)", actions: ["generate_speech"] },
@@ -95,6 +95,11 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },
   { name: "telnyx-agent ai-chat", description: "Create an OpenAI-compatible chat completion via Telnyx AI inference" },
   { name: "telnyx-agent ai-embed", description: "Create OpenAI-compatible embeddings for text or a JSON array of texts" },
+  { name: "telnyx-agent list-ai-assistants", description: "List AI assistant configurations" },
+  { name: "telnyx-agent create-ai-assistant", description: "Create an AI assistant from a name, instructions, and optional model or voice settings" },
+  { name: "telnyx-agent get-ai-assistant", description: "Retrieve one AI assistant by ID" },
+  { name: "telnyx-agent update-ai-assistant", description: "Update an AI assistant and create a new version" },
+  { name: "telnyx-agent delete-ai-assistant", description: "Delete an AI assistant with explicit confirmation" },
   { name: "telnyx-agent setup-wireguard", description: "Zero to VPN: creates network, WireGuard interface, peer — outputs ready-to-use WG config" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },

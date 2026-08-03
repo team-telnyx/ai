@@ -81,7 +81,9 @@ export function parseFlags(args: string[]): {
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const next = args[i + 1];
-      if (next && !next.startsWith("--")) {
+      // Empty strings are meaningful for fields such as an AI assistant greeting,
+      // where `--greeting ""` tells the assistant to wait for the user to speak.
+      if (next !== undefined && !next.startsWith("--")) {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);
         i++;

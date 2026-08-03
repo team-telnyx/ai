@@ -44,6 +44,13 @@ import {
 import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
+  createAiAssistantCommand,
+  deleteAiAssistantCommand,
+  getAiAssistantCommand,
+  listAiAssistantsCommand,
+  updateAiAssistantCommand,
+} from "./commands/ai-assistants.ts";
+import {
   disableSimCardCommand,
   enableSimCardCommand,
   listSimCardsCommand,
@@ -101,6 +108,11 @@ Commands:
   lookup-number     Look up carrier and caller-name information
   ai-chat           Create an OpenAI-compatible chat completion
   ai-embed          Create OpenAI-compatible text embeddings
+  list-ai-assistants List AI assistant configurations
+  create-ai-assistant Create an AI assistant
+  get-ai-assistant  Retrieve an AI assistant by ID
+  update-ai-assistant Update an AI assistant by ID
+  delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -332,6 +344,25 @@ AI Embed Flags:
   --encoding-format Embedding encoding format (Go CLI default: float)
   --user            End-user identifier for monitoring and abuse detection
 
+AI Assistant Lifecycle Flags:
+  --id <assistant-id> AI assistant ID (get, update, delete; --assistant-id alias accepted)
+  --name            Assistant name (create required; update optional)
+  --instructions    System instructions (create required; update optional)
+  --description     Assistant description (create, update)
+  --model           Language model ID (create, update)
+  --greeting        Initial assistant greeting; an empty string makes it wait (create, update)
+  --voice           Voice ID, forwarded as --voice-settings.voice (create, update)
+  --transcription-model Speech-to-text model (create, update)
+  --transcription-language Speech-to-text language (create, update)
+  --dynamic-variables <json> Dynamic variable defaults as a JSON object (create, update)
+  --dynamic-variables-webhook-url <url> Dynamic variable resolver webhook (create, update)
+  --dynamic-variables-webhook-timeout-ms <1-10000> Resolver timeout (create, update)
+  --tags <csv>      Comma-separated assistant tags (create, update)
+  --tool-ids <csv>  Comma-separated shared AI tool IDs (create, update)
+  --version-name    Human-readable version name (update only)
+  --promote-to-main <bool> Promote the new version (update only)
+  --confirm         Explicitly confirm deletion (delete only, required)
+
 IoT SIM Action Flags:
   --id <sim-card-id> SIM card ID (retrieve-sim-card, enable-sim-card, disable-sim-card — required)
   --iccid           Partial ICCID filter (list-sim-cards)
@@ -431,6 +462,11 @@ Examples:
   telnyx-agent ai-chat --message '{"role":"user","content":"Return JSON"}' --response-format '{"type":"json_object"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
+  telnyx-agent list-ai-assistants --json
+  telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
+  telnyx-agent get-ai-assistant --id <assistant-id> --json
+  telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
+  telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -480,6 +516,11 @@ const COMMANDS: Record<string, (
   "lookup-number": lookupNumberCommand,
   "ai-chat": aiChatCommand,
   "ai-embed": aiEmbedCommand,
+  "list-ai-assistants": listAiAssistantsCommand,
+  "create-ai-assistant": createAiAssistantCommand,
+  "get-ai-assistant": getAiAssistantCommand,
+  "update-ai-assistant": updateAiAssistantCommand,
+  "delete-ai-assistant": deleteAiAssistantCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
