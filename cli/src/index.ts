@@ -56,6 +56,11 @@ import {
   listSimCardsCommand,
   retrieveSimCardCommand,
 } from "./commands/sim-cards.ts";
+import {
+  getVoiceConnectionCommand,
+  listActiveCallsCommand,
+  listVoiceConnectionsCommand,
+} from "./commands/voice-connections.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -100,6 +105,9 @@ Commands:
   call-dial         Make an outbound call via Call Control
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-status       Get the status of a call by call-control-id
+  list-voice-connections List voice connections with filters and pagination
+  get-voice-connection Retrieve one voice connection by ID
+  list-active-calls List active calls for a voice connection
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
   list-phone-numbers List phone numbers owned by the account
@@ -234,7 +242,7 @@ WhatsApp Flags:
   --component       Template components as a JSON array string (whatsapp-templates, create)
   --status          Filter templates by status: APPROVED|PENDING|REJECTED (whatsapp-templates, list)
 Voice Call Flags:
-  --connection-id   Call Control connection ID (call-dial, required)
+  --connection-id   Voice connection ID (call-dial, list-active-calls — required)
   --from             E.164 number to call from (call-dial, required)
   --to               E.164 destination (call-dial, call-control transfer)
   --call-control-id Call Control ID of the call (call-control, call-status, required)
@@ -287,6 +295,15 @@ Voice Call Flags:
   --role                         Supervisor role: barge|whisper|monitor (switch-supervisor-role, required)
                     Generated optional JSON, scalar, boolean, and dotted inner flags for these actions
                     are forwarded unchanged to the Go CLI (for example --assistant.id).
+Voice Connection Discovery Flags:
+  --id <connection-id> Retrieve a voice connection (get-voice-connection — required)
+  --connection-name Filter connections by name substring (list-voice-connections)
+  --fqdn            Exact FQDN filter (list-voice-connections)
+  --outbound-voice-profile-id Outbound voice profile filter (list-voice-connections)
+  --page-number     Result page (list-voice-connections, list-active-calls)
+  --page-size       Results per page (list-voice-connections, list-active-calls)
+  --sort            Connection sort order; prefix with - for descending (list-voice-connections)
+  --max-items       Maximum items to return; -1 for unlimited (list-voice-connections, list-active-calls)
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -451,6 +468,9 @@ Examples:
   telnyx-agent call-control --action start-conversation-relay --call-control-id <id> --url wss://example.com/relay
   telnyx-agent call-control --action switch-supervisor-role --call-control-id <id> --role whisper
   telnyx-agent call-status --call-control-id <id> --json
+  telnyx-agent list-voice-connections --connection-name support --page-size 25 --json
+  telnyx-agent get-voice-connection --id <connection-id> --json
+  telnyx-agent list-active-calls --connection-id <connection-id> --json
   telnyx-agent stt --audio-url https://example.com/audio.mp3
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
   telnyx-agent stt-providers --json
@@ -510,6 +530,9 @@ const COMMANDS: Record<string, (
   "call-dial": callDialCommand,
   "call-control": callControlCommand,
   "call-status": callStatusCommand,
+  "list-voice-connections": listVoiceConnectionsCommand,
+  "get-voice-connection": getVoiceConnectionCommand,
+  "list-active-calls": listActiveCallsCommand,
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
   "list-phone-numbers": listPhoneNumbersCommand,
