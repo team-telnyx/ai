@@ -15,6 +15,15 @@ type FakeEdgeOptions = {
   rootStatus?: "pass" | "fail" | "unknown";
   inspect?: boolean;
   actorInstances?: boolean;
+  newFuncFromDir?: boolean;
+  secretsAdd?: boolean;
+  ship?: boolean;
+  resetFunc?: boolean;
+  noninteractiveConfirmation?: boolean;
+  types?: boolean;
+  kvStorage?: boolean;
+  kvKeyManagement?: boolean;
+  sqlDatabases?: boolean;
   argLog?: boolean;
 };
 
@@ -24,6 +33,15 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const rootStatus = config.rootStatus ?? (auth === "api_key" || auth === "oauth" ? "pass" : "fail");
   const inspect = config.inspect ?? true;
   const actorInstances = config.actorInstances ?? true;
+  const newFuncFromDir = config.newFuncFromDir ?? true;
+  const secretsAdd = config.secretsAdd ?? true;
+  const ship = config.ship ?? true;
+  const resetFunc = config.resetFunc ?? true;
+  const noninteractiveConfirmation = config.noninteractiveConfirmation ?? true;
+  const types = config.types ?? true;
+  const kvStorage = config.kvStorage ?? true;
+  const kvKeyManagement = config.kvKeyManagement ?? true;
+  const sqlDatabases = config.sqlDatabases ?? true;
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-edge-fake-"));
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
@@ -41,11 +59,75 @@ if (args.includes('--version')) {
   process.exit(0);
 }
 if (args[0] === 'new-func' && args.includes('--help')) {
-  console.log(['Create a new edge computing function', '', 'Flags:', '      --actor             Scaffold a StatefulActor project', '      --from-dir string   Copy files from existing directory', '  -h, --help              help for new-func', '  -n, --name string       Name of the function to create'].join('\\n'));
+  console.log(['Create a new edge computing function', '', 'Usage: telnyx-edge new-func [flags]', '', 'Flags:', '      --actor             Scaffold a StatefulActor project', ...(${newFuncFromDir} ? ['      --from-dir string   Copy files from existing directory'] : []), '  -h, --help              help for new-func', '  -n, --name string       Name of the function to create'].join('\\n'));
   process.exit(0);
 }
 if (args[0] === 'auth' && args[1] === 'api-key' && args[2] === 'set' && args.includes('--help')) {
   console.log('Set API key for authentication. The API key must be provided as an argument.');
+  process.exit(0);
+}
+if (args[0] === 'secrets' && args[1] === 'add' && args.includes('--help')) {
+  if (${secretsAdd}) {
+    console.log('Add or update a secret\\nUsage: telnyx-edge secrets add <key> <value> [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "add"\\n');
+  process.exit(1);
+}
+if (args[0] === 'ship' && args.includes('--help')) {
+  if (${ship}) {
+    console.log('Ship a function to Telnyx edge infrastructure\\nUsage: telnyx-edge ship [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "ship"\\n');
+  process.exit(1);
+}
+if (args[0] === 'reset-func' && args.includes('--help')) {
+  if (${resetFunc}) {
+    console.log('Reset a failed function back to the created state\\nUsage: telnyx-edge reset-func <function-name> [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "reset-func"\\n');
+  process.exit(1);
+}
+if (args[0] === 'delete-func' && args.includes('--help')) {
+  if (${noninteractiveConfirmation}) {
+    console.log('Delete an edge function after confirmation\\n  -y, --yes  Skip the confirmation prompt (for scripts and CI)');
+    process.exit(0);
+  }
+  console.log('Delete an edge function');
+  process.exit(0);
+}
+if (args[0] === 'types' && args.includes('--help')) {
+  if (${types}) {
+    console.log('Generate TypeScript binding types\\nUsage: telnyx-edge types [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "types"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'kv' && args[2] === 'key' && args.includes('--help')) {
+  if (${kvKeyManagement}) {
+    console.log('Manage keys in a KV namespace\\nUsage: telnyx-edge storage kv key [command]\\nCommands: list get put delete');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "key"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'kv' && args.includes('--help')) {
+  if (${kvStorage}) {
+    console.log('Manage KV storage namespaces\\nUsage: telnyx-edge storage kv [command]\\nCommands: create list get delete key');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "kv"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'execute' && args.includes('--help')) {
+  if (${sqlDatabases}) {
+    console.log('Run SQL against a SQL database\\nUsage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote  --command string  --file string');
+    process.exit(0);
+  }
+  console.log('Usage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote --command string');
   process.exit(0);
 }
 if (args[0] === 'inspect' && args.includes('--help')) {
@@ -163,9 +245,18 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.auth_mode, "api_key");
     assert.equal(data.root_status_passed, true);
     assert.equal(data.api_key_auth_supported, true);
+    assert.equal(data.new_func_from_dir_supported, true);
+    assert.equal(data.secrets_add_supported, true);
+    assert.equal(data.ship_supported, true);
     assert.equal(data.stateful_actors_supported, true);
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
+    assert.equal(data.reset_func_supported, true);
+    assert.equal(data.noninteractive_confirmation_supported, true);
+    assert.equal(data.types_supported, true);
+    assert.equal(data.kv_storage_supported, true);
+    assert.equal(data.kv_key_management_supported, true);
+    assert.equal(data.sql_databases_supported, true);
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -206,11 +297,79 @@ describe("CLI — Edge Compute handoff", () => {
     assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(["actors", "instances", "--help"])));
   });
 
+  it("edge-doctor probes v0.3 capabilities conservatively instead of inferring from version", () => {
+    const fake = withFakeEdgeCli({
+      auth: "api_key",
+      resetFunc: false,
+      noninteractiveConfirmation: false,
+      types: false,
+      kvStorage: false,
+      kvKeyManagement: false,
+      sqlDatabases: false,
+      argLog: true,
+    });
+    const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+    assert.equal(data.telnyx_edge_version, "v0.2.5");
+    assert.equal(data.ready, true, "optional v0.3 capabilities do not block the core handoff");
+    assert.equal(data.reset_func_supported, false);
+    assert.equal(data.noninteractive_confirmation_supported, false);
+    assert.equal(data.types_supported, false);
+    assert.equal(data.kv_storage_supported, false);
+    assert.equal(data.kv_key_management_supported, false);
+    assert.equal(data.sql_databases_supported, false);
+    assert.ok(data.next_steps.some((step: string) => step.includes("Optional capabilities not detected")));
+    const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [
+      ["reset-func", "--help"],
+      ["delete-func", "--help"],
+      ["secrets", "add", "--help"],
+      ["types", "--help"],
+      ["storage", "kv", "--help"],
+      ["storage", "kv", "key", "--help"],
+      ["storage", "sqldb", "execute", "--help"],
+    ]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+  });
+
+  it("requires every capability emitted by setup handoffs", () => {
+    for (const missing of ["newFuncFromDir", "secretsAdd", "ship"] as const) {
+      const fake = withFakeEdgeCli({ auth: "api_key", [missing]: false });
+      const doctor = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(doctor.authenticated, true);
+      assert.equal(doctor.root_status_passed, true);
+      assert.equal(doctor.ready, false);
+      assert.ok(doctor.next_steps.some((step: string) => step.includes("Upgrade telnyx-edge")));
+      for (const command of ["setup-edge-mcp", "setup-edge-webhook"]) {
+        const data = JSON.parse(run([command, "--json"], fake.env));
+        assert.equal(data.ready, false, `${command} must reject missing ${missing}`);
+        assert.equal(data.root_status_passed, true);
+        assert.equal(data[missing === "newFuncFromDir" ? "new_func_from_dir_supported" : missing === "secretsAdd" ? "secrets_add_supported" : "ship_supported"], false);
+        assert.ok(data.next_steps.some((step: string) => step.includes("Upgrade telnyx-edge")));
+      }
+    }
+  });
+
+  it("setup handoffs require the root status success marker", () => {
+    const fake = withFakeEdgeCli({ auth: "api_key", rootStatus: "fail" });
+    for (const command of ["setup-edge-mcp", "setup-edge-webhook"]) {
+      const data = JSON.parse(run([command, "--json"], fake.env));
+      assert.equal(data.authenticated, true);
+      assert.equal(data.root_status_passed, false);
+      assert.equal(data.ready, false);
+      assert.ok(data.next_steps.some((step: string) => step.includes("telnyx-edge status")));
+    }
+  });
+
   it("setup-edge-mcp emits a repository-aware secure build/deploy/inspect flow", () => {
     const fake = withFakeEdgeCli("api_key");
     const data = JSON.parse(run(["setup-edge-mcp", "--json", "--name", "demo-mcp"], fake.env));
     assert.equal(data.ready, true);
     assert.equal(data.telnyx_edge_installed, true);
+    assert.equal(data.root_status_passed, true);
+    assert.equal(data.new_func_from_dir_supported, true);
+    assert.equal(data.secrets_add_supported, true);
+    assert.equal(data.ship_supported, true);
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
     assert.equal(data.source_repo, "https://github.com/team-telnyx/edge-compute.git");
