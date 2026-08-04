@@ -79,11 +79,19 @@ function stopMockServer(): Promise<void> {
   return new Promise((r) => mockServer.close(() => r()));
 }
 
-function setupFake(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+function setupFake(env: NodeJS.ProcessEnv, opts?: { unresolvableOrder?: boolean }): NodeJS.ProcessEnv {
   const tmp = mkdtempSync(join(tmpdir(), "aif328-edge-"));
   const bin = join(tmp, "bin");
   mkdirSync(bin, { recursive: true });
   const fake = join(bin, "telnyx");
+  // When unresolvableOrder is set, the order SUCCEEDS but `phone-numbers
+  // retrieve` never returns an id (simulating a post-order lookup that
+  // times out / is eventually-consistent). This must trigger
+  // NumberOrderedButUnresolvedError so setup-voice KEEPS the created app
+  // (the number was likely bought and assigned) instead of orphaning it.
+  const retrieveBody = opts?.unresolvableOrder
+    ? `console.log(JSON.stringify({ data: {} }));`
+    : `console.log(JSON.stringify({ data: { id: "num_123", phone_number: "+13125550001" } }));`;
   writeFileSync(fake, `#!/usr/bin/env node
 const args = process.argv.slice(2).filter(a => a !== "--format" && a !== "json");
 const cmd = args.join(" ");
@@ -92,7 +100,7 @@ if (cmd.startsWith("available-phone-numbers")) {
 } else if (cmd.startsWith("number-order") || cmd.startsWith("number-orders")) {
   console.log(JSON.stringify({ data: { id: "order_123", status: "complete" } }));
 } else if (cmd.startsWith("phone-numbers retrieve")) {
-  console.log(JSON.stringify({ data: { id: "num_123", phone_number: "+13125550001" } }));
+  ${retrieveBody}
 } else {
   console.log(JSON.stringify({ data: {} }));
 }
@@ -163,5 +171,23 @@ describe("setup-voice edge cases (AIF-328)", () => {
     const r = await run(["setup-voice"], env);
     assert.equal(r.status, 1);
     assert.match(r.stdout, /No outbound voice profiles found/);
+  });
+
+  it("order placed but number id unresolvable → KEEPS the app (no orphaned paid number)", async () => {
+    // The number order succeeds but the follow-up id lookup never resolves.
+    // The number may already be bought AND assigned to the created app, so
+    // deleting the app would orphan a paid number. setup-voice must keep it.
+    mode = "normal";
+    // --force so we always create a fresh app (createdAppId set) instead of
+    // reusing/adopting an existing one.
+    const env = setupFake(process.env, { unresolvableOrder: true });
+    const r = await run(["setup-voice", "--force", "--json"], env);
+    assert.equal(r.status, 1, "should exit non-zero when the number can't be resolved");
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.ready, false);
+    // The app created this run must be KEPT, not deleted — the number was
+    // likely purchased and assigned to it.
+    assert.equal(data.orphan_cleanup, "kept", "created app must be kept when the order was placed but unresolved");
+    assert.ok(data.connection_id, "connection_id (the created app) should be reported");
   });
 });

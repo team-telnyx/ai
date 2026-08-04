@@ -23,7 +23,7 @@
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
-import { searchAndBuyNumber } from "../utils/number-order.ts";
+import { searchAndBuyNumber, NumberOrderedButUnresolvedError } from "../utils/number-order.ts";
 import { findReusablePair, findExistingByPrefix, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupVoiceResult {
@@ -66,6 +66,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   // True when we adopt a pre-existing bare (number-less) prefix-matched app
   // instead of creating a new one.
   let adoptedApp = false;
+  // Set true when the number order was PLACED but its resource ID couldn't be
+  // resolved. The number may already be bought AND assigned to this app, so
+  // deleting the app would orphan a paid number — keep it in that case.
+  let numberLikelyPurchased = false;
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up Voice...\n");
@@ -230,6 +234,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       steps.push({ step: 3, name: "Search for number", status: "completed", detail: phoneNumber, elapsedMs: Date.now() - step3Start });
       steps.push({ step: 4, name: "Buy number", status: "completed", resourceId: phoneNumberId, detail: phoneNumber, elapsedMs: 0 });
     } catch (err) {
+      // Placed-but-unresolved order: the number was likely bought (and assigned
+      // to this connection), so don't roll the app back below.
+      if (err instanceof NumberOrderedButUnresolvedError) numberLikelyPurchased = true;
       steps.push({ step: 3, name: "Search & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step3Start });
       throw err;
     }
@@ -285,14 +292,17 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     // apps. Only clean up an app we created here (not an adopted/reused one) and
     // only when it has no number (phoneNumberId unset).
     let cleanup: "deleted" | "kept" | "failed" | undefined;
-    if (createdAppId && !phoneNumberId) {
+    if (createdAppId && !phoneNumberId && !numberLikelyPurchased) {
+      // Safe to delete: no number order succeeded, so nothing paid is attached.
       try {
         await client.delete(`/call_control_applications/${createdAppId}`);
         cleanup = "deleted";
       } catch {
         cleanup = "failed";
       }
-    } else if (createdAppId && phoneNumberId) {
+    } else if (createdAppId && (phoneNumberId || numberLikelyPurchased)) {
+      // Keep the app: a number is assigned, or an order was placed whose number
+      // we couldn't resolve — deleting would orphan the (likely-purchased) number.
       cleanup = "kept";
     }
 
