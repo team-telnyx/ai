@@ -120,7 +120,10 @@ export function supportsSecretsAdd(): boolean {
 export function supportsTypes(): boolean {
   try {
     const out = runEdge(["types", "--help"]);
-    return /\btypes\b/i.test(out) && /typescript\s+binding\s+types/i.test(out);
+    const hasTypescript = /\btypescript\b/i.test(out);
+    const hasGenerationIndicator =
+      /\btypes\b/i.test(out) || /\btelnyx-env\.d\.ts\b/i.test(out) || /\bbindings\b/i.test(out);
+    return hasTypescript && hasGenerationIndicator;
   } catch {
     return false;
   }

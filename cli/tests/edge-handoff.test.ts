@@ -22,6 +22,7 @@ type FakeEdgeOptions = {
   resetNoninteractiveConfirmation?: boolean;
   noninteractiveConfirmation?: boolean;
   types?: boolean;
+  typesHelp?: string;
   kvStorage?: boolean;
   kvKeyManagement?: boolean;
   sqlDatabases?: boolean;
@@ -41,6 +42,7 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const resetNoninteractiveConfirmation = config.resetNoninteractiveConfirmation ?? false;
   const noninteractiveConfirmation = config.noninteractiveConfirmation ?? true;
   const types = config.types ?? true;
+  const typesHelp = config.typesHelp ?? "Generate TypeScript binding types\nUsage: telnyx-edge types [flags]";
   const kvStorage = config.kvStorage ?? true;
   const kvKeyManagement = config.kvKeyManagement ?? true;
   const sqlDatabases = config.sqlDatabases ?? true;
@@ -102,7 +104,7 @@ if (args[0] === 'delete-func' && args.includes('--help')) {
 }
 if (args[0] === 'types' && args.includes('--help')) {
   if (${types}) {
-    console.log('Generate TypeScript binding types\\nUsage: telnyx-edge types [flags]');
+    console.log(${JSON.stringify(typesHelp)});
     process.exit(0);
   }
   process.stderr.write('unknown command "types"\\n');
@@ -332,6 +334,22 @@ describe("CLI — Edge Compute handoff", () => {
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
     }
+  });
+
+  it("detects types support from the documented manifest wording", () => {
+    const fake = withFakeEdgeCli({
+      typesHelp: "Generate types for your environment from the manifest in TypeScript (telnyx-env.d.ts)",
+    });
+    const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+    assert.equal(data.types_supported, true);
+  });
+
+  it("rejects generic TypeScript help without a types-generation indicator", () => {
+    const fake = withFakeEdgeCli({
+      typesHelp: "Compile JavaScript modules; TypeScript projects are supported",
+    });
+    const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+    assert.equal(data.types_supported, false);
   });
 
   it("probes reset-func --yes independently from delete-func --yes", () => {
