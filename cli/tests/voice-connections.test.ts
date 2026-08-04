@@ -13,11 +13,69 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(): { logPath: string; fetchLogPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-voice-connections-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
+  const fetchLogPath = join(tempDir, "fetch.jsonl");
   mkdirSync(binDir, { recursive: true });
+
+  const fakeFetch = join(tempDir, "fake-fetch.mjs");
+  writeFileSync(
+    fakeFetch,
+    `import fs from "node:fs";
+globalThis.fetch = async (input, init = {}) => {
+  const url = String(input);
+  const headers = new Headers(init.headers);
+  fs.appendFileSync(process.env.TELNYX_FAKE_FETCH_LOG, JSON.stringify({
+    url,
+    method: init.method || "GET",
+    authorization: headers.get("authorization")
+  }) + "\\n");
+  const parsed = new URL(url);
+  const cursor = parsed.searchParams.get("page[after]");
+  const scenario = process.env.TELNYX_FAKE_SCENARIO;
+  const activePath = parsed.pathname === "/v2/connections/conn-1/active_calls";
+  const reservedPath = parsed.pathname === "/v2/connections/conn%2Fwith%3Freserved/active_calls";
+  if ((activePath || reservedPath) && !cursor) {
+    const multiPage = ["active-call-pages", "active-call-cursor-fallback", "active-call-repeated-cursor", "active-call-missing-cursor", "hostile-host", "hostile-path"].includes(scenario);
+    const next = ["active-call-missing-cursor", "active-call-cursor-fallback"].includes(scenario)
+      ? undefined
+      : scenario === "hostile-host"
+      ? "https://evil.example/v2/connections/conn-1/active_calls?page[after]=cursor-2"
+      : scenario === "hostile-path"
+        ? "/v2/connections/other/active_calls?page[after]=cursor-2"
+        : multiPage
+          ? "/v2/connections/conn-1/active_calls?page[after]=cursor-2&page[limit]=2"
+          : undefined;
+    return new Response(JSON.stringify({
+      data: multiPage
+        ? [
+            { call_control_id: "call-1", call_leg_id: "leg-1", record_type: "call" },
+            { call_control_id: "call-2", call_leg_id: "leg-2", record_type: "call" }
+          ]
+        : [{ call_control_id: "call-1", call_leg_id: "leg-1", call_duration: 42, record_type: "call" }],
+      meta: multiPage
+        ? { cursors: scenario === "active-call-missing-cursor" ? {} : { after: "cursor-2" }, next, page_size: 2, total_items: scenario === "active-call-repeated-cursor" ? 2 : 3 }
+        : { cursors: {}, page_size: 20, total_items: 1 }
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  if (activePath && cursor === "cursor-2") {
+    const meta = scenario === "active-call-repeated-cursor"
+      ? { cursors: { after: "cursor-2" }, next: "/v2/connections/conn-1/active_calls?page[after]=cursor-2&page[limit]=2", total_items: 2 }
+      : { cursors: {}, total_items: 3 };
+    return new Response(JSON.stringify({
+      data: [{ call_control_id: "call-3", call_leg_id: "leg-3", record_type: "call" }],
+      meta
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }
+  return new Response(JSON.stringify({ errors: [{ detail: "unexpected fake fetch: " + url }] }), {
+    status: 500,
+    headers: { "content-type": "application/json" }
+  });
+};
+`,
+  );
 
   const fakeTelnyx = join(binDir, "telnyx");
   writeFileSync(
@@ -115,32 +173,6 @@ if (args[0] === "connections" && args[1] === "list") {
     active: true,
     outbound_voice_profile_id: "ovp-1"
   } }));
-} else if (args[0] === "connections" && args[1] === "list-active-calls") {
-  if (scenario === "active-call-pages") {
-    const pages = {
-      1: [
-        { call_control_id: "call-1", call_leg_id: "leg-1", record_type: "call" },
-        { call_control_id: "call-2", call_leg_id: "leg-2", record_type: "call" }
-      ],
-      2: [{ call_control_id: "call-3", call_leg_id: "leg-3", record_type: "call" }]
-    };
-    console.log(JSON.stringify({
-      data: pages[requestedPage] || [],
-      meta: { page_number: requestedPage, page_size: 2, total_pages: 2, total_results: 3 }
-    }));
-  } else {
-    console.log(JSON.stringify({
-      data: [{
-        call_control_id: "call-1",
-        call_leg_id: "leg-1",
-        call_session_id: "session-1",
-        call_duration: 42,
-        client_state: "c3RhdGU=",
-        record_type: "call"
-      }],
-      meta: { page_number: 1, page_size: 20, total_results: 1 }
-    }));
-  }
 } else {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
   process.exit(2);
@@ -151,10 +183,16 @@ if (args[0] === "connections" && args[1] === "list") {
 
   return {
     logPath,
+    fetchLogPath,
     env: {
       ...process.env,
+      NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${fakeFetch}`].filter(Boolean).join(" "),
+      TELNYX_API_KEY: "test-key",
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
+      TELNYX_FAKE_FETCH_LOG: fetchLogPath,
+      TELNYX_FRICTION_ENABLED: "false",
+      TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };
 }
@@ -186,6 +224,13 @@ function loggedArgs(logPath: string): string[][] {
   assert.ok(contents.endsWith("\n"), "fake binary should terminate its JSON record with one newline");
   assert.ok(!contents.endsWith("\n\n"), "fake binary should not write a blank JSONL record");
   return contents.trimEnd().split("\n").map((line) => JSON.parse(line) as string[]);
+}
+
+function loggedFetches(logPath: string): Array<{ url: string; method: string; authorization: string | null }> {
+  if (!existsSync(logPath)) return [];
+  return readFileSync(logPath, "utf8").trimEnd().split("\n").map(
+    (line) => JSON.parse(line) as { url: string; method: string; authorization: string | null },
+  );
 }
 
 function assertFlag(args: string[], flag: string, value: string): void {
@@ -469,64 +514,120 @@ describe("Voice connection discovery commands", () => {
     assertFlag(args, "--format", "json");
   });
 
-  it("lists active calls for a connection with pagination", () => {
+  it("lists active calls directly with an encoded connection ID and page limit", () => {
     const fake = setupFakeTelnyx();
     const output = runAgent([
       "list-active-calls",
-      "--connection-id", "conn-1",
-      "--page-number", "1",
+      "--connection-id", "conn/with?reserved",
       "--page-size", "20",
       "--max-items", "10",
       "--json",
     ], fake.env);
 
     const result = JSON.parse(output);
-    assert.equal(result.connection_id, "conn-1");
+    assert.equal(result.connection_id, "conn/with?reserved");
     assert.equal(result.count, 1);
     assert.equal(result.active_calls[0].call_control_id, "call-1");
-    assert.equal(result.meta.total_results, 1);
-
-    const [args] = loggedArgs(fake.logPath);
-    assert.deepEqual(args.slice(0, 2), ["connections", "list-active-calls"]);
-    assertFlag(args, "--connection-id", "conn-1");
-    assertFlag(args, "--page-number", "1");
-    assertFlag(args, "--page-size", "20");
-    assert.ok(!args.includes("--max-items"));
-    assertFlag(args, "--format", "raw");
+    assert.equal(result.meta.total_items, 1);
+    assert.deepEqual(loggedArgs(fake.logPath), []);
+    assert.deepEqual(loggedFetches(fake.fetchLogPath), [{
+      url: "https://api.telnyx.com/v2/connections/conn%2Fwith%3Freserved/active_calls?page%5Blimit%5D=20",
+      method: "GET",
+      authorization: "Bearer test-key",
+    }]);
   });
 
-  it("lists active calls across multiple pages while preserving connection-id", () => {
+  it("follows active-call cursors for finite and unlimited aggregates", () => {
+    for (const limitArgs of [["--max-items", "3"], [], ["--max-items", "-1"]]) {
+      const fake = setupFakeTelnyx();
+      const output = runAgent([
+        "list-active-calls",
+        "--connection-id", "conn-1",
+        "--page-size", "2",
+        ...limitArgs,
+        "--json",
+      ], { ...fake.env, TELNYX_FAKE_SCENARIO: "active-call-pages" });
+
+      const result = JSON.parse(output);
+      assert.equal(result.connection_id, "conn-1");
+      assert.deepEqual(result.active_calls.map((call: { call_control_id: string }) => call.call_control_id), [
+        "call-1",
+        "call-2",
+        "call-3",
+      ]);
+      assert.deepEqual(result.meta, {
+        page_size: 2,
+        total_items: 3,
+        starting_page: 1,
+        pages_fetched: 2,
+        returned_results: 3,
+      });
+
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+      assert.deepEqual(loggedFetches(fake.fetchLogPath).map(({ url }) => url), [
+        "https://api.telnyx.com/v2/connections/conn-1/active_calls?page%5Blimit%5D=2",
+        "https://api.telnyx.com/v2/connections/conn-1/active_calls?page[after]=cursor-2&page[limit]=2",
+      ]);
+    }
+  });
+
+  it("stops active-call cursor traversal at a finite item limit", () => {
     const fake = setupFakeTelnyx();
     const output = runAgent([
       "list-active-calls",
       "--connection-id", "conn-1",
       "--page-size", "2",
+      "--max-items", "1",
       "--json",
     ], { ...fake.env, TELNYX_FAKE_SCENARIO: "active-call-pages" });
 
     const result = JSON.parse(output);
-    assert.equal(result.connection_id, "conn-1");
-    assert.deepEqual(result.active_calls.map((call: { call_control_id: string }) => call.call_control_id), [
-      "call-1",
-      "call-2",
-      "call-3",
-    ]);
+    assert.deepEqual(result.active_calls.map((call: { call_control_id: string }) => call.call_control_id), ["call-1"]);
     assert.deepEqual(result.meta, {
       page_size: 2,
-      total_pages: 2,
-      total_results: 3,
+      total_items: 3,
       starting_page: 1,
-      pages_fetched: 2,
-      returned_results: 3,
+      pages_fetched: 1,
+      returned_results: 1,
     });
+    assert.deepEqual(loggedArgs(fake.logPath), []);
+    assert.deepEqual(loggedFetches(fake.fetchLogPath).map(({ url }) => url), [
+      "https://api.telnyx.com/v2/connections/conn-1/active_calls?page%5Blimit%5D=2",
+    ]);
+  });
 
-    const calls = loggedArgs(fake.logPath);
-    assert.equal(calls.length, 2);
-    for (const args of calls) {
-      assertFlag(args, "--connection-id", "conn-1");
-      assert.equal(countFlag(args, "--page-number"), args === calls[0] ? 0 : 1);
+  it("stops active-call traversal when the API omits or repeats its cursor", () => {
+    for (const scenario of ["active-call-missing-cursor", "active-call-repeated-cursor"]) {
+      const fake = setupFakeTelnyx();
+      const output = runAgent([
+        "list-active-calls",
+        "--connection-id", "conn-1",
+        "--page-size", "2",
+        "--json",
+      ], { ...fake.env, TELNYX_FAKE_SCENARIO: scenario });
+
+      const result = JSON.parse(output);
+      assert.deepEqual(
+        result.active_calls.map((call: { call_control_id: string }) => call.call_control_id),
+        scenario === "active-call-repeated-cursor" ? ["call-1", "call-2", "call-3"] : ["call-1", "call-2"],
+      );
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+      assert.equal(loggedFetches(fake.fetchLogPath).length, scenario === "active-call-repeated-cursor" ? 2 : 1);
     }
-    assertFlag(calls[1], "--page-number", "2");
+  });
+
+  it("falls back to meta.cursors.after with page[limit]", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent([
+      "list-active-calls", "--connection-id", "conn-1", "--page-size", "2", "--json",
+    ], { ...fake.env, TELNYX_FAKE_SCENARIO: "active-call-cursor-fallback" });
+
+    assert.equal(JSON.parse(output).count, 3);
+    assert.deepEqual(loggedFetches(fake.fetchLogPath).map(({ url }) => url), [
+      "https://api.telnyx.com/v2/connections/conn-1/active_calls?page%5Blimit%5D=2",
+      "https://api.telnyx.com/v2/connections/conn-1/active_calls?page%5Bafter%5D=cursor-2&page%5Blimit%5D=2",
+    ]);
+    assert.deepEqual(loggedArgs(fake.logPath), []);
   });
 
   it("returns no active calls for max-items zero without invoking telnyx", () => {
@@ -545,6 +646,19 @@ describe("Voice connection discovery commands", () => {
       meta: { starting_page: 1, pages_fetched: 0, returned_results: 0 },
     });
     assert.deepEqual(loggedArgs(fake.logPath), []);
+    assert.deepEqual(loggedFetches(fake.fetchLogPath), []);
+  });
+
+  it("rejects hostile active-call next-page hosts and paths", () => {
+    for (const scenario of ["hostile-host", "hostile-path"]) {
+      const fake = setupFakeTelnyx();
+      const failure = runFailure([
+        "list-active-calls", "--connection-id", "conn-1", "--page-size", "2", "--json",
+      ], { ...fake.env, TELNYX_FAKE_SCENARIO: scenario });
+      assert.match(failure.stdout, /unexpected next-page URL/);
+      assert.equal(loggedFetches(fake.fetchLogPath).length, 1);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
   });
 
   it("prints useful human-readable connection and active-call summaries", () => {
@@ -577,6 +691,8 @@ describe("Voice connection discovery commands", () => {
     for (const args of [
       ["list-voice-connections", "--page-size", "0", "--json"],
       ["list-active-calls", "--connection-id", "conn-1", "--page-number", "nope", "--json"],
+      ["list-active-calls", "--connection-id", "conn-1", "--page-size", "9007199254740992", "--json"],
+      ["list-active-calls", "--connection-id", "conn-1", "--max-items", "Infinity", "--json"],
       ["list-voice-connections", "--max-items", "-2", "--json"],
       ["list-voice-connections", "--page-number", "9007199254740992", "--json"],
       ["list-voice-connections", "--page-size", "9007199254740992", "--json"],
@@ -619,5 +735,7 @@ describe("Voice connection discovery commands", () => {
     for (const action of ["list_voice_connections", "get_voice_connection", "list_active_calls"]) {
       assert.ok(voiceActions.includes(action), `Voice capabilities should include ${action}`);
     }
+    assert.match(help, /--page-number\s+Result page \(list-voice-connections\)/);
+    assert.doesNotMatch(help, /--page-number[^\n]*list-active-calls/);
   });
 });

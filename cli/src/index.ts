@@ -300,7 +300,7 @@ Voice Connection Discovery Flags:
   --connection-name Filter connections by name substring (list-voice-connections)
   --fqdn            Exact FQDN filter (list-voice-connections)
   --outbound-voice-profile-id Outbound voice profile filter (list-voice-connections)
-  --page-number     Result page (list-voice-connections, list-active-calls)
+  --page-number     Result page (list-voice-connections)
   --page-size       Results per page (list-voice-connections, list-active-calls)
   --sort            Connection sort order; prefix with - for descending (list-voice-connections)
   --max-items       Maximum items to return; -1 for unlimited (list-voice-connections, list-active-calls)
