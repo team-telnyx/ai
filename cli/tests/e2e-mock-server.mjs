@@ -110,11 +110,17 @@ const server = createServer((req, res) => {
       return ok({ data: { id, status: "success", phone_numbers: [{ phone_number: pn, id: nid }] } });
     }
     // GET /phone_numbers/{id-or-e164} — Go CLI resolvePhoneNumberId lookup.
+    // Only resolve a number that was actually ORDERED (recorded in state by the
+    // /number_orders handler). Fabricating a row on a miss would let the full
+    // setup-sms/setup-voice E2E pass even when the order/assignment step never
+    // recorded a number (e.g. the Go CLI request body shape changed) — exactly
+    // the regression the harness exists to catch. Return 404 instead.
     if (req.method === "GET" && /^\/phone_numbers\/.+$/.test(path)) {
       const key = decodeURIComponent(path.replace("/phone_numbers/", ""));
-      const row = state.phoneNumbers.find((n) => n.phone_number === key || n.id === key)
-        ?? { id: nextId("pn"), phone_number: key };
-      return ok({ data: row });
+      const row = state.phoneNumbers.find((n) => n.phone_number === key || n.id === key);
+      return row
+        ? ok({ data: row })
+        : ok({ errors: [{ code: "10005", detail: "Phone number not found" }] }, 404);
     }
 
     // --- Group MMS (AIF-335) ---

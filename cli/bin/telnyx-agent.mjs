@@ -27,10 +27,41 @@ const entrypoint = join(here, "telnyx-agent.ts");
 
 // Resolve the bundled tsx CLI from this package's own dependency tree so we do
 // not depend on a globally installed `tsx`/`npx`.
-let tsxCli;
-try {
-  tsxCli = require.resolve("tsx/cli");
-} catch {
+//
+// We do NOT rely solely on the `tsx/cli` subpath export: across tsx versions
+// that export has moved/changed, so on some installs `require.resolve("tsx/cli")`
+// throws and the launcher would die before spawning anything. Resolve the
+// package's own declared `bin` target from its package.json (the authoritative
+// entrypoint), and fall back to the subpath export and the `.bin/tsx` shim.
+function resolveTsxCli() {
+  // 1) Authoritative: read tsx's package.json `bin` and resolve it relative to
+  //    the package root. Works regardless of the `exports` map.
+  try {
+    const pkgJsonPath = require.resolve("tsx/package.json");
+    const pkg = require(pkgJsonPath);
+    const binRel = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.tsx;
+    if (binRel) {
+      return join(dirname(pkgJsonPath), binRel);
+    }
+  } catch {
+    // fall through
+  }
+  // 2) The subpath export, when present.
+  try {
+    return require.resolve("tsx/cli");
+  } catch {
+    // fall through
+  }
+  // 3) The installed bin shim.
+  try {
+    return require.resolve(".bin/tsx");
+  } catch {
+    return undefined;
+  }
+}
+
+const tsxCli = resolveTsxCli();
+if (!tsxCli) {
   console.error(
     "telnyx-agent: unable to locate the bundled 'tsx' runtime. " +
       "Reinstall the package (npm i -g @telnyx/agent-cli) to restore it.",
