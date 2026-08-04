@@ -378,7 +378,9 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     existingVoiceApps = [
       { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00" },
     ];
-    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_code: "US" }];
+    // Use the REAL live GET /phone_numbers field (`country_iso_alpha2`) — not a
+    // synthetic `country_code` — so this regression covers the actual API shape.
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_iso_alpha2: "US", connection_id: "cca_existing" }];
     try {
       const fake = setupFakeTelnyx();
       const r = await runAsync(["setup-voice", "--country", "GB", "--json"], fake.env);
@@ -391,6 +393,11 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
       assert.ok(cliLog.includes("number-order"), "should order a new number in the requested country");
       // And the GB search must have been issued for GB, not US.
       assert.ok(/available-phone-numbers[\s\S]*GB/.test(cliLog) || cliLog.includes("GB"), "should search in the requested country (GB)");
+      // Codex round-5 fix #2: the live US app (which already has a number) must
+      // NOT be adopted. A fresh app must be created so the GB number is not
+      // stacked onto — and the existing app's config not mutated by — the US app.
+      assert.notEqual(data.connection_id, "cca_existing", "must NOT adopt the live US app for a GB request");
+      assert.ok(postRequests(/\/v2\/call_control_applications$/).length > 0, "must create a fresh app instead of adopting the live US app");
     } finally {
       existingVoiceApps = [];
       assignedVoiceNumbers = [];
@@ -404,7 +411,7 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     existingVoiceApps = [
       { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00" },
     ];
-    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_code: "US" }];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_iso_alpha2: "US", connection_id: "cca_existing" }];
     try {
       const fake = setupFakeTelnyx();
       const r = await runAsync(["setup-voice", "--country", "US", "--json"], fake.env);

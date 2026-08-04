@@ -52,6 +52,36 @@ export async function findExistingByPrefix(
 }
 
 /**
+ * Find the newest prefix-matched resource that is BARE — i.e. has NO phone
+ * number assigned to it. This is the only kind of app that is safe to "adopt"
+ * (buy+assign a number onto) without mutating an existing, live setup.
+ *
+ * The plain {@link findExistingByPrefix} returns the newest prefix app
+ * regardless of whether it already has a number. Adopting such an app would let
+ * a later patch/number-order run against a live app (e.g. rerunning
+ * `setup-voice --country GB` when an existing US app already has a US number),
+ * changing its webhook/outbound profile and stacking a second number onto it.
+ * This helper scopes adoption to genuinely number-less apps.
+ *
+ * `filterKey` is the phone_numbers list filter used to detect an assigned
+ * number (e.g. "connection_id").
+ */
+export async function findBareByPrefix(
+  client: TelnyxClient,
+  listPath: string,
+  nameField: string,
+  prefix: string,
+  filterKey: string,
+): Promise<ExistingResource | undefined> {
+  const all = await findAllByPrefix(client, listPath, nameField, prefix);
+  for (const resource of all) {
+    const assigned = await findAssignedNumber(client, filterKey, resource.id);
+    if (!assigned || !assigned.phoneNumber) return resource;
+  }
+  return undefined;
+}
+
+/**
  * Like {@link findExistingByPrefix}, but returns ALL prefix-matched resources,
  * newest first. Callers that need to keep scanning (e.g. to find one with an
  * assigned number, skipping orphaned newer ones) use this instead of only
@@ -94,8 +124,12 @@ export async function findAssignedNumber(
     const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
     if (rows.length === 0) return undefined;
     const n = rows[0];
-    // The number's country may surface as `country_code` or `country`.
-    const country = String(n.country_code ?? n.country ?? "").toUpperCase();
+    // The number's country: the live GET /phone_numbers records expose it as
+    // `country_iso_alpha2`; older/mocked shapes may use `country_code` or
+    // `country`. Check the real field FIRST so country-scoped reuse actually
+    // sees a country on live rows (otherwise it falls through to "" and a US
+    // number could be reused for a --country GB request).
+    const country = String(n.country_iso_alpha2 ?? n.country_code ?? n.country ?? "").toUpperCase();
     return { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? ""), country };
   } catch {
     return undefined;

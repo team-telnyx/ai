@@ -24,7 +24,7 @@ import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
 import { searchAndBuyNumber, NumberOrderedButUnresolvedError } from "../utils/number-order.ts";
-import { findReusablePair, findExistingByPrefix, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
+import { findReusablePair, findBareByPrefix, AGENT_VOICE_APP_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupVoiceResult {
   connection_id: string;
@@ -155,14 +155,22 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       }
 
       // No fully-reusable pair. Before provisioning a brand-new app, check for a
-      // BARE prefix-matched app (created by an earlier failed run: app exists
-      // but never got a number). Adopt it and just buy+assign a number, so
+      // genuinely BARE prefix-matched app (created by an earlier failed run: app
+      // exists but never got a number). Adopt it and just buy+assign a number, so
       // repeated failures don't spawn a new app every time.
-      const bareApp = await findExistingByPrefix(
+      //
+      // CRITICAL: only adopt an app with NO assigned number. Otherwise a rerun
+      // that intentionally skipped full reuse (e.g. `--country GB` while an
+      // existing US app already holds a US number) would adopt that LIVE app,
+      // patch its webhook/outbound profile, and stack a second (GB) number onto
+      // it — mutating an existing setup. findBareByPrefix scopes adoption to
+      // number-less apps only.
+      const bareApp = await findBareByPrefix(
         client,
         "/call_control_applications",
         "application_name",
         AGENT_VOICE_APP_PREFIX,
+        "connection_id",
       );
       if (bareApp) {
         connectionId = bareApp.id;
