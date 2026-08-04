@@ -26,23 +26,46 @@ if [ -n "$deep" ]; then
   exit 1
 fi
 
-for provider in claude cursor; do
-  target="$REPO_ROOT/providers/$provider/plugin/skills"
+# Claude uses per-product plugins (providers/claude/plugins/<plugin>/skills/<name>);
+# sync-skills.sh routes every canonical skill into exactly one plugin.
+for skill_dir in "$SKILLS_SRC"/*/; do
+  [ -d "$skill_dir" ] || continue
+  skill_name="$(basename "$skill_dir")"
 
-  if [ ! -d "$target" ]; then
-    echo "WARNING: $target does not exist"
+  matches=()
+  for candidate in "$REPO_ROOT"/providers/claude/plugins/*/skills/"$skill_name"; do
+    [ -d "$candidate" ] && matches+=("$candidate")
+  done
+
+  if [ "${#matches[@]}" -eq 0 ]; then
+    echo "Out of sync: $skill_name missing from providers/claude/plugins/*/skills"
+    out_of_sync=true
     continue
   fi
+  if [ "${#matches[@]}" -gt 1 ]; then
+    echo "Out of sync: $skill_name present in multiple claude plugins: ${matches[*]#$REPO_ROOT/}"
+    out_of_sync=true
+    continue
+  fi
+  if ! diff -r "$skill_dir" "${matches[0]}" > /dev/null 2>&1; then
+    echo "Out of sync: ${matches[0]#$REPO_ROOT/}"
+    out_of_sync=true
+  fi
+done
 
+target="$REPO_ROOT/providers/cursor/plugin/skills"
+if [ ! -d "$target" ]; then
+  echo "WARNING: $target does not exist"
+else
   for skill_dir in "$SKILLS_SRC"/*/; do
     [ -d "$skill_dir" ] || continue
     skill_name="$(basename "$skill_dir")"
     if ! diff -r "$skill_dir" "$target/$skill_name" > /dev/null 2>&1; then
-      echo "Out of sync: providers/$provider/plugin/skills/$skill_name"
+      echo "Out of sync: providers/cursor/plugin/skills/$skill_name"
       out_of_sync=true
     fi
   done
-done
+fi
 
 if [ "$out_of_sync" = true ]; then
   echo ""
