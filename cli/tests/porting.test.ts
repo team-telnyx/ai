@@ -39,12 +39,14 @@ if (args[0] === "porting-orders" && args[1] === "list") {
     ? { phone_numbers: [{ phone_number: "+131****0000" }], porting_phone_numbers_count: 99 }
     : { porting_phone_numbers_count: id === "po-zero" ? 0 : 2 };
   console.log(JSON.stringify({ data: {
-    id, status: "draft", customer_reference: "migration-2026", ...phoneNumberFields
+    id, status: "draft", customer_reference: "migration-2026", ...phoneNumberFields,
+    end_user: { admin: { pin_passcode: "retrieve-pin-4931", name: "Porting Admin" } }
   } }));
 } else if (args[0] === "porting-orders" && args[1] === "update") {
   console.log(JSON.stringify({ data: {
     id: flag("--id"), status: "draft", customer_reference: flag("--customer-reference") || "migration-2026",
-    phone_numbers_count: 2
+    phone_numbers_count: 2,
+    end_user: { admin: { pinPasscode: "update-pin-8274", name: "Updated Admin" } }
   } }));
 } else if (args[0] === "porting-orders:actions" && (args[1] === "confirm" || args[1] === "cancel")) {
   console.log(JSON.stringify({ data: {
@@ -190,6 +192,16 @@ describe("Porting-order management commands", () => {
     assertFlag(args, "--format", "json");
   });
 
+  it("redacts a nested porting admin pin_passcode from get JSON output", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["get-porting-order", "--id", "po-1", "--json"], fake.env);
+    const result = JSON.parse(output);
+
+    assert.equal(result.porting_order.end_user.admin.pin_passcode, "[REDACTED]");
+    assert.equal(result.porting_order.end_user.admin.name, "Porting Admin");
+    assert.doesNotMatch(output, /retrieve-pin-4931/);
+  });
+
   it("shows the API count when list and retrieve responses omit phone number arrays", () => {
     const listFake = setupFakeTelnyx();
     const listOutput = runAgent(["list-porting-orders"], listFake.env);
@@ -261,6 +273,32 @@ describe("Porting-order management commands", () => {
     assertFlag(args, "--misc.remaining-numbers-action", "keep");
     assertFlag(args, "--misc.new-billing-phone-number", "+131****9999");
     assertFlag(args, "--format", "json");
+  });
+
+  it("redacts a nested camel-case porting admin pinPasscode from update JSON output", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent([
+      "update-porting-order", "--id", "po-1", "--customer-reference", "migration-2027", "--json",
+    ], fake.env);
+    const result = JSON.parse(output);
+
+    assert.equal(result.porting_order.end_user.admin.pinPasscode, "[REDACTED]");
+    assert.equal(result.porting_order.end_user.admin.name, "Updated Admin");
+    assert.doesNotMatch(output, /update-pin-8274/);
+  });
+
+  it("does not include nested porting admin passcodes in human get or update output", () => {
+    const getFake = setupFakeTelnyx();
+    const getOutput = runAgent(["get-porting-order", "--id", "po-1"], getFake.env);
+    assert.match(getOutput, /migration-2026/);
+    assert.doesNotMatch(getOutput, /retrieve-pin-4931/);
+
+    const updateFake = setupFakeTelnyx();
+    const updateOutput = runAgent([
+      "update-porting-order", "--id", "po-1", "--customer-reference", "migration-2027",
+    ], updateFake.env);
+    assert.match(updateOutput, /migration-2027/);
+    assert.doesNotMatch(updateOutput, /update-pin-8274/);
   });
 
   it("submits through the Go CLI confirm action and normalizes the result", () => {
