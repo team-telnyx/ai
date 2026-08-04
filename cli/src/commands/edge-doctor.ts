@@ -18,6 +18,7 @@ import {
   supportsNewFuncFromDir,
   supportsNonInteractiveConfirmation,
   supportsResetFunc,
+  supportsResetFuncNonInteractiveConfirmation,
   supportsSecretsAdd,
   supportsShip,
   supportsSqlDatabases,
@@ -40,6 +41,7 @@ interface EdgeDoctorResult {
   inspect_supported: boolean;
   actor_instances_supported: boolean;
   reset_func_supported: boolean;
+  reset_func_noninteractive_confirmation_supported: boolean;
   noninteractive_confirmation_supported: boolean;
   types_supported: boolean;
   kv_storage_supported: boolean;
@@ -65,6 +67,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let inspectSupported = false;
   let actorInstancesSupported = false;
   let resetFuncSupported = false;
+  let resetFuncNoninteractiveConfirmationSupported = false;
   let noninteractiveConfirmationSupported = false;
   let typesSupported = false;
   let kvStorageSupported = false;
@@ -96,6 +99,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
     resetFuncSupported = supportsResetFunc();
+    resetFuncNoninteractiveConfirmationSupported = supportsResetFuncNonInteractiveConfirmation();
     noninteractiveConfirmationSupported = supportsNonInteractiveConfirmation();
     typesSupported = supportsTypes();
     kvStorageSupported = supportsKvStorage();
@@ -149,6 +153,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       name: "Failed-function reset",
       ok: resetFuncSupported,
       detail: resetFuncSupported ? "reset-func <function-name> is available" : "reset-func --help capability not detected",
+    });
+    checks.push({
+      name: "Non-interactive failed-function reset",
+      ok: resetFuncNoninteractiveConfirmationSupported,
+      detail: resetFuncNoninteractiveConfirmationSupported
+        ? "reset-func --yes is available for scripts and CI"
+        : "reset-func --help did not advertise --yes confirmation bypass",
     });
     checks.push({
       name: "Non-interactive destructive confirmation",
@@ -276,7 +287,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       nextSteps.push("Actor scaffolding is available, but this CLI does not expose actors instances; upgrade telnyx-edge for that view.");
     }
     if (resetFuncSupported) {
-      nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${noninteractiveConfirmationSupported ? " --yes (scripts/CI)" : ""}`);
+      nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${resetFuncNoninteractiveConfirmationSupported ? " --yes (scripts/CI)" : ""}`);
     }
     if (typesSupported) {
       nextSteps.push("Generate TypeScript binding declarations with: telnyx-edge types");
@@ -289,6 +300,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     }
     const missingOptional = [
       !resetFuncSupported && "reset-func",
+      resetFuncSupported && !resetFuncNoninteractiveConfirmationSupported && "reset-func --yes",
       !noninteractiveConfirmationSupported && "destructive-command --yes",
       !typesSupported && "types",
       !kvStorageSupported && "KV namespaces",
@@ -315,6 +327,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
     reset_func_supported: resetFuncSupported,
+    reset_func_noninteractive_confirmation_supported: resetFuncNoninteractiveConfirmationSupported,
     noninteractive_confirmation_supported: noninteractiveConfirmationSupported,
     types_supported: typesSupported,
     kv_storage_supported: kvStorageSupported,

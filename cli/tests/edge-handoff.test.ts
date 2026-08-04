@@ -19,6 +19,7 @@ type FakeEdgeOptions = {
   secretsAdd?: boolean;
   ship?: boolean;
   resetFunc?: boolean;
+  resetNoninteractiveConfirmation?: boolean;
   noninteractiveConfirmation?: boolean;
   types?: boolean;
   kvStorage?: boolean;
@@ -37,6 +38,7 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const secretsAdd = config.secretsAdd ?? true;
   const ship = config.ship ?? true;
   const resetFunc = config.resetFunc ?? true;
+  const resetNoninteractiveConfirmation = config.resetNoninteractiveConfirmation ?? false;
   const noninteractiveConfirmation = config.noninteractiveConfirmation ?? true;
   const types = config.types ?? true;
   const kvStorage = config.kvStorage ?? true;
@@ -84,7 +86,7 @@ if (args[0] === 'ship' && args.includes('--help')) {
 }
 if (args[0] === 'reset-func' && args.includes('--help')) {
   if (${resetFunc}) {
-    console.log('Reset a failed function back to the created state\\nUsage: telnyx-edge reset-func <function-name> [flags]');
+    console.log(['Reset a failed function back to the created state', 'Usage: telnyx-edge reset-func <function-name> [flags]', ...(${resetNoninteractiveConfirmation} ? ['  -y, --yes  Skip the confirmation prompt (for scripts and CI)'] : [])].join('\\n'));
     process.exit(0);
   }
   process.stderr.write('unknown command "reset-func"\\n');
@@ -332,6 +334,29 @@ describe("CLI — Edge Compute handoff", () => {
     }
   });
 
+  it("probes reset-func --yes independently from delete-func --yes", () => {
+    const deleteOnly = withFakeEdgeCli({
+      resetFunc: true,
+      resetNoninteractiveConfirmation: false,
+      noninteractiveConfirmation: true,
+    });
+    const withoutResetYes = JSON.parse(run(["edge-doctor", "--json"], deleteOnly.env));
+    assert.equal(withoutResetYes.noninteractive_confirmation_supported, true);
+    assert.equal(withoutResetYes.reset_func_noninteractive_confirmation_supported, false);
+    assert.ok(withoutResetYes.next_steps.some((step: string) => step.includes("reset-func <function-name>")));
+    assert.ok(!withoutResetYes.next_steps.some((step: string) => step.includes("reset-func <function-name> --yes")));
+
+    const resetOnly = withFakeEdgeCli({
+      resetFunc: true,
+      resetNoninteractiveConfirmation: true,
+      noninteractiveConfirmation: false,
+    });
+    const withResetYes = JSON.parse(run(["edge-doctor", "--json"], resetOnly.env));
+    assert.equal(withResetYes.noninteractive_confirmation_supported, false);
+    assert.equal(withResetYes.reset_func_noninteractive_confirmation_supported, true);
+    assert.ok(withResetYes.next_steps.some((step: string) => step.includes("reset-func <function-name> --yes")));
+  });
+
   it("requires every capability emitted by setup handoffs", () => {
     for (const missing of ["newFuncFromDir", "secretsAdd", "ship"] as const) {
       const fake = withFakeEdgeCli({ auth: "api_key", [missing]: false });
@@ -363,7 +388,11 @@ describe("CLI — Edge Compute handoff", () => {
 
   it("setup-edge-mcp emits a repository-aware secure build/deploy/inspect flow", () => {
     const fake = withFakeEdgeCli("api_key");
-    const data = JSON.parse(run(["setup-edge-mcp", "--json", "--name", "demo-mcp"], fake.env));
+    const output = run(["setup-edge-mcp", "--json", "--name", "demo-mcp"], {
+      ...fake.env,
+      SHARED_SECRET: "must-not-appear-in-output",
+    });
+    const data = JSON.parse(output);
     assert.equal(data.ready, true);
     assert.equal(data.telnyx_edge_installed, true);
     assert.equal(data.root_status_passed, true);
@@ -382,6 +411,9 @@ describe("CLI — Edge Compute handoff", () => {
     assert.ok(data.deploy_command.includes("telnyx-edge ship"));
     assert.ok(data.deploy_command.includes("telnyx-edge inspect demo-mcp"));
     assert.ok(!data.deploy_command.includes("<your-api-key>"));
+    assert.ok(data.next_steps.some((step: string) => step.includes("Authorization: Bearer $SHARED_SECRET")));
+    assert.ok(!data.next_steps.some((step: string) => step.includes("Bearer ***")));
+    assert.ok(!output.includes("must-not-appear-in-output"));
   });
 
   it("setup-edge-webhook emits a repository-aware HMAC-secured deploy/inspect flow", () => {

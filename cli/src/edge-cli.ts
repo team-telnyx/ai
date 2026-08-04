@@ -96,6 +96,16 @@ export function supportsResetFunc(): boolean {
   }
 }
 
+/** Detect reset confirmation bypass from reset-func's own help surface. */
+export function supportsResetFuncNonInteractiveConfirmation(): boolean {
+  try {
+    const out = runEdge(["reset-func", "--help"]);
+    return /--yes\b/i.test(out) && /confirm(?:ation)?|scripts?|\bci\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect the exact secret write command emitted by the setup handoffs. */
 export function supportsSecretsAdd(): boolean {
   try {

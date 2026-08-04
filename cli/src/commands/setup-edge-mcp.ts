@@ -118,7 +118,7 @@ export async function setupEdgeMcpCommand(flags: Record<string, string | boolean
           : [
               "Export TELNYX_API_KEY and a high-entropy SHARED_SECRET (for example, openssl rand -hex 32).",
               "Run deploy_command from the directory where you want the function project created.",
-              `Configure the MCP client to send Authorization: Bearer *** to the ${inspectSupported ? "inspected" : "deployed function's"} invoke URL.`,
+              `Configure the MCP client to send Authorization: Bearer $SHARED_SECRET to the ${inspectSupported ? "inspected" : "deployed function's"} invoke URL.`,
             ];
 
   const result: SetupEdgeMcpResult = {
