@@ -30,6 +30,8 @@ export interface ReusablePair {
   resource: ExistingResource;
   phoneNumber: string;
   phoneNumberId: string;
+  /** ISO country of the reused number (uppercased), when the API exposes it. */
+  country: string;
 }
 
 /**
@@ -86,13 +88,15 @@ export async function findAssignedNumber(
   client: TelnyxClient,
   filterKey: string,
   resourceId: string,
-): Promise<{ phoneNumber: string; phoneNumberId: string } | undefined> {
+): Promise<{ phoneNumber: string; phoneNumberId: string; country: string } | undefined> {
   try {
     const res = await client.get("/phone_numbers", { [`filter[${filterKey}]`]: resourceId, "page[size]": 1 });
     const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
     if (rows.length === 0) return undefined;
     const n = rows[0];
-    return { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? "") };
+    // The number's country may surface as `country_code` or `country`.
+    const country = String(n.country_code ?? n.country ?? "").toUpperCase();
+    return { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? ""), country };
   } catch {
     return undefined;
   }
@@ -110,17 +114,27 @@ export async function findReusablePair(
   nameField: string,
   prefix: string,
   filterKey: string,
+  /**
+   * When set (an explicit --country request), only reuse a number whose country
+   * matches. An explicit country is a material setting: reusing a US number for
+   * a `--country GB` request would silently hand back the wrong country while
+   * reporting ready. Numbers with no exposed country are treated as a match so
+   * accounts/mocks that don't return a country field still reuse as before.
+   */
+  requiredCountry?: string,
 ): Promise<ReusablePair | undefined> {
   // Scan ALL prefix-matched resources (newest first), not just the newest one.
   // A prior failed setup can leave a newer orphan profile/app with no number
   // while an older one still has a usable assigned number; stopping at the
   // first match would make us fall through and buy another paid number.
+  const want = requiredCountry ? requiredCountry.toUpperCase() : "";
   const resources = await findAllByPrefix(client, listPath, nameField, prefix);
   for (const resource of resources) {
     const number = await findAssignedNumber(client, filterKey, resource.id);
-    if (number) {
-      return { resource, phoneNumber: number.phoneNumber, phoneNumberId: number.phoneNumberId };
-    }
+    if (!number) continue;
+    // Skip a reusable pair whose country doesn't match an explicit request.
+    if (want && number.country && number.country !== want) continue;
+    return { resource, phoneNumber: number.phoneNumber, phoneNumberId: number.phoneNumberId, country: number.country };
   }
   return undefined;
 }

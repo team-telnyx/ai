@@ -370,6 +370,54 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("does NOT reuse a US number when --country GB is explicit (country is material)", async () => {
+    // An existing agent app+number is US, but the user explicitly asks for a GB
+    // number. Reusing the US number would silently hand back the wrong country
+    // while reporting ready. setup-voice must skip reuse and provision fresh.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00" },
+    ];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_code: "US" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--country", "GB", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      // Core contract: the US number must NOT be handed back for a GB request,
+      // and a fresh number MUST be ordered (in the requested country).
+      assert.notEqual(data.phone_number, "+13125559999", "must not hand back the US number for a GB request");
+      const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+      assert.ok(cliLog.includes("number-order"), "should order a new number in the requested country");
+      // And the GB search must have been issued for GB, not US.
+      assert.ok(/available-phone-numbers[\s\S]*GB/.test(cliLog) || cliLog.includes("GB"), "should search in the requested country (GB)");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
+  it("still reuses when --country matches the existing number's country", async () => {
+    // Sanity: an explicit --country US with an existing US number should still
+    // reuse (country guard must not over-block matching-country reuse).
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00" },
+    ];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999", country_code: "US" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--country", "US", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true, "should reuse the matching-country number");
+      assert.equal(data.phone_number, "+13125559999");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("adopts an existing BARE app (no number) and buys+assigns a number instead of creating a new app", async () => {
     // Earlier failed run left an app with no number. setup-voice should adopt it
     // rather than spawn yet another app.

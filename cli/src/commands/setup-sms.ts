@@ -26,7 +26,8 @@ interface SetupSmsResult {
 
 export async function setupSmsCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
-  const country = (flags.country as string) || "US";
+  const explicitCountry = typeof flags.country === "string" && flags.country ? String(flags.country).toUpperCase() : "";
+  const country = explicitCountry || "US";
   // AIF-336: reuse a previously agent-created profile+number by default so
   // re-runs don't silently buy another ~$1/mo number. Pass --force to always
   // provision a fresh profile and number.
@@ -62,12 +63,16 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
     // AIF-336: idempotency — reuse an existing agent-created profile + assigned
     // number unless --force was passed.
     if (!force) {
+      // An explicit --country is material: only reuse a number in that country,
+      // otherwise fall through and provision a fresh one in the requested
+      // country instead of silently handing back the old country's number.
       const existing = await findReusablePair(
         client,
         "/messaging_profiles",
         "name",
         AGENT_SMS_PROFILE_PREFIX,
         "messaging_profile_id",
+        explicitCountry || undefined,
       );
       if (existing) {
         profileId = existing.resource.id;

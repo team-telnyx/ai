@@ -43,7 +43,8 @@ interface SetupVoiceResult {
 export async function setupVoiceCommand(flags: Record<string, string | boolean>): Promise<void> {
   const client = new TelnyxClient();
   const jsonOutput = flags.json === true;
-  const country = (flags.country as string) || "US";
+  const explicitCountry = typeof flags.country === "string" && flags.country ? String(flags.country).toUpperCase() : "";
+  const country = explicitCountry || "US";
   const webhookExplicit = !!((flags["webhook-url"] as string) || (flags.webhook as string));
   const webhookUrl = (flags["webhook-url"] as string) || (flags.webhook as string) || "https://example.com/webhook";
   const outboundProfileIdFlag = (flags["outbound-voice-profile-id"] as string) || "";
@@ -78,12 +79,16 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     // AIF-336: idempotency — reuse an existing agent-created Call Control App +
     // assigned number unless --force was passed.
     if (!force) {
+      // An explicit --country is material: only reuse a number in that country,
+      // otherwise provision a fresh one in the requested country rather than
+      // silently returning the previous country's number as ready.
       const existing = await findReusablePair(
         client,
         "/call_control_applications",
         "application_name",
         AGENT_VOICE_APP_PREFIX,
         "connection_id",
+        explicitCountry || undefined,
       );
       if (existing) {
         connectionId = existing.resource.id;
