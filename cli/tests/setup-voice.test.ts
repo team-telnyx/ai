@@ -50,7 +50,17 @@ function startMockServer(): Promise<void> {
         } catch { /* ignore */ }
         capturedRequests.push({ method: req.method ?? "", path: req.url ?? "", body: parsedBody });
 
-        // AIF-336: GET /call_control_applications (idempotency reuse lookup)
+        // GET /call_control_applications/:id (single-app detail lookup used by
+        // the reuse/adopt branches to read webhook + outbound profile)
+        const ccaDetail = req.url?.match(/^\/v2\/call_control_applications\/([^/?]+)$/);
+        if (req.method === "GET" && ccaDetail) {
+          const found = existingVoiceApps.find((a) => String(a.id) === ccaDetail[1]) ?? { id: ccaDetail[1] };
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ data: found }));
+          return;
+        }
+
+        // AIF-336: GET /call_control_applications (idempotency reuse lookup, list)
         if (req.method === "GET" && req.url?.startsWith("/v2/call_control_applications")) {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ data: existingVoiceApps }));
@@ -84,6 +94,16 @@ function startMockServer(): Promise<void> {
               application_name: (parsedBody as Record<string, unknown>)?.application_name ?? "test",
               webhook_event_url: (parsedBody as Record<string, unknown>)?.webhook_event_url ?? "",
             },
+          }));
+          return;
+        }
+
+        // PATCH /call_control_applications/:id (adopt-with-flags: apply the
+        // requested webhook / outbound profile to an adopted bare app)
+        if (req.method === "PATCH" && req.url?.startsWith("/v2/call_control_applications/")) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            data: { id: req.url.split("/").pop(), ...(parsedBody ?? {}) },
           }));
           return;
         }
@@ -371,6 +391,53 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
       const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
       assert.ok(cliLog.includes("number-order"), "should buy a number for the adopted app");
       assert.ok(patchRequests().some((p) => p.path.includes("/phone_numbers/")), "should assign the number to the adopted app");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
+  it("applies requested --webhook to an ADOPTED bare app (no stale webhook)", async () => {
+    // Bug: adopting a bare app while the user passed --webhook-url used to keep
+    // the app's stale/default webhook while reporting the requested one, so call
+    // events went to the wrong URL. The adopted app must be PATCHed.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_bare", application_name: "Agent Voice App - 2026-07-27 09:00:00", webhook_event_url: "https://old.example.com/stale" },
+    ];
+    assignedVoiceNumbers = []; // bare app => not a full reusable pair
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--webhook", "https://mine.example.com/hook", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.connection_id, "cca_bare", "should adopt the bare app");
+      // The adopted app must be PATCHed with the requested webhook.
+      const ccaPatch = patchRequests().find((p) => p.path.includes("/call_control_applications/"));
+      assert.ok(ccaPatch, "must PATCH the adopted app to apply requested settings");
+      assert.equal((ccaPatch!.body as Record<string, unknown>)?.webhook_event_url, "https://mine.example.com/hook", "must apply the requested webhook to the adopted app");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
+  it("flags --outbound-voice-profile-id as not applied when reusing a complete app+number", async () => {
+    // Reuse of a complete pair must not silently ignore a requested outbound
+    // profile: report outbound_profile_not_applied and keep the real profile.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_existing", application_name: "Agent Voice App - 2026-07-24 10:00:00", outbound: { outbound_voice_profile_id: "ovp_real" } },
+    ];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125559999" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--outbound-voice-profile-id", "ovp_requested", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true);
+      assert.equal(data.outbound_profile_not_applied, true, "should flag the requested outbound profile was not applied");
+      assert.notEqual(data.outbound_voice_profile_id, "ovp_requested", "must not echo an unapplied outbound profile as if set");
     } finally {
       existingVoiceApps = [];
       assignedVoiceNumbers = [];

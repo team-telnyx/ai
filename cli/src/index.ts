@@ -71,7 +71,7 @@ Commands:
   disable-sim-card  Disable an IoT SIM card (asynchronous action)
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
-  setup-verify      Zero to verification: create profile, buy number
+  setup-verify      Zero to verification: create profile (no number bought)
   verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
   verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number

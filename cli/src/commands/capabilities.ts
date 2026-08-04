@@ -100,7 +100,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },
   { name: "telnyx-agent setup-edge-mcp", description: "Concrete MCP-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
   { name: "telnyx-agent setup-edge-webhook", description: "Concrete webhook-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
-  { name: "telnyx-agent setup-verify", description: "Zero to verification: creates verify profile, buys number — outputs test command" },
+  { name: "telnyx-agent setup-verify", description: "Zero to verification: creates a verify profile (no number bought — OTPs use Telnyx's managed pool) — outputs test command" },
   { name: "telnyx-agent verify-send", description: "Trigger a verification via SMS, call, flashcall, or WhatsApp — returns verification ID" },
   { name: "telnyx-agent verify-check", description: "Submit a code for verification (--code) or retrieve the current verification status" },
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },

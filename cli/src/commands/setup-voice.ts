@@ -36,6 +36,7 @@ interface SetupVoiceResult {
   ready: boolean;
   reused: boolean;
   webhook_not_applied?: boolean;
+  outbound_profile_not_applied?: boolean;
   steps: StepResult[];
 }
 
@@ -101,9 +102,11 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
           existingWebhookUrl = String(appData.webhook_event_url ?? "");
         } catch { /* leave outboundProfileId / existingWebhookUrl as-is */ }
-        // When reusing, the existing app keeps its OWN webhook — a --webhook
-        // passed on this run is NOT applied. Report honestly instead of echoing
-        // a webhook we didn't set, and tell the user how to apply a new one.
+        // When reusing, the existing app keeps its OWN webhook AND outbound
+        // voice profile — a --webhook or --outbound-voice-profile-id passed on
+        // this run is NOT applied. Report both honestly instead of echoing
+        // values we didn't set, and tell the user how to apply new ones.
+        const outboundProfileNotApplied = !!outboundProfileIdFlag && outboundProfileIdFlag !== outboundProfileId;
         steps.push({ step: 1, name: "Reuse existing Call Control App + number", status: "completed", resourceId: connectionId, detail: `${connectionName} → ${phoneNumber}`, elapsedMs: 0 });
 
         const result: SetupVoiceResult = {
@@ -115,10 +118,13 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           // one or the default placeholder. Fall back to a clear note if the
           // app lookup didn't return a webhook.
           webhook_url: existingWebhookUrl || "(existing app's webhook — unchanged)",
+          // Report the reused app's ACTUAL outbound profile, never the requested
+          // flag value (which we don't apply on reuse).
           outbound_voice_profile_id: outboundProfileId,
           ready: true,
           reused: true,
           ...(webhookExplicit ? { webhook_not_applied: true } : {}),
+          ...(outboundProfileNotApplied ? { outbound_profile_not_applied: true } : {}),
           steps,
         };
         if (jsonOutput) {
@@ -134,6 +140,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           });
           if (webhookExplicit) {
             console.log("  ⚠ Your --webhook was NOT applied — the reused app keeps its existing webhook. Use --force to create a new app with your webhook.");
+          }
+          if (outboundProfileNotApplied) {
+            console.log("  ⚠ Your --outbound-voice-profile-id was NOT applied — the reused app keeps its existing outbound profile. Use --force to create a new app with that profile.");
           }
           console.log("  💡 Use the Connection ID above with: telnyx-agent call-dial --connection-id " + connectionId + " ...\n");
         }
@@ -154,17 +163,41 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         connectionId = bareApp.id;
         connectionName = bareApp.name;
         adoptedApp = true;
-        // Resolve the adopted app's outbound profile for the final output.
+        // Resolve the adopted app's current webhook + outbound profile.
+        let adoptedWebhookUrl = "";
         try {
           const appRes = await client.get(`/call_control_applications/${connectionId}`);
           const appData = (appRes.data ?? appRes) as Record<string, unknown>;
           const outbound = (appData.outbound ?? {}) as Record<string, unknown>;
           outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
+          adoptedWebhookUrl = String(appData.webhook_event_url ?? "");
         } catch { /* resolved below if still empty */ }
+        // If the user explicitly requested a webhook and/or outbound profile,
+        // apply them to the adopted app — otherwise call events would keep going
+        // to the stale/default webhook while we report the requested one.
+        const wantWebhook = webhookExplicit && webhookUrl !== adoptedWebhookUrl;
+        const wantProfile = !!outboundProfileIdFlag && outboundProfileIdFlag !== outboundProfileId;
+        if (wantWebhook || wantProfile) {
+          const patchBody: Record<string, unknown> = {};
+          if (wantWebhook) patchBody.webhook_event_url = webhookUrl;
+          if (wantProfile) patchBody.outbound = { outbound_voice_profile_id: outboundProfileIdFlag };
+          try {
+            await client.patch(`/call_control_applications/${connectionId}`, patchBody);
+            if (wantProfile) outboundProfileId = outboundProfileIdFlag;
+            if (wantWebhook) adoptedWebhookUrl = webhookUrl;
+          } catch (err) {
+            // If the update fails, don't silently claim the settings were applied.
+            steps.push({ step: 1, name: "Apply requested settings to adopted app", status: "failed", detail: errorMsg(err), elapsedMs: 0 });
+            throw err;
+          }
+        }
         steps.push({ step: 1, name: "Adopt existing bare Call Control App", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: 0 });
         if (!jsonOutput) {
           printStep(steps[steps.length - 1], totalSteps);
           console.log("  ↩ Adopting an existing app with no number (from an earlier incomplete run) instead of creating a new one.\n");
+          if (wantWebhook || wantProfile) {
+            console.log("  ✓ Applied your requested " + [wantWebhook ? "webhook" : "", wantProfile ? "outbound profile" : ""].filter(Boolean).join(" + ") + " to the adopted app.\n");
+          }
         }
       }
     } else if (!jsonOutput) {
