@@ -30,7 +30,10 @@ function flag(name) { const index = args.indexOf(name); return index >= 0 ? args
 
 if (args[0] === "porting-orders" && args[1] === "list") {
   console.log(JSON.stringify({
-    data: [{ id: "po-1", status: "draft", customer_reference: "migration-2026", porting_phone_numbers_count: 3 }],
+    data: [{
+      id: "po-1", status: "draft", customer_reference: "migration-2026", porting_phone_numbers_count: 3,
+      end_user: { admin: { pin_passcode: "list-pin-6152", name: "List Admin" } }
+    }],
     meta: { page_number: 2, page_size: 25, total_results: 1 }
   }));
 } else if (args[0] === "porting-orders" && args[1] === "retrieve") {
@@ -148,6 +151,7 @@ describe("Porting-order management commands", () => {
         status: "draft",
         customer_reference: "migration-2026",
         porting_phone_numbers_count: 3,
+        end_user: { admin: { pin_passcode: "[REDACTED]", name: "List Admin" } },
       }],
       meta: { page_number: 2, page_size: 25, total_results: 1 },
     });
@@ -172,6 +176,24 @@ describe("Porting-order management commands", () => {
     assertFlag(args, "--page-size", "25");
     assertFlag(args, "--sort.value", "-created_at");
     assertFlag(args, "--format", "raw");
+  });
+
+  it("redacts a nested porting admin pin_passcode from list JSON output", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["list-porting-orders", "--json"], fake.env);
+    const result = JSON.parse(output);
+
+    assert.equal(result.porting_orders[0].end_user.admin.pin_passcode, "[REDACTED]");
+    assert.equal(result.porting_orders[0].end_user.admin.name, "List Admin");
+    assert.doesNotMatch(output, /list-pin-6152/);
+  });
+
+  it("does not expose a porting admin PIN in human list output", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["list-porting-orders"], fake.env);
+
+    assert.match(output, /po-1 — draft · migration-2026 · 3 phone number\(s\)/);
+    assert.doesNotMatch(output, /list-pin-6152/);
   });
 
   it("retrieves a porting order under stable JSON keys", () => {
