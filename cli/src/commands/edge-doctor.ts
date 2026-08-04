@@ -287,7 +287,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       nextSteps.push("Actor scaffolding is available, but this CLI does not expose actors instances; upgrade telnyx-edge for that view.");
     }
     if (resetFuncSupported) {
-      nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${resetFuncNoninteractiveConfirmationSupported ? " --yes (scripts/CI)" : ""}`);
+      nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${resetFuncNoninteractiveConfirmationSupported ? " --yes" : ""}`);
     }
     if (typesSupported) {
       nextSteps.push("Generate TypeScript binding declarations with: telnyx-edge types");

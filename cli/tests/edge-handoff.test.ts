@@ -354,7 +354,11 @@ describe("CLI — Edge Compute handoff", () => {
     const withResetYes = JSON.parse(run(["edge-doctor", "--json"], resetOnly.env));
     assert.equal(withResetYes.noninteractive_confirmation_supported, false);
     assert.equal(withResetYes.reset_func_noninteractive_confirmation_supported, true);
-    assert.ok(withResetYes.next_steps.some((step: string) => step.includes("reset-func <function-name> --yes")));
+    const resetStep = withResetYes.next_steps.find((step: string) => step.includes("reset-func <function-name> --yes"));
+    assert.ok(resetStep);
+    const resetCommand = resetStep.slice(resetStep.indexOf(": ") + 2);
+    assert.doesNotMatch(resetCommand, /\([^)]*\)/, "copyable reset command must not contain inline annotations");
+    assert.doesNotThrow(() => execFileSync("/bin/sh", ["-n", "-c", resetCommand]));
   });
 
   it("requires every capability emitted by setup handoffs", () => {
