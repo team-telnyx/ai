@@ -162,6 +162,10 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 
 | Skill | Description |
 |-------|-------------|
+| `telnyx-email-curl` | Send transactional email, batch sends, scheduled delivery, templates, validation |
+| `telnyx-email-inbound-curl` | Manage inboxes, list/search messages, threads, reply/forward |
+| `telnyx-email-domains-curl` | Manage sending domains, DNS verification, health, domain webhooks |
+| `telnyx-email-suppressions-curl` | Suppression lists, import/export, unsubscribe groups |
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |
