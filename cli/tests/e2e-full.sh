@@ -91,7 +91,7 @@ echo "$OUT" | grep -q '+13125557001' && ok "found available numbers via Go CLI -
 echo "setup-sms full provision (fresh):"
 OUT="$(run setup-sms --json 2>&1)"
 if echo "$OUT" | grep -qiE 'command .*not found'; then bad "setup-sms number-buy crashed (command-not-found)"; \
-  elif echo "$OUT" | grep -qE '"phone_number": *"\+1'; then ok "setup-sms provisioned end-to-end (profile+number+assign)"; \
+  elif echo "$OUT" | grep -qE '"ready": *true' && echo "$OUT" | grep -qE '"phone_number": *"\+1'; then ok "setup-sms provisioned end-to-end (profile+number+assign)"; \
   else bad "setup-sms did not complete: $(echo "$OUT" | tail -2 | head -1)"; fi
 
 # ================= setup-sms idempotency (AIF-336, seeded reuse) =================

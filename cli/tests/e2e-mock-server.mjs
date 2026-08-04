@@ -194,6 +194,18 @@ const server = createServer((req, res) => {
       if (cc) rows = rows.filter((n) => n.connection_id === cc);
       return ok({ data: rows });
     }
+    // Messaging-profile assignment lives on the /messaging subresource, NOT the
+    // generic phone-number update. setup-sms step 4 PATCHes this path, so the
+    // mock must honour it (otherwise the assign 404s and the harness reports a
+    // false success from the error-path result still carrying phone_number).
+    const msgAssign = path.match(/^\/phone_numbers\/([^/]+)\/messaging$/);
+    if (req.method === "PATCH" && msgAssign) {
+      const id = msgAssign[1];
+      let row = state.phoneNumbers.find((n) => n.id === id);
+      if (!row) { row = { id, phone_number: "+13125552000" }; state.phoneNumbers.push(row); }
+      if (body?.messaging_profile_id) row.messaging_profile_id = body.messaging_profile_id;
+      return ok({ data: row });
+    }
     if (req.method === "PATCH" && /^\/phone_numbers\/[^/]+$/.test(path)) {
       const id = path.split("/").pop();
       let row = state.phoneNumbers.find((n) => n.id === id);
