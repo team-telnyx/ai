@@ -438,7 +438,7 @@ function responseDataRecord(response: unknown): JsonRecord {
 
 function phoneNumberCount(order: JsonRecord): string {
   if (Array.isArray(order.phone_numbers)) return `${order.phone_numbers.length} phone number(s)`;
-  const count = order.phone_numbers_count;
+  const count = order.porting_phone_numbers_count ?? order.phone_numbers_count;
   return count === undefined || count === null ? "" : `${String(count)} phone number(s)`;
 }
 

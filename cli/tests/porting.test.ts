@@ -30,13 +30,16 @@ function flag(name) { const index = args.indexOf(name); return index >= 0 ? args
 
 if (args[0] === "porting-orders" && args[1] === "list") {
   console.log(JSON.stringify({
-    data: [{ id: "po-1", status: "draft", customer_reference: "migration-2026", phone_numbers: [{ phone_number: "+131****0000" }] }],
+    data: [{ id: "po-1", status: "draft", customer_reference: "migration-2026", porting_phone_numbers_count: 3 }],
     meta: { page_number: 2, page_size: 25, total_results: 1 }
   }));
 } else if (args[0] === "porting-orders" && args[1] === "retrieve") {
+  const id = flag("--id");
+  const phoneNumberFields = id === "po-array-precedence"
+    ? { phone_numbers: [{ phone_number: "+131****0000" }], porting_phone_numbers_count: 99 }
+    : { porting_phone_numbers_count: id === "po-zero" ? 0 : 2 };
   console.log(JSON.stringify({ data: {
-    id: flag("--id"), status: "draft", customer_reference: "migration-2026",
-    phone_numbers: [{ phone_number: "+131****0000" }]
+    id, status: "draft", customer_reference: "migration-2026", ...phoneNumberFields
   } }));
 } else if (args[0] === "porting-orders" && args[1] === "update") {
   console.log(JSON.stringify({ data: {
@@ -142,7 +145,7 @@ describe("Porting-order management commands", () => {
         id: "po-1",
         status: "draft",
         customer_reference: "migration-2026",
-        phone_numbers: [{ phone_number: "+131****0000" }],
+        porting_phone_numbers_count: 3,
       }],
       meta: { page_number: 2, page_size: 25, total_results: 1 },
     });
@@ -178,13 +181,36 @@ describe("Porting-order management commands", () => {
     const result = JSON.parse(output);
     assert.equal(result.porting_order_id, "po-1");
     assert.equal(result.porting_order.status, "draft");
-    assert.equal(result.porting_order.phone_numbers[0].phone_number, "+131****0000");
+    assert.equal(result.porting_order.porting_phone_numbers_count, 2);
 
     const [args] = loggedArgs(fake.logPath);
     assert.deepEqual(args.slice(0, 2), ["porting-orders", "retrieve"]);
     assertFlag(args, "--id", "po-1");
     assert.ok(args.includes("--include-phone-numbers=true"));
     assertFlag(args, "--format", "json");
+  });
+
+  it("shows the API count when list and retrieve responses omit phone number arrays", () => {
+    const listFake = setupFakeTelnyx();
+    const listOutput = runAgent(["list-porting-orders"], listFake.env);
+    assert.match(listOutput, /po-1 — draft · migration-2026 · 3 phone number\(s\)/);
+
+    const retrieveFake = setupFakeTelnyx();
+    const retrieveOutput = runAgent(["get-porting-order", "--id", "po-1"], retrieveFake.env);
+    assert.match(retrieveOutput, /Phone Numbers\s+2 phone number\(s\)/);
+  });
+
+  it("uses phone number arrays before count fields and renders a zero count", () => {
+    const precedenceFake = setupFakeTelnyx();
+    const precedenceOutput = runAgent([
+      "get-porting-order", "--id", "po-array-precedence",
+    ], precedenceFake.env);
+    assert.match(precedenceOutput, /Phone Numbers\s+1 phone number\(s\)/);
+    assert.doesNotMatch(precedenceOutput, /99 phone number\(s\)/);
+
+    const zeroFake = setupFakeTelnyx();
+    const zeroOutput = runAgent(["get-porting-order", "--id", "po-zero"], zeroFake.env);
+    assert.match(zeroOutput, /Phone Numbers\s+0 phone number\(s\)/);
   });
 
   it("updates core order and post-port number settings using generated inner flags", () => {
