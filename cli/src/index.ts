@@ -166,14 +166,14 @@ TTS Flags:
   --text            Text to synthesize (required)
   --voice           Voice ID/name (optional, provider-specific)
   --language        Language code (default: en)
-  --provider        TTS provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (default: telnyx)
+  --provider        TTS provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (default: telnyx)
   --output-type     Response format: base64 (base64-encoded audio JSON; default: base64)
   --text-type       Input format: text or ssml (default: text)
   --disable-cache   Skip cached audio and regenerate (boolean)
 
 TTS-voices Flags:
-  --provider        Filter voices by provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (optional)
-  --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., elevenlabs, resemble)
+  --provider        Filter voices by provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (optional)
+  --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., resemble)
 SMS Action Flags:
   --from <e164>          Sender number, E.164 (send-sms, send-group-mms, schedule-sms — required)
   --to <e164>            Recipient number, E.164 (send-sms, schedule-sms — required)

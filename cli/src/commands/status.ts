@@ -29,11 +29,15 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
   };
 
   // Run all queries concurrently via direct REST calls
-  const [balanceRes, numbersRes, profilesRes, connectionsRes, assistantsRes] = await Promise.allSettled([
+  const [balanceRes, numbersRes, profilesRes, connectionsRes, callControlAppsRes, assistantsRes] = await Promise.allSettled([
     client.get("/balance"),
     client.get("/phone_numbers", { page_size: 1 }),
     client.get("/messaging_profiles", { page_size: 1 }),
     client.get("/credential_connections", { page_size: 1 }),
+    // setup-voice now provisions a Call Control Application, so count those too;
+    // otherwise `status` reports Voice Connections: 0 right after a successful
+    // voice setup.
+    client.get("/call_control_applications", { page_size: 1 }),
     // Live API path is /ai/assistants (not /ai_assistants, which 404s).
     client.get("/ai/assistants", { page_size: 1 }),
   ]);
@@ -82,13 +86,23 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
     results.warnings.push(`Could not fetch messaging profiles: ${errorMsg(profilesRes.reason)}`);
   }
 
-  // Connections
+  // Connections = credential connections + Call Control Applications (both are
+  // usable voice connections; the new setup-voice happy path creates the latter).
   if (connectionsRes.status === "fulfilled") {
     const meta = connectionsRes.value.meta as Record<string, unknown> | undefined;
-    results.connections.total = Number(meta?.total_results ?? 0);
+    results.connections.total += Number(meta?.total_results ?? 0);
   } else {
     failureCount++;
     results.warnings.push(`Could not fetch connections: ${errorMsg(connectionsRes.reason)}`);
+  }
+
+  // Call Control Applications
+  if (callControlAppsRes.status === "fulfilled") {
+    const meta = callControlAppsRes.value.meta as Record<string, unknown> | undefined;
+    results.connections.total += Number(meta?.total_results ?? 0);
+  } else {
+    failureCount++;
+    results.warnings.push(`Could not fetch call control applications: ${errorMsg(callControlAppsRes.reason)}`);
   }
 
   // AI Assistants
@@ -126,7 +140,7 @@ export async function statusCommand(flags: Record<string, string | boolean>): Pr
   }
 
   // Exit non-zero if every query failed — the CLI is effectively non-functional.
-  if (failureCount === 5) {
+  if (failureCount === 6) {
     process.exit(1);
   }
 }

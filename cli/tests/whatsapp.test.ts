@@ -256,8 +256,10 @@ function setupWhatsappResponder(numberStatus: string): RouteResponder {
     if (req.method === "GET" && req.path === "/whatsapp/business_accounts") {
       return { json: { data: [{ id: "waba_test123", name: "Test WABA" }] } };
     }
-    if (req.method === "GET" && req.path === "/whatsapp/business_accounts/waba_test123/phone_numbers") {
-      return { json: { data: [{ phone_number: phone, status: numberStatus, enabled: true }] } };
+    // Supported endpoint: GET /whatsapp/phone_numbers?waba_id=... (the
+    // /business_accounts/{id}/phone_numbers sub-path 404s in the live API).
+    if (req.method === "GET" && req.path === "/whatsapp/phone_numbers") {
+      return { json: { data: [{ phone_number: phone, status: numberStatus, enabled: true, waba_id: "waba_test123" }] } };
     }
     if (req.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/verify$/.test(req.path)) {
       return { json: { data: { phone_number: phone, status: "verified" } } };
@@ -481,8 +483,8 @@ describe("WhatsApp commands", () => {
       // Both list calls must hit the singular /v2/whatsapp/... path (no /v2/v2).
       assert.ok(mock.requests.some((r) => r.method === "GET" && r.path === "/whatsapp/business_accounts"), "must GET /whatsapp/business_accounts");
       assert.ok(
-        mock.requests.some((r) => r.method === "GET" && r.path === "/whatsapp/business_accounts/waba_test123/phone_numbers"),
-        "must GET the WABA phone_numbers subresource",
+        mock.requests.some((r) => r.method === "GET" && r.path === "/whatsapp/phone_numbers"),
+        "must GET the supported /whatsapp/phone_numbers endpoint",
       );
       // No request path may contain a doubled /v2 segment.
       assert.ok(!mock.requests.some((r) => r.path.includes("/v2/")), "no request path should contain a doubled /v2");

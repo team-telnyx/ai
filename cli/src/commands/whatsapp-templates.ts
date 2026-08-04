@@ -132,11 +132,17 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
 
       let scoped = raw;
       if (wabaId) {
-        const matched = raw.filter((t) => t.waba_id != null && String(t.waba_id) === wabaId);
-        // Only apply the client-side narrowing when the records actually expose a
-        // waba_id; otherwise (all null) keep the full list rather than hiding
-        // everything, which is the exact bug we're fixing.
-        if (matched.length > 0) scoped = matched;
+        // Distinguish two cases:
+        //  (a) records carry no waba_id at all (API returns waba_id: null on
+        //      every row) — we cannot narrow, so keep the full list rather than
+        //      hiding everything (the always-empty bug we're fixing).
+        //  (b) records DO carry waba_id values — narrow to the requested WABA,
+        //      even if that yields zero matches (an empty result is correct; we
+        //      must not fall back to templates from other WABAs).
+        const anyHasWabaId = raw.some((t) => t.waba_id != null);
+        if (anyHasWabaId) {
+          scoped = raw.filter((t) => t.waba_id != null && String(t.waba_id) === wabaId);
+        }
       }
 
       const templates: WhatsappTemplate[] = scoped.map((t) => ({

@@ -121,7 +121,21 @@ export async function callDialCommand(flags: Record<string, string | boolean>): 
   if (commandId) body.command_id = commandId;
   // Forward the normalized uppercase value so the API receives POST/GET, not post/get.
   if (webhookUrlMethod) body.webhook_url_method = webhookUrlMethod.toUpperCase();
-  if (webhookUrls) body.webhook_urls = webhookUrls;
+  // The Dial API defines `webhook_urls` as an object map of event types to
+  // URLs (not a plain string). Parse/validate the flag as JSON so per-event
+  // webhook routing reaches the API as the correct type instead of 422-ing.
+  if (webhookUrls) {
+    try {
+      const parsed = JSON.parse(webhookUrls);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        throw new Error("not an object");
+      }
+      body.webhook_urls = parsed;
+    } catch {
+      printError("--webhook-urls must be a JSON object mapping event types to URLs, e.g. '{\"call.answered\":\"https://example.com/hook\"}'");
+      process.exit(1);
+    }
+  }
 
   try {
     if (!jsonOutput) {

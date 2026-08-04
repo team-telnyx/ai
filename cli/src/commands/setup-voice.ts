@@ -86,18 +86,20 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         phoneNumber = existing.phoneNumber;
         phoneNumberId = existing.phoneNumberId;
         reused = true;
-        // Cosmetic fix: surface the reused app's real outbound profile id instead
-        // of "". Best-effort — never block reuse on this lookup.
+        // Surface the reused app's REAL outbound profile id and REAL webhook
+        // instead of ""/the default placeholder. Best-effort — never block reuse
+        // on this lookup.
+        let existingWebhookUrl = "";
         try {
           const appRes = await client.get(`/call_control_applications/${connectionId}`);
           const appData = (appRes.data ?? appRes) as Record<string, unknown>;
           const outbound = (appData.outbound ?? {}) as Record<string, unknown>;
           outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
-        } catch { /* leave outboundProfileId as-is */ }
+          existingWebhookUrl = String(appData.webhook_event_url ?? "");
+        } catch { /* leave outboundProfileId / existingWebhookUrl as-is */ }
         // When reusing, the existing app keeps its OWN webhook — a --webhook
         // passed on this run is NOT applied. Report honestly instead of echoing
         // a webhook we didn't set, and tell the user how to apply a new one.
-        const webhookApplied = !webhookExplicit;
         steps.push({ step: 1, name: "Reuse existing Call Control App + number", status: "completed", resourceId: connectionId, detail: `${connectionName} → ${phoneNumber}`, elapsedMs: 0 });
 
         const result: SetupVoiceResult = {
@@ -105,8 +107,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           connection_name: connectionName,
           phone_number: phoneNumber,
           phone_number_id: phoneNumberId,
-          // Do not claim the requested webhook was set on a reused app.
-          webhook_url: webhookApplied ? webhookUrl : "(existing app's webhook — unchanged)",
+          // Report the reused app's ACTUAL configured webhook, not the requested
+          // one or the default placeholder. Fall back to a clear note if the
+          // app lookup didn't return a webhook.
+          webhook_url: existingWebhookUrl || "(existing app's webhook — unchanged)",
           outbound_voice_profile_id: outboundProfileId,
           ready: true,
           reused: true,

@@ -47,8 +47,13 @@ export async function setupVerifyCommand(flags: Record<string, string | boolean>
 
     // Idempotency: reuse an existing agent-created verify profile unless --force
     // or a custom --profile-name was given (a custom name signals intent to
-    // create a distinct profile).
-    if (!force && !customName) {
+    // create a distinct profile). An explicit --destinations list is also a
+    // material profile setting: silently reusing a profile whitelisted for a
+    // different set (e.g. reusing a US-only profile for --destinations US,GB)
+    // would report ready:true while the requested destinations aren't allowed.
+    // Treat it like --force and create/validate a matching profile instead.
+    const explicitDestinations = typeof flags.destinations === "string" && flags.destinations.trim() !== "";
+    if (!force && !customName && !explicitDestinations) {
       const existing = await findExistingByPrefix(client, "/verify_profiles", "name", AGENT_VERIFY_PROFILE_PREFIX);
       if (existing) {
         profileId = existing.id;

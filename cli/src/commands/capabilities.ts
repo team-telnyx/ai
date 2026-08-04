@@ -29,8 +29,8 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant"] },
   ],
   "🔊 Text-to-Speech": [
-    { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)", actions: ["generate_speech"] },
-    { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)", actions: ["list_voices"] },
+    { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
+    { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["list_voices"] },
   ],
   "🎤 Speech-to-Text": [
     { name: "Transcription", description: "Transcribe hosted audio files to text via the OpenAI-compatible transcription endpoint, with model and language options", actions: ["ai_audio_transcribe"] },
@@ -106,7 +106,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },
   { name: "telnyx-agent setup-porting", description: "Zero to porting: checks portability, creates porting order, lists requirements, optionally submits" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
-  { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai)" },
+  { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts an audio URL and returns the transcript with optional language, model, and keyword biasing" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts a hosted audio file URL and returns the transcript with optional model and language selection" },

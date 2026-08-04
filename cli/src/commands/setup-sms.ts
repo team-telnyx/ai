@@ -11,7 +11,7 @@
 import { TelnyxCLIError } from "../telnyx-cli.ts";
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printStep, printSuccess, printError, outputJson, type StepResult } from "../utils/output.ts";
-import { searchAndBuyNumber } from "../utils/number-order.ts";
+import { searchAndBuyNumber, NumberOrderedButUnresolvedError } from "../utils/number-order.ts";
 import { findReusablePair, AGENT_SMS_PROFILE_PREFIX } from "../utils/idempotency.ts";
 
 interface SetupSmsResult {
@@ -45,6 +45,11 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
   // retry orphans a messaging profile on the account.
   let createdProfileId = "";
   let clientRef: TelnyxClient | undefined;
+  // Set true only when the number order was PLACED but its resource ID couldn't
+  // be resolved. In that case the number may already be bought with the profile
+  // attached, so rolling back the profile would orphan a paid number and block
+  // a later reuse. A genuine buy failure (no order placed) still rolls back.
+  let numberLikelyPurchased = false;
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up SMS...\n");
@@ -133,6 +138,9 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
       steps.push({ step: 2, name: "Search for number", status: "completed", detail: phoneNumber, elapsedMs: Date.now() - step2Start });
       steps.push({ step: 3, name: "Buy number", status: "completed", resourceId: phoneNumberId, detail: phoneNumber, elapsedMs: 0 });
     } catch (err) {
+      // If the order was placed but only the ID lookup failed, the number was
+      // likely purchased with the profile attached — don't roll the profile back.
+      if (err instanceof NumberOrderedButUnresolvedError) numberLikelyPurchased = true;
       steps.push({ step: 2, name: "Search & buy number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
       throw err;
     }
@@ -146,7 +154,12 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
     const step4Start = Date.now();
     try {
       if (phoneNumberId) {
-        await client.patch(`/phone_numbers/${phoneNumberId}`, {
+        // Messaging-profile assignment lives on the /messaging subresource, NOT
+        // the generic phone-number update endpoint. On accounts where the number
+        // order didn't already attach the profile, PATCH /phone_numbers/{id}
+        // silently no-ops the messaging_profile_id, leaving the number
+        // unusable for SMS. Use PATCH /phone_numbers/{id}/messaging.
+        await client.patch(`/phone_numbers/${phoneNumberId}/messaging`, {
           messaging_profile_id: profileId,
         });
       }
@@ -184,14 +197,18 @@ export async function setupSmsCommand(flags: Record<string, string | boolean>): 
     // orphaned profiles piling up on the account. Only clean up a profile we
     // created here AND that has no number assigned (phoneNumberId unset).
     let cleanup: "deleted" | "kept" | "failed" | undefined;
-    if (createdProfileId && !phoneNumberId && clientRef) {
+    if (createdProfileId && !phoneNumberId && !numberLikelyPurchased && clientRef) {
+      // Safe to delete: we created the profile but no number order succeeded, so
+      // no paid number could be attached to it.
       try {
         await clientRef.delete(`/messaging_profiles/${createdProfileId}`);
         cleanup = "deleted";
       } catch {
         cleanup = "failed";
       }
-    } else if (createdProfileId && phoneNumberId) {
+    } else if (createdProfileId && (phoneNumberId || numberLikelyPurchased)) {
+      // Keep the profile: either a number is assigned, or an order was placed
+      // whose number we couldn't resolve — deleting would orphan the number.
       cleanup = "kept";
     }
 

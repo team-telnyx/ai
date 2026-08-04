@@ -42,9 +42,10 @@ export async function callStatusCommand(flags: Record<string, string | boolean>)
   }
 
   try {
-    const apiKey = process.env.TELNYX_API_KEY;
-    if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
-    const client = new TelnyxClient(apiKey);
+    // Resolve auth the same way as the rest of the CLI: env var OR
+    // ~/.config/telnyx/config.json. The previous env-only guard made
+    // call-status uniquely unusable for config-file-authenticated users.
+    const client = new TelnyxClient();
 
     if (!jsonOutput) console.log(`\n📞 Retrieving call status for ${callControlId}...`);
 

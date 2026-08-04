@@ -206,8 +206,11 @@ const server = createServer((req, res) => {
     } catch (err) {
       // Never let a handler exception kill the server mid-suite.
       if (!res.headersSent) {
+        // Log the detail server-side for debugging, but don't echo the raw
+        // error/stack back in the HTTP response (CodeQL: stack-trace exposure).
+        console.error("[mock] handler error:", err?.stack || err?.message || err);
         res.writeHead(500, { "content-type": "application/json" });
-        res.end(JSON.stringify({ errors: [{ code: "90000", detail: String(err && err.message || err) }] }));
+        res.end(JSON.stringify({ errors: [{ code: "90000", detail: "internal mock error" }] }));
       }
     }
   });

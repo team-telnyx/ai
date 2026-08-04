@@ -90,9 +90,18 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
     const step2Start = Date.now();
     let reusedExisting = false;
     try {
-      // Direct REST (AIF-326): GET /v2/whatsapp/business_accounts/{id}/phone_numbers.
-      const numRes = await client.get(`/whatsapp/business_accounts/${encodeURIComponent(wabaId)}/phone_numbers`);
-      const numbers = ((numRes.data as Array<Record<string, unknown>>) ?? (Array.isArray(numRes) ? numRes : [])) as Array<Record<string, unknown>>;
+      // Direct REST (AIF-326): the supported WhatsApp phone-number list endpoint
+      // is GET /v2/whatsapp/phone_numbers with an optional waba_id filter (see
+      // tools/typescript/src/shared/constants.ts and telnyx-whatsapp-curl SKILL).
+      // The /business_accounts/{id}/phone_numbers sub-path 404s, which aborted
+      // setup-whatsapp at step 2 before it could reuse or buy a number.
+      const numRes = await client.get("/whatsapp/phone_numbers", { waba_id: wabaId });
+      const allNumbers = ((numRes.data as Array<Record<string, unknown>>) ?? (Array.isArray(numRes) ? numRes : [])) as Array<Record<string, unknown>>;
+      // Belt-and-suspenders: if the API ignores the filter, narrow client-side
+      // to the selected WABA when records actually carry a waba_id.
+      const numbers = allNumbers.some((n) => n.waba_id != null)
+        ? allNumbers.filter((n) => n.waba_id == null || String(n.waba_id) === wabaId)
+        : allNumbers;
       if (numbers.length) {
         // Scan the full list for a connected/verified number before
         // falling back to a pending one, so we don't buy unnecessarily.

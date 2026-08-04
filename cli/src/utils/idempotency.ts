@@ -45,19 +45,34 @@ export async function findExistingByPrefix(
   nameField: string,
   prefix: string,
 ): Promise<ExistingResource | undefined> {
+  const all = await findAllByPrefix(client, listPath, nameField, prefix);
+  return all[0];
+}
+
+/**
+ * Like {@link findExistingByPrefix}, but returns ALL prefix-matched resources,
+ * newest first. Callers that need to keep scanning (e.g. to find one with an
+ * assigned number, skipping orphaned newer ones) use this instead of only
+ * seeing the most recent match.
+ */
+export async function findAllByPrefix(
+  client: TelnyxClient,
+  listPath: string,
+  nameField: string,
+  prefix: string,
+): Promise<ExistingResource[]> {
   try {
     const res = await client.get(listPath, { "page[size]": 250 });
     const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
     const matches = rows
       .filter((r) => typeof r[nameField] === "string" && (r[nameField] as string).startsWith(prefix))
       .map((r) => ({ id: String(r.id), name: String(r[nameField]) }));
-    if (matches.length === 0) return undefined;
     // Names carry a trailing timestamp, so the lexicographically largest name
     // is the most recently created one.
     matches.sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
-    return matches[0];
+    return matches;
   } catch {
-    return undefined;
+    return [];
   }
 }
 
@@ -96,9 +111,16 @@ export async function findReusablePair(
   prefix: string,
   filterKey: string,
 ): Promise<ReusablePair | undefined> {
-  const resource = await findExistingByPrefix(client, listPath, nameField, prefix);
-  if (!resource) return undefined;
-  const number = await findAssignedNumber(client, filterKey, resource.id);
-  if (!number) return undefined;
-  return { resource, phoneNumber: number.phoneNumber, phoneNumberId: number.phoneNumberId };
+  // Scan ALL prefix-matched resources (newest first), not just the newest one.
+  // A prior failed setup can leave a newer orphan profile/app with no number
+  // while an older one still has a usable assigned number; stopping at the
+  // first match would make us fall through and buy another paid number.
+  const resources = await findAllByPrefix(client, listPath, nameField, prefix);
+  for (const resource of resources) {
+    const number = await findAssignedNumber(client, filterKey, resource.id);
+    if (number) {
+      return { resource, phoneNumber: number.phoneNumber, phoneNumberId: number.phoneNumberId };
+    }
+  }
+  return undefined;
 }
