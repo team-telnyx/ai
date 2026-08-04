@@ -452,6 +452,39 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("PATCHes a resolved DEFAULT outbound profile onto an adopted bare app (no explicit flag)", async () => {
+    // Codex round-6: adopting a bare app that has NO outbound profile, with no
+    // --outbound-voice-profile-id passed, used to resolve a default profile and
+    // report it as ready WITHOUT patching it onto the app — so the app had no
+    // profile and outbound calls would fail. The adopted app must be PATCHed
+    // with the resolved default.
+    capturedRequests = [];
+    existingVoiceApps = [
+      // Bare app: no `outbound` block at all => no outbound profile configured.
+      { id: "cca_bare", application_name: "Agent Voice App - 2026-07-27 09:00:00" },
+    ];
+    assignedVoiceNumbers = []; // bare app => not a full reusable pair
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.connection_id, "cca_bare", "should adopt the bare app");
+      // The resolved default profile must actually be PATCHed onto the app.
+      const profilePatch = patchRequests().find(
+        (p) => p.path.includes("/call_control_applications/") &&
+          !!((p.body as Record<string, unknown>)?.outbound as Record<string, unknown> | undefined)?.outbound_voice_profile_id,
+      );
+      assert.ok(profilePatch, "must PATCH the resolved default outbound profile onto the adopted app");
+      const patchedProfile = ((profilePatch!.body as Record<string, unknown>).outbound as Record<string, unknown>).outbound_voice_profile_id;
+      assert.equal(patchedProfile, data.outbound_voice_profile_id, "patched profile must match the reported one");
+      assert.ok(String(patchedProfile).length > 0, "a real profile id must be applied");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("applies requested --webhook to an ADOPTED bare app (no stale webhook)", async () => {
     // Bug: adopting a bare app while the user passed --webhook-url used to keep
     // the app's stale/default webhook while reporting the requested one, so call

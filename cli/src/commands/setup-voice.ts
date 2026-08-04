@@ -68,6 +68,10 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   // True when we adopt a pre-existing bare (number-less) prefix-matched app
   // instead of creating a new one.
   let adoptedApp = false;
+  // Outbound profile ACTUALLY configured on an adopted bare app (empty until
+  // resolved). Used to detect when Step 1 resolves a default that must be
+  // PATCHed onto the adopted app so outbound calls actually work.
+  let appOutboundProfile = "";
   // Set true when the number order was PLACED but its resource ID couldn't be
   // resolved. The number may already be bought AND assigned to this app, so
   // deleting the app would orphan a paid number — keep it in that case.
@@ -183,6 +187,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           const appData = (appRes.data ?? appRes) as Record<string, unknown>;
           const outbound = (appData.outbound ?? {}) as Record<string, unknown>;
           outboundProfileId = String(outbound.outbound_voice_profile_id ?? "");
+          appOutboundProfile = outboundProfileId;
           adoptedWebhookUrl = String(appData.webhook_event_url ?? "");
         } catch { /* resolved below if still empty */ }
         // If the user explicitly requested a webhook and/or outbound profile,
@@ -196,7 +201,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           if (wantProfile) patchBody.outbound = { outbound_voice_profile_id: outboundProfileIdFlag };
           try {
             await client.patch(`/call_control_applications/${connectionId}`, patchBody);
-            if (wantProfile) outboundProfileId = outboundProfileIdFlag;
+            if (wantProfile) { outboundProfileId = outboundProfileIdFlag; appOutboundProfile = outboundProfileIdFlag; }
             if (wantWebhook) adoptedWebhookUrl = webhookUrl;
           } catch (err) {
             // If the update fails, don't silently claim the settings were applied.
@@ -242,6 +247,22 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
     // Step 2: Create Call Control Application — skipped when adopting a bare app.
     const step2Start = Date.now();
     if (adoptedApp) {
+      // A fresh app gets its outbound profile at creation time. An adopted app
+      // does NOT, so if Step 1 had to resolve a default profile (the adopted app
+      // had none and the user passed no explicit --outbound-voice-profile-id),
+      // PATCH it onto the app now. Otherwise we'd report a profile as ready
+      // while the app still has none and outbound calls would fail.
+      if (outboundProfileId && outboundProfileId !== appOutboundProfile) {
+        try {
+          await client.patch(`/call_control_applications/${connectionId}`, {
+            outbound: { outbound_voice_profile_id: outboundProfileId },
+          });
+          appOutboundProfile = outboundProfileId;
+        } catch (err) {
+          steps.push({ step: 2, name: "Apply outbound profile to adopted app", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });
+          throw err;
+        }
+      }
       steps.push({ step: 2, name: "Reuse adopted Call Control App", status: "completed", resourceId: connectionId, detail: connectionName, elapsedMs: 0 });
       if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
     } else {
