@@ -63,6 +63,31 @@ describe("Bug fix: --help/-h shows help instead of running the command", () => {
     assert.doesNotMatch(stdout, /error/i);
     assert.match(stdout, /Usage:/);
   });
+
+  // Codex round-8: `-h`/`--help` AFTER a boolean flag must still be treated as
+  // help. Boolean flags (--json, --force, ...) don't consume the next token, so
+  // the help guard must not swallow a trailing -h as their "value" and fall
+  // through into a handler that makes API calls / buys numbers.
+  it("setup-sms --json -h shows help (does not run) even without API key", () => {
+    const { stdout, status } = runCli(["setup-sms", "--json", "-h"], { ...process.env, TELNYX_API_KEY: "" });
+    assert.equal(status, 0, "expected -h after --json to exit 0 without API key");
+    assert.match(stdout, /Usage:/);
+    assert.doesNotMatch(stdout, /error/i);
+  });
+
+  it("setup-voice --force -h shows help (does not provision) even without API key", () => {
+    const { stdout, status } = runCli(["setup-voice", "--force", "-h"], { ...process.env, TELNYX_API_KEY: "" });
+    assert.equal(status, 0, "expected -h after --force to exit 0 without API key");
+    assert.match(stdout, /Usage:/);
+    assert.doesNotMatch(stdout, /error/i);
+  });
+
+  it("send-sms --text \"-h\" still treats -h as a VALUE, not help", () => {
+    // The value-taking flag path must be preserved: -h as a --text value is a
+    // real message, not a help request.
+    const parsed = parseFlags(["send-sms", "--text", "-h"]);
+    assert.equal(parsed.flags.text, "-h", "expected -h to be the --text value");
+  });
 });
 
 describe("Bug fix: parseFlags handles empty string values", () => {

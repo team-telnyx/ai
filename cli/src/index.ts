@@ -540,13 +540,23 @@ const KNOWN_FLAGS = new Set<string>([
 // through to the Go CLI or maintain their own extensible flag lists.
 const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "ai-chat"]);
 
+// Boolean (valueless) flags. These NEVER consume the following token as a
+// value, so a help token right after one (e.g. `setup-sms --json -h` or
+// `setup-voice --force -h`) must still be recognized as help. Keeping this in
+// sync with the commands' boolean flags is what lets isHelpRequested tell
+// `--json -h` (help) apart from `send-sms --text "-h"` ("-h" is a real value).
+const BOOLEAN_FLAGS = new Set<string>([
+  "json", "force", "stream", "record", "submit", "cancel", "create",
+  "deepfake-detection", "disable-cache", "transcription",
+]);
+
 // Detect a help request in FLAG position only. A help token counts when it is
 // the command itself (`help`, `--help`, `-h`) or a standalone flag on a
 // subcommand (`setup-voice --help`, `setup-voice -h`). It must NOT count when
-// `-h`/`--help` is consumed as the VALUE of another flag (e.g.
+// `-h`/`--help` is consumed as the VALUE of a value-taking flag (e.g.
 // `send-sms --text "-h"`), so we walk argv the same way parseFlags does and skip
-// consumed values. This keeps help interception consistent with the parser and
-// avoids a false positive that would block legitimate sends.
+// consumed values — but only for flags that actually take a value. Boolean
+// flags don't consume the next token, so `-h` after them is still help.
 function isHelpRequested(argv: string[]): boolean {
   const command = argv[0];
   if (command === "help" || command === "--help" || command === "-h") return true;
@@ -554,8 +564,12 @@ function isHelpRequested(argv: string[]): boolean {
     const arg = argv[i];
     if (arg === "--help" || arg === "-h") return true;
     if (arg.startsWith("--")) {
+      const key = arg.slice(2);
       const next = argv[i + 1];
-      if (next && !next.startsWith("--")) i++; // skip value consumed by this flag
+      // Only skip the next token as a consumed VALUE when this flag actually
+      // takes a value. Boolean flags don't, so we must not swallow a trailing
+      // `-h`/`--help` (or any real next token) as their value.
+      if (next && !next.startsWith("--") && !BOOLEAN_FLAGS.has(key)) i++;
     }
   }
   return false;

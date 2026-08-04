@@ -37,6 +37,9 @@ let capturedRequests: CapturedRequest[] = [];
 // detect and reuse them. Default empty => fresh-setup path (existing tests).
 let existingVoiceApps: Array<Record<string, unknown>> = [];
 let assignedVoiceNumbers: Array<Record<string, unknown>> = [];
+// When >0, the GET /phone_numbers assigned-number lookup returns this HTTP
+// status (e.g. 500) to simulate a transient/permission error. 0 = normal.
+let phoneNumbersLookupStatus = 0;
 
 function startMockServer(): Promise<void> {
   return new Promise((resolve) => {
@@ -69,6 +72,11 @@ function startMockServer(): Promise<void> {
 
         // AIF-336: GET /phone_numbers?filter[connection_id]=... (assigned number)
         if (req.method === "GET" && req.url?.startsWith("/v2/phone_numbers?")) {
+          if (phoneNumbersLookupStatus > 0) {
+            res.writeHead(phoneNumbersLookupStatus, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ errors: [{ title: "simulated lookup failure" }] }));
+            return;
+          }
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ data: assignedVoiceNumbers }));
           return;
@@ -447,6 +455,31 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
       assert.ok(cliLog.includes("number-order"), "should buy a number for the adopted app");
       assert.ok(patchRequests().some((p) => p.path.includes("/phone_numbers/")), "should assign the number to the adopted app");
     } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
+  it("does NOT adopt an app when the assigned-number lookup FAILS (transient error != bare)", async () => {
+    // Codex round-8: a 5xx / permission / filter error while checking whether a
+    // prefix-matched app has a number must NOT be treated as "bare". Adopting a
+    // possibly-live app would patch it and stack another number onto it. On
+    // lookup error we must fall through to creating a FRESH app instead.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_maybe_live", application_name: "Agent Voice App - 2026-07-27 09:00:00" },
+    ];
+    assignedVoiceNumbers = [];
+    phoneNumbersLookupStatus = 500; // simulate transient lookup failure
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.notEqual(data.connection_id, "cca_maybe_live", "must NOT adopt an app when the number lookup failed");
+      assert.ok(postRequests(/\/v2\/call_control_applications$/).length > 0, "must create a fresh app instead of adopting on lookup error");
+    } finally {
+      phoneNumbersLookupStatus = 0;
       existingVoiceApps = [];
       assignedVoiceNumbers = [];
     }

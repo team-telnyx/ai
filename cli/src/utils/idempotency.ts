@@ -75,8 +75,14 @@ export async function findBareByPrefix(
 ): Promise<ExistingResource | undefined> {
   const all = await findAllByPrefix(client, listPath, nameField, prefix);
   for (const resource of all) {
-    const assigned = await findAssignedNumber(client, filterKey, resource.id);
-    if (!assigned || !assigned.phoneNumber) return resource;
+    const lookup = await lookupAssignedNumber(client, filterKey, resource.id);
+    // Only adopt on a CONFIRMED no-number response. A lookup ERROR (transient
+    // 5xx / permission / filter issue) must NOT be treated as "bare": adopting
+    // a possibly-live app would patch its webhook/outbound profile and stack
+    // another number onto it. On error, skip this candidate so we fall through
+    // to creating a fresh app instead of mutating an existing one.
+    if (lookup.status === "no-number") return resource;
+    // status === "has-number" or "error" => not safe to adopt; keep scanning.
   }
   return undefined;
 }
@@ -108,32 +114,71 @@ export async function findAllByPrefix(
   }
 }
 
+export interface AssignedNumber {
+  phoneNumber: string;
+  phoneNumberId: string;
+  country: string;
+}
+
+/**
+ * Result of an assigned-number lookup that DISTINGUISHES a confirmed
+ * zero-row response from a lookup failure. This matters because "the app has
+ * no number" and "we couldn't check" must drive opposite decisions: a bare-app
+ * adopt path may only adopt on a CONFIRMED no-number, while a reuse path skips
+ * on either. See {@link lookupAssignedNumber}.
+ */
+export type AssignedNumberLookup =
+  | { status: "has-number"; number: AssignedNumber }
+  | { status: "no-number" }
+  | { status: "error" };
+
+/**
+ * Look up the phone number assigned to a resource, distinguishing a confirmed
+ * empty result from an API error. `filterKey` is the phone_numbers list filter
+ * to scope by ("messaging_profile_id" or "connection_id").
+ */
+export async function lookupAssignedNumber(
+  client: TelnyxClient,
+  filterKey: string,
+  resourceId: string,
+): Promise<AssignedNumberLookup> {
+  let res: unknown;
+  try {
+    res = await client.get("/phone_numbers", { [`filter[${filterKey}]`]: resourceId, "page[size]": 1 });
+  } catch {
+    // Transient 5xx / permission / filter error — we do NOT know whether the
+    // resource has a number. Report error so callers can stay conservative
+    // (e.g. NOT adopt a possibly-live app as if it were bare).
+    return { status: "error" };
+  }
+  const r = res as { data?: Array<Record<string, unknown>> };
+  const rows = (r.data ?? (Array.isArray(res) ? (res as Array<Record<string, unknown>>) : [])) as Array<Record<string, unknown>>;
+  if (rows.length === 0) return { status: "no-number" };
+  const n = rows[0];
+  // The number's country: the live GET /phone_numbers records expose it as
+  // `country_iso_alpha2`; older/mocked shapes may use `country_code` or
+  // `country`. Check the real field FIRST so country-scoped reuse actually
+  // sees a country on live rows (otherwise it falls through to "" and a US
+  // number could be reused for a --country GB request).
+  const country = String(n.country_iso_alpha2 ?? n.country_code ?? n.country ?? "").toUpperCase();
+  return { status: "has-number", number: { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? ""), country } };
+}
+
 /**
  * Find a phone number already assigned to the given resource.
  * `filterKey` is the phone_numbers list filter to scope by
  * ("messaging_profile_id" or "connection_id").
  * Returns undefined when the resource has no assigned number (or on error).
+ * Prefer {@link lookupAssignedNumber} when you must distinguish "no number"
+ * from "lookup failed".
  */
 export async function findAssignedNumber(
   client: TelnyxClient,
   filterKey: string,
   resourceId: string,
-): Promise<{ phoneNumber: string; phoneNumberId: string; country: string } | undefined> {
-  try {
-    const res = await client.get("/phone_numbers", { [`filter[${filterKey}]`]: resourceId, "page[size]": 1 });
-    const rows = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
-    if (rows.length === 0) return undefined;
-    const n = rows[0];
-    // The number's country: the live GET /phone_numbers records expose it as
-    // `country_iso_alpha2`; older/mocked shapes may use `country_code` or
-    // `country`. Check the real field FIRST so country-scoped reuse actually
-    // sees a country on live rows (otherwise it falls through to "" and a US
-    // number could be reused for a --country GB request).
-    const country = String(n.country_iso_alpha2 ?? n.country_code ?? n.country ?? "").toUpperCase();
-    return { phoneNumber: String(n.phone_number ?? ""), phoneNumberId: String(n.id ?? ""), country };
-  } catch {
-    return undefined;
-  }
+): Promise<AssignedNumber | undefined> {
+  const result = await lookupAssignedNumber(client, filterKey, resourceId);
+  return result.status === "has-number" ? result.number : undefined;
 }
 
 /**
