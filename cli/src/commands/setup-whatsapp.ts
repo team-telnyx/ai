@@ -252,24 +252,26 @@ export async function setupWhatsappCommand(flags: Record<string, string | boolea
         throw err;
       }
     } else {
-      // Existing number, unverified, no --code provided — initialize verification
+      // Existing number, already initialized on the WABA but still pending
+      // (a prior run started verification), no --code provided. The number is
+      // ALREADY initialized, so re-POSTing the create/initialize endpoint can
+      // fail with an "already initialized" error. Use the documented resend
+      // action to send a fresh code instead.
+      // POST /whatsapp/phone_numbers/{phone_number}/resend_verification
       try {
-        await client.post(`/whatsapp/business_accounts/${encodeURIComponent(wabaId)}/phone_numbers`, {
-          display_name: displayName,
-          phone_number: phoneNumber,
-          language: "en_US",
+        await client.post(`/whatsapp/phone_numbers/${encodeURIComponent(phoneNumber)}/resend_verification`, {
           verification_method: "sms",
         });
         steps.push({
           step: 4,
-          name: "Re-initialize WhatsApp verification",
+          name: "Resend WhatsApp verification code",
           status: "completed",
           resourceId: phoneNumber,
-          detail: "code sent via SMS",
+          detail: "fresh code sent via SMS",
           elapsedMs: Date.now() - step4Start,
         });
       } catch (err) {
-        steps.push({ step: 4, name: "Initialize WhatsApp verification", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
+        steps.push({ step: 4, name: "Resend WhatsApp verification code", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
         throw err;
       }
     }

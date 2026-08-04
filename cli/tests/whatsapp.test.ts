@@ -264,6 +264,10 @@ function setupWhatsappResponder(numberStatus: string): RouteResponder {
     if (req.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/verify$/.test(req.path)) {
       return { json: { data: { phone_number: phone, status: "verified" } } };
     }
+    // Documented resend action for an already-initialized (pending) number.
+    if (req.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/resend_verification$/.test(req.path)) {
+      return { json: { data: { phone_number: phone, status: "pending" } } };
+    }
     if (req.method === "POST" && /\/whatsapp\/business_accounts\/.+\/phone_numbers$/.test(req.path)) {
       return { json: { data: { id: "wa_ph_test", status: "pending" } } };
     }
@@ -541,6 +545,29 @@ describe("WhatsApp commands", () => {
       const data = JSON.parse(stdout);
       assert.equal(data.verified, false);
       assert.equal(data.ready, false);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("setup-whatsapp uses the RESEND endpoint (not re-initialize) for a reused pending number without --code", async () => {
+    // Codex round-7: a rerun without --code on an already-initialized (pending)
+    // number must call the documented resend action to get a fresh code, NOT
+    // re-POST the create/initialize endpoint (which fails on an already-
+    // initialized number).
+    const mock = await startMockApi(setupWhatsappResponder("pending"));
+    try {
+      const { status } = await runCliAsync(["setup-whatsapp", "--json"], restEnv(mock));
+      assert.equal(status, 0);
+      const resend = mock.requests.find(
+        (r) => r.method === "POST" && /\/whatsapp\/phone_numbers\/.+\/resend_verification$/.test(r.path),
+      );
+      assert.ok(resend, "must POST the resend_verification endpoint for a reused pending number");
+      // And it must NOT re-initialize via the create endpoint.
+      const reinit = mock.requests.find(
+        (r) => r.method === "POST" && /\/whatsapp\/business_accounts\/.+\/phone_numbers$/.test(r.path),
+      );
+      assert.ok(!reinit, "must NOT re-POST the create/initialize endpoint for an already-initialized number");
     } finally {
       await mock.close();
     }

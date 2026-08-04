@@ -510,6 +510,30 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("reports the ADOPTED app's existing webhook (not the default) when no --webhook is passed", async () => {
+    // Codex round-7: adopting a bare app WITHOUT --webhook kept the app's
+    // existing webhook_event_url but reported the default placeholder, so the
+    // user was told call events go somewhere they don't. The output must carry
+    // the adopted app's real webhook.
+    capturedRequests = [];
+    existingVoiceApps = [
+      { id: "cca_bare", application_name: "Agent Voice App - 2026-07-27 09:00:00", webhook_event_url: "https://real.example.com/existing-hook" },
+    ];
+    assignedVoiceNumbers = []; // bare app => not a full reusable pair
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.connection_id, "cca_bare", "should adopt the bare app");
+      assert.equal(data.webhook_url, "https://real.example.com/existing-hook", "must report the adopted app's real webhook, not the default placeholder");
+      assert.notEqual(data.webhook_url, "https://example.com/webhook", "must NOT report the default placeholder webhook");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("flags --outbound-voice-profile-id as not applied when reusing a complete app+number", async () => {
     // Reuse of a complete pair must not silently ignore a requested outbound
     // profile: report outbound_profile_not_applied and keep the real profile.

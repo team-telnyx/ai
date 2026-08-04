@@ -72,6 +72,12 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
   // resolved). Used to detect when Step 1 resolves a default that must be
   // PATCHed onto the adopted app so outbound calls actually work.
   let appOutboundProfile = "";
+  // The webhook URL that is ACTUALLY configured on the connection we end up
+  // using. For a freshly created app this is the requested `webhookUrl`; for an
+  // ADOPTED app it is the app's existing webhook (unless --webhook was passed
+  // and patched). Reported in the result so we never claim a webhook the app
+  // isn't actually using.
+  let effectiveWebhookUrl = webhookUrl;
   // Set true when the number order was PLACED but its resource ID couldn't be
   // resolved. The number may already be bought AND assigned to this app, so
   // deleting the app would orphan a paid number — keep it in that case.
@@ -195,6 +201,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         // to the stale/default webhook while we report the requested one.
         const wantWebhook = webhookExplicit && webhookUrl !== adoptedWebhookUrl;
         const wantProfile = !!outboundProfileIdFlag && outboundProfileIdFlag !== outboundProfileId;
+        // Default: the adopted app keeps its OWN webhook. Only overridden below
+        // if the user explicitly passed --webhook and we successfully patch it.
+        effectiveWebhookUrl = adoptedWebhookUrl || webhookUrl;
         if (wantWebhook || wantProfile) {
           const patchBody: Record<string, unknown> = {};
           if (wantWebhook) patchBody.webhook_event_url = webhookUrl;
@@ -202,7 +211,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
           try {
             await client.patch(`/call_control_applications/${connectionId}`, patchBody);
             if (wantProfile) { outboundProfileId = outboundProfileIdFlag; appOutboundProfile = outboundProfileIdFlag; }
-            if (wantWebhook) adoptedWebhookUrl = webhookUrl;
+            if (wantWebhook) { adoptedWebhookUrl = webhookUrl; effectiveWebhookUrl = webhookUrl; }
           } catch (err) {
             // If the update fails, don't silently claim the settings were applied.
             steps.push({ step: 1, name: "Apply requested settings to adopted app", status: "failed", detail: errorMsg(err), elapsedMs: 0 });
@@ -332,7 +341,9 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
       connection_name: connectionName,
       phone_number: phoneNumber,
       phone_number_id: phoneNumberId,
-      webhook_url: webhookUrl,
+      // Report the webhook actually configured on the connection — for an
+      // adopted app that's its existing webhook, not the default placeholder.
+      webhook_url: effectiveWebhookUrl,
       outbound_voice_profile_id: outboundProfileId,
       ready: true,
       // Adopting a bare app is a partial reuse (existing app + new number).
@@ -347,7 +358,7 @@ export async function setupVoiceCommand(flags: Record<string, string | boolean>)
         "Connection ID": connectionId,
         "App Name": connectionName,
         "Phone Number": phoneNumber,
-        "Webhook URL": webhookUrl,
+        "Webhook URL": effectiveWebhookUrl,
         "Outbound Profile": outboundProfileId,
         Ready: "✓",
       });
