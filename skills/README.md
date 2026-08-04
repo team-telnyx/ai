@@ -1,10 +1,10 @@
 # Telnyx Agent Skills
 
-Official Agent Skills for building on Telnyx.
+Official Agent Skills for building on Telnyx and managing your Telnyx account.
 
-These skills give coding agents structured, up-to-date context to generate correct, production-ready code without relying on pre-training or fragile doc retrieval.
+These skills give agents structured, up-to-date context to generate correct, production-ready code — and to handle account management like signup and payments — without relying on pre-training or fragile doc retrieval.
 
-They include accurate schemas, SDK patterns, workflows, and API references, so agents can implement Telnyx APIs reliably in real-world applications.
+They include accurate schemas, SDK patterns, workflows, and API references, so agents can build production-grade applications on Telnyx — with account management (signup, funding, payments) covered alongside.
 
 Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.io/specification) and are compatible with coding agents like Claude Code, Cursor, Windsurf, and others.
 
@@ -17,6 +17,7 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Skills CLI installation](#skills-cli-installation)
 - [Claude Code plugins installation](#install-claude-code-plugins)
 - [Telnyx API and SDKs](#available-skills)
+- [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
 - [Twilio Migration](#twilio-migration)
 
@@ -177,6 +178,19 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | `telnyx-account-notifications-*` | Notification channels and settings |
 | `telnyx-account-reports-*` | Usage reports for billing and analytics |
 <!-- END GENERATED SKILLS_TABLE -->
+
+## Payments
+
+Fund a Telnyx account programmatically — built for agentic payment flows where an AI agent adds account credit on your behalf. No account yet? Agents can sign up programmatically first via the [bot signup skill](https://telnyx.com/agent-signup.md).
+
+Available payment skills:
+
+| Skill | Description |
+|-------|-------------|
+| `telnyx-mpp-payment` | Add account credit via Machine Payment Protocol (HTTP 402) using Stripe Link or Tempo USDC, then verify the transaction and balance |
+| `telnyx-x402-payment` | Fund an account with USDC on Base via the x402 protocol — quoting, EIP-712 signing, and settlement |
+
+> **Note:** These payments move real funds. Both skills include verification steps and safe support-handoff guidance.
 
 ## WebRTC Client SDKs
 
