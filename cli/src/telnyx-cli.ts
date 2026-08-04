@@ -80,20 +80,27 @@ export class TelnyxCLIError extends Error {
  * with `--format json`, so the default is fine for those.
  *
  * @param args - CLI arguments (e.g., ['available-phone-numbers', 'list', '--filter.country-code', 'US'])
- * @param opts - Optional overrides for timeout, env, and output format
+ * @param opts - Optional overrides for timeout, env, output format, and stdin request body
  * @returns Parsed JSON response from the CLI (typically { data: ... } or { data: [...], meta: ... })
  */
 export async function telnyxCli(
   args: string[],
-  opts?: { timeout?: number; env?: Record<string, string | undefined>; format?: "json" | "raw" },
+  opts?: {
+    timeout?: number;
+    env?: Record<string, string | undefined>;
+    format?: "json" | "raw";
+    stdin?: string;
+  },
 ): Promise<any> {
   const timeout = opts?.timeout ?? 60000;
   try {
-    const { stdout } = await execFileAsync(TELNYX_BINARY, [...args, "--format", opts?.format ?? "json"], {
+    const execution = execFileAsync(TELNYX_BINARY, [...args, "--format", opts?.format ?? "json"], {
       env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv,
       timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB — some list responses can be large
     });
+    if (opts?.stdin !== undefined) execution.child.stdin?.end(opts.stdin);
+    const { stdout } = await execution;
     const trimmed = stdout.trim();
     if (!trimmed) return {};
     // The Go CLI should output clean JSON with --format json, but keep the

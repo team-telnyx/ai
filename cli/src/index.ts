@@ -359,6 +359,8 @@ AI Assistant Lifecycle Flags:
   --dynamic-variables-webhook-timeout-ms <1-10000> Resolver timeout (create, update)
   --tags <csv>      Comma-separated assistant tags (create, update)
   --tool-ids <csv>  Comma-separated shared AI tool IDs (create, update)
+  --clear-tags      Clear all assistant tags (update only; exclusive with --tags)
+  --clear-tool-ids  Clear all shared AI tool IDs (update only; exclusive with --tool-ids)
   --version-name    Human-readable version name (update only)
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)

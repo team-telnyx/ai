@@ -92,19 +92,23 @@ export async function updateAiAssistantCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
   const assistantId = assistantIdFlag(flags, jsonOutput);
   const args = ["ai:assistants", "update", "--assistant-id", assistantId];
+  const requestBody: JsonRecord = {};
 
-  addAssistantFields(args, flags, jsonOutput);
+  addAssistantFields(args, flags, jsonOutput, requestBody);
   addMappedFlag(args, flags, "name", "--name");
   addMappedFlag(args, flags, "instructions", "--instructions");
   addMappedFlag(args, flags, "version-name", "--version-name");
   addBooleanFlag(args, flags, "promote-to-main", "--promote-to-main", jsonOutput);
 
-  if (args.length === 4) {
+  if (args.length === 4 && Object.keys(requestBody).length === 0) {
     fail("at least one AI assistant field must be supplied for update", jsonOutput);
   }
 
   try {
-    const response = await telnyxCli(args);
+    const response = await telnyxCli(
+      args,
+      Object.keys(requestBody).length > 0 ? { stdin: JSON.stringify(requestBody) } : undefined,
+    );
     presentAssistant("AI assistant updated!", normalizeAssistant(response, assistantId), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -145,6 +149,7 @@ function addAssistantFields(
   args: string[],
   flags: Flags,
   jsonOutput: boolean,
+  requestBody?: JsonRecord,
 ): void {
   addMappedFlag(args, flags, "description", "--description");
   addMappedFlag(args, flags, "model", "--model");
@@ -160,8 +165,26 @@ function addAssistantFields(
     10_000,
     jsonOutput,
   );
-  addCsvFlag(args, flags, "tags", "--tag", jsonOutput);
-  addCsvFlag(args, flags, "tool-ids", "--tool-id", jsonOutput);
+  addCsvOrClearFlag(
+    args,
+    flags,
+    "tags",
+    "--tag",
+    "clear-tags",
+    "tags",
+    requestBody,
+    jsonOutput,
+  );
+  addCsvOrClearFlag(
+    args,
+    flags,
+    "tool-ids",
+    "--tool-id",
+    "clear-tool-ids",
+    "tool_ids",
+    requestBody,
+    jsonOutput,
+  );
   addMappedFlag(args, flags, "voice", "--voice-settings.voice");
   addMappedFlag(args, flags, "transcription-model", "--transcription.model");
   addMappedFlag(args, flags, "transcription-language", "--transcription.language");
@@ -253,6 +276,33 @@ function addJsonObjectFlag(
   args.push(target, value);
 }
 
+function addCsvOrClearFlag(
+  args: string[],
+  flags: Flags,
+  source: string,
+  target: string,
+  clearSource: string,
+  bodyField: string,
+  requestBody: JsonRecord | undefined,
+  jsonOutput: boolean,
+): void {
+  const clearValue = flags[clearSource];
+  if (clearValue === undefined) {
+    addCsvFlag(args, flags, source, target, jsonOutput);
+    return;
+  }
+  if (clearValue !== true) {
+    fail(`--${clearSource} is a boolean flag and does not take a value`, jsonOutput);
+  }
+  if (!requestBody) {
+    fail(`--${clearSource} is only valid for update-ai-assistant`, jsonOutput);
+  }
+  if (flags[source] !== undefined) {
+    fail(`--${source} and --${clearSource} cannot be used together`, jsonOutput);
+  }
+  requestBody[bodyField] = [];
+}
+
 function addCsvFlag(
   args: string[],
   flags: Flags,
@@ -260,11 +310,14 @@ function addCsvFlag(
   target: string,
   jsonOutput: boolean,
 ): void {
-  const value = optionalStringFlag(flags, source);
-  if (value === undefined) return;
-  const values = value.split(",").map((item) => item.trim()).filter(Boolean);
+  const raw = flags[source];
+  if (raw === undefined) return;
+  if (typeof raw !== "string") {
+    fail(`--${source} must contain at least one value`, jsonOutput);
+  }
+  const values = raw.split(",").map((item) => item.trim()).filter(Boolean);
   if (values.length === 0) fail(`--${source} must contain at least one value`, jsonOutput);
-  args.push(target, JSON.stringify(values));
+  for (const value of values) args.push(target, value);
 }
 
 function addIntegerRangeFlag(

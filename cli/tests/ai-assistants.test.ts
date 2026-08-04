@@ -13,10 +13,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(options: { captureStdin?: boolean } = {}): {
+  logPath: string;
+  requestLogPath: string;
+  env: NodeJS.ProcessEnv;
+} {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-ai-assistants-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
+  const requestLogPath = join(tempDir, "requests.jsonl");
   const fakeTelnyx = join(binDir, "telnyx");
   mkdirSync(binDir, { recursive: true });
 
@@ -27,7 +32,38 @@ const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
+function flags(name) {
+  const values = [];
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] === name && args[index + 1] !== undefined) values.push(args[index + 1]);
+  }
+  return values;
+}
 function equalsFlag(name) { const item = args.find((arg) => arg.startsWith(name + "=")); return item && item.slice(name.length + 1); }
+function requestBody() {
+  let body = {};
+  if (process.env.TELNYX_FAKE_CAPTURE_STDIN === "1") {
+    const stdin = fs.readFileSync(0, "utf8");
+    if (stdin) body = JSON.parse(stdin);
+  }
+  function set(name, key) { const value = flag(name); if (value !== undefined) body[key] = value; }
+  set("--name", "name");
+  set("--instructions", "instructions");
+  set("--description", "description");
+  set("--model", "model");
+  set("--greeting", "greeting");
+  set("--version-name", "version_name");
+  const tags = flags("--tag");
+  const toolIds = flags("--tool-id");
+  if (tags.length > 0) body.tags = tags;
+  if (toolIds.length > 0) body.tool_ids = toolIds;
+  const promoteToMain = equalsFlag("--promote-to-main");
+  if (promoteToMain !== undefined) body.promote_to_main = promoteToMain === "true";
+  return body;
+}
+function logRequest(method, body) {
+  fs.appendFileSync(process.env.TELNYX_FAKE_REQUEST_LOG, JSON.stringify({ method, body }) + "\\n");
+}
 
 if (args[0] !== "ai:assistants") {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
@@ -41,16 +77,9 @@ if (args[0] !== "ai:assistants") {
     meta: { total_results: 2 }
   }));
 } else if (args[1] === "create") {
-  console.log(JSON.stringify({ data: {
-    id: "assistant-created",
-    name: flag("--name"),
-    instructions: flag("--instructions"),
-    description: flag("--description"),
-    model: flag("--model"),
-    greeting: flag("--greeting"),
-    tags: JSON.parse(flag("--tag") || "[]"),
-    tool_ids: JSON.parse(flag("--tool-id") || "[]")
-  } }));
+  const body = requestBody();
+  logRequest("POST", body);
+  console.log(JSON.stringify({ data: { id: "assistant-created", ...body } }));
 } else if (args[1] === "retrieve") {
   console.log(JSON.stringify({ data: {
     id: flag("--assistant-id"),
@@ -60,13 +89,14 @@ if (args[0] !== "ai:assistants") {
     greeting: "Hello"
   } }));
 } else if (args[1] === "update") {
+  const body = requestBody();
+  logRequest("POST", body);
   console.log(JSON.stringify({ data: {
     id: flag("--assistant-id"),
-    name: flag("--name") || "Concierge",
-    instructions: flag("--instructions") || "Help callers",
-    model: flag("--model") || "model-one",
-    greeting: flag("--greeting"),
-    promote_to_main: equalsFlag("--promote-to-main") === "true"
+    name: "Concierge",
+    instructions: "Help callers",
+    model: "model-one",
+    ...body
   } }));
 } else if (args[1] === "delete") {
   console.log(JSON.stringify({ data: { id: flag("--assistant-id") } }));
@@ -80,10 +110,13 @@ if (args[0] !== "ai:assistants") {
 
   return {
     logPath,
+    requestLogPath,
     env: {
       ...process.env,
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
+      TELNYX_FAKE_REQUEST_LOG: requestLogPath,
+      TELNYX_FAKE_CAPTURE_STDIN: options.captureStdin ? "1" : "0",
       TELNYX_API_KEY: "KEY_fake_test",
     },
   };
@@ -118,10 +151,20 @@ function loggedArgs(logPath: string): string[][] {
   return contents.trimEnd().split("\n").map((line) => JSON.parse(line) as string[]);
 }
 
+function loggedRequests(logPath: string): Array<{ method: string; body: Record<string, unknown> }> {
+  if (!existsSync(logPath)) return [];
+  return readFileSync(logPath, "utf8").trimEnd().split("\n").map((line) => JSON.parse(line));
+}
+
 function assertFlag(args: string[], flag: string, value: string): void {
   const index = args.indexOf(flag);
   assert.notEqual(index, -1, `expected ${flag} in ${args.join(" ")}`);
   assert.equal(args[index + 1], value);
+}
+
+function assertFlagValues(args: string[], flag: string, values: string[]): void {
+  const actual = args.flatMap((arg, index) => arg === flag ? [args[index + 1]] : []);
+  assert.deepEqual(actual, values, `expected repeated ${flag} values in ${args.join(" ")}`);
 }
 
 describe("AI assistant lifecycle action commands", () => {
@@ -184,9 +227,13 @@ describe("AI assistant lifecycle action commands", () => {
     assertFlag(args, "--dynamic-variables", dynamicVariables);
     assertFlag(args, "--dynamic-variables-webhook-url", "https://example.com/variables");
     assertFlag(args, "--dynamic-variables-webhook-timeout-ms", "2500");
-    assertFlag(args, "--tag", JSON.stringify(["front-desk", "production"]));
-    assertFlag(args, "--tool-id", JSON.stringify(["tool-1", "tool-2"]));
+    assertFlagValues(args, "--tag", ["front-desk", "production"]);
+    assertFlagValues(args, "--tool-id", ["tool-1", "tool-2"]);
     assertFlag(args, "--format", "json");
+
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body.tags, ["front-desk", "production"]);
+    assert.deepEqual(request.body.tool_ids, ["tool-1", "tool-2"]);
   });
 
   it("gets one assistant through ai:assistants retrieve", () => {
@@ -239,6 +286,77 @@ describe("AI assistant lifecycle action commands", () => {
     assertFlag(args, "--version-name", "Night shift");
     assert.ok(args.includes("--promote-to-main=false"));
     assertFlag(args, "--format", "json");
+  });
+
+  it("clears all tags and shared tool IDs through explicit update-only flags", () => {
+    const fake = setupFakeTelnyx({ captureStdin: true });
+    const result = runAgent([
+      "update-ai-assistant",
+      "--id", "assistant-1",
+      "--clear-tags",
+      "--clear-tool-ids",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).ai_assistant.tags, []);
+    assert.deepEqual(JSON.parse(result.stdout).ai_assistant.tool_ids, []);
+
+    const [args] = loggedArgs(fake.logPath);
+    assert.equal(args.includes("--tag"), false);
+    assert.equal(args.includes("--tool-id"), false);
+    assert.equal(args.includes("--clear-tags"), false);
+    assert.equal(args.includes("--clear-tool-ids"), false);
+
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body, { tags: [], tool_ids: [] });
+  });
+
+  it("does not forward omitted update fields while preserving an intentionally empty greeting", () => {
+    const fake = setupFakeTelnyx();
+    const result = runAgent([
+      "update-ai-assistant",
+      "--id", "assistant-1",
+      "--greeting", "",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body, { greeting: "" });
+  });
+
+  it("keeps CSV validation and rejects clear flags on create or beside CSV values", () => {
+    const invalidCases = [
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--tags", "", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--tool-ids", " , ", "--json"],
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--clear-tags", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--tags", "production", "--clear-tags", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--clear-tool-ids", "false", "--json"],
+    ];
+
+    for (const args of invalidCases) {
+      const fake = setupFakeTelnyx();
+      const result = runAgent(args, fake.env);
+      assert.notEqual(result.status, 0, `expected ${args.join(" ")} to fail`);
+      assert.ok(JSON.parse(result.stdout).error);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+  });
+
+  it("rejects bare array flags on create and update instead of silently omitting them", () => {
+    const invalidCases = [
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--tags", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--tool-ids", "--json"],
+    ];
+
+    for (const args of invalidCases) {
+      const fake = setupFakeTelnyx();
+      const result = runAgent(args, fake.env);
+      assert.notEqual(result.status, 0, `expected ${args.join(" ")} to fail`);
+      assert.match(JSON.parse(result.stdout).error, /--(?:tags|tool-ids) must contain at least one value/);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
   });
 
   it("requires explicit confirmation before deleting and never forwards --confirm", () => {
@@ -307,6 +425,8 @@ describe("AI assistant lifecycle action commands", () => {
       );
     }
     assert.match(help.stdout, /--confirm\s+Explicitly confirm deletion/);
+    assert.match(help.stdout, /--clear-tags\s+Clear all assistant tags/);
+    assert.match(help.stdout, /--clear-tool-ids\s+Clear all shared AI tool IDs/);
 
     const actions = capabilities.api_capabilities["🤖 AI"].find(
       (capability: { name: string }) => capability.name === "Assistants",
