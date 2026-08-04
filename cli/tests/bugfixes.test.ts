@@ -215,3 +215,47 @@ describe("Bug fix: README has tts and tts-voices sections", () => {
     assert.match(readme, /--voice/);
   });
 });
+
+describe("Bug fix: -h after boolean flags triggers help (not swallowed as flag value)", () => {
+  it("setup-voice --force -h shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-voice", "--force", "-h"]);
+    assert.equal(status, 0, "expected --force -h to exit 0 with help");
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("setup-sms --json -h shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-sms", "--json", "-h"]);
+    assert.equal(status, 0, "expected --json -h to exit 0 with help");
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("setup-voice --json -h shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-voice", "--json", "-h"]);
+    assert.equal(status, 0);
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("setup-sms --force -h shows help and exits 0", () => {
+    const { stdout, status } = runCli(["setup-sms", "--force", "-h"]);
+    assert.equal(status, 0);
+    assert.match(stdout, /Usage:/);
+  });
+
+  it("parseFlags: --json -h sets json=true and helpRequested=true", () => {
+    const parsed = parseFlags(["setup-voice", "--json", "-h"]);
+    assert.equal(parsed.flags.json, true, "expected json to be boolean true, not '-h'");
+    assert.equal(parsed.helpRequested, true, "expected helpRequested to be true");
+  });
+
+  it("parseFlags: --force -h sets force=true and helpRequested=true", () => {
+    const parsed = parseFlags(["setup-sms", "--force", "-h"]);
+    assert.equal(parsed.flags.force, true, "expected force to be boolean true, not '-h'");
+    assert.equal(parsed.helpRequested, true);
+  });
+
+  it("parseFlags: --text -h still treats -h as text value (non-boolean flag)", () => {
+    const parsed = parseFlags(["send-sms", "--text", "-h"]);
+    assert.equal(parsed.flags.text, "-h", "expected text to be '-h' for non-boolean flag");
+    assert.equal(parsed.helpRequested, false, "expected helpRequested to be false when -h is a value");
+  });
+});

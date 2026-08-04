@@ -80,6 +80,31 @@ function isSensitiveKey(key: string): boolean {
   return /(^|_)(password|passphrase|secret|token|api_key)$/i.test(key) || /^sipPassword$/i.test(key);
 }
 
+/**
+ * Flags that are inherently boolean — they never consume the next argv token
+ * as a value.  This is used by both {@link parseFlags} and the
+ * `isHelpRequested` guard in `index.ts` so that a token like `-h` following a
+ * boolean flag (e.g. `setup-voice --force -h`) is NOT swallowed as the flag's
+ * value and instead reaches the explicit `-h`/`--help` check.
+ *
+ * Note: fax-specific boolean flags (`monochrome`, `store-media`,
+ * `store-preview`, `t38-enabled`) are deliberately excluded because the fax
+ * command accepts explicit `--flag=false` values for Go CLI compatibility,
+ * which requires parseFlags to treat the next token as a value.
+ */
+export const BOOLEAN_FLAGS = new Set<string>([
+  "json",
+  "force",
+  "record",
+  "cancel",
+  "create",
+  "stream",
+  "submit",
+  "disable-cache",
+  "deepfake-detection",
+  "transcription",
+]);
+
 export function parseFlags(args: string[]): {
   command: string;
   flags: Record<string, string | boolean>;
@@ -100,9 +125,11 @@ export function parseFlags(args: string[]): {
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const next = args[i + 1];
-      // Treat `--flag ""` as an empty string value, not a boolean.
-      // The old code used `next && ...` which treated `""` as falsy.
-      if (next !== undefined && next !== null && !next.startsWith("--")) {
+      // Boolean flags never consume the next token — leave it for the loop
+      // to process on its own (it may be another flag like `-h`).
+      // Non-boolean flags consume the next token as their value, unless it
+      // starts with `--` (another long flag) — same heuristic as before.
+      if (!BOOLEAN_FLAGS.has(key) && next !== undefined && next !== null && !next.startsWith("--")) {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);
         i++;
