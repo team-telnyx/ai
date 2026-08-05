@@ -22,7 +22,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Plugins and Extensions
 
-Install the Telnyx plugins you need to give your AI coding assistant Telnyx MCP server access and Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. Plugins are split by product area so you only load the skills your project uses — see the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need).
+Install the Telnyx plugins you need to give your AI coding assistant Telnyx Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. Plugins are split by product area so you only load the skills your project uses — see the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server — see [MCP](#model-context-protocol-mcp).
 
 Empowers agents to generate correct, production-ready code — and to manage their own accounts — without relying on pre-training or fragile doc retrieval.
 
