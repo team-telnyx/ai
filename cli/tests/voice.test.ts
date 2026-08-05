@@ -6,7 +6,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -57,12 +58,60 @@ if (command[0] === "calls" && command[1] === "dial") {
   };
 }
 
+/**
+ * Async variants of run()/runFailure(). Required for the call-status tests, which
+ * stand up an in-process mock HTTP server: a synchronous execFileSync/spawnSync
+ * would block the event loop so the mock could never accept the child's request
+ * (deadlock -> timeout). These spawn asynchronously and await exit.
+ */
+function runAsync(args: string[], env: NodeJS.ProcessEnv): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("npx", ["tsx", cliBin, ...args], { cwd: cliRoot, env });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d.toString()));
+    child.stderr.on("data", (d) => (stderr += d.toString()));
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error(`timeout running: ${args.join(" ")}`));
+    }, 30000);
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+
 function readLoggedArgs(logPath: string): string[][] {
   return readFileSync(logPath, "utf8")
     .trim()
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+}
+
+interface MockApi {
+  baseUrl: string;
+  close: () => Promise<void>;
+}
+
+/** Start a throwaway local HTTP server to stand in for the Telnyx REST API. */
+function startMockApi(handler: (req: IncomingMessage, res: ServerResponse) => void): Promise<MockApi> {
+  return new Promise((resolve) => {
+    const server = createServer(handler);
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const port = typeof addr === "object" && addr ? addr.port : 0;
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}`,
+        close: () => new Promise((done) => server.close(() => done())),
+      });
+    });
+  });
 }
 
 function run(args: string[], env?: NodeJS.ProcessEnv): string {
@@ -97,89 +146,125 @@ function assertFlagValue(args: string[], flag: string, value: string): void {
 }
 
 describe("Voice API action commands", () => {
-  it("call-dial passes the correct flags to `calls dial`", () => {
-    const fake = setupFakeTelnyx();
-    const output = run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--json"],
-      fake.env,
-    );
-
-    const data = JSON.parse(output);
-    assert.equal(data.call_control_id, "call-dial-123");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    assertFlagValue(dialCall!, "--connection-id", "conn-1");
-    assertFlagValue(dialCall!, "--from", "+13125550000");
-    assertFlagValue(dialCall!, "--to", "+13125551234");
-    // Boolean/detection flags should NOT be present when not requested.
-    assert.ok(!dialCall!.includes("--answering-machine-detection"));
-    assert.ok(!dialCall!.includes("--deepfake-detection"));
+  it("call-dial POSTs /v2/calls with a +E.164 `to` intact (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      assert.equal(req.method, "POST");
+      assert.equal(req.url, "/calls");
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123", call_leg_id: "leg-1", call_session_id: "sess-1", is_alive: true } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(
+        ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+94771280314", "--json"],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_control_id, "call-dial-123");
+      // The +E.164 number must reach the API body verbatim (the AIF-327 bug).
+      assert.equal(received?.to, "+94771280314");
+      assert.equal(received?.from, "+13125550000");
+      assert.equal(received?.connection_id, "conn-1");
+      // Detection fields absent when not requested.
+      assert.equal(received?.answering_machine_detection, undefined);
+      assert.equal(received?.deepfake_detection, undefined);
+      // Must NOT shell out to the Go CLI anymore.
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
   });
 
-  it("call-dial forwards AMD mode, deepfake and record flags in Go CLI syntax", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      [
-        "call-dial",
-        "--connection-id", "conn-1",
-        "--from", "+13125550000",
-        "--to", "+13125551234",
-        "--answering-machine-detection",
-        "--deepfake-detection",
-        "--record",
-        "--json",
-      ],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    // Bare --answering-machine-detection defaults to the "detect" mode value.
-    assertFlagValue(dialCall!, "--answering-machine-detection", "detect");
-    // deepfake_detection is an object; the Go CLI takes the inner --deepfake-detection.enabled flag.
-    assert.ok(dialCall!.includes("--deepfake-detection.enabled"), "must include --deepfake-detection.enabled");
-    // --record takes the event to record from, not a boolean.
-    assertFlagValue(dialCall!, "--record", "record-from-answer");
-  });
-
-  it("call-dial forwards an explicit --answering-machine-detection mode", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      [
-        "call-dial",
-        "--connection-id", "conn-1",
-        "--from", "+13125550000",
-        "--to", "+13125551234",
-        "--answering-machine-detection", "premium",
-        "--json",
-      ],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    assertFlagValue(dialCall!, "--answering-machine-detection", "premium");
-  });
-
-  it("call-dial rejects an invalid --answering-machine-detection mode", () => {
-    const fake = setupFakeTelnyx();
-    assert.throws(() =>
-      run(
+  it("call-dial maps AMD (bare), deepfake and record into the REST body (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
         [
           "call-dial",
           "--connection-id", "conn-1",
           "--from", "+13125550000",
           "--to", "+13125551234",
-          "--answering-machine-detection", "bogus",
+          "--answering-machine-detection",
+          "--deepfake-detection",
+          "--record",
           "--json",
         ],
-        fake.env,
-      ),
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      // Bare --answering-machine-detection defaults to "detect".
+      assert.equal(received?.answering_machine_detection, "detect");
+      // deepfake_detection is an object on the API.
+      assert.deepEqual(received?.deepfake_detection, { enabled: true });
+      // record takes the event to record from, not a boolean.
+      assert.equal(received?.record, "record-from-answer");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial forwards an explicit --answering-machine-detection mode (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial",
+          "--connection-id", "conn-1",
+          "--from", "+13125550000",
+          "--to", "+13125551234",
+          "--answering-machine-detection", "premium",
+          "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.answering_machine_detection, "premium");
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial rejects an invalid --answering-machine-detection mode (no network call)", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(
+      [
+        "call-dial",
+        "--connection-id", "conn-1",
+        "--from", "+13125550000",
+        "--to", "+13125551234",
+        "--answering-machine-detection", "bogus",
+        "--json",
+      ],
+      { ...fake.env, TELNYX_API_KEY: "***" },
     );
+    assert.ok(/Invalid --answering-machine-detection mode/.test(stderr));
   });
 
   it("call-control --action hangup calls `calls:actions hangup`", () => {
@@ -321,17 +406,77 @@ describe("Voice API action commands", () => {
     assertFlagValue(answerCall!, "--record", "record-from-answer");
   });
 
-  it("call-status calls `calls retrieve-status`", () => {
+  it("call-status derives 'active' from is_alive:true via REST GET /calls/:id (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      assert.equal(req.method, "GET");
+      assert.equal(req.url, "/calls/call-1");
+      res.writeHead(200, { "content-type": "application/json" });
+      // Real Telnyx retrieve-status shape: is_alive only, NO call_status field.
+      res.end(JSON.stringify({ data: { record_type: "call", call_control_id: "call-1", call_session_id: "sess-9", is_alive: true } }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(["call-status", "--call-control-id", "call-1", "--json"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_status, "active");
+      assert.equal(data.is_alive, true);
+      assert.equal(data.call_control_id, "call-1");
+      // Must NOT shell out to the Go CLI anymore.
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status derives 'ended' from is_alive:false for a completed call (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ data: { record_type: "call", call_control_id: "call-2", is_alive: false } }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stdout } = await runAsync(["call-status", "--call-control-id", "call-2", "--json"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.equal(status, 0, `expected success, stdout=${stdout}`);
+      const data = JSON.parse(stdout);
+      assert.equal(data.call_status, "ended");
+      assert.equal(data.is_alive, false);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status surfaces the API error detail on 422 (AIF-334)", async () => {
+    const mock = await startMockApi((req, res) => {
+      res.writeHead(422, { "content-type": "application/json" });
+      res.end(JSON.stringify({ errors: [{ code: "90015", title: "Invalid Call Control ID", detail: "The call_control_id provided was not valid." }] }));
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status, stderr } = await runAsync(["call-status", "--call-control-id", "bad-id"], {
+        ...fake.env,
+        TELNYX_API_KEY: "KEYtest",
+        TELNYX_API_BASE_URL: mock.baseUrl,
+      });
+      assert.notEqual(status, 0, "expected command to fail on 422");
+      assert.ok(/call_control_id provided was not valid/.test(stderr), `expected API detail in stderr, got: ${stderr}`);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-status requires --call-control-id", () => {
     const fake = setupFakeTelnyx();
-    const output = run(["call-status", "--call-control-id", "call-1", "--json"], fake.env);
-
-    const data = JSON.parse(output);
-    assert.equal(data.call_status, "active");
-
-    const calls = readLoggedArgs(fake.logPath);
-    const statusCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls retrieve-status");
-    assert.ok(statusCall, "should invoke `calls retrieve-status`");
-    assertFlagValue(statusCall!, "--call-control-id", "call-1");
+    const stderr = runFailure(["call-status"], { ...fake.env, TELNYX_API_KEY: "KEYtest" });
+    assert.ok(/--call-control-id is required/.test(stderr));
   });
 
   it("help text includes the voice commands", () => {
@@ -362,44 +507,33 @@ describe("Voice API action commands", () => {
 
   // === Gap PR tests: number masking + advanced call-control actions ===
 
-  it("call-dial with --privacy id passes number masking flag to Go CLI", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--privacy", "id", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall, "should invoke `calls dial`");
-    // The v0.21 Go CLI exposes --privacy (BodyPath: "privacy").
-    assertFlagValue(dialCall!, "--privacy", "id");
-  });
-
-  it("call-dial with --from-display-name passes the flag through", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--from-display-name", "Acme Corp", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall);
-    assertFlagValue(dialCall!, "--from-display-name", "Acme Corp");
-  });
-
-  it("call-dial with --transcription flag passes through", () => {
-    const fake = setupFakeTelnyx();
-    run(
-      ["call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234", "--transcription", "--json"],
-      fake.env,
-    );
-
-    const calls = readLoggedArgs(fake.logPath);
-    const dialCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls dial");
-    assert.ok(dialCall);
-    assert.ok(dialCall!.includes("--transcription"), "should include --transcription flag");
+  it("call-dial maps --privacy, --from-display-name and --transcription into the REST body (AIF-327)", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial", "--connection-id", "conn-1", "--from", "+13125550000", "--to", "+13125551234",
+          "--privacy", "id", "--from-display-name", "Acme Corp", "--transcription", "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.privacy, "id");
+      assert.equal(received?.from_display_name, "Acme Corp");
+      assert.equal(received?.transcription, true);
+    } finally {
+      await mock.close();
+    }
   });
 
   it("call-control --action gather calls `calls:actions gather` and forwards client-state/command-id", () => {
@@ -537,8 +671,8 @@ describe("Voice API action commands", () => {
     },
     {
       action: "start-ai-assistant",
-      flags: ["--assistant.id", "assistant-1", "--greeting", "Hello", "--send-message-history-updates"],
-      values: [["--assistant.id", "assistant-1"], ["--greeting", "Hello"]],
+      flags: ["--assistant.id", "assistant-1", "--greeting", "Hello", "--transcription", '{"model":"deepgram"}', "--send-message-history-updates"],
+      values: [["--assistant.id", "assistant-1"], ["--greeting", "Hello"], ["--transcription", '{"model":"deepgram"}']],
       bare: ["--send-message-history-updates"],
     },
     {
@@ -548,8 +682,8 @@ describe("Voice API action commands", () => {
     },
     {
       action: "start-conversation-relay",
-      flags: ["--url", "wss://example.com/relay", "--voice", "Telnyx.KokoroTTS.af", "--conversation-relay-settings.url", "wss://nested.example.com/relay", "--dtmf-detection"],
-      values: [["--url", "wss://example.com/relay"], ["--voice", "Telnyx.KokoroTTS.af"], ["--conversation-relay-settings.url", "wss://nested.example.com/relay"]],
+      flags: ["--url", "wss://example.com/relay", "--voice", "Telnyx.KokoroTTS.af", "--conversation-relay-settings.url", "wss://nested.example.com/relay", "--transcription", '{"provider":"telnyx"}', "--dtmf-detection"],
+      values: [["--url", "wss://example.com/relay"], ["--voice", "Telnyx.KokoroTTS.af"], ["--conversation-relay-settings.url", "wss://nested.example.com/relay"], ["--transcription", '{"provider":"telnyx"}']],
       bare: ["--dtmf-detection"],
     },
     {
