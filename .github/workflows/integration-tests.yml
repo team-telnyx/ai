@@ -25,6 +25,14 @@ jobs:
       - name: Verify provider skill directories match source
         run: ./scripts/check-skills-sync.sh
 
+  skill-count-check:
+    name: Check — Skill-count markers current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify SKILL_COUNT markers match on-disk count
+        run: ./scripts/check-skill-count.sh
+
   unit-tests:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest
