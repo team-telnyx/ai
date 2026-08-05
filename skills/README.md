@@ -278,7 +278,7 @@ Telnyx ships one plugin per product area, so you install only the skills your pr
 /plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 
-Each plugin bundles that product's skills. Plugins are disjoint — no skill ships in two plugins, so there's no double-install risk. Not sure which you need? See the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server (`https://api.telnyx.com/v2/mcp`) — see the [MCP section](/README.md#model-context-protocol-mcp) of the root README.
+Each plugin bundles that product's skills, and every skill lives in exactly one plugin — install any combination and you'll never load duplicates or waste context. Not sure which you need? See the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server (`https://api.telnyx.com/v2/mcp`) — see the [MCP section](/README.md#model-context-protocol-mcp) of the root README.
 
 ## Skill Structure
 

@@ -4,7 +4,7 @@ Coding-assistant plugins that wire Telnyx into AI IDEs and CLIs.
 
 ## Which plugin do I need?
 
-Telnyx ships one Claude Code plugin per product area. Install only what your project uses — each plugin loads its own skills into your assistant's context, so smaller installs mean less token overhead and less room for confusion. Plugins are disjoint: no skill ships in two plugins.
+Telnyx ships one Claude Code plugin per product area. Install only what your project uses — each plugin loads its own skills into your assistant's context, so smaller installs mean less token overhead and less room for confusion. Every skill lives in exactly one plugin, so plugins compose cleanly — install any combination and you'll never load duplicate skills or waste context.
 
 | Plugin | Covers | Skills |
 | --- | --- | --- |
