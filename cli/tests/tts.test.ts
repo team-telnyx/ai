@@ -228,6 +228,34 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.equal(body.text_type, "ssml");
   });
 
+  // AIF-331 follow-up: a namespaced voice id (`Provider.Model.Voice`) already
+  // encodes the provider. The live API rejects a redundant `provider` field for
+  // these with 422 `{"errors":{"telnyx":["can't be blank"]}}`, so the body must
+  // OMIT `provider` when the voice id is namespaced. This is exactly the
+  // cookbook example (`--provider telnyx --voice Telnyx.Bayan.Amanda`) that
+  // failed live before this fix.
+  it("omits provider from the body when the voice id is namespaced (Provider.Model.Voice)", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Telnyx.Bayan.Amanda", "--provider", "telnyx", "--json"]);
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}`);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body.voice, "Telnyx.Bayan.Amanda");
+    assert.equal(body.provider, undefined, "provider must be omitted for a namespaced voice id");
+    // --provider is still echoed in the command output for the user.
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.provider, "telnyx");
+  });
+
+  it("still sends provider in the body for a bare (non-namespaced) voice name", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--provider", "aws", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body.voice, "Amy");
+    assert.equal(body.provider, "aws", "provider is required to route a bare voice name");
+  });
+
   it("accepts the xai provider", async () => {
     lastRequest = null;
     const r = await runTtsAsync(["--text", "Hello", "--voice", "xai-voice", "--provider", "xai", "--json"]);

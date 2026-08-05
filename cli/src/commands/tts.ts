@@ -17,6 +17,15 @@
  * wrapper only supports `base64_output` (exposed as the friendly alias
  * `base64`) because `binary_output` returns raw audio bytes, which cannot be
  * transported through the JSON pipeline.
+ *
+ * AIF-331 follow-up: When the voice id is namespaced as `Provider.Model.Voice`
+ * (e.g. `Telnyx.Bayan.Amanda`), the API derives the provider FROM the voice id
+ * and rejects a separately-supplied `provider` field with a 422
+ * `{"errors":{"telnyx":["can't be blank"]}}`. Verified live against the API:
+ * `provider:"telnyx"` + a namespaced telnyx voice always 422s, while omitting
+ * `provider` returns audio. So we only send `provider` in the body when the
+ * voice id is NOT namespaced (a bare name that needs the provider for routing).
+ * The `--provider` flag is still validated (typo guard) and echoed in output.
  */
 
 import { writeFileSync } from "node:fs";
@@ -107,15 +116,20 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       console.log("\n🔊 Generating speech...\n");
     }
 
+    // A namespaced voice id (`Provider.Model.Voice`) already encodes the
+    // provider; the API derives it and rejects a redundant `provider` field.
+    const voiceIsNamespaced = voice.includes(".");
+
     // Build request body — all snake_case for the REST API
     const body: Record<string, unknown> = {
       text,
       language,
-      provider,
       output_type: outputType,
       text_type: textType,
     };
     if (voice) body.voice = voice;
+    // Only send provider when the voice id does not already namespace it.
+    if (!voiceIsNamespaced) body.provider = provider;
     if (disableCache) body.disable_cache = true;
 
     const client = new TelnyxClient();
