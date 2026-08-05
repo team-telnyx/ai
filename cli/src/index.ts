@@ -325,6 +325,7 @@ Voice Call Flags:
   --webhook-url                  Webhook URL override (call-dial, call-control answer)
   --audio-url                    Audio URL to play on answer (call-dial); start-playback (required); gather-using-audio (optional)
   --timeout-secs                 Dial timeout in seconds (call-dial)
+  --retry-on-timeout [true|false] Continue through remaining routing paths after a dial timeout (call-dial, default: true)
   --privacy                      Number masking: 'id' hides caller ID, 'none' is normal (call-dial, default: none)
   --from-display-name            Caller ID display name (call-dial)
   --time-limit-secs              Max call duration in seconds (call-dial)
@@ -655,6 +656,7 @@ const KNOWN_FLAGS = new Set<string>([
   "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
   "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "response-format",
+  "retry-on-timeout",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
   "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
   "start-message", "starts-with", "status", "stop", "stop-message", "store-media", "store-preview",

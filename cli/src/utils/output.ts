@@ -112,7 +112,7 @@ export const BOOLEAN_FLAGS = new Set<string>([
 ]);
 
 const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
-  ["call-dial", new Set(["transcription"])],
+  ["call-dial", new Set(["retry-on-timeout", "transcription"])],
 ]);
 
 export function isBooleanFlag(command: string, key: string): boolean {
@@ -142,7 +142,8 @@ const BOOLEAN_VALUE_FLAGS = new Set<string>([
 ]);
 
 function isBooleanValueFlag(command: string, key: string): boolean {
-  return BOOLEAN_VALUE_FLAGS.has(key) || (command === "call-dial" && key === "transcription");
+  return BOOLEAN_VALUE_FLAGS.has(key)
+    || (command === "call-dial" && (key === "retry-on-timeout" || key === "transcription"));
 }
 
 export function parseFlags(args: string[]): {

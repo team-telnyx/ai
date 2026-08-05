@@ -175,11 +175,89 @@ describe("Voice API action commands", () => {
       // Detection fields absent when not requested.
       assert.equal(received?.answering_machine_detection, undefined);
       assert.equal(received?.deepfake_detection, undefined);
+      assert.equal(received?.retry_on_timeout, undefined);
       // Must NOT shell out to the Go CLI anymore.
       assertNoLoggedCalls(fake.logPath);
     } finally {
       await mock.close();
     }
+  });
+
+  for (const [label, retryArgs] of [
+    ["bare", ["--retry-on-timeout"]],
+    ["explicit true", ["--retry-on-timeout", "true"]],
+  ] as const) {
+    it(`call-dial maps ${label} --retry-on-timeout to true in the REST body`, async () => {
+      let received: Record<string, unknown> | undefined;
+      const mock = await startMockApi((req, res) => {
+        let raw = "";
+        req.on("data", (c) => (raw += c.toString()));
+        req.on("end", () => {
+          received = JSON.parse(raw);
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+        });
+      });
+      try {
+        const fake = setupFakeTelnyx();
+        const { status } = await runAsync(
+          [
+            "call-dial", "--connection-id", "conn-1",
+            "--from", "+15550001000", "--to", "+15550001001",
+            ...retryArgs, "--json",
+          ],
+          { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+        );
+        assert.equal(status, 0);
+        assert.equal(received?.retry_on_timeout, true);
+        assertNoLoggedCalls(fake.logPath);
+      } finally {
+        await mock.close();
+      }
+    });
+  }
+
+  it("call-dial maps explicit false --retry-on-timeout to false in the REST body", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial", "--connection-id", "conn-1",
+          "--from", "+15550001000", "--to", "+15550001001",
+          "--retry-on-timeout", "false", "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.retry_on_timeout, false);
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial rejects invalid --retry-on-timeout before any network call", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(
+      [
+        "call-dial", "--connection-id", "conn-1",
+        "--from", "+15550001000", "--to", "+15550001001",
+        "--retry-on-timeout", "sometimes", "--json",
+      ],
+      { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: "http://127.0.0.1:1" },
+    );
+    assert.match(stderr, /Invalid --retry-on-timeout: sometimes\. Must be true or false/);
+    assertNoLoggedCalls(fake.logPath);
   });
 
   it("call-dial maps AMD (bare), deepfake and record into the REST body (AIF-327)", async () => {
