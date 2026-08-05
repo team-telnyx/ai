@@ -169,7 +169,6 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |
-| `telnyx-seti-*` | Space Exploration Telecommunications Infrastructure |
 | `telnyx-oauth-*` | OAuth 2.0 authentication flows |
 
 #### Account
