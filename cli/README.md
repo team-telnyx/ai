@@ -176,7 +176,7 @@ What they do:
 - prefer `telnyx-edge auth api-key set <your-api-key>` for agents when supported
 - point you at a real Edge example
 - give you the concrete next deploy command
-- preserve an honest handoff instead of pretending `telnyx-agent` owns Edge lifecycle
+- hand off function creation, deployment, and lifecycle management to the `telnyx-edge` CLI, which owns them
 
 ### `telnyx-agent fund-account`
 
