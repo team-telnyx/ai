@@ -1,9 +1,9 @@
 {
   "$schema": "https://agent.telnyx.com/schemas/agent-manifest-v1.json",
   "name": "Telnyx",
-  "description": "Programmable telecom platform — voice, messaging, IoT, AI, networking, storage.",
+  "description": "Programmable telecom platform — voice, messaging, email, IoT, AI, networking, storage.",
   "version": "1.0.0",
-  "updated": "2026-03-23T00:00:00Z",
+  "updated": "2026-07-29T00:00:00Z",
 
   "auth": {
     "type": "api_key",
@@ -63,6 +63,15 @@
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
       "requires": []
+    },
+    {
+      "id": "email",
+      "name": "Email",
+      "description": "Send transactional email, manage inboxes and inbound messages, configure sending domains with DNS verification, and handle suppressions and unsubscribe groups.",
+      "guide": "/guides/email.md",
+      "api": "POST /v2/email_messages",
+      "docs": "https://developers.telnyx.com/docs/email",
+      "requires": ["sending_domain", "api_key"]
     },
     {
       "id": "numbers",
@@ -154,6 +163,15 @@
       "description": "Fund account with USDC on Base blockchain via x402 protocol.",
       "guide": "/guides/x402-payments.md",
       "api": "POST /v2/x402/credit_account/quote",
+      "docs": "https://developers.telnyx.com/docs/account/billing",
+      "requires": []
+    },
+    {
+      "id": "mpp_payments",
+      "name": "MPP Payments",
+      "description": "Fund account via Machine Payment Protocol (HTTP 402) with Stripe Link or Tempo USDC.",
+      "guide": "/guides/mpp-payments.md",
+      "api": "POST /v2/machine-payments/account-credit",
       "docs": "https://developers.telnyx.com/docs/account/billing",
       "requires": []
     },

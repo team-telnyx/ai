@@ -12,6 +12,15 @@ import { verifySendCommand } from "./commands/verify-send.ts";
 import { verifyCheckCommand } from "./commands/verify-check.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
+import {
+  attachPortingDocumentCommand,
+  cancelPortingOrderCommand,
+  getPortingOrderCommand,
+  listPortingDocumentsCommand,
+  listPortingOrdersCommand,
+  submitPortingOrderCommand,
+  updatePortingOrderCommand,
+} from "./commands/porting-orders.ts";
 import { edgeDoctorCommand } from "./commands/edge-doctor.ts";
 import { setupEdgeMcpCommand } from "./commands/setup-edge-mcp.ts";
 import { setupEdgeWebhookCommand } from "./commands/setup-edge-webhook.ts";
@@ -44,11 +53,23 @@ import {
 import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
+  createAiAssistantCommand,
+  deleteAiAssistantCommand,
+  getAiAssistantCommand,
+  listAiAssistantsCommand,
+  updateAiAssistantCommand,
+} from "./commands/ai-assistants.ts";
+import {
   disableSimCardCommand,
   enableSimCardCommand,
   listSimCardsCommand,
   retrieveSimCardCommand,
 } from "./commands/sim-cards.ts";
+import {
+  getVoiceConnectionCommand,
+  listActiveCallsCommand,
+  listVoiceConnectionsCommand,
+} from "./commands/voice-connections.ts";
 import { parseFlags } from "./utils/output.ts";
 
 const HELP = `
@@ -72,6 +93,13 @@ Commands:
   verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number
   setup-porting     Zero to porting: check portability, create order, submit
+  list-porting-orders List port-in orders with filters and pagination
+  get-porting-order Retrieve one porting order by ID
+  update-porting-order Update porting order details and number configuration
+  submit-porting-order Confirm and submit a draft porting order
+  cancel-porting-order Cancel a porting order (requires --confirm)
+  attach-porting-document Attach an existing Telnyx document to a porting order
+  list-porting-documents List documents attached to a porting order
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
   setup-edge-mcp    Handoff to an Edge-hosted MCP server example
   setup-edge-webhook Handoff to an Edge-hosted webhook receiver example
@@ -93,6 +121,9 @@ Commands:
   call-dial         Make an outbound call via Call Control
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-status       Get the status of a call by call-control-id
+  list-voice-connections List voice connections with filters and pagination
+  get-voice-connection Retrieve one voice connection by ID
+  list-active-calls List active calls for a voice connection
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
   list-phone-numbers List phone numbers owned by the account
@@ -101,6 +132,11 @@ Commands:
   lookup-number     Look up carrier and caller-name information
   ai-chat           Create an OpenAI-compatible chat completion
   ai-embed          Create OpenAI-compatible text embeddings
+  list-ai-assistants List AI assistant configurations
+  create-ai-assistant Create an AI assistant
+  get-ai-assistant  Retrieve an AI assistant by ID
+  update-ai-assistant Update an AI assistant by ID
+  delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -148,6 +184,34 @@ Verify Flags:
   --billing-phone   Billing telephone number on the account (setup-porting)
   --old-provider    Current/losing carrier name (setup-porting)
   --submit          Submit the newly created porting order immediately (setup-porting)
+
+Porting Order Action Flags:
+  --id <id>         Porting order ID (get, update, submit, cancel, attach/list documents — required)
+  --customer-reference Customer bookkeeping reference (list, update)
+  --customer-group-reference Customer group reference (list, update)
+  --parent-support-key Parent support key filter (list-porting-orders)
+  --phone-number    Phone-number substring filter (list-porting-orders)
+  --country-code    Phone-number country filter (list-porting-orders)
+  --carrier-name    Current carrier filter (list-porting-orders)
+  --port-type       full|partial (list, update)
+  --fast-port-eligible <bool> FastPort eligibility filter (list-porting-orders)
+  --foc-after / --foc-before ISO 8601 requested FOC range filters (list-porting-orders)
+  --include-phone-numbers <bool> Include phone-number objects (list, get)
+  --page-number / --page-size Positive pagination values (list orders/documents)
+  --sort            Generated API sort value (list orders/documents)
+  --foc-datetime-requested ISO 8601 requested FOC date-time (update)
+  --enable-messaging <bool> Port messaging capabilities (update)
+  --connection-id / --messaging-profile-id Number assignments after porting (update)
+  --billing-group-id / --emergency-address-id Number configuration (update)
+  --tags            Comma-separated number tags (update)
+  --loa-document-id / --invoice-document-id Primary document IDs (update)
+  --requirement-group-id Requirement group to copy into the order (update)
+  --webhook-url     Porting order webhook URL (update)
+  --remaining-numbers-action keep|disconnect (partial-port update)
+  --new-billing-phone-number Required when keeping remaining numbers (update)
+  --confirm         Required safety acknowledgement (cancel-porting-order)
+  --document-id     Existing Telnyx document ID (attach-porting-document — required)
+  --document-type   loa|invoice|csr|other (attach required; comma-separated list filter)
 
 Fund-account Flags:
   --amount <usd>    Amount to fund in USD (required, e.g., 50.00)
@@ -222,7 +286,7 @@ WhatsApp Flags:
   --component       Template components as a JSON array string (whatsapp-templates, create)
   --status          Filter templates by status: APPROVED|PENDING|REJECTED (whatsapp-templates, list)
 Voice Call Flags:
-  --connection-id   Call Control connection ID (call-dial, required)
+  --connection-id   Voice connection ID (call-dial, list-active-calls — required)
   --from             E.164 number to call from (call-dial, required)
   --to               E.164 destination (call-dial, call-control transfer)
   --call-control-id Call Control ID of the call (call-control, call-status, required)
@@ -275,6 +339,15 @@ Voice Call Flags:
   --role                         Supervisor role: barge|whisper|monitor (switch-supervisor-role, required)
                     Generated optional JSON, scalar, boolean, and dotted inner flags for these actions
                     are forwarded unchanged to the Go CLI (for example --assistant.id).
+Voice Connection Discovery Flags:
+  --id <connection-id> Retrieve a voice connection (get-voice-connection — required)
+  --connection-name Filter connections by name substring (list-voice-connections)
+  --fqdn            Exact FQDN filter (list-voice-connections)
+  --outbound-voice-profile-id Outbound voice profile filter (list-voice-connections)
+  --page-number     Result page (list-voice-connections)
+  --page-size       Results per page (list-voice-connections, list-active-calls)
+  --sort            Connection sort order; prefix with - for descending (list-voice-connections)
+  --max-items       Maximum items to return; -1 for unlimited (list-voice-connections, list-active-calls)
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -332,6 +405,27 @@ AI Embed Flags:
   --encoding-format Embedding encoding format (Go CLI default: float)
   --user            End-user identifier for monitoring and abuse detection
 
+AI Assistant Lifecycle Flags:
+  --id <assistant-id> AI assistant ID (get, update, delete; --assistant-id alias accepted)
+  --name            Assistant name (create required; update optional)
+  --instructions    System instructions (create required; update optional)
+  --description     Assistant description (create, update)
+  --model           Language model ID (create, update)
+  --greeting        Initial assistant greeting; an empty string makes it wait (create, update)
+  --voice           Voice ID, forwarded as --voice-settings.voice (create, update)
+  --transcription-model Speech-to-text model (create, update)
+  --transcription-language Speech-to-text language (create, update)
+  --dynamic-variables <json> Dynamic variable defaults as a JSON object (create, update)
+  --dynamic-variables-webhook-url <url> Dynamic variable resolver webhook (create, update)
+  --dynamic-variables-webhook-timeout-ms <1-10000> Resolver timeout (create, update)
+  --tags <csv>      Comma-separated assistant tags (create, update)
+  --tool-ids <csv>  Comma-separated shared AI tool IDs (create, update)
+  --clear-tags      Clear all assistant tags (update only; exclusive with --tags)
+  --clear-tool-ids  Clear all shared AI tool IDs (update only; exclusive with --tool-ids)
+  --version-name    Human-readable version name (update only)
+  --promote-to-main <bool> Promote the new version (update only)
+  --confirm         Explicitly confirm deletion (delete only, required)
+
 IoT SIM Action Flags:
   --id <sim-card-id> SIM card ID (retrieve-sim-card, enable-sim-card, disable-sim-card — required)
   --iccid           Partial ICCID filter (list-sim-cards)
@@ -355,6 +449,13 @@ Examples:
   telnyx-agent setup-voice --webhook https://example.com/calls
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
   telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
+  telnyx-agent list-porting-orders --customer-reference migration-2026 --page-size 25 --json
+  telnyx-agent get-porting-order --id <porting-order-id> --json
+  telnyx-agent update-porting-order --id <porting-order-id> --connection-id <connection-id> --enable-messaging true --json
+  telnyx-agent submit-porting-order --id <porting-order-id> --json
+  telnyx-agent cancel-porting-order --id <porting-order-id> --confirm --json
+  telnyx-agent attach-porting-document --id <porting-order-id> --document-id <document-id> --document-type loa --json
+  telnyx-agent list-porting-documents --id <porting-order-id> --document-type loa,invoice --json
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
   telnyx-agent verify-check --verification-id ver_xxx --code 123456
   telnyx-agent verify-check --verification-id ver_xxx
@@ -418,6 +519,9 @@ Examples:
   telnyx-agent call-control --action start-conversation-relay --call-control-id <id> --url wss://example.com/relay
   telnyx-agent call-control --action switch-supervisor-role --call-control-id <id> --role whisper
   telnyx-agent call-status --call-control-id <id> --json
+  telnyx-agent list-voice-connections --connection-name support --page-size 25 --json
+  telnyx-agent get-voice-connection --id <connection-id> --json
+  telnyx-agent list-active-calls --connection-id <connection-id> --json
   telnyx-agent stt --audio-url https://example.com/audio.mp3
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
   telnyx-agent stt-providers --json
@@ -431,6 +535,11 @@ Examples:
   telnyx-agent ai-chat --message '{"role":"user","content":"Return JSON"}' --response-format '{"type":"json_object"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
+  telnyx-agent list-ai-assistants --json
+  telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
+  telnyx-agent get-ai-assistant --id <assistant-id> --json
+  telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
+  telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -451,6 +560,13 @@ const COMMANDS: Record<string, (
   "verify-check": verifyCheckCommand,
   "setup-10dlc": setup10dlcCommand,
   "setup-porting": setupPortingCommand,
+  "list-porting-orders": listPortingOrdersCommand,
+  "get-porting-order": getPortingOrderCommand,
+  "update-porting-order": updatePortingOrderCommand,
+  "submit-porting-order": submitPortingOrderCommand,
+  "cancel-porting-order": cancelPortingOrderCommand,
+  "attach-porting-document": attachPortingDocumentCommand,
+  "list-porting-documents": listPortingDocumentsCommand,
   "edge-doctor": edgeDoctorCommand,
   "setup-edge-mcp": setupEdgeMcpCommand,
   "setup-edge-webhook": setupEdgeWebhookCommand,
@@ -472,6 +588,9 @@ const COMMANDS: Record<string, (
   "call-dial": callDialCommand,
   "call-control": callControlCommand,
   "call-status": callStatusCommand,
+  "list-voice-connections": listVoiceConnectionsCommand,
+  "get-voice-connection": getVoiceConnectionCommand,
+  "list-active-calls": listActiveCallsCommand,
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
   "list-phone-numbers": listPhoneNumbersCommand,
@@ -480,6 +599,11 @@ const COMMANDS: Record<string, (
   "lookup-number": lookupNumberCommand,
   "ai-chat": aiChatCommand,
   "ai-embed": aiEmbedCommand,
+  "list-ai-assistants": listAiAssistantsCommand,
+  "create-ai-assistant": createAiAssistantCommand,
+  "get-ai-assistant": getAiAssistantCommand,
+  "update-ai-assistant": updateAiAssistantCommand,
+  "delete-ai-assistant": deleteAiAssistantCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
