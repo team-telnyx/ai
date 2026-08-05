@@ -1,21 +1,19 @@
 # Friction Feedback Loop CLI
 
-Internal CLI for reporting API friction to the FFL (Friction Feedback Loop) backend.
-
-**🔒 Private Repo** - For internal Telnyx testing only.
+CLI for reporting Telnyx API friction to the FFL (Friction Feedback Loop) backend.
 
 ---
 
 ## Overview
 
-When AI agents or developers encounter friction using Telnyx APIs (parameter mismatches, unclear errors, missing docs), they can report it using this CLI. Reports are sent to the FFL backend for analysis and tracking.
+When AI agents or developers encounter friction using Telnyx APIs (parameter mismatches, unclear errors, missing docs), they can report it using this CLI. Reports go to the FFL backend, where the Telnyx team uses them to fix docs, specs, and skills — every report makes the skills in this repo better.
 
 ---
 
 ## Installation
 
 ```bash
-pip install git+https://github.com/team-telnyx/aifde-ffl-cli.git
+pip install "git+https://github.com/team-telnyx/ai.git#subdirectory=tools/ffl-cli"
 ```
 
 ---
@@ -87,7 +85,7 @@ friction-report watchdog --skill <SKILLNAME> --team <TEAM> -- <your-command-here
 
 - `--output auto` (default): Remote if TELNYX_API_KEY set, local otherwise
 - `--output local`: Save to `~/.openclaw/friction-logs/`
-- `--output remote`: Send to FFL backend (requires VPN + API key)
+- `--output remote`: Send to FFL backend (requires a Telnyx API key)
 - `--output both`: Local file + remote report
 
 ---
@@ -255,8 +253,8 @@ See [`templates/SKILL_TEMPLATE.md`](./templates/SKILL_TEMPLATE.md) for a copy-pa
 
 ```bash
 # Clone repo
-git clone https://github.com/team-telnyx/aifde-ffl-cli.git
-cd aifde-ffl-cli
+git clone https://github.com/team-telnyx/ai.git
+cd ai/tools/ffl-cli
 
 # Install in editable mode
 pip install -e .
@@ -316,14 +314,6 @@ python -m pytest tests/
 
 ---
 
-## Related Repos
-
-- **Backend:** [`team-telnyx/aifde-ffl-backend`](https://github.com/team-telnyx/aifde-ffl-backend)
-- **Deployment:** [`team-telnyx/deploy-ai-fde-main`](https://github.com/team-telnyx/deploy-ai-fde-main)
-- **Documentation:** (TBD)
-
----
-
 ## License
 
 MIT
@@ -332,6 +322,4 @@ MIT
 
 ## Support
 
-For questions or issues, contact the AI-FDE team:
-- Slack: `#squad-ai-fde`
-- Email: ai-fde@telnyx.com
+For questions or issues, [open an issue](https://github.com/team-telnyx/ai/issues) on this repo or email ai-fde@telnyx.com.

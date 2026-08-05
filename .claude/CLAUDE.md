@@ -79,7 +79,7 @@ out of sync. CI will catch drift.
 - `tools/python/` — Python agent toolkit (PyPI)
 - `tools/typescript/` — TypeScript agent toolkit (npm)
 - `tools/mcp/` — MCP proxy server
-- `tools/ffl-cli/` — Filling-from-life CLI
+- `tools/ffl-cli/` — Friction Feedback Loop (FFL) CLI for reporting Telnyx API friction
 - `cli/` — agent CLI for provisioning Telnyx infrastructure
 - `inference/` — Telnyx inference docs
 - `guides/` — operational guides

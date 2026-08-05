@@ -56,7 +56,7 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 | `tools/typescript/`     | TypeScript agent toolkit (npm).                                           |
 | `tools/mcp/`            | MCP proxy server for the generic Telnyx API MCP endpoint.                |
 | `tools/mcp-apps/`       | Focused app-layer MCP servers with MCP Apps UI resources.                |
-| `tools/ffl-cli/`        | Filling-from-life CLI tooling.                                            |
+| `tools/ffl-cli/`        | Friction Feedback Loop (FFL) CLI — report Telnyx API friction (parameter mismatches, unclear errors, missing docs). |
 | `cli/`                  | Agent CLI for provisioning Telnyx infrastructure.                         |
 | `inference/`            | Documentation for Telnyx-hosted inference.                                |
 | `guides/`               | Step-by-step operational guides.                                          |
