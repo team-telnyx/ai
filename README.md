@@ -7,7 +7,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Table of contents
 
-- [Telnyx Plugins](#plugins-and-extensions) - Install the Telnyx plugins for Claude Code, Cursor, Gemini CLI, or OpenCode to give your coding assistant Telnyx MCP server access and Telnyx Agent Skills.
+- [Telnyx Plugins](#plugins-and-extensions) - Set up your coding assistant: Telnyx Agent Skills plugins for Claude Code and Cursor, the hosted Telnyx MCP server via the Gemini CLI extension, and a Telnyx model-provider plugin for OpenCode.
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
   
