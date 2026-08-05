@@ -21,6 +21,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 - [Edge Compute](#edge-compute) - agent workflows and handoff tooling for Telnyx Edge Compute functions
 
+- [Maintainers](#maintainers) - who maintains this repo and how to reach them
+
 ## Plugins and Extensions
 
 Install the Telnyx plugins you need to give your AI coding assistant Telnyx Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. Plugins are split by product area so you only load the skills your project uses — see the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server — see [MCP](#model-context-protocol-mcp).
@@ -236,6 +238,10 @@ Use this repo for agent workflows against Telnyx Edge Compute: the [Agent CLI](/
 
 To create, deploy, and manage the functions themselves (secrets, bindings, lifecycle), use the `telnyx-edge` CLI from [`team-telnyx/edge-compute`](https://github.com/team-telnyx/edge-compute). For agent flows, prefer API-key auth (`telnyx-edge auth api-key set <key>`).
 
+
+## Maintainers
+
+Maintained by the Telnyx AI‑FDE team: [@aisling404](https://github.com/aisling404), [@Oliver-Zimmerman](https://github.com/Oliver-Zimmerman), [@aaronjo-Telnyx](https://github.com/aaronjo-Telnyx), and [@gbattistel](https://github.com/gbattistel) (see [CODEOWNERS](/.github/CODEOWNERS)). The fastest way to reach us is an [issue](https://github.com/team-telnyx/ai/issues); for security reports, see [SECURITY.md](/.github/SECURITY.md).
 
 ## License
 
