@@ -6,7 +6,7 @@
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { printSuccess, printError, outputJson, failWith } from "../utils/output.ts";
 
 interface WhatsappSendResult {
   from: string;
@@ -26,8 +26,7 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
   const messagingProfileId = flags["messaging-profile-id"] as string;
 
   if (!from || !to) {
-    printError("--from and --to are required (E.164 phone numbers)");
-    process.exit(1);
+    failWith("--from and --to are required (E.164 phone numbers)", jsonOutput);
   }
 
   // Build the whatsapp_message JSON string. Initialize to keep strict mode happy.
@@ -43,8 +42,7 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
       template: { name: templateName, language: { code: templateLanguage } },
     });
   } else {
-    printError("Provide --text for a text message or --template-name for a template message");
-    process.exit(1);
+    failWith("Provide --text for a text message or --template-name for a template message", jsonOutput);
   }
 
   try {

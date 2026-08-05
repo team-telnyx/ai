@@ -3,9 +3,22 @@
  *
  * Default (list) mode lists templates for a WABA, optionally filtered by status.
  * Create mode (--create) submits a new template for approval.
+ *
+ * Direct REST (AIF-326): the pinned Go CLI (v0.21.0) built a doubled URL path
+ * `/v2/v2/whatsapp/message_templates`, so every whatsapp resource-listing/create
+ * command 404'd (error 10005). The base URL already ends in `/v2`, so we call
+ * the resource paths (`/whatsapp/message_templates`) directly and avoid the Go
+ * CLI entirely for these commands.
+ *
+ * List filtering (live-API bug): the API returns `waba_id: null` on template
+ * records, so a server-side `filter[waba_id]=<id>` matches nothing and the list
+ * always came back empty even when approved templates exist. In list mode we no
+ * longer send that filter and `--waba-id` is optional; if an id is given AND the
+ * records actually carry a waba_id we filter client-side, otherwise we list all.
+ * Create mode still requires `--waba-id`.
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
 interface WhatsappTemplate {
@@ -40,8 +53,10 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
   const component = flags.component as string;
   const status = flags.status as string;
 
-  if (!wabaId) {
-    printError("--waba-id is required");
+  // --waba-id is only required for create (see header note on the list-filter
+  // live bug). List mode works without it.
+  if (create && !wabaId) {
+    printError("--waba-id is required for --create");
     process.exit(1);
   }
 
@@ -71,19 +86,14 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         process.exit(1);
       }
 
-      const createArgs = [
-        "whatsapp:templates", "create",
-        "--waba-id", wabaId,
-        "--name", name,
-        "--language", language,
-        "--category", category,
-      ];
-      // Emit one --component flag per component object (Go CLI slice semantics)
-      for (const comp of components) {
-        createArgs.push("--component", JSON.stringify(comp));
-      }
-
-      const res = await telnyxCli(createArgs);
+      const client = new TelnyxClient();
+      const res = await client.post("/whatsapp/message_templates", {
+        waba_id: wabaId,
+        name,
+        language,
+        category,
+        components,
+      });
       const data = (res.data ?? res) as Record<string, unknown>;
       const templateId = String(data.id ?? "");
 
@@ -109,15 +119,33 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         });
       }
     } else {
-      // List mode (default)
-      const args = ["whatsapp:templates", "list", "--filter-waba-id", wabaId];
-      if (status) args.push("--filter-status", status);
+      // List mode (default) — GET /v2/whatsapp/message_templates.
+      // Do NOT send filter[waba_id]: the API returns waba_id: null on records so
+      // that server-side filter matches nothing (always-empty bug). We fetch
+      // unfiltered and, only if the caller passed --waba-id AND the records
+      // actually carry a matching waba_id, we narrow client-side.
+      const client = new TelnyxClient();
+      const params: Record<string, unknown> = {};
+      if (status) params["filter[status]"] = status;
+      const res = await client.get("/whatsapp/message_templates", params);
+      const raw = ((res.data as Array<Record<string, unknown>>) ?? (Array.isArray(res) ? res : [])) as Array<Record<string, unknown>>;
 
-      // format: "raw" — list output via --format json is concatenated per-item
-      // JSON documents, not a parseable array (see telnyxCli docs).
-      const res = await telnyxCli(args, { format: "raw" });
-      const raw = (Array.isArray(res) ? res : (res.data as Array<Record<string, unknown>>) ?? []) as Array<Record<string, unknown>>;
-      const templates: WhatsappTemplate[] = raw.map((t) => ({
+      let scoped = raw;
+      if (wabaId) {
+        // Distinguish two cases:
+        //  (a) records carry no waba_id at all (API returns waba_id: null on
+        //      every row) — we cannot narrow, so keep the full list rather than
+        //      hiding everything (the always-empty bug we're fixing).
+        //  (b) records DO carry waba_id values — narrow to the requested WABA,
+        //      even if that yields zero matches (an empty result is correct; we
+        //      must not fall back to templates from other WABAs).
+        const anyHasWabaId = raw.some((t) => t.waba_id != null);
+        if (anyHasWabaId) {
+          scoped = raw.filter((t) => t.waba_id != null && String(t.waba_id) === wabaId);
+        }
+      }
+
+      const templates: WhatsappTemplate[] = scoped.map((t) => ({
         name: String(t.name ?? ""),
         language: String(t.language ?? ""),
         category: String(t.category ?? ""),
@@ -125,7 +153,7 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
         id: t.id ? String(t.id) : undefined,
       }));
 
-      const result: WhatsappTemplatesListResult = { waba_id: wabaId, templates };
+      const result: WhatsappTemplatesListResult = { waba_id: wabaId ?? "", templates };
 
       if (jsonOutput) {
         outputJson(result);
@@ -153,7 +181,7 @@ export async function whatsappTemplatesCommand(flags: Record<string, string | bo
 }
 
 function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
 }

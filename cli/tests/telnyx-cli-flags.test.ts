@@ -4,7 +4,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -96,36 +96,9 @@ describe("telnyx CLI flag compatibility", () => {
     assert.equal(parsed.flags.model, "new");
   });
 
-  it("status uses --page-size for paginated list commands and no page-size for ai:assistants", () => {
-    const fake = setupFakeTelnyx();
-
-    const output = execFileSync("npx", ["tsx", cliBin, "status", "--json"], {
-      cwd: cliRoot,
-      encoding: "utf8",
-      env: fake.env,
-      timeout: 30000,
-    });
-
-    const data = JSON.parse(output);
-    assert.equal(data.ai_assistants.total, 2);
-
-    const calls = readLoggedArgs(fake.logPath);
-    assert.ok(calls.every((args) => !args.includes("--page.size")), "must not use unsupported --page.size flag");
-
-    const numbersCall = calls.find((args) => args.slice(0, 2).join(" ") === "phone-numbers list");
-    const profilesCall = calls.find((args) => args.slice(0, 2).join(" ") === "messaging-profiles list");
-    const connectionsCall = calls.find((args) => args.slice(0, 2).join(" ") === "credential-connections list");
-    assert.ok(numbersCall, "status should query phone-numbers list");
-    assert.ok(profilesCall, "status should query messaging-profiles list");
-    assert.ok(connectionsCall, "status should query credential-connections list");
-    assertFlagValue(numbersCall, "--page-size", "1");
-    assertFlagValue(profilesCall, "--page-size", "1");
-    assertFlagValue(connectionsCall, "--page-size", "1");
-
-    const assistantsCall = calls.find((args) => args.slice(0, 2).join(" ") === "ai:assistants list");
-    assert.ok(assistantsCall, "status should query ai:assistants list");
-    assert.ok(!assistantsCall.includes("--page-size"), "ai:assistants list does not support pagination flags");
-  });
+  // NOTE: `status` was REST-swapped from Go CLI to TelnyxClient (direct fetch)
+  // and no longer shells out to `telnyx`. Its Go CLI flag compat is no longer
+  // relevant. See tests/status-rest.test.ts for the new REST-based tests.
 
   it("searchNumbers uses the Go CLI's --filter.limit flag for limits", async () => {
     const fake = setupFakeTelnyx();
@@ -158,4 +131,88 @@ describe("telnyx CLI flag compatibility", () => {
       else process.env.TELNYX_FAKE_ARGS_LOG = previousArgsLog;
     }
   });
+});
+
+describe("help flag never triggers command execution (AIF-325)", () => {
+  // A --help/-h flag on a setup-* command must print help and make ZERO Go CLI
+  // calls. Regression: `setup-voice --help` previously fell through to the handler
+  // and purchased a billable number/connection before erroring on the unknown flag.
+  const helpInvocations: string[][] = [
+    ["setup-voice", "--help"],
+    ["setup-sms", "--help"],
+    ["setup-verify", "-h"],
+    ["setup-ai", "--help"],
+    ["setup-10dlc", "--help"],
+    ["help"],
+    ["--help"],
+    ["-h"],
+    [],
+  ];
+
+  for (const argv of helpInvocations) {
+    const label = argv.length ? argv.join(" ") : "(no args)";
+    it(`prints help and makes no Go CLI calls for: ${label}`, () => {
+      const fake = setupFakeTelnyx();
+
+      const output = execFileSync("npx", ["tsx", cliBin, ...argv], {
+        cwd: cliRoot,
+        encoding: "utf8",
+        env: fake.env,
+        timeout: 30000,
+      });
+
+      // Help text was printed.
+      assert.match(output, /telnyx-agent — Agent-friendly CLI for Telnyx API v2/);
+      assert.match(output, /Usage:/);
+
+      // The fake telnyx binary only creates its log file when invoked. If it was
+      // never called, the log file must not exist at all — proving zero API calls.
+      if (existsSync(fake.logPath)) {
+        const calls = readLoggedArgs(fake.logPath);
+        assert.equal(
+          calls.length,
+          0,
+          `expected zero Go CLI calls for \`${label}\`, got: ${JSON.stringify(calls)}`,
+        );
+      }
+    });
+  }
+});
+
+describe("help detection ignores -h in flag-VALUE position (AIF-325)", () => {
+  // A literal "-h" passed as the VALUE of another flag (e.g. an SMS body or
+  // password) must NOT be treated as a help request. parseFlags captures "-h" as
+  // a real value (single-dash tokens are not flags), so the command must dispatch
+  // to the handler and reach the Go CLI as normal.
+  // Note: "--help" as a value is a separate parser limitation (parseFlags never
+  // consumes a `--`-prefixed token as a value), so it is intentionally not tested
+  // here — that input is non-functional independent of this fix.
+  const valueInvocations: string[][] = [
+    ["send-sms", "--from", "+10000000000", "--to", "+20000000000", "--text", "-h"],
+  ];
+
+  for (const argv of valueInvocations) {
+    const label = argv.join(" ");
+    it(`dispatches to the handler (no help short-circuit) for: ${label}`, () => {
+      const fake = setupFakeTelnyx();
+
+      const output = execFileSync("npx", ["tsx", cliBin, ...argv], {
+        cwd: cliRoot,
+        encoding: "utf8",
+        env: fake.env,
+        timeout: 30000,
+      });
+
+      // Must NOT be the top-level help screen.
+      assert.doesNotMatch(output, /telnyx-agent — Agent-friendly CLI for Telnyx API v2/);
+
+      // The command reached the Go CLI (fake logged at least one invocation).
+      assert.equal(existsSync(fake.logPath), true, "expected the Go CLI to be invoked");
+      const calls = readLoggedArgs(fake.logPath);
+      assert.ok(
+        calls.length >= 1,
+        `expected at least one Go CLI call for \`${label}\`, got: ${JSON.stringify(calls)}`,
+      );
+    });
+  }
 });
