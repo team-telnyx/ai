@@ -21,7 +21,7 @@ git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 
 ## Prerequisites and readiness
 
-1. Download the latest CLI from the [Edge Compute CLI releases page](https://github.com/team-telnyx/edge-compute-cli/releases). SQL databases require CLI v0.3.0 or newer.
+1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). SQL databases require CLI v0.3.0 or newer.
 2. Authenticate interactively or with an API key stored by the CLI.
 3. Run the root status diagnostic. Unlike `auth status`, this validates configuration, credentials, and API connectivity.
 
@@ -191,10 +191,10 @@ telnyx-edge ship --from-dir=./my-function
 Delete a function when it is no longer needed:
 
 ```bash
-telnyx-edge delete-func my-function
+telnyx-edge delete-func my-function --yes
 ```
 
-`delete-func` is irreversible. Confirm the function name before running it, especially when cleaning up an end-to-end test deployment.
+`delete-func` is irreversible. Use `--yes` (`-y`) in scripts, agents, and CI to skip the interactive confirmation; see [Non-interactive destructive commands](#non-interactive-destructive-commands) for the full list.
 
 ### Revisions and rollback
 
