@@ -253,6 +253,26 @@ describe("Bug fix: -h after boolean flags triggers help (not swallowed as flag v
     assert.equal(parsed.helpRequested, true);
   });
 
+  it("parseFlags: presence-only action flags preserve following help tokens", () => {
+    const shortHelp = parseFlags(["update-ai-assistant", "--clear-tool-ids", "-h"]);
+    assert.equal(shortHelp.flags["clear-tool-ids"], true);
+    assert.equal(shortHelp.helpRequested, true);
+
+    const longHelp = parseFlags(["cancel-porting-order", "--confirm", "--help"]);
+    assert.equal(longHelp.flags.confirm, true);
+    assert.equal(longHelp.helpRequested, true);
+  });
+
+  it("parseFlags: presence-only action flags capture explicit values for rejection", () => {
+    const clear = parseFlags(["update-ai-assistant", "--clear-tool-ids", "false", "--json"]);
+    assert.equal(clear.flags["clear-tool-ids"], "false");
+    assert.equal(clear.flags.json, true);
+
+    const confirm = parseFlags(["cancel-porting-order", "--confirm", "true", "--json"]);
+    assert.equal(confirm.flags.confirm, "true");
+    assert.equal(confirm.flags.json, true);
+  });
+
   it("parseFlags: --text -h still treats -h as text value (non-boolean flag)", () => {
     const parsed = parseFlags(["send-sms", "--text", "-h"]);
     assert.equal(parsed.flags.text, "-h", "expected text to be '-h' for non-boolean flag");

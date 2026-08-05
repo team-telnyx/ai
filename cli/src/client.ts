@@ -20,7 +20,9 @@
  * - POST /call_control_applications (setup-voice — Go CLI creates credential connections, not Call Control Apps)
  * - GET /outbound_voice_profiles (setup-voice — needed to resolve default outbound profile)
  *
- * All other operations go through the telnyx CLI wrapper (see telnyx-cli.ts).
+ * All other operations go through the telnyx CLI wrapper (see telnyx-cli.ts),
+ * except active-call listing: pinned CLI v0.21.0 generates unsupported numbered
+ * pagination for that cursor endpoint and does not safely encode connection IDs.
  */
 
 import { readFileSync } from "node:fs";

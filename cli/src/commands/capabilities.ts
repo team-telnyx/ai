@@ -18,7 +18,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
   ],
   "📞 Voice": [
-    { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection", "number_masking", "from_display_name", "time_limit", "media_encryption", "transcription", "gather", "stop_gather", "start_playback", "stop_playback", "start_transcription", "stop_transcription", "pause_recording", "resume_recording", "start_forking", "stop_forking", "start_siprec", "stop_siprec", "start_streaming", "stop_streaming", "enqueue", "leave_queue", "send_sip_info", "update_client_state", "add_ai_assistant_messages", "gather_using_ai", "gather_using_audio", "gather_using_speak", "join_ai_assistant", "start_ai_assistant", "stop_ai_assistant", "start_conversation_relay", "stop_conversation_relay", "switch_supervisor_role"] },
+    { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "list_voice_connections", "get_voice_connection", "list_active_calls", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection", "number_masking", "from_display_name", "time_limit", "media_encryption", "transcription", "gather", "stop_gather", "start_playback", "stop_playback", "start_transcription", "stop_transcription", "pause_recording", "resume_recording", "start_forking", "stop_forking", "start_siprec", "stop_siprec", "start_streaming", "stop_streaming", "enqueue", "leave_queue", "send_sip_info", "update_client_state", "add_ai_assistant_messages", "gather_using_ai", "gather_using_audio", "gather_using_speak", "join_ai_assistant", "start_ai_assistant", "stop_ai_assistant", "start_conversation_relay", "stop_conversation_relay", "switch_supervisor_role"] },
   ],
   "🔢 Numbers": [
     { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
@@ -26,7 +26,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "🤖 AI": [
     { name: "Chat Completions", description: "LLM inference via Telnyx AI (executable with telnyx-agent ai-chat)", actions: ["ai_chat"] },
     { name: "Embeddings", description: "Generate text embeddings (executable with telnyx-agent ai-embed)", actions: ["ai_embed"] },
-    { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant"] },
+    { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant", "get_ai_assistant", "update_ai_assistant", "delete_ai_assistant"] },
   ],
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
@@ -69,7 +69,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "x402 Crypto Payments", description: "Fund account with USDC on Base blockchain via x402 protocol", actions: ["get_payment_quote", "submit_payment"] },
   ],
   "🔄 Porting": [
-    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "upload_porting_document", "list_porting_requirements"] },
+    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
     { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
   ],
   "💬 WhatsApp": [
@@ -95,6 +95,11 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },
   { name: "telnyx-agent ai-chat", description: "Create an OpenAI-compatible chat completion via Telnyx AI inference" },
   { name: "telnyx-agent ai-embed", description: "Create OpenAI-compatible embeddings for text or a JSON array of texts" },
+  { name: "telnyx-agent list-ai-assistants", description: "List AI assistant configurations" },
+  { name: "telnyx-agent create-ai-assistant", description: "Create an AI assistant from a name, instructions, and optional model or voice settings" },
+  { name: "telnyx-agent get-ai-assistant", description: "Retrieve one AI assistant by ID" },
+  { name: "telnyx-agent update-ai-assistant", description: "Update an AI assistant and create a new version" },
+  { name: "telnyx-agent delete-ai-assistant", description: "Delete an AI assistant with explicit confirmation" },
   { name: "telnyx-agent setup-wireguard", description: "Zero to VPN: creates network, WireGuard interface, peer — outputs ready-to-use WG config" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },
@@ -105,6 +110,13 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent verify-check", description: "Submit a code for verification (--code) or retrieve the current verification status" },
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },
   { name: "telnyx-agent setup-porting", description: "Zero to porting: checks portability, creates porting order, lists requirements, optionally submits" },
+  { name: "telnyx-agent list-porting-orders", description: "List port-in orders with core filters, phone-number inclusion, sorting, and pagination" },
+  { name: "telnyx-agent get-porting-order", description: "Retrieve one porting order by ID" },
+  { name: "telnyx-agent update-porting-order", description: "Update references, FOC settings, documents, messaging, and post-port number configuration" },
+  { name: "telnyx-agent submit-porting-order", description: "Confirm and submit a draft porting order" },
+  { name: "telnyx-agent cancel-porting-order", description: "Cancel a porting order after explicit --confirm acknowledgement" },
+  { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
+  { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
@@ -116,6 +128,9 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent call-dial", description: "Make an outbound call via Call Control (AMD, deepfake detection, recording optional)" },
   { name: "telnyx-agent call-control", description: "Call Control actions: answer, hangup, transfer, DTMF, recording, noise suppression, speak (TTS), bridge, refer, reject, gather, playback, transcription, forking, siprec, streaming, enqueue, send-sip-info, update-client-state, AI assistant lifecycle/messages/gather/join, Conversation Relay, supervisor roles" },
   { name: "telnyx-agent call-status", description: "Get the status of a call by call-control-id" },
+  { name: "telnyx-agent list-voice-connections", description: "List voice connections across connection types with filters and pagination" },
+  { name: "telnyx-agent get-voice-connection", description: "Retrieve the high-level details of one voice connection" },
+  { name: "telnyx-agent list-active-calls", description: "List active calls for a voice connection with pagination" },
   { name: "telnyx-agent list-phone-numbers", description: "List account-owned phone numbers with core filters and pagination" },
   { name: "telnyx-agent search-phone-numbers", description: "Search available phone numbers by country, type, features, location, or number pattern" },
   { name: "telnyx-agent buy-phone-number", description: "Purchase one phone number and optionally assign its connection or messaging profile" },

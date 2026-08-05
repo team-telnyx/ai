@@ -5,10 +5,14 @@
 import { outputJson, printError, printSuccess, printWarning } from "../utils/output.ts";
 import {
   getEdgeAuthStatus,
+  getEdgeRootStatus,
   hasEdgeCli,
   supportsActorInstances,
   supportsApiKeyAuth,
   supportsInspect,
+  supportsNewFuncFromDir,
+  supportsSecretsAdd,
+  supportsShip,
   supportsStatefulActors,
   validateEdgeFunctionName,
 } from "../edge-cli.ts";
@@ -18,7 +22,11 @@ interface SetupEdgeWebhookResult {
   telnyx_edge_installed: boolean;
   authenticated: boolean;
   auth_mode: "api_key" | "oauth" | "none" | "unknown";
+  root_status_passed: boolean;
   api_key_auth_supported: boolean;
+  new_func_from_dir_supported: boolean;
+  secrets_add_supported: boolean;
+  ship_supported: boolean;
   stateful_actors_supported: boolean;
   inspect_supported: boolean;
   actor_instances_supported: boolean;
@@ -43,10 +51,15 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
 
   const hasEdge = hasEdgeCli();
   const apiKeyAuthSupported = hasEdge ? supportsApiKeyAuth() : false;
+  const newFuncFromDirSupported = hasEdge ? supportsNewFuncFromDir() : false;
+  const secretsAddSupported = hasEdge ? supportsSecretsAdd() : false;
+  const shipSupported = hasEdge ? supportsShip() : false;
   const statefulActorsSupported = hasEdge ? supportsStatefulActors() : false;
   const inspectSupported = hasEdge ? supportsInspect() : false;
   const actorInstancesSupported = hasEdge ? supportsActorInstances() : false;
   const authStatus = hasEdge ? safeAuthStatus() : { authenticated: false, mode: "none" as const };
+  const rootStatusPassed = hasEdge ? safeRootStatus() : false;
+  const mandatoryCapabilitiesSupported = newFuncFromDirSupported && secretsAddSupported && shipSupported;
   const authCommand = apiKeyAuthSupported
     ? `: "\${TELNYX_API_KEY:?Export TELNYX_API_KEY first}" && telnyx-edge auth api-key set "$TELNYX_API_KEY"`
     : "telnyx-edge auth login";
@@ -74,6 +87,9 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
   if (!inspectSupported && hasEdge) {
     notes.push("This installed CLI did not expose inspect --help; upgrade telnyx-edge to inspect the function after deployment.");
   }
+  if (hasEdge && !mandatoryCapabilitiesSupported) {
+    notes.push("The suggested flow is shown for handoff purposes, but this CLI did not expose every command it emits; do not run it until the missing capabilities are installed.");
+  }
   if (statefulActorsSupported) {
     notes.push("For per-entity webhook state, actor scaffolding is available via telnyx-edge new-func --actor --language ts.");
   }
@@ -85,18 +101,32 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
     ? ["Install telnyx-edge from the Edge Compute releases page, then rerun this command."]
     : !authStatus.authenticated
       ? [`Authenticate first: ${authCommand}`, "Run telnyx-edge status, then rerun this handoff."]
-      : [
-          "Export a high-entropy WEBHOOK_SECRET (for example: export WEBHOOK_SECRET=\"$(openssl rand -hex 32)\").",
-          "Run deploy_command from the directory where you want the function project created.",
-          "Configure the producer with the same secret and HMAC-sign the exact payload bytes before sending.",
-        ];
+      : !rootStatusPassed
+        ? [
+            "Run telnyx-edge status and resolve every failed config, credential, or connectivity check.",
+            "Rerun this handoff only after status prints 'All checks passed - CLI is ready to use'.",
+          ]
+        : !mandatoryCapabilitiesSupported
+          ? [
+              `Upgrade telnyx-edge; this flow requires ${missingCapabilities(newFuncFromDirSupported, secretsAddSupported, shipSupported).join(", ")}.`,
+              "Verify the missing commands on their own --help surfaces, then rerun this handoff.",
+            ]
+          : [
+              "Export a high-entropy WEBHOOK_SECRET (for example: export WEBHOOK_SECRET=\"$(openssl rand -hex 32)\").",
+              "Run deploy_command from the directory where you want the function project created.",
+              "Configure the producer with the same secret and HMAC-sign the exact payload bytes before sending.",
+            ];
 
   const result: SetupEdgeWebhookResult = {
-    ready: hasEdge && authStatus.authenticated,
+    ready: hasEdge && authStatus.authenticated && rootStatusPassed && mandatoryCapabilitiesSupported,
     telnyx_edge_installed: hasEdge,
     authenticated: authStatus.authenticated,
     auth_mode: authStatus.mode,
+    root_status_passed: rootStatusPassed,
     api_key_auth_supported: apiKeyAuthSupported,
+    new_func_from_dir_supported: newFuncFromDirSupported,
+    secrets_add_supported: secretsAddSupported,
+    ship_supported: shipSupported,
     stateful_actors_supported: statefulActorsSupported,
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
@@ -129,10 +159,18 @@ export async function setupEdgeWebhookCommand(flags: Record<string, string | boo
       Ready: "✓",
     });
   } else {
-    printError(hasEdge ? "telnyx-edge is not positively authenticated." : "telnyx-edge is not installed.");
-    printWarning(hasEdge
-      ? `Authenticate first with: ${authCommand}`
-      : "This command is a handoff helper — it depends on the dedicated Edge Compute CLI.");
+    printError(!hasEdge
+      ? "telnyx-edge is not installed."
+      : !authStatus.authenticated
+        ? "telnyx-edge is not positively authenticated."
+        : !rootStatusPassed
+          ? "telnyx-edge status did not pass every readiness check."
+          : "telnyx-edge lacks commands required by this setup flow.");
+    printWarning(!hasEdge
+      ? "This command is a handoff helper — it depends on the dedicated Edge Compute CLI."
+      : !authStatus.authenticated
+        ? `Authenticate first with: ${authCommand}`
+        : nextSteps[0]);
   }
 
   console.log(`  Source repository: ${SOURCE_REPO}`);
@@ -160,4 +198,20 @@ function safeAuthStatus(): { authenticated: boolean; mode: "api_key" | "oauth" |
   } catch {
     return { authenticated: false, mode: "unknown" };
   }
+}
+
+function safeRootStatus(): boolean {
+  try {
+    return getEdgeRootStatus().passed;
+  } catch {
+    return false;
+  }
+}
+
+function missingCapabilities(fromDir: boolean, secretsAdd: boolean, ship: boolean): string[] {
+  return [
+    !fromDir && "new-func --from-dir",
+    !secretsAdd && "secrets add <key> <value>",
+    !ship && "ship",
+  ].filter((value): value is string => Boolean(value));
 }
