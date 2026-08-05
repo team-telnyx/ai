@@ -70,7 +70,7 @@ import {
   listActiveCallsCommand,
   listVoiceConnectionsCommand,
 } from "./commands/voice-connections.ts";
-import { parseFlags, BOOLEAN_FLAGS } from "./utils/output.ts";
+import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
 // Version is read lazily so that `--version` works without loading any command modules.
 import { createRequire } from "node:module";
@@ -679,8 +679,8 @@ const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "ai-chat"]);
 // `send-sms --text "-h"`), so we walk argv the same way parseFlags does and skip
 // consumed values — but only for flags that actually take a value. Boolean
 // flags don't consume the next token, so `-h` after them is still help.
-// BOOLEAN_FLAGS is imported from utils/output.ts so the set stays in sync
-// with parseFlags.
+// Boolean flag detection is imported from utils/output.ts so this stays in sync
+// with parseFlags, including command-scoped boolean flags.
 function isHelpRequested(argv: string[]): boolean {
   const command = argv[0];
   if (command === "help" || command === "--help" || command === "-h") return true;
@@ -692,7 +692,7 @@ function isHelpRequested(argv: string[]): boolean {
       // Boolean flags never consume the next token — so a following
       // `-h`/`--help` is still seen as a help request, not swallowed as a
       // value (e.g. `setup-voice --force -h`, `setup-sms --json -h`).
-      if (!BOOLEAN_FLAGS.has(key)) {
+      if (!isBooleanFlag(command ?? "help", key)) {
         const next = argv[i + 1];
         if (next && !next.startsWith("--")) i++; // skip value consumed by this flag
       }

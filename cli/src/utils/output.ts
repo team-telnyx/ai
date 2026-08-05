@@ -87,8 +87,9 @@ function isSensitiveKey(key: string): boolean {
  * parseFlags captures an adjacent explicit value so the command can reject it,
  * while still leaving `-h`/`--help` available for help interception.
  *
- * This set is also used by the `isHelpRequested` guard in `index.ts`, ensuring
- * a help token following any boolean flag is never swallowed as its value.
+ * This set is also used by the `isHelpRequested` guard in `index.ts`, together
+ * with command-scoped boolean flags, ensuring a help token following any boolean
+ * flag is never swallowed as its value.
  *
  * Note: fax-specific boolean flags (`monochrome`, `store-media`,
  * `store-preview`, `t38-enabled`) are deliberately excluded because the fax
@@ -108,8 +109,15 @@ export const BOOLEAN_FLAGS = new Set<string>([
   "submit",
   "disable-cache",
   "deepfake-detection",
-  "transcription",
 ]);
+
+const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
+  ["call-dial", new Set(["transcription"])],
+]);
+
+export function isBooleanFlag(command: string, key: string): boolean {
+  return BOOLEAN_FLAGS.has(key) || COMMAND_BOOLEAN_FLAGS.get(command)?.has(key) === true;
+}
 
 // These safety/action flags are presence-only. Capture an adjacent explicit
 // value so their command handlers can reject it instead of silently treating
@@ -158,7 +166,7 @@ export function parseFlags(args: string[]): {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);
         i++;
-      } else if (!BOOLEAN_FLAGS.has(key) && next !== undefined && next !== null && !next.startsWith("--")) {
+      } else if (!isBooleanFlag(command, key) && next !== undefined && next !== null && !next.startsWith("--")) {
         flags[key] = next;
         (occurrences[key] ??= []).push(next);
         i++;

@@ -671,8 +671,8 @@ describe("Voice API action commands", () => {
     },
     {
       action: "start-ai-assistant",
-      flags: ["--assistant.id", "assistant-1", "--greeting", "Hello", "--send-message-history-updates"],
-      values: [["--assistant.id", "assistant-1"], ["--greeting", "Hello"]],
+      flags: ["--assistant.id", "assistant-1", "--greeting", "Hello", "--transcription", '{"model":"deepgram"}', "--send-message-history-updates"],
+      values: [["--assistant.id", "assistant-1"], ["--greeting", "Hello"], ["--transcription", '{"model":"deepgram"}']],
       bare: ["--send-message-history-updates"],
     },
     {
@@ -682,8 +682,8 @@ describe("Voice API action commands", () => {
     },
     {
       action: "start-conversation-relay",
-      flags: ["--url", "wss://example.com/relay", "--voice", "Telnyx.KokoroTTS.af", "--conversation-relay-settings.url", "wss://nested.example.com/relay", "--dtmf-detection"],
-      values: [["--url", "wss://example.com/relay"], ["--voice", "Telnyx.KokoroTTS.af"], ["--conversation-relay-settings.url", "wss://nested.example.com/relay"]],
+      flags: ["--url", "wss://example.com/relay", "--voice", "Telnyx.KokoroTTS.af", "--conversation-relay-settings.url", "wss://nested.example.com/relay", "--transcription", '{"provider":"telnyx"}', "--dtmf-detection"],
+      values: [["--url", "wss://example.com/relay"], ["--voice", "Telnyx.KokoroTTS.af"], ["--conversation-relay-settings.url", "wss://nested.example.com/relay"], ["--transcription", '{"provider":"telnyx"}']],
       bare: ["--dtmf-detection"],
     },
     {
