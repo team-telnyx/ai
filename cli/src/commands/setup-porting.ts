@@ -39,6 +39,9 @@ export async function setupPortingCommand(flags: Record<string, string | boolean
   let submitted = false;
 
   try {
+    if (flags.submit !== undefined && flags.submit !== true) {
+      throw new Error("--submit does not accept a value; pass bare --submit to submit the order");
+    }
     const apiKey = process.env.TELNYX_API_KEY;
     if (!apiKey) throw new Error("TELNYX_API_KEY environment variable is required");
     const client = new TelnyxClient(apiKey);

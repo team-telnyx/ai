@@ -68,13 +68,18 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 
 ### Editing skills
 
-`skills/` is the canonical source. After editing any skill, run:
+`skills/` is the canonical source **within this repo** — the `providers/` copies derive from it. But not every skill is editable here. Check the skill's `SKILL.md` frontmatter first:
+
+- **Has a `generated_by:` field** (~90% of skills): the skill is regenerated from the official Telnyx OpenAPI specifications by an automated pipeline, and a daily auto-update PR will overwrite any direct edit. Don't PR changes to these — open an issue describing the problem instead; code-example errors are fixed upstream in the spec.
+- **No `generated_by:` field**: the skill is hand-authored. PRs welcome. After editing, run:
 
 ```bash
 ./scripts/sync-skills.sh
 ```
 
 This propagates changes to `providers/claude/` and `providers/cursor/`. Commit the sync output alongside your skill edits — don't leave them out of sync.
+
+One exception inside hand-authored skills: embedded SDK reference files (`telnyx-twilio-migration/sdk-reference/`, `telnyx-twilio-migration/references/sdk-api-details/`, and `telnyx-webrtc-client-*/references/webrtc-server-api.md`) are pipeline-managed and will also be overwritten — treat those like generated content.
 
 ### Editing `agent.json`
 

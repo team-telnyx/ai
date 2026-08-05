@@ -70,7 +70,11 @@ import {
   listActiveCallsCommand,
   listVoiceConnectionsCommand,
 } from "./commands/voice-connections.ts";
-import { parseFlags } from "./utils/output.ts";
+import { parseFlags, isBooleanFlag } from "./utils/output.ts";
+
+// Version is read lazily so that `--version` works without loading any command modules.
+import { createRequire } from "node:module";
+const VERSION = createRequire(import.meta.url)("../package.json").version as string;
 
 const HELP = `
 telnyx-agent — Agent-friendly CLI for Telnyx API v2
@@ -80,7 +84,7 @@ Usage:
 
 Commands:
   setup-sms         Zero to SMS: create profile, buy number, assign it
-  setup-voice       Zero to voice: create connection, buy number, assign it
+  setup-voice       Zero to voice: create Call Control App, buy number, assign it
   setup-iot         Zero to IoT: list SIMs, create group, activate SIM
   list-sim-cards    List IoT SIM cards with filters and pagination
   retrieve-sim-card Retrieve one IoT SIM card by ID
@@ -88,7 +92,7 @@ Commands:
   disable-sim-card  Disable an IoT SIM card (asynchronous action)
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
-  setup-verify      Zero to verification: create profile, buy number
+  setup-verify      Zero to verification: create profile (no number bought)
   verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
   verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number
@@ -143,11 +147,16 @@ Global Flags:
   --country <code>  Country code for number search (default: US)
 
 Setup-specific Flags:
-  --webhook <url>   Webhook URL (setup-voice)
+  --webhook-url <url>          Webhook URL for setup-voice (alias: --webhook; default: https://example.com/webhook)
+  --outbound-voice-profile-id  Outbound voice profile ID (setup-voice, default: auto-detect first available)
+  --force                      Provision a NEW profile/app + number even if an agent-created one
+                               already exists (setup-sms, setup-voice; default: reuse existing to
+                               avoid buying duplicate ~$1/mo numbers)
   --instructions    AI assistant instructions (setup-ai)
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
   --profile-name    Custom verify profile name (setup-verify)
+  --destinations    Whitelisted destination countries for verify (setup-verify, default: US)
 
 Verify Flags:
   --phone-number    E.164 number to verify (verify-send, required)
@@ -221,14 +230,14 @@ TTS Flags:
   --text            Text to synthesize (required)
   --voice           Voice ID/name (optional, provider-specific)
   --language        Language code (default: en)
-  --provider        TTS provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (default: telnyx)
+  --provider        TTS provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (default: telnyx)
   --output-type     Response format: base64 (base64-encoded audio JSON; default: base64)
   --text-type       Input format: text or ssml (default: text)
   --disable-cache   Skip cached audio and regenerate (boolean)
 
 TTS-voices Flags:
-  --provider        Filter voices by provider: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai (optional)
-  --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., elevenlabs, resemble)
+  --provider        Filter voices by provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (optional)
+  --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., resemble)
 SMS Action Flags:
   --from <e164>          Sender number, E.164 (send-sms, send-group-mms, schedule-sms — required)
   --to <e164>            Recipient number, E.164 (send-sms, schedule-sms — required)
@@ -446,7 +455,11 @@ Examples:
   telnyx-agent status --json
   telnyx-agent capabilities
   telnyx-agent setup-sms --country US
+  telnyx-agent setup-voice
+  telnyx-agent setup-verify
+  telnyx-agent setup-verify --destinations US,GB,LK
   telnyx-agent setup-voice --webhook https://example.com/calls
+  telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
   telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
   telnyx-agent setup-porting --phone-numbers +131****0001,+131****0002 --customer-name "Acme Corp"
   telnyx-agent list-porting-orders --customer-reference migration-2026 --page-size 25 --json
@@ -610,10 +623,104 @@ const COMMANDS: Record<string, (
   "disable-sim-card": disableSimCardCommand,
 };
 
-export async function run(argv: string[]): Promise<void> {
-  const { command, flags, occurrences } = parseFlags(argv);
+// Union of every flag any command reads (kept in sync with src/commands/*).
+// Used ONLY to emit a non-blocking warning for unrecognized flags so a typo
+// like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
+// This never fails the run — a missing entry just costs a spurious warning.
+const KNOWN_FLAGS = new Set<string>([
+  "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "amount",
+  "answering-machine-detection", "api-key", "area-code", "assistant", "assistant-id", "audio-url",
+  "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
+  "brand-name", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
+  "channels", "clear-tags", "clear-tool-ids", "client-state", "code", "command-id", "company-name",
+  "component", "confirm", "connection-id", "connection-name", "contains", "content-type",
+  "conversation-id", "country", "country-code", "create", "custom-code",
+  "customer-group-reference", "customer-name", "customer-reference", "deepfake-detection", "depth",
+  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
+  "document-id", "document-type", "dtmf-detection", "dynamic-variables",
+  "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
+  "emergency-address-id", "enable-messaging", "encoding-format", "ends-with", "extension",
+  "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
+  "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
+  "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
+  "guided-choice", "guided-json", "help", "help-message", "iccid", "id", "include-phone-numbers",
+  "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
+  "limit", "loa-document-id", "locality", "max-items", "max-tokens", "media-encryption",
+  "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "method", "model",
+  "monochrome", "msisdn", "name", "national-destination-code", "network-id",
+  "new-billing-phone-number", "number-type", "numbers", "old-provider", "opt-in-method",
+  "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
+  "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
+  "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
+  "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
+  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "response-format",
+  "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
+  "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
+  "start-message", "starts-with", "status", "stop", "stop-message", "store-media", "store-preview",
+  "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature",
+  "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
+  "to", "tool", "tool-choice", "tool-ids", "top-p", "transcription", "transcription-language",
+  "transcription-model", "ttl", "tx", "type", "url", "usecase", "user", "verification-id",
+  "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
+  "webhook", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
+  "whitelisted-destinations",
+]);
 
-  if (command === "help" || command === "--help" || command === "-h" || !command) {
+// Commands that accept an arbitrary/generated flag surface, where an
+// unknown-flag warning would produce false positives. These forward flags
+// through to the Go CLI or maintain their own extensible flag lists.
+const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "ai-chat"]);
+
+// Detect a help request in FLAG position only. A help token counts when it is
+// the command itself (`help`, `--help`, `-h`) or a standalone flag on a
+// subcommand (`setup-voice --help`, `setup-voice -h`). It must NOT count when
+// `-h`/`--help` is consumed as the VALUE of a value-taking flag (e.g.
+// `send-sms --text "-h"`), so we walk argv the same way parseFlags does and skip
+// consumed values — but only for flags that actually take a value. Boolean
+// flags don't consume the next token, so `-h` after them is still help.
+// Boolean flag detection is imported from utils/output.ts so this stays in sync
+// with parseFlags, including command-scoped boolean flags.
+function isHelpRequested(argv: string[]): boolean {
+  const command = argv[0];
+  if (command === "help" || command === "--help" || command === "-h") return true;
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--help" || arg === "-h") return true;
+    if (arg.startsWith("--")) {
+      const key = arg.slice(2);
+      // Boolean flags never consume the next token — so a following
+      // `-h`/`--help` is still seen as a help request, not swallowed as a
+      // value (e.g. `setup-voice --force -h`, `setup-sms --json -h`).
+      if (!isBooleanFlag(command ?? "help", key)) {
+        const next = argv[i + 1];
+        if (next && !next.startsWith("--")) i++; // skip value consumed by this flag
+      }
+    }
+  }
+  return false;
+}
+
+export async function run(argv: string[]): Promise<void> {
+  const { command, flags, occurrences, helpRequested } = parseFlags(argv);
+
+  // Version flag (AIF-333): `telnyx-agent --version` / `-V`.
+  if (command === "--version" || command === "-V") {
+    console.log(VERSION);
+    return;
+  }
+
+  // Intercept help BEFORE dispatching to any command handler. setup-* handlers
+  // make live API calls and purchase billable resources (numbers, connections)
+  // before hitting an unknown flag, so a `--help`/`-h` request must never fall
+  // through to a handler. See isHelpRequested for flag-position vs value nuance.
+  if (!command || command === "help" || isHelpRequested(argv)) {
+    console.log(HELP);
+    return;
+  }
+
+  // Per-command help: `telnyx-agent tts --help` or `telnyx-agent tts -h`
+  if (helpRequested) {
     console.log(HELP);
     return;
   }
@@ -623,6 +730,22 @@ export async function run(argv: string[]): Promise<void> {
     console.error(`Unknown command: ${command}\n`);
     console.log(HELP);
     process.exit(1);
+  }
+
+  // Non-blocking warning for unrecognized flags so typos don't silently no-op
+  // (e.g. `tts --output-typ base64`). We never fail the run on this.
+  // Skip commands that legitimately accept arbitrary/generated flags:
+  //  - call-control forwards a large generated Go-CLI flag surface, incl. nested
+  //    dotted flags (e.g. --assistant.model, --participant.name);
+  //  - ai-webchat maintains its own extensible sampling-flag set.
+  // Also always ignore dotted flags (nested payload builders) anywhere.
+  if (!FLAG_WARN_EXEMPT_COMMANDS.has(command)) {
+    const unknownFlags = Object.keys(flags).filter(
+      (f) => f !== "_" && !f.includes(".") && !KNOWN_FLAGS.has(f),
+    );
+    if (unknownFlags.length > 0) {
+      console.error(`⚠ Ignoring unrecognized flag${unknownFlags.length > 1 ? "s" : ""}: ${unknownFlags.map((f) => `--${f}`).join(", ")} (run \`telnyx-agent ${command} --help\`)`);
+    }
   }
 
   await handler(flags, occurrences);
