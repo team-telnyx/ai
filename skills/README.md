@@ -306,7 +306,7 @@ cp -r ai/skills/telnyx-messaging-python .github/skills/
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for guidelines — in particular the split between auto-generated skills (open an issue) and hand-authored skills (PRs welcome).
 
 ## Support
 

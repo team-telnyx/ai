@@ -1,28 +1,108 @@
 /**
- * Mock-binary tests for the `telnyx-agent tts` (text-to-speech) command.
+ * Tests for the `telnyx-agent tts` and `tts-voices` commands.
+ *
+ * `tts` (generate-speech) uses a direct REST POST /text-to-speech/speech
+ * (AIF-331 fix — Go CLI was not passing --voice through to the API body).
+ * Tests use a mock HTTP server to verify the request payload and response.
+ *
+ * `tts-voices` (list-voices) still shells out to the Go CLI
+ * `text-to-speech list-voices` subcommand. Tests use a fake binary.
  */
-import { describe, it } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-/**
- * Build a fake `telnyx` binary that logs every invocation's args and returns
- * canned JSON for the `text-to-speech generate-speech` subcommand.
- *
- * With `output_type=base64_output`, the real API (POST /text-to-speech/speech)
- * responds `{ "base64_audio": "..." }` with no `data` envelope, which the Go
- * CLI prints as-is with `--format json`.
- */
+// ---------------------------------------------------------------------------
+// Mock HTTP server for tts (generate-speech) REST tests
+// ---------------------------------------------------------------------------
+
+interface CapturedRequest {
+  method: string;
+  path: string;
+  body: Record<string, unknown> | null;
+}
+
+let mockServer: Server;
+let mockPort: number;
+let lastRequest: CapturedRequest | null = null;
+
+function startMockServer(): Promise<void> {
+  return new Promise((resolve) => {
+    mockServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        let parsedBody: Record<string, unknown> | null = null;
+        try {
+          parsedBody = body ? JSON.parse(body) : null;
+        } catch { /* ignore parse errors */ }
+        lastRequest = { method: req.method ?? "", path: req.url ?? "", body: parsedBody };
+
+        if (req.method === "POST" && req.url === "/v2/text-to-speech/speech") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            base64_audio: "SGVsbG8gYXVkaW8=",
+          }));
+          return;
+        }
+
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ errors: [{ code: "10005", detail: "Not found" }] }));
+      });
+    });
+    mockServer.listen(0, "127.0.0.1", () => {
+      const addr = mockServer.address();
+      mockPort = typeof addr === "object" && addr ? addr.port : 0;
+      resolve();
+    });
+  });
+}
+
+function stopMockServer(): Promise<void> {
+  return new Promise((resolve) => {
+    mockServer.close(() => resolve());
+  });
+}
+
+function capturedRequest(): CapturedRequest {
+  assert.ok(lastRequest, "expected the mock server to have received a request");
+  return lastRequest as CapturedRequest;
+}
+
+// Async spawn for tts tests (mock server needs event loop)
+function runTtsAsync(args: string[]): Promise<{ status: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const child = spawn("npx", ["tsx", cliBin, "tts", ...args], {
+      cwd: cliRoot,
+      env: {
+        ...process.env,
+        TELNYX_API_KEY: "test-key-1234",
+        TELNYX_API_BASE_URL: `http://127.0.0.1:${mockPort}/v2`,
+      },
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (c: Buffer) => (stdout += c.toString()));
+    child.stderr.on("data", (c: Buffer) => (stderr += c.toString()));
+    child.on("close", (code) => resolve({ status: code ?? -1, stdout, stderr }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Fake Go CLI binary for tts-voices (list-voices) tests
+// ---------------------------------------------------------------------------
+
 function setupFakeTelnyx(): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
-  const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-tts-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-tts-voices-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
   mkdirSync(binDir, { recursive: true });
@@ -42,19 +122,7 @@ function flagValue(args, flag) {
 
 const command = args.filter((a) => a !== "--format" && a !== "json");
 
-if (command[0] === "text-to-speech" && command[1] === "generate-speech") {
-  const outputType = flagValue(command, "--output-type");
-  if (outputType === "base64_output") {
-    console.log(JSON.stringify({ base64_audio: "SGVsbG8gYXVkaW8=" }));
-  } else {
-    // The real API rejects anything other than binary_output/base64_output,
-    // and binary_output would be raw audio bytes — emit an error marker so a
-    // test forwarding the wrong enum fails loudly.
-    console.error("unexpected --output-type: " + outputType);
-    process.exit(1);
-  }
-} else if (command[0] === "text-to-speech" && command[1] === "list-voices") {
-  // GET /text-to-speech/voices responds { "voices": [...] } with no data envelope.
+if (command[0] === "text-to-speech" && command[1] === "list-voices") {
   const provider = flagValue(command, "--provider") || "telnyx";
   console.log(JSON.stringify({ voices: [
     { voice_id: "voice-1", name: "Voice One", language: "en-US", gender: "female", provider },
@@ -97,7 +165,7 @@ function assertNoFlag(args: string[], flag: string): void {
   assert.equal(args.indexOf(flag), -1, `did not expect ${flag} in ${args.join(" ")}`);
 }
 
-function runCli(args: string[], env: NodeJS.ProcessEnv): { stdout: string; status: number } {
+function runCliSync(args: string[], env: NodeJS.ProcessEnv): { stdout: string; status: number } {
   try {
     const stdout = execFileSync("npx", ["tsx", cliBin, ...args], {
       cwd: cliRoot,
@@ -111,127 +179,163 @@ function runCli(args: string[], env: NodeJS.ProcessEnv): { stdout: string; statu
   }
 }
 
-describe("tts (text-to-speech) command", () => {
-  it("defaults to base64_output and surfaces the base64_audio response field", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["tts", "--text", "Hello world", "--json"], fake.env);
+// ---------------------------------------------------------------------------
+// tts (generate-speech) — REST-based tests (AIF-331)
+// ---------------------------------------------------------------------------
 
-    assert.equal(status, 0, `expected exit 0, got ${status}`);
-    const data = JSON.parse(stdout);
+describe("tts (text-to-speech) command — REST (AIF-331)", () => {
+  before(async () => {
+    await startMockServer();
+  });
+
+  after(async () => {
+    await stopMockServer();
+  });
+
+  it("POSTs to /text-to-speech/speech and returns base64 audio", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello world", "--voice", "Telnyx.Bayan.Amanda", "--json"]);
+    assert.equal(r.status, 0, `exit 0 expected, got ${r.status}: ${r.stderr}`);
+    const req = capturedRequest();
+    assert.equal(req.method, "POST");
+    assert.equal(req.path, "/v2/text-to-speech/speech");
+    const data = JSON.parse(r.stdout);
     assert.equal(data.text, "Hello world");
+    assert.equal(data.voice, "Telnyx.Bayan.Amanda");
     assert.equal(data.output_type, "base64_output");
     assert.equal(data.audio_data, "SGVsbG8gYXVkaW8=");
     assert.equal(data.has_audio_data, true);
-
-    const calls = readLoggedArgs(fake.logPath);
-    const ttsCall = calls.find((a) => a.slice(0, 2).join(" ") === "text-to-speech generate-speech");
-    assert.ok(ttsCall, "expected a text-to-speech generate-speech call");
-    assertFlagValue(ttsCall, "--text", "Hello world");
-    assertFlagValue(ttsCall, "--output-type", "base64_output");
   });
 
-  it("forwards --provider and --voice flags when supplied", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(
-      ["tts", "--text", "Hello", "--provider", "aws", "--voice", "Amy", "--json"],
-      fake.env,
-    );
-
-    assert.equal(status, 0);
-    const data = JSON.parse(stdout);
-    assert.equal(data.provider, "aws");
-    assert.equal(data.voice, "Amy");
-
-    const ttsCall = readLoggedArgs(fake.logPath).find(
-      (a) => a.slice(0, 2).join(" ") === "text-to-speech generate-speech",
-    );
-    assert.ok(ttsCall);
-    assertFlagValue(ttsCall, "--provider", "aws");
-    assertFlagValue(ttsCall, "--voice", "Amy");
+  it("includes voice in the request body when provided", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--provider", "aws", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body.voice, "Amy");
+    assert.equal(body.text, "Hello");
+    assert.equal(body.provider, "aws");
   });
 
-  it("accepts the xai provider", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(
-      ["tts", "--text", "Hello", "--provider", "xai", "--json"],
-      fake.env,
-    );
+  it("includes output_type, language, provider, text_type in the request body", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--language", "fr", "--provider", "aws", "--text-type", "ssml", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body.output_type, "base64_output");
+    assert.equal(body.language, "fr");
+    assert.equal(body.provider, "aws");
+    assert.equal(body.text_type, "ssml");
+  });
 
-    assert.equal(status, 0, `expected exit 0, got ${status}`);
-    const data = JSON.parse(stdout);
+  it("accepts the xai provider", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "xai-voice", "--provider", "xai", "--json"]);
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}`);
+    const data = JSON.parse(r.stdout);
     assert.equal(data.provider, "xai");
-
-    const ttsCall = readLoggedArgs(fake.logPath).find(
-      (a) => a.slice(0, 2).join(" ") === "text-to-speech generate-speech",
-    );
-    assert.ok(ttsCall);
-    assertFlagValue(ttsCall, "--provider", "xai");
   });
 
-  it("maps the friendly base64 alias to the base64_output API enum", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(
-      ["tts", "--text", "Hello", "--output-type", "base64", "--json"],
-      fake.env,
-    );
-
-    assert.equal(status, 0);
-    const data = JSON.parse(stdout);
+  it("maps the friendly base64 alias to the base64_output API enum", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--output-type", "base64", "--json"]);
+    assert.equal(r.status, 0);
+    const data = JSON.parse(r.stdout);
     assert.equal(data.output_type, "base64_output");
-    assert.equal(data.has_audio_data, true);
-
-    const ttsCall = readLoggedArgs(fake.logPath).find(
-      (a) => a.slice(0, 2).join(" ") === "text-to-speech generate-speech",
-    );
-    assert.ok(ttsCall);
-    assertFlagValue(ttsCall, "--output-type", "base64_output");
-    assertNoFlag(ttsCall, "--disable-cache");
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body!.output_type, "base64_output");
   });
 
-  it("rejects unsupported output types without invoking the telnyx CLI", () => {
-    const fake = setupFakeTelnyx();
+  it("includes disable_cache in the request body when --disable-cache is set", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--disable-cache", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body!.disable_cache, true);
+  });
+
+  it("omits disable_cache when --disable-cache is not set", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body!.disable_cache, undefined);
+  });
+
+  it("writes decoded audio to a file when --output is given", async () => {
+    lastRequest = null;
+    const outDir = mkdtempSync(join(tmpdir(), "telnyx-agent-tts-out-"));
+    const outFile = join(outDir, "speech.wav");
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--output", outFile, "--json"]);
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.output_file, outFile);
+    assert.ok(existsSync(outFile), "expected the audio file to be written");
+    // Mock returns base64 "SGVsbG8gYXVkaW8=" => "Hello audio".
+    assert.equal(readFileSync(outFile, "utf8"), "Hello audio");
+  });
+
+  it("rejects unsupported output types without calling the API", async () => {
+    lastRequest = null;
     for (const bad of ["url", "binary_output"]) {
-      const { status } = runCli(["tts", "--text", "Hello", "--output-type", bad, "--json"], fake.env);
-      assert.notEqual(status, 0, `expected non-zero exit for --output-type ${bad}`);
+      const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--output-type", bad, "--json"]);
+      assert.notEqual(r.status, 0, `expected non-zero exit for --output-type ${bad}`);
     }
-    if (existsSync(fake.logPath)) {
-      assert.equal(readLoggedArgs(fake.logPath).length, 0, "expected no telnyx CLI invocations");
-    }
+    assert.equal(lastRequest, null, "expected no API calls");
   });
 
-  it("fails when --text is not provided", () => {
-    const fake = setupFakeTelnyx();
-    const { status, stdout } = runCli(["tts", "--json"], fake.env);
-
-    assert.notEqual(status, 0, "expected non-zero exit when --text is missing");
-    // No telnyx CLI call should have been made — the fake binary only creates
-    // the log file when it is actually invoked, so a missing file means zero
-    // invocations, which is exactly what we want.
-    if (existsSync(fake.logPath)) {
-      const calls = readLoggedArgs(fake.logPath);
-      assert.equal(calls.length, 0, "expected no telnyx CLI invocations");
-    }
-    // JSON error path should still emit structured output.
-    if (stdout.trim()) {
-      const data = JSON.parse(stdout);
+  it("fails when --text is not provided", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--voice", "Amy", "--json"]);
+    assert.notEqual(r.status, 0, "expected non-zero exit when --text is missing");
+    assert.equal(lastRequest, null, "expected no API calls");
+    if (r.stdout.trim()) {
+      const data = JSON.parse(r.stdout);
       assert.ok(data.error, "expected an error field in JSON output");
     }
   });
 
-  it("lists the tts command in the help text", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["help"], fake.env);
+  it("rejects an invalid --provider", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--provider", "nope", "--json"]);
+    assert.notEqual(r.status, 0, "expected non-zero exit for an unknown provider");
+    assert.equal(lastRequest, null, "expected no API calls");
+  });
 
+  it("rejects elevenlabs (Decision #2: not in the live provider set)", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--provider", "elevenlabs", "--json"]);
+    assert.notEqual(r.status, 0, "elevenlabs is no longer a valid provider");
+    assert.equal(lastRequest, null, "expected no API calls");
+  });
+
+  it("accepts a live-set provider that used to be missing (inworld)", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync(["--text", "Hello", "--voice", "iw-voice", "--provider", "inworld", "--json"]);
+    assert.equal(r.status, 0, `expected exit 0 for inworld, got ${r.status}`);
+    const data = JSON.parse(r.stdout);
+    assert.equal(data.provider, "inworld");
+  });
+
+  it("lists the tts command in the help text", () => {
+    const { stdout, status } = runCliSync(["help"], { ...process.env });
     assert.equal(status, 0);
     assert.match(stdout, /tts\b/);
     assert.match(stdout, /--text/);
     assert.match(stdout, /--output-type/);
     assert.match(stdout, /--provider/);
   });
+});
 
+// ---------------------------------------------------------------------------
+// tts-voices (list-voices) — Go CLI-based tests (unchanged)
+// ---------------------------------------------------------------------------
+
+describe("tts-voices (list-voices) command — Go CLI", () => {
   it("tts-voices calls text-to-speech list-voices and returns the voice list", () => {
     const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["tts-voices", "--json"], fake.env);
+    const { stdout, status } = runCliSync(["tts-voices", "--json"], fake.env);
 
     assert.equal(status, 0, `expected exit 0, got ${status}`);
     const data = JSON.parse(stdout);
@@ -247,7 +351,7 @@ describe("tts (text-to-speech) command", () => {
 
   it("tts-voices forwards the --provider flag when supplied", () => {
     const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["tts-voices", "--provider", "aws", "--json"], fake.env);
+    const { stdout, status } = runCliSync(["tts-voices", "--provider", "aws", "--json"], fake.env);
 
     assert.equal(status, 0);
     const data = JSON.parse(stdout);
@@ -263,26 +367,26 @@ describe("tts (text-to-speech) command", () => {
 
   it("tts-voices forwards --api-key to the Go CLI for provider voice lists", () => {
     const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(
-      ["tts-voices", "--provider", "elevenlabs", "--api-key", "sk-provider-key", "--json"],
+    const { stdout, status } = runCliSync(
+      ["tts-voices", "--provider", "inworld", "--api-key", "sk-provider-key", "--json"],
       fake.env,
     );
 
     assert.equal(status, 0, `expected exit 0, got ${status}`);
     const data = JSON.parse(stdout);
-    assert.equal(data.provider, "elevenlabs");
+    assert.equal(data.provider, "inworld");
 
     const voicesCall = readLoggedArgs(fake.logPath).find(
       (a) => a.slice(0, 2).join(" ") === "text-to-speech list-voices",
     );
     assert.ok(voicesCall);
-    assertFlagValue(voicesCall, "--provider", "elevenlabs");
+    assertFlagValue(voicesCall, "--provider", "inworld");
     assertFlagValue(voicesCall, "--api-key", "sk-provider-key");
   });
 
   it("tts-voices omits --api-key when not provided", () => {
     const fake = setupFakeTelnyx();
-    runCli(["tts-voices", "--json"], fake.env);
+    runCliSync(["tts-voices", "--json"], fake.env);
     const voicesCall = readLoggedArgs(fake.logPath).find(
       (a) => a.slice(0, 2).join(" ") === "text-to-speech list-voices",
     );
@@ -292,7 +396,7 @@ describe("tts (text-to-speech) command", () => {
 
   it("tts-voices accepts the xai provider", () => {
     const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["tts-voices", "--provider", "xai", "--json"], fake.env);
+    const { stdout, status } = runCliSync(["tts-voices", "--provider", "xai", "--json"], fake.env);
 
     assert.equal(status, 0, `expected exit 0, got ${status}`);
     const data = JSON.parse(stdout);
@@ -307,7 +411,7 @@ describe("tts (text-to-speech) command", () => {
 
   it("tts-voices rejects unknown providers without invoking the telnyx CLI", () => {
     const fake = setupFakeTelnyx();
-    const { status } = runCli(["tts-voices", "--provider", "nope", "--json"], fake.env);
+    const { status } = runCliSync(["tts-voices", "--provider", "nope", "--json"], fake.env);
 
     assert.notEqual(status, 0, "expected non-zero exit for an unknown provider");
     if (existsSync(fake.logPath)) {
@@ -316,9 +420,7 @@ describe("tts (text-to-speech) command", () => {
   });
 
   it("lists the tts-voices command in the help text", () => {
-    const fake = setupFakeTelnyx();
-    const { stdout, status } = runCli(["help"], fake.env);
-
+    const { stdout, status } = runCliSync(["help"], { ...process.env });
     assert.equal(status, 0);
     assert.match(stdout, /tts-voices\b/);
   });

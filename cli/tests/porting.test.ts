@@ -8,6 +8,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { setupPortingCommand } from "../src/commands/setup-porting.ts";
+import { parseFlags } from "../src/utils/output.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
@@ -122,7 +124,71 @@ function assertNoCalls(logPath: string): void {
   assert.deepEqual(loggedArgs(logPath), []);
 }
 
+async function runSetupPorting(args: string[]): Promise<{ output: string; requests: string[]; status: number }> {
+  const requests: string[] = [];
+  const originalFetch = globalThis.fetch;
+  const originalLog = console.log;
+  const originalExit = process.exit;
+  const originalApiKey = process.env.TELNYX_API_KEY;
+  const output: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    requests.push(`${init?.method ?? "GET"} ${url.pathname}`);
+    if (init?.method === "POST" && url.pathname === "/v2/portability_checks") {
+      return Response.json({ data: { results: [{ portable: true }] } });
+    }
+    if (init?.method === "POST" && url.pathname === "/v2/porting_orders") {
+      return Response.json({ data: { id: "po-setup", status: "draft" } });
+    }
+    if (init?.method === "GET" && url.pathname === "/v2/porting_orders/po-setup/requirements") {
+      return Response.json({ data: { requirements: [] } });
+    }
+    if (init?.method === "POST" && url.pathname === "/v2/porting_orders/po-setup/actions/confirm") {
+      return Response.json({ data: { id: "po-setup", status: "submitted" } });
+    }
+    return Response.json({ errors: [{ detail: "unexpected request" }] }, { status: 404 });
+  };
+  console.log = (...values: unknown[]) => { output.push(values.join(" ")); };
+  process.exit = ((code?: number) => { throw new Error(`EXIT:${code ?? 0}`); }) as typeof process.exit;
+  process.env.TELNYX_API_KEY = "KEY_test";
+
+  try {
+    const { flags } = parseFlags(args);
+    try {
+      await setupPortingCommand(flags);
+      return { output: output.join("\n"), requests, status: 0 };
+    } catch (err) {
+      if (err instanceof Error && err.message === "EXIT:1") {
+        return { output: output.join("\n"), requests, status: 1 };
+      }
+      throw err;
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.log = originalLog;
+    process.exit = originalExit;
+    if (originalApiKey === undefined) delete process.env.TELNYX_API_KEY;
+    else process.env.TELNYX_API_KEY = originalApiKey;
+  }
+}
+
 describe("Porting-order management commands", () => {
+  it("requires a bare --submit before confirming a setup-porting order", async () => {
+    const explicitFalse = await runSetupPorting([
+      "setup-porting", "--phone-numbers", "+13125550001", "--submit", "false", "--json",
+    ]);
+    assert.equal(explicitFalse.status, 1);
+    assert.match(JSON.parse(explicitFalse.output).error, /--submit does not accept a value/);
+    assert.ok(!explicitFalse.requests.includes("POST /v2/porting_orders/po-setup/actions/confirm"));
+
+    const bare = await runSetupPorting([
+      "setup-porting", "--phone-numbers", "+13125550001", "--submit", "--json",
+    ]);
+    assert.equal(bare.status, 0);
+    assert.equal(JSON.parse(bare.output).submitted, true);
+    assert.ok(bare.requests.includes("POST /v2/porting_orders/po-setup/actions/confirm"));
+  });
+
   it("lists porting orders with generated deep-object filters and stable JSON", () => {
     const fake = setupFakeTelnyx();
     const output = runAgent([
@@ -339,11 +405,20 @@ describe("Porting-order management commands", () => {
     assertFlag(args, "--format", "json");
   });
 
-  it("requires --confirm before cancelling, then invokes the generated cancel action", () => {
+  it("requires a bare --confirm before cancelling, then invokes the generated cancel action", () => {
     const fake = setupFakeTelnyx();
     const error = expectFailure(["cancel-porting-order", "--id", "po-1", "--json"], fake.env);
     assert.match(error, /pass --confirm/);
     assertNoCalls(fake.logPath);
+
+    for (const explicitValue of ["true", "false"]) {
+      const explicitFake = setupFakeTelnyx();
+      const explicitError = expectFailure([
+        "cancel-porting-order", "--id", "po-1", "--confirm", explicitValue, "--json",
+      ], explicitFake.env);
+      assert.match(explicitError, /pass --confirm/);
+      assertNoCalls(explicitFake.logPath);
+    }
 
     const output = runAgent(["cancel-porting-order", "--id", "po-1", "--confirm", "--json"], fake.env);
     assert.deepEqual(JSON.parse(output), {

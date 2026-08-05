@@ -7,7 +7,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Table of contents
 
-- [Telnyx Plugins](#plugins) - Install the Telnyx plugin for Claude Code, Cursor, or Gemini CLI to give your coding assistant Telnyx MCP server access and Telnyx Agent Skills.
+- [Telnyx Plugins](#plugins-and-extensions) - Set up your coding assistant: Telnyx Agent Skills plugins for Claude Code and Cursor, the hosted Telnyx MCP server via the Gemini CLI extension, and a Telnyx model-provider plugin for OpenCode.
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
   
@@ -18,7 +18,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 - [Model Context Protocol (MCP)](#model-context-protocol-mcp) - use Telnyx's generic API MCP proxy or app-layer MCP Apps.
 
 - [Guides](#guides) - step-by-step tutorials for common workflows
- 
+
+- [Edge Compute](#edge-compute) - agent workflows and handoff tooling for Telnyx Edge Compute functions
 
 ## Plugins and Extensions
 
@@ -165,7 +166,6 @@ const tools = toolkit.getLangChainTools();
 ```
 
 Works with LangChain and Vercel's AI SDK. See [TypeScript docs](/tools/typescript) for full usage.
- for the full list of commands and options.
 
 ## Agent Skills
 
@@ -228,26 +228,13 @@ From `tools/mcp-apps`, use `npm install`, `npm run typecheck`, `npm run build`, 
 
 Curl-first operational guides for common Telnyx workflows — SMS messaging, voice call control, AI assistants, phone numbers, porting, verification, webhooks, 10DLC registration, WireGuard networking, MPP and x402 account payments, and Edge Compute handoff patterns.
 
-For Edge Compute specifically, the goal is to make the handoff testable fast: start from a real `telnyx-edge` example, deploy it, and let `team-telnyx/ai` orchestrate against that live endpoint.
-
 See [Guides](/guides) for the full list.
 
 ## Edge Compute
 
-`team-telnyx/ai` does not currently own native Edge Compute lifecycle support.
+Use this repo for agent workflows against Telnyx Edge Compute: the [Agent CLI](/cli) ships `edge-doctor` (readiness checks), `setup-edge-mcp`, and `setup-edge-webhook` for wiring a deployed function into MCP and webhook flows — the [Edge Compute guide](/guides/edge-compute.md) walks through the full workflow, from auth to a live endpoint.
 
-Instead, this repo should be treated as the orchestration/discoverability layer, while the actual function lifecycle lives in the separate `team-telnyx/edge-compute` repo and the `telnyx-edge` CLI.
-
-In practice:
-- use `team-telnyx/ai` for agent workflows, capability discovery, and AI-oriented integration patterns
-- use `team-telnyx/edge-compute` + `telnyx-edge` for function creation, deployment, secrets, bindings, and lifecycle management
-
-The intended end state is a clean bridge:
-- `ai` = orchestrates and explains
-- Edge Compute = deploys and runs (prefer API-key auth for agent flows)
-- the boundary between them is a documented HTTP/MCP/function contract
-
-See [Edge Compute guide](/guides/edge-compute.md).
+To create, deploy, and manage the functions themselves (secrets, bindings, lifecycle), use the `telnyx-edge` CLI from [`team-telnyx/edge-compute`](https://github.com/team-telnyx/edge-compute). For agent flows, prefer API-key auth (`telnyx-edge auth api-key set <key>`).
 
 
 ## License
