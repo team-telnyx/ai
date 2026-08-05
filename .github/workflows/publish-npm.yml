@@ -36,7 +36,7 @@ jobs:
       github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'typescript')
     permissions:
-      contents: read
+      contents: write  # push per-package release tags
       id-token: write
 
     steps:
@@ -60,7 +60,7 @@ jobs:
       github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'cli')
     permissions:
-      contents: read
+      contents: write  # push per-package release tags
       id-token: write
 
     steps:
@@ -84,7 +84,7 @@ jobs:
       github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'mcp')
     permissions:
-      contents: read
+      contents: write  # push per-package release tags
       id-token: write
 
     steps:
@@ -108,7 +108,7 @@ jobs:
       github.repository == 'team-telnyx/ai' &&
       (github.event_name == 'release' || github.event.inputs.package == 'all' || github.event.inputs.package == 'opencode')
     permissions:
-      contents: read
+      contents: write  # push per-package release tags
       id-token: write
 
     steps:
