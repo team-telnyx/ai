@@ -25,6 +25,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "🤖 AI": [
     { name: "Chat Completions", description: "LLM inference via Telnyx AI (executable with telnyx-agent ai-chat)", actions: ["ai_chat"] },
+    { name: "Anthropic Messages", description: "Anthropic-compatible LLM inference (executable with telnyx-agent ai-anthropic-message)", actions: ["ai_anthropic_message"] },
     { name: "Embeddings", description: "Generate text embeddings (executable with telnyx-agent ai-embed)", actions: ["ai_embed"] },
     { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant", "get_ai_assistant", "update_ai_assistant", "delete_ai_assistant"] },
   ],
@@ -94,6 +95,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent disable-sim-card", description: "Request asynchronous disablement of an IoT SIM card" },
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },
   { name: "telnyx-agent ai-chat", description: "Create an OpenAI-compatible chat completion via Telnyx AI inference" },
+  { name: "telnyx-agent ai-anthropic-message", description: "Create an Anthropic-compatible message response via Telnyx AI inference" },
   { name: "telnyx-agent ai-embed", description: "Create OpenAI-compatible embeddings for text or a JSON array of texts" },
   { name: "telnyx-agent list-ai-assistants", description: "List AI assistant configurations" },
   { name: "telnyx-agent create-ai-assistant", description: "Create an AI assistant from a name, instructions, and optional model or voice settings" },

@@ -51,6 +51,7 @@ import {
   searchPhoneNumbersCommand,
 } from "./commands/numbers.ts";
 import { aiChatCommand } from "./commands/ai-chat.ts";
+import { aiAnthropicMessageCommand } from "./commands/ai-anthropic-message.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
   createAiAssistantCommand,
@@ -135,6 +136,7 @@ Commands:
   buy-phone-number  Purchase/order one phone number
   lookup-number     Look up carrier and caller-name information
   ai-chat           Create an OpenAI-compatible chat completion
+  ai-anthropic-message Create an Anthropic-compatible message response
   ai-embed          Create OpenAI-compatible text embeddings
   list-ai-assistants List AI assistant configurations
   create-ai-assistant Create an AI assistant
@@ -407,6 +409,27 @@ AI Chat Flags:
   --tool <json>     OpenAI-compatible tool object
   --tool-choice     Tool selection: none, auto, or required
 
+AI Anthropic Message Flags:
+  --message <json>  Anthropic message JSON object (repeatable, required)
+  --model <id>      Anthropic-compatible model ID (required)
+  --max-tokens <n>  Maximum number of tokens to generate (required)
+  --api-key-ref <id> Integration-secret identifier for an external provider API key
+  --billing-group-id <id> Billing group to associate with the request
+  --fallback-config <json> Model fallback configuration
+  --max-retries <n> Maximum request retries
+  --mcp-server <json> MCP server definition JSON object (repeatable)
+  --metadata <json> Request metadata object
+  --service-tier <tier> Service tier for the request
+  --stop-sequence <value> Stop sequence (repeatable)
+  --system <value>  System prompt string or JSON content-block array
+  --temperature <n> Sampling temperature from 0 to 1
+  --thinking <json> Extended-thinking configuration
+  --timeout <seconds> Request timeout in seconds
+  --tool-choice <json> Anthropic tool-choice JSON object
+  --tool <json>     Anthropic tool definition JSON object (repeatable)
+  --top-k <n>       Restrict sampling to the top K token options
+  --top-p <n>       Nucleus sampling probability
+
 AI Embed Flags:
   --input <value>   Text or JSON array of strings to embed (required)
   --model <id>      Embedding model ID (required)
@@ -546,6 +569,7 @@ Examples:
   telnyx-agent lookup-number --phone-number +131****0000 --type caller-name --json
   telnyx-agent ai-chat --message '{"role":"user","content":"Hello"}' --json
   telnyx-agent ai-chat --message '{"role":"user","content":"Return JSON"}' --response-format '{"type":"json_object"}' --json
+  telnyx-agent ai-anthropic-message --model zai-org/GLM-5.2 --max-tokens 256 --message '{"role":"user","content":"Hello"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
   telnyx-agent list-ai-assistants --json
@@ -611,6 +635,7 @@ const COMMANDS: Record<string, (
   "buy-phone-number": buyPhoneNumberCommand,
   "lookup-number": lookupNumberCommand,
   "ai-chat": aiChatCommand,
+  "ai-anthropic-message": aiAnthropicMessageCommand,
   "ai-embed": aiEmbedCommand,
   "list-ai-assistants": listAiAssistantsCommand,
   "create-ai-assistant": createAiAssistantCommand,
@@ -629,7 +654,7 @@ const COMMANDS: Record<string, (
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "amount",
-  "answering-machine-detection", "api-key", "area-code", "assistant", "assistant-id", "audio-url",
+  "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
   "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
   "brand-name", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
   "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
@@ -641,13 +666,13 @@ const KNOWN_FLAGS = new Set<string>([
   "document-id", "document-type", "dtmf-detection", "dynamic-variables",
   "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
   "emergency-address-id", "enable-messaging", "encoding-format", "ends-with", "extension",
-  "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
+  "fallback-config", "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
   "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
   "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
   "guided-choice", "guided-json", "help", "help-message", "iccid", "id", "include-phone-numbers",
   "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
-  "limit", "loa-document-id", "locality", "max-items", "max-tokens", "media-encryption",
-  "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "method", "model",
+  "limit", "loa-document-id", "locality", "max-items", "max-retries", "max-tokens", "mcp-server", "media-encryption",
+  "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "metadata", "method", "model",
   "monochrome", "msisdn", "name", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-type", "numbers", "old-provider", "opt-in-method",
   "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
@@ -656,11 +681,11 @@ const KNOWN_FLAGS = new Set<string>([
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
   "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "response-format",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
-  "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
-  "start-message", "starts-with", "status", "stop", "stop-message", "store-media", "store-preview",
-  "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature",
+  "service-tier", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
+  "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
+  "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
   "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
-  "to", "tool", "tool-choice", "tool-ids", "top-p", "transcription", "transcription-language",
+  "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p", "transcription", "transcription-language",
   "transcription-model", "ttl", "tx", "type", "url", "usecase", "user", "verification-id",
   "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
   "webhook", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
