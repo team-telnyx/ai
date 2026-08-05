@@ -56,3 +56,15 @@ fi
 
 # Use the system npm (Node 24 ships npm 11+) for OIDC provenance
 npm publish --access public --no-git-checks --tag "$TAG"
+
+# Tag the published version so npm releases are traceable to commits.
+# Runs only after a real publish — the already-published path exits above.
+GIT_TAG="$PACKAGE_NAME@$VERSION"
+if git rev-parse -q --verify "refs/tags/$GIT_TAG" >/dev/null; then
+  echo "Tag $GIT_TAG already exists; skipping tag."
+else
+  git config user.name "github-actions[bot]"
+  git config user.email "github-actions[bot]@users.noreply.github.com"
+  git tag -a "$GIT_TAG" -m "$PACKAGE_NAME $VERSION"
+  git push origin "refs/tags/$GIT_TAG" || echo "WARNING: tag push failed; publish succeeded (tag manually: $GIT_TAG)"
+fi
