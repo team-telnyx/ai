@@ -159,9 +159,13 @@ Do not put `WEBHOOK_SECRET` in the request body or an Authorization header unles
 
 ## API Reference
 
-### Create, deploy, inspect, and recover
+### List, create, deploy, inspect, and recover
 
 ```bash
+# List deployed functions. Use --page and --page-size for larger accounts.
+telnyx-edge list
+telnyx-edge list --page 2 --page-size 25
+
 # New generated project
 telnyx-edge new-func --language=ts --name=my-function
 
@@ -183,6 +187,14 @@ telnyx-edge ship --from-dir=./my-function
 ```
 
 `reset-func` applies to failed states, not healthy deployments. Teardown is asynchronous.
+
+Delete a function when it is no longer needed:
+
+```bash
+telnyx-edge delete-func my-function --yes
+```
+
+`delete-func` is irreversible. Use `--yes` (`-y`) in scripts, agents, and CI to skip the interactive confirmation; see [Non-interactive destructive commands](#non-interactive-destructive-commands) for the full list.
 
 ### Revisions and rollback
 
