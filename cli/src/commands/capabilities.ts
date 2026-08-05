@@ -12,7 +12,7 @@ interface Capability {
 
 const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
-    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile"] },
+    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "delete_messaging_profile"] },
   ],
   "💬 RCS": [
     { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
@@ -81,6 +81,11 @@ const CAPABILITIES: Record<string, Capability[]> = {
 const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-sms", description: "Zero to SMS: creates messaging profile, buys number, assigns it" },
   { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS)" },
+  { name: "telnyx-agent list-messaging-profiles", description: "List messaging profiles with name filters and pagination" },
+  { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination controls" },
+  { name: "telnyx-agent get-messaging-profile", description: "Retrieve one messaging profile by ID" },
+  { name: "telnyx-agent update-messaging-profile", description: "Update one or more fields on a messaging profile" },
+  { name: "telnyx-agent delete-messaging-profile", description: "Delete a messaging profile by ID with explicit confirmation" },
   { name: "telnyx-agent fax-send", description: "Send a fax using a fax application connection and a media URL or uploaded media name" },
   { name: "telnyx-agent send-group-mms", description: "Send a group MMS to multiple recipients (--to comma-separated E.164 numbers)" },
   { name: "telnyx-agent schedule-sms", description: "Schedule an SMS for future delivery at a given ISO 8601 time" },

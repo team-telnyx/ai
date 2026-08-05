@@ -33,6 +33,13 @@ import { setupWhatsappCommand } from "./commands/setup-whatsapp.ts";
 import { whatsappSendCommand } from "./commands/whatsapp-send.ts";
 import { whatsappTemplatesCommand } from "./commands/whatsapp-templates.ts";
 import { sendSmsCommand } from "./commands/send-sms.ts";
+import {
+  createMessagingProfileCommand,
+  deleteMessagingProfileCommand,
+  getMessagingProfileCommand,
+  listMessagingProfilesCommand,
+  updateMessagingProfileCommand,
+} from "./commands/messaging-profiles.ts";
 import { faxSendCommand } from "./commands/fax-send.ts";
 import { sendGroupMmsCommand } from "./commands/send-group-mms.ts";
 import { scheduleSmsCommand } from "./commands/schedule-sms.ts";
@@ -117,6 +124,11 @@ Commands:
   whatsapp-send     Send a WhatsApp message (text or template)
   whatsapp-templates List or create WhatsApp message templates
   send-sms          Send an SMS or MMS message (--media-url sends MMS)
+  list-messaging-profiles List messaging profiles with name filters and pagination
+  create-messaging-profile Create a messaging profile
+  get-messaging-profile Get a messaging profile by ID
+  update-messaging-profile Update a messaging profile by ID
+  delete-messaging-profile Delete a messaging profile by ID (requires --confirm)
   fax-send          Send a fax from a URL or uploaded media file
   send-group-mms    Send a group MMS to multiple recipients (--to comma-separated)
   schedule-sms      Schedule an SMS for future delivery (--send-at ISO 8601)
@@ -252,6 +264,34 @@ SMS Action Flags:
   --send-at <iso8601>    Send time, ISO 8601 (schedule-sms — required, e.g., 2024-12-31T00:00:00Z)
   --id <message-id>      Message ID (sms-status — required)
   --cancel               Cancel a scheduled message instead of retrieving status (sms-status)
+
+Messaging Profile Flags:
+  --id <profile-id>      Messaging profile ID (get, update, delete — required)
+  --name <name>          Profile name (create — required; update) or exact-name filter (list)
+  --name-contains <text> Filter profile names containing text (list)
+  --whitelisted-destinations <codes> Comma-separated ISO alpha-2 destinations or * (create — required; update)
+  --whitelisted-destination <code> Repeatable generated-CLI alias for destinations (create, update)
+  --ai-assistant-id <id> AI assistant linked to the profile (create, update)
+  --alpha-sender <text>  Default alphanumeric sender (create, update)
+  --enabled <bool>       Enable or disable the profile (create, update)
+  --health-webhook-url <url> Spend-limit health webhook (create only)
+  --resource-group-id <id> Resource group assignment (create only)
+  --webhook-url <url>    Primary messaging webhook URL (create, update)
+  --webhook-failover-url <url> Failover messaging webhook URL (create, update)
+  --webhook-api-version <version> 1, 2, or 2010-04-01 (create, update)
+  --v1-secret <secret>   Legacy webhook secret (update only)
+  --daily-spend-limit <usd> Non-negative profile spend limit (create, update)
+  --daily-spend-limit-enabled <bool> Enforce the daily spend limit (create, update)
+  --smart-encoding <bool> Enable automatic SMS encoding optimization (create, update)
+  --mms-fall-back-to-sms <bool> Enable MMS-to-SMS fallback (create, update)
+  --mms-transcoding <bool> Enable MMS media transcoding (create, update)
+  --mobile-only <bool> Restrict sends to mobile numbers (create, update)
+  --number-pool-settings <json|null> Number-pool settings object (create, update)
+  --url-shortener-settings <json|null> URL-shortener settings object (create, update)
+  --page-number <n>      Result page (list-messaging-profiles)
+  --page-size <n>        Results per page (list-messaging-profiles)
+  --max-items <n>        Maximum list items; -1 means unlimited (list-messaging-profiles)
+  --confirm              Required safety confirmation (delete-messaging-profile)
 
 Fax Action Flags:
   --connection-id <id>   Fax application connection ID (fax-send, required)
@@ -515,6 +555,11 @@ Examples:
   telnyx-agent whatsapp-templates --waba-id <id> --create --name promo --category MARKETING --component '[]'
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello!"
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "See this" --media-url https://example.com/img.png --subject "Photo"
+  telnyx-agent list-messaging-profiles --name-contains production --json
+  telnyx-agent create-messaging-profile --name "Production SMS" --whitelisted-destinations US,CA --webhook-url https://example.com/messages --json
+  telnyx-agent get-messaging-profile --id <profile-id> --json
+  telnyx-agent update-messaging-profile --id <profile-id> --name "Updated SMS" --enabled true --json
+  telnyx-agent delete-messaging-profile --id <profile-id> --confirm --json
   telnyx-agent fax-send --connection-id <id> --from +131****0000 --to +131****0001 --media-url https://example.com/document.pdf
   telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002,+131****0003 --text "Group hi!"
   telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002 --media-url https://example.com/cat.png
@@ -617,6 +662,11 @@ const COMMANDS: Record<string, (
   "whatsapp-send": whatsappSendCommand,
   "whatsapp-templates": whatsappTemplatesCommand,
   "send-sms": sendSmsCommand,
+  "list-messaging-profiles": listMessagingProfilesCommand,
+  "create-messaging-profile": createMessagingProfileCommand,
+  "get-messaging-profile": getMessagingProfileCommand,
+  "update-messaging-profile": updateMessagingProfileCommand,
+  "delete-messaging-profile": deleteMessagingProfileCommand,
   "fax-send": faxSendCommand,
   "send-group-mms": sendGroupMmsCommand,
   "schedule-sms": scheduleSmsCommand,
@@ -654,7 +704,7 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "amount",
+  "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
   "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
   "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
   "brand-name", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
@@ -664,34 +714,34 @@ const KNOWN_FLAGS = new Set<string>([
   "conversation-id", "country", "country-code", "create", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "deepfake-detection", "depth",
   "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
-  "document-id", "document-type", "dtmf-detection", "dynamic-variables",
+  "daily-spend-limit", "daily-spend-limit-enabled", "document-id", "document-type", "dtmf-detection", "dynamic-variables",
   "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
-  "emergency-address-id", "enable-messaging", "encoding-format", "ends-with", "extension",
+  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "extension",
   "fallback-config", "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
   "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
   "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
-  "guided-choice", "guided-json", "help", "help-message", "iccid", "id", "include-phone-numbers",
+  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "iccid", "id", "include-phone-numbers",
   "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
   "limit", "loa-document-id", "locality", "max-items", "max-retries", "max-tokens", "mcp-server", "media-encryption",
   "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "metadata", "method", "model",
-  "monochrome", "msisdn", "name", "national-destination-code", "network-id",
+  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "monochrome", "msisdn", "name", "name-contains", "national-destination-code", "network-id", "number-pool-settings",
   "new-billing-phone-number", "number-type", "numbers", "old-provider", "opt-in-method",
   "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
   "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
   "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
-  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "response-format",
-  "retry-on-timeout",
+  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
   "service-tier", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
   "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
   "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
+  "smart-encoding",
   "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
   "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p", "transcription", "transcription-language",
   "transcription-model", "ttl", "tx", "type", "url", "usecase", "user", "verification-id",
-  "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
-  "webhook", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
-  "whitelisted-destinations",
+  "url-shortener-settings", "v1-secret", "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
+  "webhook", "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
+  "whitelisted-destination", "whitelisted-destinations",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an

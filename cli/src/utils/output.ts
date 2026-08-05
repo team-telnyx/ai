@@ -113,6 +113,14 @@ export const BOOLEAN_FLAGS = new Set<string>([
 
 const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ["call-dial", new Set(["retry-on-timeout", "transcription"])],
+  ["create-messaging-profile", new Set([
+    "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
+    "mms-transcoding", "mobile-only", "smart-encoding",
+  ])],
+  ["update-messaging-profile", new Set([
+    "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
+    "mms-transcoding", "mobile-only", "smart-encoding",
+  ])],
 ]);
 
 export function isBooleanFlag(command: string, key: string): boolean {
@@ -143,7 +151,8 @@ const BOOLEAN_VALUE_FLAGS = new Set<string>([
 
 function isBooleanValueFlag(command: string, key: string): boolean {
   return BOOLEAN_VALUE_FLAGS.has(key)
-    || (command === "call-dial" && (key === "retry-on-timeout" || key === "transcription"));
+    || (command === "call-dial" && (key === "retry-on-timeout" || key === "transcription"))
+    || COMMAND_BOOLEAN_FLAGS.get(command)?.has(key) === true;
 }
 
 export function parseFlags(args: string[]): {
