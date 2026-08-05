@@ -22,7 +22,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Plugins and Extensions
 
-Install the unified Telnyx plugin to give your AI coding assistant Telnyx MCP server access and 238 Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. 
+Install the Telnyx plugins you need to give your AI coding assistant Telnyx MCP server access and Agent Skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration, account management (signup, MPP/x402 payments), and more. Plugins are split by product area so you only load the skills your project uses — see the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need).
 
 Empowers agents to generate correct, production-ready code — and to manage their own accounts — without relying on pre-training or fragile doc retrieval.
 
@@ -37,16 +37,17 @@ Empowers agents to generate correct, production-ready code — and to manage the
 **Step 2.** Install the plugins you need — pick one or more:
 
 ```bash
-/plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
-/plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
 /plugin install telnyx-messaging@telnyx  # SMS / MMS
-/plugin install telnyx-tts@telnyx         # Text-to-speech
-/plugin install telnyx-stt@telnyx         # Speech-to-text
-/plugin install telnyx-verify@telnyx      # Phone verification / 2FA
-/plugin install telnyx-numbers@telnyx     # Number management
-/plugin install telnyx-webrtc@telnyx      # WebRTC
-/plugin install telnyx-ai@telnyx         # AI inference
-/plugin install telnyx-platform@telnyx   # Platform services (numbers, billing, MCP)
+/plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
+/plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
+/plugin install telnyx-email@telnyx      # Email API
+/plugin install telnyx-tts@telnyx        # Text-to-speech
+/plugin install telnyx-stt@telnyx        # Speech-to-text
+/plugin install telnyx-verify@telnyx     # Phone verification / 2FA
+/plugin install telnyx-numbers@telnyx    # Number management, 10DLC, porting
+/plugin install telnyx-webrtc@telnyx     # WebRTC and client SDKs
+/plugin install telnyx-ai@telnyx         # AI inference and assistants
+/plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 
 ### Gemini CLI extension
