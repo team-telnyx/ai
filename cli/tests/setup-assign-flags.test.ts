@@ -356,6 +356,25 @@ describe("setup-sms step 4 (AIF-329: REST PATCH instead of Go CLI)", () => {
     }
   });
 
+  it("--force false reuses an existing SMS profile + number without provisioning", async () => {
+    capturedRequests = [];
+    existingSmsProfiles = [{ id: "prof_existing", name: "Agent SMS Profile - 2026-07-24 02:29:55" }];
+    assignedSmsNumbers = [{ id: "num_existing", phone_number: "+13125558888" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-sms", "--force", "false", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true, "explicit false must not take the force path");
+      assert.equal(capturedRequests.filter((c) => c.method === "POST" && c.path === "/v2/messaging_profiles").length, 0);
+      const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+      assert.ok(!cliLog.includes("number-orders"), "explicit false must not buy a number");
+    } finally {
+      existingSmsProfiles = [];
+      assignedSmsNumbers = [];
+    }
+  });
+
   // ------------------------------------------------------------------
   // Orphan rollback: a profile created this run must be deleted if a later
   // step (number search/buy) fails — otherwise failed retries pile up

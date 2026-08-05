@@ -631,6 +631,25 @@ describe("setup-voice (AIF-328: Call Control Application, not credential connect
     }
   });
 
+  it("--force false reuses an existing voice app + number without provisioning", async () => {
+    capturedRequests = [];
+    existingVoiceApps = [{ id: "app_existing", application_name: "Agent Voice App - 2026-07-24 02:29:55" }];
+    assignedVoiceNumbers = [{ id: "num_existing", phone_number: "+13125558888" }];
+    try {
+      const fake = setupFakeTelnyx();
+      const r = await runAsync(["setup-voice", "--force", "false", "--json"], fake.env);
+      assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+      const data = JSON.parse(r.stdout);
+      assert.equal(data.reused, true, "explicit false must not take the force path");
+      assert.equal(postRequests(/\/v2\/call_control_applications/).length, 0);
+      const cliLog = existsSync(fake.logPath) ? readFileSync(fake.logPath, "utf8") : "";
+      assert.ok(!cliLog.includes("number-orders"), "explicit false must not buy a number");
+    } finally {
+      existingVoiceApps = [];
+      assignedVoiceNumbers = [];
+    }
+  });
+
   it("lists setup-voice in help with --outbound-voice-profile-id flag", () => {
     let stdout = "";
     let status = 0;

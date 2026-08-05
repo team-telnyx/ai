@@ -440,6 +440,31 @@ describe("SMS action commands", () => {
     );
   });
 
+  it("sms-status --cancel false retrieves and never cancels", () => {
+    const fake = setupFakeTelnyx();
+    const out = runAgent(["sms-status", "--id", "msg-123", "--cancel", "false", "--json"], fake.env);
+
+    const data = JSON.parse(out);
+    assert.equal(data.message_id, "msg-123");
+    assert.equal(data.status, "delivered");
+    assert.equal(data.cancelled, undefined);
+
+    const calls = readLoggedArgs(fake.logPath);
+    assert.ok(calls.some((a) => a.slice(0, 2).join(" ") === "messages retrieve"));
+    assert.ok(!calls.some((a) => a.slice(0, 2).join(" ") === "messages cancel-scheduled"));
+  });
+
+  it("sms-status --cancel true cancels a scheduled message", () => {
+    const fake = setupFakeTelnyx();
+    const out = runAgent(["sms-status", "--id", "sched-456", "--cancel", "true", "--json"], fake.env);
+
+    const data = JSON.parse(out);
+    assert.equal(data.cancelled, true);
+    const calls = readLoggedArgs(fake.logPath);
+    assert.ok(calls.some((a) => a.slice(0, 2).join(" ") === "messages cancel-scheduled"));
+    assert.ok(!calls.some((a) => a.slice(0, 2).join(" ") === "messages retrieve"));
+  });
+
   it("derives status from recipient entries (data.to[].status)", async () => {
     const { deriveMessageStatus, recipientStatuses } = await import("../src/utils/message-status.ts");
 

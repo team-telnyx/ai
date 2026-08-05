@@ -119,16 +119,31 @@ export function isBooleanFlag(command: string, key: string): boolean {
   return BOOLEAN_FLAGS.has(key) || COMMAND_BOOLEAN_FLAGS.get(command)?.has(key) === true;
 }
 
-// These safety/action flags are presence-only. Capture an adjacent explicit
-// value so their command handlers can reject it instead of silently treating
-// `--confirm false` or `--clear-tool-ids false` as an enabled flag plus an
-// ignored positional token. Help tokens remain unconsumed and are intercepted.
+// These safety/consent flags are presence-only. Capture any adjacent value as
+// a string so strict handlers can reject valued forms, including true/false.
 const VALUE_REJECTING_BOOLEAN_FLAGS = new Set<string>([
   "confirm",
   "clear-tags",
   "clear-tool-ids",
   "submit",
 ]);
+
+// These action booleans support agent-friendly `--flag true|false` syntax.
+// Unknown adjacent values are still captured as strings, which fails safe for
+// handlers that enable behavior only when the normalized value is true.
+const BOOLEAN_VALUE_FLAGS = new Set<string>([
+  "force",
+  "record",
+  "cancel",
+  "create",
+  "stream",
+  "disable-cache",
+  "deepfake-detection",
+]);
+
+function isBooleanValueFlag(command: string, key: string): boolean {
+  return BOOLEAN_VALUE_FLAGS.has(key) || (command === "call-dial" && key === "transcription");
+}
 
 export function parseFlags(args: string[]): {
   command: string;
@@ -150,22 +165,25 @@ export function parseFlags(args: string[]): {
     if (arg.startsWith("--")) {
       const key = arg.slice(2);
       const next = args[i + 1];
-      // Boolean flags normally never consume the next token. Presence-only
-      // safety flags capture an unexpected adjacent value so the handler can
-      // reject it; recognized help tokens still remain available to the loop.
+      // Boolean flags normally never consume the next token. Strict presence-
+      // only flags capture values for rejection; agent-friendly booleans also
+      // normalize literal true/false. Help tokens remain available to the loop.
       // Non-boolean flags consume the next token as their value, unless it
       // starts with `--` (another long flag). Empty strings remain meaningful
       // values for fields such as an AI assistant greeting, where
       // `--greeting ""` tells the assistant to wait for the user to speak.
       if (
-        VALUE_REJECTING_BOOLEAN_FLAGS.has(key)
+        (VALUE_REJECTING_BOOLEAN_FLAGS.has(key) || isBooleanValueFlag(command, key))
         && next !== undefined
         && next !== "-h"
         && next !== "--help"
         && !next.startsWith("--")
       ) {
-        flags[key] = next;
-        (occurrences[key] ??= []).push(next);
+        const value = isBooleanValueFlag(command, key) && (next === "true" || next === "false")
+          ? next === "true"
+          : next;
+        flags[key] = value;
+        (occurrences[key] ??= []).push(value);
         i++;
       } else if (!isBooleanFlag(command, key) && next !== undefined && next !== null && !next.startsWith("--")) {
         flags[key] = next;

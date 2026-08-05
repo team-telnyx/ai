@@ -279,6 +279,57 @@ describe("Bug fix: -h after boolean flags triggers help (not swallowed as flag v
     const submit = parseFlags(["setup-porting", "--submit", "false", "--json"]);
     assert.equal(submit.flags.submit, "false");
     assert.equal(submit.flags.json, true);
+
+    const clearTags = parseFlags(["update-ai-assistant", "--clear-tags", "true", "--json"]);
+    assert.equal(clearTags.flags["clear-tags"], "true");
+    assert.deepEqual(clearTags.occurrences["clear-tags"], ["true"]);
+  });
+
+  it("parseFlags: agent-friendly booleans normalize adjacent true/false literals", () => {
+    for (const [command, flag] of [
+      ["setup-sms", "force"],
+      ["sms-status", "cancel"],
+      ["call-dial", "record"],
+      ["whatsapp-templates", "create"],
+      ["ai-chat", "stream"],
+      ["tts", "disable-cache"],
+      ["call-dial", "deepfake-detection"],
+      ["call-dial", "transcription"],
+    ] as const) {
+      for (const value of [true, false]) {
+        const parsed = parseFlags([command, `--${flag}`, String(value), "--json"]);
+        assert.equal(parsed.flags[flag], value, `expected --${flag} ${value} to normalize`);
+        assert.deepEqual(parsed.occurrences[flag], [value], `expected normalized --${flag} occurrence`);
+        assert.equal(parsed.flags.json, true);
+      }
+    }
+  });
+
+  it("parseFlags: agent-friendly booleans capture arbitrary values but never enable them", () => {
+    for (const [command, flag] of [
+      ["setup-sms", "force"],
+      ["sms-status", "cancel"],
+      ["call-dial", "record"],
+      ["whatsapp-templates", "create"],
+      ["ai-chat", "stream"],
+      ["tts", "disable-cache"],
+      ["call-dial", "deepfake-detection"],
+      ["call-dial", "transcription"],
+    ] as const) {
+      const parsed = parseFlags([command, `--${flag}`, "yes"]);
+      assert.equal(parsed.flags[flag], "yes", `expected --${flag} yes to fail safe`);
+      assert.deepEqual(parsed.occurrences[flag], ["yes"]);
+    }
+  });
+
+  it("parseFlags: transcription is boolean only for call-dial and value-bearing for call-control", () => {
+    const dial = parseFlags(["call-dial", "--transcription", "true"]);
+    assert.equal(dial.flags.transcription, true);
+    assert.deepEqual(dial.occurrences.transcription, [true]);
+
+    const control = parseFlags(["call-control", "--transcription", '{"model":"deepgram"}']);
+    assert.equal(control.flags.transcription, '{"model":"deepgram"}');
+    assert.deepEqual(control.occurrences.transcription, ['{"model":"deepgram"}']);
   });
 
   it("parseFlags: --text -h still treats -h as text value (non-boolean flag)", () => {
