@@ -7,7 +7,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Table of contents
 
-- [Telnyx Plugins](#plugins) - Install the Telnyx plugin for Claude Code, Cursor, or Gemini CLI to give your coding assistant Telnyx MCP server access and Telnyx Agent Skills.
+- [Telnyx Plugins](#plugins-and-extensions) - Install the Telnyx plugins for Claude Code, Cursor, Gemini CLI, or OpenCode to give your coding assistant Telnyx MCP server access and Telnyx Agent Skills.
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
   
@@ -18,7 +18,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 - [Model Context Protocol (MCP)](#model-context-protocol-mcp) - use Telnyx's generic API MCP proxy or app-layer MCP Apps.
 
 - [Guides](#guides) - step-by-step tutorials for common workflows
- 
+
+- [Edge Compute](#edge-compute) - agent workflows and handoff tooling for Telnyx Edge Compute functions
 
 ## Plugins and Extensions
 
@@ -164,7 +165,6 @@ const tools = toolkit.getLangChainTools();
 ```
 
 Works with LangChain and Vercel's AI SDK. See [TypeScript docs](/tools/typescript) for full usage.
- for the full list of commands and options.
 
 ## Agent Skills
 
