@@ -127,6 +127,7 @@ const VALUE_REJECTING_BOOLEAN_FLAGS = new Set<string>([
   "confirm",
   "clear-tags",
   "clear-tool-ids",
+  "submit",
 ]);
 
 export function parseFlags(args: string[]): {

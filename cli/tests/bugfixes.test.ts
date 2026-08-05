@@ -261,6 +261,10 @@ describe("Bug fix: -h after boolean flags triggers help (not swallowed as flag v
     const longHelp = parseFlags(["cancel-porting-order", "--confirm", "--help"]);
     assert.equal(longHelp.flags.confirm, true);
     assert.equal(longHelp.helpRequested, true);
+
+    const submitHelp = parseFlags(["setup-porting", "--submit", "-h"]);
+    assert.equal(submitHelp.flags.submit, true);
+    assert.equal(submitHelp.helpRequested, true);
   });
 
   it("parseFlags: presence-only action flags capture explicit values for rejection", () => {
@@ -271,6 +275,10 @@ describe("Bug fix: -h after boolean flags triggers help (not swallowed as flag v
     const confirm = parseFlags(["cancel-porting-order", "--confirm", "true", "--json"]);
     assert.equal(confirm.flags.confirm, "true");
     assert.equal(confirm.flags.json, true);
+
+    const submit = parseFlags(["setup-porting", "--submit", "false", "--json"]);
+    assert.equal(submit.flags.submit, "false");
+    assert.equal(submit.flags.json, true);
   });
 
   it("parseFlags: --text -h still treats -h as text value (non-boolean flag)", () => {
