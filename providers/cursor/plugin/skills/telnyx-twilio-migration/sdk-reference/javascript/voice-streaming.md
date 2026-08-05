@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -125,7 +125,7 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
 
 ```javascript
 const response = await client.calls.actions.startTranscription('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');

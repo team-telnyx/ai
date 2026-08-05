@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: voice-conferencing
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup

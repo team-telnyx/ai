@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: messaging-profiles
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -118,7 +118,7 @@ Returns: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `cre
 
 `PATCH /messaging_profiles/{id}`
 
-Optional: `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `record_type` (enum: messaging_profile), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
+Optional: `ai_assistant_id` (string | null), `alpha_sender` (string | null), `created_at` (date-time), `daily_spend_limit` (string), `daily_spend_limit_enabled` (boolean), `enabled` (boolean), `id` (uuid), `mms_fall_back_to_sms` (boolean), `mms_transcoding` (boolean), `mobile_only` (boolean), `name` (string), `number_pool_settings` (object | null), `record_type` (enum: messaging_profile), `smart_encoding` (boolean), `updated_at` (date-time), `url_shortener_settings` (object | null), `v1_secret` (string), `webhook_api_version` (enum: 1, 2, 2010-04-01), `webhook_failover_url` (url), `webhook_url` (url), `whitelisted_destinations` (array[string])
 
 ```java
 import com.telnyx.sdk.models.messagingprofiles.MessagingProfileUpdateParams;

@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -63,7 +63,7 @@ Optional: `phone_numbers` (array[string])
 
 ```javascript
 const response = await client.portabilityChecks.run({
-    phoneNumbers: ["+18005550101"],
+    phone_numbers: ["+18005550101"],
 });
 
 console.log(response.data);

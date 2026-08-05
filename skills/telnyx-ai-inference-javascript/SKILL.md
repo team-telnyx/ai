@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: ai-inference
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -71,20 +71,22 @@ Transcribe speech to text. This endpoint is consistent with the [OpenAI Transcri
 `POST /ai/audio/transcriptions`
 
 ```javascript
+import fs from 'fs';
+
 const response = await client.ai.audio.transcribe({ model: 'distil-whisper/distil-large-v2' });
 
 console.log(response.text);
 ```
 
-Returns: `duration` (number), `segments` (array[object]), `text` (string)
+Returns: `duration` (number), `segments` (array[object]), `text` (string), `words` (array[object])
 
 ## Create a chat completion
 
-Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
+**Deprecated**: Use `POST /v2/ai/openai/chat/completions` instead. Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/chat/completions` — Required: `messages`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `seed` (integer), `stop` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
 
 ```javascript
 const response = await client.ai.chat.createCompletion({
@@ -126,6 +128,20 @@ console.log(conversation.id);
 ```
 
 Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
+## Aggregate Conversation Insights
+
+Aggregate conversation insights by specified fields
+
+`GET /ai/conversations/conversation-insights/aggregates`
+
+```javascript
+const response = await client.ai.conversations.conversationInsights.aggregate();
+
+console.log(response.data);
+```
+
+Returns: `record_count` (integer)
 
 ## Get Insight Template Groups
 
@@ -381,9 +397,10 @@ Retrieve messages for a specific conversation, including tool calls made by the 
 `GET /ai/conversations/{conversation_id}/messages`
 
 ```javascript
-const messages = await client.ai.conversations.messages.list('550e8400-e29b-41d4-a716-446655440000');
-
-console.log(messages.data);
+// Automatically fetches more pages as needed.
+for await (const messageListResponse of client.ai.conversations.messages.list('550e8400-e29b-41d4-a716-446655440000')) {
+  console.log(messageListResponse.role);
+}
 ```
 
 Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
@@ -417,7 +434,7 @@ Perform embedding on a Telnyx Storage Bucket using an embedding model. The curre
 Optional: `document_chunk_overlap_size` (integer), `document_chunk_size` (integer), `embedding_model` (object), `loader` (object)
 
 ```javascript
-const embeddingResponse = await client.ai.embeddings.create({ bucket_name: 'bucket_name' });
+const embeddingResponse = await client.ai.embeddings.create({ bucket_name: 'my-bucket' });
 
 console.log(embeddingResponse.data);
 ```
@@ -472,7 +489,7 @@ Optional: `num_of_docs` (integer)
 
 ```javascript
 const response = await client.ai.embeddings.similaritySearch({
-  bucket_name: 'bucket_name',
+  bucket_name: 'my-bucket',
   query: 'What is Telnyx?',
 });
 
@@ -489,7 +506,7 @@ Embed website content from a specified URL, including child pages up to 5 levels
 
 ```javascript
 const embeddingResponse = await client.ai.embeddings.url({
-  bucket_name: 'bucket_name',
+  bucket_name: 'my-bucket',
   url: 'https://example.com/resource',
 });
 
@@ -542,7 +559,7 @@ Optional: `hyperparameters` (object), `suffix` (string)
 ```javascript
 const fineTuningJob = await client.ai.fineTuning.jobs.create({
   model: 'openai/gpt-4o',
-  training_file: 'training_file',
+  training_file: 'training-data.jsonl',
 });
 
 console.log(fineTuningJob.id);
@@ -580,7 +597,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Get available models
 
-This endpoint returns a list of Open Source and OpenAI models that are available for use.    **Note**: Model `id`'s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.
+**Deprecated**: Use `GET /v2/ai/openai/models` instead. Returns the same `ModelsResponse` payload as the OpenAI-compatible endpoint — open-source LLMs hosted on Telnyx (e.g. `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.1-FP8`, `MiniMaxAI/MiniMax-M2.7`), embedding models, and fine-tuned models — kept around for backwards compatibility.
 
 `GET /ai/models`
 
@@ -590,7 +607,7 @@ const response = await client.ai.retrieveModels();
 console.log(response.data);
 ```
 
-Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -624,6 +641,18 @@ console.log(response.data);
 ```
 
 Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
+## Create a response
+
+**Deprecated**: Use `POST /v2/ai/openai/responses` instead. This endpoint is compatible with the [OpenAI Responses API](https://developers.openai.com/api/reference/responses/overview) and may be used with the OpenAI JS or Python SDK. Response id parameter is not supported at the moment. Use the `conversation` parameter with a Telnyx Conversation ID to leverage persistent conversations.
+
+`POST /ai/responses`
+
+```javascript
+const response = await client.ai.createResponseDeprecated({ body: { model: 'bar', input: 'bar' } });
+
+console.log(response);
+```
 
 ## Summarize file content
 
@@ -729,7 +758,7 @@ Generate synthesized speech audio from text input. Returns audio in the requeste
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble, xai), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
 
 ```javascript
 const response = await client.textToSpeech.generate();

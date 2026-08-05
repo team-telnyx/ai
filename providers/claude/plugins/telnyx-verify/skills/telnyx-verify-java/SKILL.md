@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: verify
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -96,7 +96,7 @@ import com.telnyx.sdk.models.verifications.byphonenumber.ByPhoneNumberListRespon
 ByPhoneNumberListResponse byPhoneNumbers = client.verifications().byPhoneNumber().list("+13035551234");
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
 
@@ -133,7 +133,7 @@ VerificationTriggerCallParams params = VerificationTriggerCallParams.builder()
 CreateVerificationResponse createVerificationResponse = client.verifications().triggerCall(params);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger Flash call verification
 
@@ -152,7 +152,7 @@ VerificationTriggerFlashcallParams params = VerificationTriggerFlashcallParams.b
 CreateVerificationResponse createVerificationResponse = client.verifications().triggerFlashcall(params);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
 
@@ -171,7 +171,26 @@ VerificationTriggerSmsParams params = VerificationTriggerSmsParams.builder()
 CreateVerificationResponse createVerificationResponse = client.verifications().triggerSms(params);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
+
+## Trigger WhatsApp verification
+
+`POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
+
+Optional: `custom_code` (string | null), `timeout_secs` (integer)
+
+```java
+import com.telnyx.sdk.models.verifications.CreateVerificationResponse;
+import com.telnyx.sdk.models.verifications.VerificationTriggerWhatsappVerificationParams;
+
+VerificationTriggerWhatsappVerificationParams params = VerificationTriggerWhatsappVerificationParams.builder()
+    .phoneNumber("+13035551234")
+    .verifyProfileId("12ade33a-21c0-473b-b055-b3c836e1c292")
+    .build();
+CreateVerificationResponse createVerificationResponse = client.verifications().triggerWhatsappVerification(params);
+```
+
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Retrieve verification
 
@@ -184,7 +203,7 @@ import com.telnyx.sdk.models.verifications.VerificationRetrieveResponse;
 VerificationRetrieveResponse verification = client.verifications().retrieve("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
 
@@ -214,7 +233,7 @@ import com.telnyx.sdk.models.verifyprofiles.VerifyProfileListParams;
 VerifyProfileListPage page = client.verifyProfiles().list();
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Create a Verify profile
 
@@ -222,7 +241,7 @@ Creates a new Verify profile to associate verifications with.
 
 `POST /verify_profiles` — Required: `name`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `language` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```java
 import com.telnyx.sdk.models.verifyprofiles.VerifyProfileCreateParams;
@@ -234,7 +253,7 @@ VerifyProfileCreateParams params = VerifyProfileCreateParams.builder()
 VerifyProfileData verifyProfileData = client.verifyProfiles().create(params);
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Retrieve Verify profile message templates
 
@@ -301,13 +320,13 @@ import com.telnyx.sdk.models.verifyprofiles.VerifyProfileRetrieveParams;
 VerifyProfileData verifyProfileData = client.verifyProfiles().retrieve("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `language` (string), `name` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```java
 import com.telnyx.sdk.models.verifyprofiles.VerifyProfileData;
@@ -316,7 +335,7 @@ import com.telnyx.sdk.models.verifyprofiles.VerifyProfileUpdateParams;
 VerifyProfileData verifyProfileData = client.verifyProfiles().update("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
 
@@ -329,4 +348,4 @@ import com.telnyx.sdk.models.verifyprofiles.VerifyProfileDeleteParams;
 VerifyProfileData verifyProfileData = client.verifyProfiles().delete("12ade33a-21c0-473b-b055-b3c836e1c292");
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)

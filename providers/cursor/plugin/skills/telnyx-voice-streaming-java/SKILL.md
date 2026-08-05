@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: voice-streaming
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -146,7 +146,7 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionStartTranscriptionParams;

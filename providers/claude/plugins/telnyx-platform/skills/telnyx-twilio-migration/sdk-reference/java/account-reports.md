@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -650,7 +650,7 @@ SessionAnalysisRetrieveParams params = SessionAnalysisRetrieveParams.builder()
 SessionAnalysisRetrieveResponse sessionAnalysis = client.sessionAnalysis().retrieve(params);
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
 ## Get Telnyx product usage data (BETA)
 

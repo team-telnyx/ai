@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: ai-inference
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -84,15 +84,15 @@ AudioTranscribeParams params = AudioTranscribeParams.builder()
 AudioTranscribeResponse response = client.ai().audio().transcribe(params);
 ```
 
-Returns: `duration` (number), `segments` (array[object]), `text` (string)
+Returns: `duration` (number), `segments` (array[object]), `text` (string), `words` (array[object])
 
 ## Create a chat completion
 
-Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
+**Deprecated**: Use `POST /v2/ai/openai/chat/completions` instead. Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
 
 `POST /ai/chat/completions` — Required: `messages`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `seed` (integer), `stop` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
 
 ```java
 import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionParams;
@@ -142,6 +142,21 @@ Conversation conversation = client.ai().conversations().create();
 ```
 
 Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `metadata` (object), `name` (string)
+
+## Aggregate Conversation Insights
+
+Aggregate conversation insights by specified fields
+
+`GET /ai/conversations/conversation-insights/aggregates`
+
+```java
+import com.telnyx.sdk.models.ai.conversations.conversationinsights.ConversationInsightAggregateParams;
+import com.telnyx.sdk.models.ai.conversations.conversationinsights.ConversationInsightAggregateResponse;
+
+ConversationInsightAggregateResponse response = client.ai().conversations().conversationInsights().aggregate();
+```
+
+Returns: `record_count` (integer)
 
 ## Get Insight Template Groups
 
@@ -418,10 +433,10 @@ Retrieve messages for a specific conversation, including tool calls made by the 
 `GET /ai/conversations/{conversation_id}/messages`
 
 ```java
+import com.telnyx.sdk.models.ai.conversations.messages.MessageListPage;
 import com.telnyx.sdk.models.ai.conversations.messages.MessageListParams;
-import com.telnyx.sdk.models.ai.conversations.messages.MessageListResponse;
 
-MessageListResponse messages = client.ai().conversations().messages().list("550e8400-e29b-41d4-a716-446655440000");
+MessageListPage page = client.ai().conversations().messages().list("550e8400-e29b-41d4-a716-446655440000");
 ```
 
 Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
@@ -637,7 +652,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Get available models
 
-This endpoint returns a list of Open Source and OpenAI models that are available for use.    **Note**: Model `id`'s will be in the form `{source}/{model_name}`. For example `openai/gpt-4` or `mistralai/Mistral-7B-Instruct-v0.1` consistent with HuggingFace naming conventions.
+**Deprecated**: Use `GET /v2/ai/openai/models` instead. Returns the same `ModelsResponse` payload as the OpenAI-compatible endpoint — open-source LLMs hosted on Telnyx (e.g. `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.1-FP8`, `MiniMaxAI/MiniMax-M2.7`), embedding models, and fine-tuned models — kept around for backwards compatibility.
 
 `GET /ai/models`
 
@@ -648,7 +663,7 @@ import com.telnyx.sdk.models.ai.AiRetrieveModelsResponse;
 AiRetrieveModelsResponse response = client.ai().retrieveModels();
 ```
 
-Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -685,6 +700,24 @@ EmbeddingListEmbeddingModelsResponse response = client.ai().openai().embeddings(
 ```
 
 Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
+
+## Create a response
+
+**Deprecated**: Use `POST /v2/ai/openai/responses` instead. This endpoint is compatible with the [OpenAI Responses API](https://developers.openai.com/api/reference/responses/overview) and may be used with the OpenAI JS or Python SDK. Response id parameter is not supported at the moment. Use the `conversation` parameter with a Telnyx Conversation ID to leverage persistent conversations.
+
+`POST /ai/responses`
+
+```java
+import com.telnyx.sdk.core.JsonValue;
+import com.telnyx.sdk.models.ai.AiCreateResponseDeprecatedParams;
+import com.telnyx.sdk.models.ai.AiCreateResponseDeprecatedResponse;
+
+AiCreateResponseDeprecatedParams.Body params = AiCreateResponseDeprecatedParams.Body.builder()
+    .putAdditionalProperty("model", JsonValue.from("bar"))
+    .putAdditionalProperty("input", JsonValue.from("bar"))
+    .build();
+AiCreateResponseDeprecatedResponse response = client.ai().createResponseDeprecated(params);
+```
 
 ## Summarize file content
 
@@ -798,7 +831,7 @@ Generate synthesized speech audio from text input. Returns audio in the requeste
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble, xai), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
 
 ```java
 import com.telnyx.sdk.models.texttospeech.TextToSpeechGenerateParams;

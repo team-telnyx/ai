@@ -8,7 +8,7 @@ This file is a complement to `README.md` (human-facing) and `.github/CONTRIBUTIN
 
 ## What this repo is
 
-The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, per-product plugins for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, <!-- SKILL_COUNT -->242<!-- /SKILL_COUNT --> Agent Skills, and operational guides.
+The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, per-product plugins for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, <!-- SKILL_COUNT -->236<!-- /SKILL_COUNT --> Agent Skills, and operational guides.
 
 ---
 
@@ -48,7 +48,7 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 
 | Path                    | What it contains                                                          |
 | ----------------------- | ------------------------------------------------------------------------- |
-| `skills/`               | Canonical agent skills (SKILL.md files). <!-- SKILL_COUNT -->242<!-- /SKILL_COUNT --> skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
+| `skills/`               | Canonical agent skills (SKILL.md files). <!-- SKILL_COUNT -->236<!-- /SKILL_COUNT --> skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
 | `providers/claude/`     | Claude Code plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
 | `providers/cursor/`     | Cursor plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
 | `plugins/opencode/`     | OpenCode plugin (auth + TUI for Telnyx-hosted models).                    |

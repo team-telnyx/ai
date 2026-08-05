@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.84.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.84.0")
 ```
 
 ## Setup
@@ -846,7 +846,6 @@ Create a source from which data can be migrated from.
 Optional: `id` (string), `source_region` (string)
 
 ```java
-import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateParams;
 import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceCreateResponse;
 import com.telnyx.sdk.models.storage.migrationsources.MigrationSourceParams;
 
@@ -908,7 +907,6 @@ Initiate a migration of data from an external provider into Telnyx Cloud Storage
 Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped)
 
 ```java
-import com.telnyx.sdk.models.storage.migrations.MigrationCreateParams;
 import com.telnyx.sdk.models.storage.migrations.MigrationCreateResponse;
 import com.telnyx.sdk.models.storage.migrations.MigrationParams;
 
@@ -1089,23 +1087,6 @@ WirelessBlocklistCreateResponse wirelessBlocklist = client.wirelessBlocklists().
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
-## Update a Wireless Blocklist
-
-Update a Wireless Blocklist.
-
-`PATCH /wireless_blocklists`
-
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
-
-```java
-import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistUpdateParams;
-import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistUpdateResponse;
-
-WirelessBlocklistUpdateResponse wirelessBlocklist = client.wirelessBlocklists().update();
-```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
-
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
@@ -1117,6 +1098,23 @@ import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistRetrieveParams;
 import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistRetrieveResponse;
 
 WirelessBlocklistRetrieveResponse wirelessBlocklist = client.wirelessBlocklists().retrieve("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
+```
+
+Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+
+## Update a Wireless Blocklist
+
+Update a Wireless Blocklist.
+
+`PATCH /wireless_blocklists/{id}`
+
+Optional: `name` (string), `values` (array[object])
+
+```java
+import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistUpdateParams;
+import com.telnyx.sdk.models.wirelessblocklists.WirelessBlocklistUpdateResponse;
+
+WirelessBlocklistUpdateResponse wirelessBlocklist = client.wirelessBlocklists().update("6a09cdc3-8948-47f0-aa62-74ac943d6c58");
 ```
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])

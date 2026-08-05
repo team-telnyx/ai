@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: iot
   language: go
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -1186,24 +1186,6 @@ Create a Wireless Blocklist to prevent SIMs from connecting to certain networks.
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
-## Update a Wireless Blocklist
-
-Update a Wireless Blocklist.
-
-`PATCH /wireless_blocklists`
-
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
-
-```go
-	wirelessBlocklist, err := client.WirelessBlocklists.Update(context.Background(), telnyx.WirelessBlocklistUpdateParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", wirelessBlocklist.Data)
-```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
-
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
@@ -1212,6 +1194,28 @@ Retrieve information about a Wireless Blocklist.
 
 ```go
 	wirelessBlocklist, err := client.WirelessBlocklists.Get(context.Background(), "6a09cdc3-8948-47f0-aa62-74ac943d6c58")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", wirelessBlocklist.Data)
+```
+
+Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+
+## Update a Wireless Blocklist
+
+Update a Wireless Blocklist.
+
+`PATCH /wireless_blocklists/{id}`
+
+Optional: `name` (string), `values` (array[object])
+
+```go
+	wirelessBlocklist, err := client.WirelessBlocklists.Update(
+		context.Background(),
+		"6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+		telnyx.WirelessBlocklistUpdateParams{},
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -72,7 +72,7 @@ Returns: `cidr_block` (string), `created_at` (date-time), `description` (string)
 Optional: `description` (string)
 
 ```javascript
-const accessIPRange = await client.accessIPRanges.create({ cidr_block: 'cidr_block' });
+const accessIPRange = await client.accessIPRanges.create({ cidr_block: '203.0.113.0/24' });
 
 console.log(accessIPRange.id);
 ```
@@ -237,7 +237,7 @@ Creates a FQDN connection.
 Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, Ashburn, VA, San Jose, CA, Sydney, Australia, Amsterdam, Netherlands, London, UK, Toronto, Canada, Vancouver, Canada, Frankfurt, Germany), `android_push_credential_id` (string | null), `call_cost_in_webhooks` (boolean), `default_on_hold_comfort_noise_enabled` (boolean), `dtmf_type` (enum: RFC 2833, Inband, SIP INFO), `encode_contact_header_enabled` (boolean), `encrypted_media` (enum: SRTP, None), `inbound` (object), `ios_push_credential_id` (string | null), `jitter_buffer` (object), `microsoft_teams_sbc` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `noise_suppression_details` (object), `onnet_t38_passthrough_enabled` (boolean), `outbound` (object), `rtcp_settings` (object), `tags` (array[string]), `transport_protocol` (enum: UDP, TCP, TLS), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (uri), `webhook_event_url` (uri), `webhook_timeout_secs` (integer | null)
 
 ```javascript
-const fqdnConnection = await client.fqdnConnections.create({ connection_name: 'my-resource' });
+const fqdnConnection = await client.fqdnConnections.create({ connection_name: 'my-sip-connection' });
 
 console.log(fqdnConnection.data);
 ```
@@ -392,7 +392,7 @@ Optional: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL,
 
 ```javascript
 const ipConnection = await client.ipConnections.create({
-    connectionName: 'my-ip-connection',
+    connection_name: 'my-ip-connection',
 });
 
 console.log(ipConnection.data);
