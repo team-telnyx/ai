@@ -154,6 +154,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
+  const routeToMobile = flags["route-to-mobile"];
   // Flags for the advanced call-control actions.
   const audioUrl = flags["audio-url"] as string | undefined;
   const queueName = flags["queue-name"] as string | undefined;
@@ -178,6 +179,17 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     process.exit(1);
   }
   const act = action as Action;
+
+  if (
+    routeToMobile !== undefined
+    && routeToMobile !== true
+    && routeToMobile !== false
+    && routeToMobile !== "true"
+    && routeToMobile !== "false"
+  ) {
+    printError(`Invalid --route-to-mobile: ${String(routeToMobile)}. Must be true or false`);
+    process.exit(1);
+  }
 
   // Every action needs a call-control-id (bridge uses it as the first leg).
   if (!callControlId) {
@@ -276,6 +288,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     deepfakeDetection,
     record,
     webhookUrl,
+    routeToMobile,
     audioUrl,
     queueName,
     body,
@@ -341,6 +354,7 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
+    routeToMobile?: string | boolean;
     audioUrl?: string;
     queueName?: string;
     body?: string;
@@ -368,7 +382,16 @@ function buildActionArgs(
     case "hangup":
       return ["calls:actions", "hangup", "--call-control-id", opts.callControlId];
     case "transfer":
-      return ["calls:actions", "transfer", "--call-control-id", opts.callControlId, "--to", opts.to!];
+      return [
+        "calls:actions", "transfer",
+        "--call-control-id", opts.callControlId,
+        "--to", opts.to!,
+        ...(opts.routeToMobile === undefined
+          ? []
+          : opts.routeToMobile === true || opts.routeToMobile === "true"
+            ? ["--route-to-mobile"]
+            : ["--route-to-mobile=false"]),
+      ];
     case "dtmf":
       return ["calls:actions", "send-dtmf", "--call-control-id", opts.callControlId, "--digits", opts.digits!];
     case "start-recording":

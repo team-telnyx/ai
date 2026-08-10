@@ -501,6 +501,7 @@ Voice Call Flags:
   --audio-url                    Audio URL to play on answer (call-dial); start-playback (required); gather-using-audio (optional)
   --timeout-secs                 Dial timeout in seconds (call-dial)
   --retry-on-timeout [true|false] Continue through remaining routing paths after a dial timeout (call-dial, default: true)
+  --route-to-mobile [true|false]   Route directly to a Telnyx Mobile device, bypassing inbound call interception (call-dial, call-control transfer; default: false)
   --privacy                      Number masking: 'id' hides caller ID, 'none' is normal (call-dial, default: none)
   --from-display-name            Caller ID display name (call-dial)
   --time-limit-secs              Max call duration in seconds (call-dial)
@@ -831,11 +832,13 @@ Examples:
   telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --answering-machine-detection --json
   telnyx-agent call-control --action hangup --call-control-id <id>
   telnyx-agent call-control --action transfer --call-control-id <id> --to +131****9999
+  telnyx-agent call-control --action transfer --call-control-id <id> --to +131****9999 --route-to-mobile
   telnyx-agent call-control --action dtmf --call-control-id <id> --digits 1234
   telnyx-agent call-control --action speak --call-control-id <id> --payload "Hello there" --voice female
   telnyx-agent call-control --action start-recording --call-control-id <id> --channels dual --format mp3
   telnyx-agent call-control --action bridge --call-control-id <id> --call-control-id-2 <id2>
   telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --privacy id
+  telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --route-to-mobile
   telnyx-agent call-dial --connection-id <id> --from +131****0000 --to +131****1234 --transcription --time-limit-secs 600
   telnyx-agent call-control --action start-playback --call-control-id <id> --audio-url https://example.com/hello.wav
   telnyx-agent call-control --action stop-playback --call-control-id <id>
@@ -1085,10 +1088,10 @@ const KNOWN_FLAGS = new Set<string>([
   "query", "queue-name", "reaction", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
-  "role", "room-id", "room-participant-id", "room-session-id", "rx", "safesearch",
-  "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at",
-  "send-at", "service-level", "service-tier", "service-type", "sim-card-group-id", "sim-card-id",
-  "sip-address", "slug", "smart-encoding", "sole-prop", "sort", "source", "sources",
+  "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "rx",
+  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
+  "scheduled-at", "send-at", "service-level", "service-tier", "service-type", "sim-card-group-id",
+  "sim-card-id", "sip-address", "slug", "smart-encoding", "sole-prop", "sort", "source", "sources",
   "speak-on-enter", "sql", "start-conference-on-create", "start-message", "starts-with", "status",
   "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
   "stream-type", "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags",

@@ -16,6 +16,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
+const testDialFrom = "+1" + "5551001000";
+const testDialTo = "+1" + "5551001001";
+const testTransferTo = "+1" + "3125559999";
 
 function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-voice-"));
@@ -176,6 +179,7 @@ describe("Voice API action commands", () => {
       assert.equal(received?.answering_machine_detection, undefined);
       assert.equal(received?.deepfake_detection, undefined);
       assert.equal(received?.retry_on_timeout, undefined);
+      assert.equal(received?.route_to_mobile, undefined);
       // Must NOT shell out to the Go CLI anymore.
       assertNoLoggedCalls(fake.logPath);
     } finally {
@@ -257,6 +261,83 @@ describe("Voice API action commands", () => {
       { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: "http://127.0.0.1:1" },
     );
     assert.match(stderr, /Invalid --retry-on-timeout: sometimes\. Must be true or false/);
+    assertNoLoggedCalls(fake.logPath);
+  });
+
+  for (const [label, routeArgs] of [
+    ["bare", ["--route-to-mobile"]],
+    ["explicit true", ["--route-to-mobile", "true"]],
+  ] as const) {
+    it(`call-dial maps ${label} --route-to-mobile to true in the REST body`, async () => {
+      let received: Record<string, unknown> | undefined;
+      const mock = await startMockApi((req, res) => {
+        let raw = "";
+        req.on("data", (c) => (raw += c.toString()));
+        req.on("end", () => {
+          received = JSON.parse(raw);
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+        });
+      });
+      try {
+        const fake = setupFakeTelnyx();
+        const { status } = await runAsync(
+          [
+            "call-dial", "--connection-id", "conn-1",
+            "--from", testDialFrom, "--to", testDialTo,
+            ...routeArgs, "--json",
+          ],
+          { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+        );
+        assert.equal(status, 0);
+        assert.equal(received?.route_to_mobile, true);
+        assertNoLoggedCalls(fake.logPath);
+      } finally {
+        await mock.close();
+      }
+    });
+  }
+
+  it("call-dial maps explicit false --route-to-mobile to false in the REST body", async () => {
+    let received: Record<string, unknown> | undefined;
+    const mock = await startMockApi((req, res) => {
+      let raw = "";
+      req.on("data", (c) => (raw += c.toString()));
+      req.on("end", () => {
+        received = JSON.parse(raw);
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ data: { call_control_id: "call-dial-123" } }));
+      });
+    });
+    try {
+      const fake = setupFakeTelnyx();
+      const { status } = await runAsync(
+        [
+          "call-dial", "--connection-id", "conn-1",
+          "--from", testDialFrom, "--to", testDialTo,
+          "--route-to-mobile", "false", "--json",
+        ],
+        { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: mock.baseUrl },
+      );
+      assert.equal(status, 0);
+      assert.equal(received?.route_to_mobile, false);
+      assertNoLoggedCalls(fake.logPath);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("call-dial rejects invalid --route-to-mobile before any network call", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(
+      [
+        "call-dial", "--connection-id", "conn-1",
+        "--from", testDialFrom, "--to", testDialTo,
+        "--route-to-mobile", "sometimes", "--json",
+      ],
+      { ...fake.env, TELNYX_API_KEY: "***", TELNYX_API_BASE_URL: "http://127.0.0.1:1" },
+    );
+    assert.match(stderr, /Invalid --route-to-mobile: sometimes\. Must be true or false/);
     assertNoLoggedCalls(fake.logPath);
   });
 
@@ -370,7 +451,72 @@ describe("Voice API action commands", () => {
     const transferCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions transfer");
     assert.ok(transferCall, "should invoke `calls:actions transfer`");
     assertFlagValue(transferCall!, "--call-control-id", "call-1");
-    assertFlagValue(transferCall!, "--to", "+13125559999");
+    assertFlagValue(transferCall!, "--to", testTransferTo);
+    assert.ok(!transferCall!.some((arg) => arg.startsWith("--route-to-mobile")));
+  });
+
+  for (const [label, routeArgs] of [
+    ["bare", ["--route-to-mobile"]],
+    ["explicit true", ["--route-to-mobile", "true"]],
+  ] as const) {
+    it(`call-control transfer maps ${label} --route-to-mobile to the generated Go CLI boolean flag`, () => {
+      const fake = setupFakeTelnyx();
+      run(
+        [
+          "call-control", "--action", "transfer", "--call-control-id", "call-1",
+          "--to", testTransferTo, ...routeArgs, "--json",
+        ],
+        fake.env,
+      );
+
+      const transferCall = readLoggedArgs(fake.logPath)
+        .find((args) => args.slice(0, 2).join(" ") === "calls:actions transfer");
+      assert.ok(transferCall, "should invoke `calls:actions transfer`");
+      assert.ok(transferCall!.includes("--route-to-mobile"));
+      assert.ok(!transferCall!.includes("--route-to-mobile=false"));
+    });
+  }
+
+  it("call-control transfer maps explicit false --route-to-mobile to generated Go CLI syntax", () => {
+    const fake = setupFakeTelnyx();
+    run(
+      [
+        "call-control", "--action", "transfer", "--call-control-id", "call-1",
+        "--to", testTransferTo, "--route-to-mobile", "false", "--json",
+      ],
+      fake.env,
+    );
+
+    const transferCall = readLoggedArgs(fake.logPath)
+      .find((args) => args.slice(0, 2).join(" ") === "calls:actions transfer");
+    assert.ok(transferCall, "should invoke `calls:actions transfer`");
+    assert.ok(transferCall!.includes("--route-to-mobile=false"));
+    assert.ok(!transferCall!.includes("--route-to-mobile"));
+  });
+
+  it("call-control rejects invalid --route-to-mobile before invoking the Go CLI", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(
+      [
+        "call-control", "--action", "transfer", "--call-control-id", "call-1",
+        "--to", testTransferTo, "--route-to-mobile", "sometimes", "--json",
+      ],
+      fake.env,
+    );
+    assert.match(stderr, /Invalid --route-to-mobile: sometimes\. Must be true or false/);
+    assertNoLoggedCalls(fake.logPath);
+  });
+
+  it("--route-to-mobile does not swallow following help tokens", () => {
+    for (const [command, help] of [
+      ["call-dial", "-h"],
+      ["call-control", "--help"],
+    ] as const) {
+      const fake = setupFakeTelnyx();
+      const output = run([command, "--route-to-mobile", help], fake.env);
+      assert.match(output, /Usage:/);
+      assertNoLoggedCalls(fake.logPath);
+    }
   });
 
   it("call-control --action dtmf calls `calls:actions send-dtmf` with --digits", () => {
