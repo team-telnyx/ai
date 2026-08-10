@@ -54,6 +54,12 @@ Names must be 1–64 characters, contain only alphanumeric characters and dashes
 
 Use one of the repository-aware handoff commands below for a complete clone, build, secrets, deploy, and inspect sequence. The expanded manual flows show exactly what each helper emits.
 
+### Classic Node lockfile prerequisite
+
+Before shipping a classic Node function whose `package.json` declares dependencies, ensure the function directory contains either `package-lock.json` or `npm-shrinkwrap.json`. These are the accepted npm lockfile forms; without one, `telnyx-edge ship` fails before upload.
+
+Run `npm install` in the function directory to create `package-lock.json`. The MCP manual flow below already does this before building and shipping.
+
 ## Secure MCP server handoff
 
 The TypeScript MCP example requires two distinct secrets:
@@ -255,6 +261,34 @@ const mcpToken: string = await env.SECRETS.get("MCP_TOKEN");
 ```
 
 `binding` is the code-facing handle; `name` is the secret-store key. `types` covers all declared actor, Telnyx, secret, KV, SQL database, and Cloud Storage bindings, runs offline without authentication, and should be rerun whenever the manifest changes.
+
+### Rate limiter bindings
+
+Declare each fixed-window limiter in `func.toml` or `telnyx.toml`. `limit` is the allowed call count and `period` is the window in seconds:
+
+```toml
+[[ratelimits]]
+name = "api-limit"
+namespace_id = "1001"
+limit = 100
+period = 60
+```
+
+Install `@telnyx/edge-runtime` **0.9.0 or newer**, then regenerate declarations. `telnyx-edge types` emits the binding as a runtime `RateLimiter`:
+
+```bash
+npm install @telnyx/edge-runtime@latest
+telnyx-edge types
+```
+
+```typescript
+import { env } from "@telnyx/edge-runtime";
+
+const { success } = await env.API_LIMIT.limit({ key: clientId });
+if (!success) return new Response("Too many requests", { status: 429 });
+```
+
+The runtime handle is canonicalized to uppercase with hyphens replaced by underscores (`api-limit` becomes `env.API_LIMIT`). `namespace_id` is optional and must be a positive integer string; functions using the same value share a counter pool, so reuse it only when cross-function limiting is intentional.
 
 ### Non-interactive destructive commands
 
