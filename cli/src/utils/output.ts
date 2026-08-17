@@ -119,6 +119,8 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
     "soft-end-conference-on-exit", "start-conference-on-enter", "stop-playback-on-dtmf",
   ])],
   ["list-conference-participants", new Set(["muted", "on-hold", "whispering"])],
+  ["list-room-sessions", new Set(["active", "include-participants"])],
+  ["get-room-session", new Set(["include-participants"])],
   ["create-messaging-profile", new Set([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",

@@ -92,6 +92,16 @@ import {
   listActiveCallsCommand,
   listVoiceConnectionsCommand,
 } from "./commands/voice-connections.ts";
+import {
+  endRoomSessionCommand,
+  getRoomParticipantCommand,
+  getRoomSessionCommand,
+  kickRoomParticipantsCommand,
+  listRoomParticipantsCommand,
+  listRoomSessionsCommand,
+  muteRoomParticipantsCommand,
+  unmuteRoomParticipantsCommand,
+} from "./commands/room-sessions.ts";
 import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
 // Version is read lazily so that `--version` works without loading any command modules.
@@ -165,6 +175,14 @@ Commands:
   list-voice-connections List voice connections with filters and pagination
   get-voice-connection Retrieve one voice connection by ID
   list-active-calls List active calls for a voice connection
+  list-room-sessions List room sessions with room and active-state filters
+  get-room-session  Retrieve one room session by ID
+  list-room-participants List participants in a room session
+  get-room-participant Retrieve one room participant by ID
+  end-room-session  End a room session and remove all participants
+  kick-room-participants Remove selected participants from a room session
+  mute-room-participants Mute selected participants in a room session
+  unmute-room-participants Unmute selected participants in a room session
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
   list-phone-numbers List phone numbers owned by the account
@@ -445,6 +463,17 @@ Conference Flags:
   --payload / --voice (speak), --audio-url / --media-name (play, hold, gather),
   --digits (send-dtmf), --format mp3|wav (record-start), --recording-id,
   --command-id, --supervisor-role, --whisper-call-control-id, --beep-enabled
+Room Session Moderation Flags:
+  --room-session-id <id> Room session ID (get/list participants and moderation actions — required)
+  --room-participant-id <id> Room participant ID (get-room-participant — required)
+  --room-id <id>    Filter sessions by room (list-room-sessions)
+  --active <bool>   Filter active or inactive sessions (list-room-sessions)
+  --include-participants <bool> Include participants with session results (list/get room sessions)
+  --context <text>  Filter participants by context (list-room-participants)
+  --participants <all|ids> "all" or comma-separated participant IDs (kick/mute/unmute — required)
+  --exclude <ids>   Comma-separated participant IDs to exclude (kick/mute/unmute)
+  --page-number     Result page (list-room-sessions, list-room-participants)
+  --page-size       Results per page (list-room-sessions, list-room-participants)
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -664,6 +693,14 @@ Examples:
   telnyx-agent list-voice-connections --connection-name support --page-size 25 --json
   telnyx-agent get-voice-connection --id <connection-id> --json
   telnyx-agent list-active-calls --connection-id <connection-id> --json
+  telnyx-agent list-room-sessions --active true --include-participants true --json
+  telnyx-agent get-room-session --room-session-id <session-id> --json
+  telnyx-agent list-room-participants --room-session-id <session-id> --json
+  telnyx-agent get-room-participant --room-participant-id <participant-id> --json
+  telnyx-agent mute-room-participants --room-session-id <session-id> --participants all --exclude <participant-id> --json
+  telnyx-agent unmute-room-participants --room-session-id <session-id> --participants <participant-id> --json
+  telnyx-agent kick-room-participants --room-session-id <session-id> --participants <participant-id> --json
+  telnyx-agent end-room-session --room-session-id <session-id> --json
   telnyx-agent stt --audio-url https://example.com/audio.mp3
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
   telnyx-agent stt-providers --json
@@ -749,6 +786,14 @@ const COMMANDS: Record<string, (
   "list-voice-connections": listVoiceConnectionsCommand,
   "get-voice-connection": getVoiceConnectionCommand,
   "list-active-calls": listActiveCallsCommand,
+  "list-room-sessions": listRoomSessionsCommand,
+  "get-room-session": getRoomSessionCommand,
+  "list-room-participants": listRoomParticipantsCommand,
+  "get-room-participant": getRoomParticipantCommand,
+  "end-room-session": endRoomSessionCommand,
+  "kick-room-participants": kickRoomParticipantsCommand,
+  "mute-room-participants": muteRoomParticipantsCommand,
+  "unmute-room-participants": unmuteRoomParticipantsCommand,
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
   "list-phone-numbers": listPhoneNumbersCommand,
@@ -777,15 +822,17 @@ const COMMANDS: Record<string, (
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
+  "about", "action", "active", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
   "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
   "authorized-person", "beep-enabled", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
   "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "comfort-noise", "conference-id",
   "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
   "channels", "clear-tags", "clear-tool-ids", "client-state", "code", "command-id", "company-name",
   "component", "confirm", "connection-id", "connection-name", "contains", "content-type",
-  "conversation-id", "country", "country-code", "create", "custom-code",
+  "context", "conversation-id", "country", "country-code", "create", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "deepfake-detection", "depth",
   "description", "destinations", "digits", "dimensions", "disable-cache", "display-name", "duration-minutes",
+  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name", "exclude",
   "daily-spend-limit", "daily-spend-limit-enabled", "document-id", "document-type", "dtmf-detection", "dynamic-variables",
   "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
   "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "extension",
@@ -793,19 +840,24 @@ const KNOWN_FLAGS = new Set<string>([
   "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
   "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
   "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "iccid", "id", "include-phone-numbers",
+  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "iccid", "id", "include-participants", "include-phone-numbers",
   "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
   "limit", "loa-document-id", "locality", "max-items", "max-participants", "max-retries", "max-tokens", "mcp-server", "media-encryption",
   "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "metadata", "method", "model",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "monochrome", "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id", "number-pool-settings",
   "new-billing-phone-number", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
   "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
-  "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
+  "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant", "participants",
   "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
   "queue-name", "record", "recording-id", "region", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
   "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "sole-prop", "sort", "source",
   "start-conference-on-create", "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
+  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
+  "role", "room-id", "room-participant-id", "room-session-id", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
+  "service-tier", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
+  "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
   "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
   "smart-encoding",
   "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
