@@ -93,10 +93,16 @@ import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiAnthropicMessageCommand } from "./commands/ai-anthropic-message.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
+  chatAiAssistantCommand,
   createAiAssistantCommand,
   deleteAiAssistantCommand,
+  getAiAssistantTestRunCommand,
   getAiAssistantCommand,
+  listAiAssistantTestRunsCommand,
   listAiAssistantsCommand,
+  sendAiAssistantSmsCommand,
+  testAiAssistantToolCommand,
+  triggerAiAssistantTestRunCommand,
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
 import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
@@ -249,6 +255,12 @@ Commands:
   web-research      Start synchronous or background deep web research
   web-research-status Retrieve a background web research task by ID
   storage-sql-query Run SQL against a Telnyx Storage SQL database
+  chat-ai-assistant Send a chat turn to an AI assistant conversation
+  send-ai-assistant-sms Send or start an assistant conversation over SMS
+  trigger-ai-assistant-test-run Execute an existing AI assistant test
+  get-ai-assistant-test-run Retrieve one AI assistant test run
+  list-ai-assistant-test-runs List execution history for an AI assistant test
+  test-ai-assistant-tool Execute a webhook tool in an AI assistant context
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -738,6 +750,25 @@ Web Intelligence Flags:
   --max-sources <n> Maximum number of research sources
   --research-effort <level> Research depth: lite or deep
   --task-id <id>    Background research task ID (web-research-status — required)
+AI Assistant Execution Flags:
+  --id <assistant-id> Assistant ID (chat, SMS, and tool test; --assistant-id alias accepted)
+  --content <text>  User message sent to the assistant (chat required)
+  --conversation-id <id> Existing conversation thread ID (chat required)
+  --name <name>     Optional display name for the chat user
+  --stream <bool>   Request a streamed assistant chat response (requires Go CLI >= 0.26)
+  --from / --to     SMS sender and recipient in E.164 format (assistant SMS required)
+  --text <text>     Optional initial assistant SMS text
+  --conversation-metadata <json> Conversation metadata object (assistant SMS)
+  --should-create-conversation <bool> Create a conversation when needed (assistant SMS)
+  --test-id <id>    Assistant test ID (trigger, get, and list test runs)
+  --run-id <id>     Assistant test run ID (get required)
+  --destination-version-id <id> Assistant version used by a triggered test run
+  --status <value>  Test-run status filter (list)
+  --page-number / --page-size Positive pagination values (list test runs)
+  --max-items <n>   Maximum returned test runs; -1 means unlimited
+  --tool-id <id>    Shared webhook tool ID (tool test required)
+  --arguments <json> Webhook tool arguments object
+  --dynamic-variables <json> Dynamic variables object (tool test)
 
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
@@ -920,6 +951,12 @@ Examples:
   telnyx-agent web-contents --url https://example.com --format markdown --json
   telnyx-agent web-research --query "Compare SIP trunking providers" --background true --json
   telnyx-agent web-research-status --task-id <task-id> --json
+  telnyx-agent chat-ai-assistant --id <assistant-id> --conversation-id <conversation-id> --content "Hello" --json
+  telnyx-agent send-ai-assistant-sms --id <assistant-id> --from +131****0000 --to +131****0001 --text "Hello" --json
+  telnyx-agent trigger-ai-assistant-test-run --test-id <test-id> --json
+  telnyx-agent get-ai-assistant-test-run --test-id <test-id> --run-id <run-id> --json
+  telnyx-agent list-ai-assistant-test-runs --test-id <test-id> --status completed --json
+  telnyx-agent test-ai-assistant-tool --id <assistant-id> --tool-id <tool-id> --arguments '{"ticket_id":"123"}' --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -1027,6 +1064,12 @@ const COMMANDS: Record<string, (
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
   "search-ai-collection": searchAiCollectionCommand,
+  "chat-ai-assistant": chatAiAssistantCommand,
+  "send-ai-assistant-sms": sendAiAssistantSmsCommand,
+  "trigger-ai-assistant-test-run": triggerAiAssistantTestRunCommand,
+  "get-ai-assistant-test-run": getAiAssistantTestRunCommand,
+  "list-ai-assistant-test-runs": listAiAssistantTestRunsCommand,
+  "test-ai-assistant-tool": testAiAssistantToolCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -1047,24 +1090,25 @@ const COMMANDS: Record<string, (
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "agent-id",
   "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "artifact-id", "assistant", "assistant-id", "attachment",
-  "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc", "beep-enabled",
-  "billing-group-id", "billing-phone", "biz-opaque-callback-data", "black-threshold", "body",
-  "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id",
-  "call-control-id-2", "call-control-id-to-bridge", "call-control-id-to-bridge-with",
-  "camera-image", "campaign-id", "cancel", "carrier-name", "category", "cause", "cc", "channels",
-  "clear-tags", "clear-tool-ids", "client-state", "code", "collection-id", "comfort-noise",
-  "command-id", "company-name", "component", "conference-id", "confirm", "connection-id",
-  "connection-name", "connector-name", "contacts", "contains", "content-type", "context",
-  "conversation-id", "count", "country", "country-code", "crawl-timeout", "create", "currency",
-  "custom-code", "customer-group-reference", "customer-name", "customer-reference",
-  "daily-spend-limit", "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
-  "destinations", "digits", "dimensions", "disable-cache", "display-name", "document",
-  "document-id", "document-type", "dtmf-detection", "duration-minutes", "dynamic-variables",
-  "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
-  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "exclude",
-  "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features", "file-url",
-  "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
+  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
+  "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
+  "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
+  "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
+  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
+  "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids", "client-state", "code",
+  "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
+  "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
+  "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
+  "country", "country-code", "crawl-timeout", "create", "currency", "custom-code",
+  "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
+  "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
+  "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
+  "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
+  "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
+  "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
+  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
@@ -1088,17 +1132,18 @@ const KNOWN_FLAGS = new Set<string>([
   "query", "queue-name", "reaction", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
-  "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "rx",
+  "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
-  "scheduled-at", "send-at", "service-level", "service-tier", "service-type", "sim-card-group-id",
-  "sim-card-id", "sip-address", "slug", "smart-encoding", "sole-prop", "sort", "source", "sources",
-  "speak-on-enter", "sql", "start-conference-on-create", "start-message", "starts-with", "status",
-  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
-  "stream-type", "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags",
-  "task-id", "temperature", "template-id", "template-language", "template-name",
-  "template-variables", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
-  "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p",
-  "tracking-settings", "transaction-type", "transcription", "transcription-language",
+  "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
+  "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "slug",
+  "smart-encoding", "sole-prop", "sort", "source", "sources", "speak-on-enter", "sql",
+  "start-conference-on-create", "start-message", "starts-with", "status", "sticker", "stop",
+  "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
+  "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
+  "temperature", "template-id", "template-language", "template-name", "template-variables",
+  "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
+  "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
+  "top-p", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
