@@ -41,7 +41,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Fax", description: "Send faxes programmatically", actions: ["send_fax"] },
   ],
   "📡 IoT": [
-    { name: "SIM Cards", description: "List, inspect, enable, and disable IoT SIM cards", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card"] },
+    { name: "SIM Cards", description: "List, inspect, enable, and disable IoT SIM cards and observe asynchronous actions", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card", "retrieve_sim_card_action", "list_sim_card_actions"] },
   ],
   "🔍 Lookup": [
     { name: "Number Lookup", description: "Carrier and caller ID lookups", actions: ["lookup_number"] },
@@ -98,6 +98,8 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent retrieve-sim-card", description: "Retrieve one IoT SIM card by ID" },
   { name: "telnyx-agent enable-sim-card", description: "Request asynchronous enablement of an IoT SIM card" },
   { name: "telnyx-agent disable-sim-card", description: "Request asynchronous disablement of an IoT SIM card" },
+  { name: "telnyx-agent retrieve-sim-card-action", description: "Retrieve the status and details of an asynchronous SIM card action" },
+  { name: "telnyx-agent list-sim-card-actions", description: "List asynchronous SIM card actions with status, type, SIM, bulk-action, and pagination filters" },
   { name: "telnyx-agent setup-ai", description: "Zero to AI assistant: creates assistant, buys number, wires them together" },
   { name: "telnyx-agent ai-chat", description: "Create an OpenAI-compatible chat completion via Telnyx AI inference" },
   { name: "telnyx-agent ai-anthropic-message", description: "Create an Anthropic-compatible message response via Telnyx AI inference" },

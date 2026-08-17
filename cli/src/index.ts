@@ -70,7 +70,9 @@ import {
 import {
   disableSimCardCommand,
   enableSimCardCommand,
+  listSimCardActionsCommand,
   listSimCardsCommand,
+  retrieveSimCardActionCommand,
   retrieveSimCardCommand,
 } from "./commands/sim-cards.ts";
 import {
@@ -98,6 +100,8 @@ Commands:
   retrieve-sim-card Retrieve one IoT SIM card by ID
   enable-sim-card   Enable an IoT SIM card (asynchronous action)
   disable-sim-card  Disable an IoT SIM card (asynchronous action)
+  retrieve-sim-card-action Retrieve an asynchronous SIM card action by ID
+  list-sim-card-actions List asynchronous SIM card actions with filters and pagination
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
   setup-verify      Zero to verification: create profile (no number bought)
@@ -500,15 +504,18 @@ AI Assistant Lifecycle Flags:
   --confirm         Explicitly confirm deletion (delete only, required)
 
 IoT SIM Action Flags:
-  --id <sim-card-id> SIM card ID (retrieve-sim-card, enable-sim-card, disable-sim-card — required)
+  --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
   --iccid           Partial ICCID filter (list-sim-cards)
   --msisdn          MSISDN filter (list-sim-cards)
-  --status          Comma-separated SIM statuses (list-sim-cards)
+  --status          Comma-separated SIM statuses (list-sim-cards), or action status (list-sim-card-actions)
   --tags            Comma-separated tags that all matching SIMs must have (list-sim-cards)
   --sim-card-group-id SIM card group filter (list-sim-cards)
+  --sim-card-id     SIM card filter (list-sim-card-actions)
+  --bulk-sim-card-action-id Bulk action filter (list-sim-card-actions)
+  --action-type     Action type filter (list-sim-card-actions)
   --include-sim-card-group Include the associated SIM card group (list, retrieve)
-  --page-number     Result page (list-sim-cards)
-  --page-size       Results per page (list-sim-cards)
+  --page-number     Result page (SIM/action list commands)
+  --page-size       Results per page (SIM/action list commands)
   --sort            Sort field; prefix with - for descending (list-sim-cards)
 
 Environment:
@@ -627,6 +634,8 @@ Examples:
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
   telnyx-agent disable-sim-card --id <sim-card-id> --json
+  telnyx-agent retrieve-sim-card-action --id <action-id> --json
+  telnyx-agent list-sim-card-actions --sim-card-id <sim-card-id> --status in-progress --json
 `;
 
 const COMMANDS: Record<string, (
@@ -697,6 +706,8 @@ const COMMANDS: Record<string, (
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
   "disable-sim-card": disableSimCardCommand,
+  "retrieve-sim-card-action": retrieveSimCardActionCommand,
+  "list-sim-card-actions": listSimCardActionsCommand,
 };
 
 // Union of every flag any command reads (kept in sync with src/commands/*).
@@ -704,10 +715,10 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
+  "about", "action", "action-type", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
   "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
   "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
-  "brand-name", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
   "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
   "channels", "clear-tags", "clear-tool-ids", "client-state", "code", "command-id", "company-name",
   "component", "confirm", "connection-id", "connection-name", "contains", "content-type",
@@ -732,7 +743,7 @@ const KNOWN_FLAGS = new Set<string>([
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
   "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
-  "service-tier", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
+  "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "sole-prop", "sort", "source",
   "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
   "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
   "smart-encoding",

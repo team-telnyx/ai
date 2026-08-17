@@ -30,6 +30,17 @@ interface SimActionResult {
   status: string;
 }
 
+interface SimActionRetrieveResult {
+  action_id: string;
+  sim_card_action: JsonRecord;
+}
+
+interface SimActionListResult {
+  count: number;
+  sim_card_actions: JsonRecord[];
+  meta: JsonRecord;
+}
+
 export async function listSimCardsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
   const args = ["sim-cards", "list"];
@@ -78,6 +89,53 @@ export async function retrieveSimCardCommand(flags: Flags): Promise<void> {
         Status: simStatus(simCard) || "(not returned)",
       });
     }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+export async function retrieveSimCardActionCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const actionId = stringFlag(flags, "id");
+  if (!actionId) fail("--id is required (SIM card action ID)", jsonOutput);
+
+  try {
+    const response = await telnyxCli(["sim-cards:actions", "retrieve", "--id", actionId]);
+    const action = asRecord(asRecord(response).data ?? response);
+    const result: SimActionRetrieveResult = {
+      action_id: stringValue(action.id) || actionId,
+      sim_card_action: action,
+    };
+
+    if (jsonOutput) {
+      outputJson(result);
+    } else {
+      printSuccess("SIM card action retrieved!", {
+        "Action ID": result.action_id,
+        "SIM Card ID": stringValue(action.sim_card_id) || "(not returned)",
+        "Action Type": stringValue(action.action_type) || "(not returned)",
+        Status: simStatus(action) || "(not returned)",
+      });
+    }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+export async function listSimCardActionsCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const args = ["sim-cards:actions", "list"];
+
+  addMappedFlag(args, flags, "sim-card-id", "--filter.sim-card-id");
+  addMappedFlag(args, flags, "status", "--filter.status");
+  addMappedFlag(args, flags, "bulk-sim-card-action-id", "--filter.bulk-sim-card-action-id");
+  addMappedFlag(args, flags, "action-type", "--filter.action-type");
+  addPositiveIntegerFlag(args, flags, "page-number", "--page-number", jsonOutput);
+  addPositiveIntegerFlag(args, flags, "page-size", "--page-size", jsonOutput);
+
+  try {
+    const response = await telnyxCli(args, { format: "raw" });
+    presentSimActionList(normalizeSimActionList(response), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
   }
@@ -135,6 +193,20 @@ function normalizeSimList(response: unknown): SimListResult {
   };
 }
 
+function normalizeSimActionList(response: unknown): SimActionListResult {
+  const envelope = asRecord(response);
+  const actions = Array.isArray(envelope.data)
+    ? envelope.data.filter(
+        (item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item),
+      )
+    : [];
+  return {
+    count: actions.length,
+    sim_card_actions: actions,
+    meta: asRecord(envelope.meta),
+  };
+}
+
 function presentSimList(result: SimListResult, jsonOutput: boolean): void {
   if (jsonOutput) {
     outputJson(result);
@@ -151,6 +223,25 @@ function presentSimList(result: SimListResult, jsonOutput: boolean): void {
     console.log(`  • ${id}${details ? ` — ${details}` : ""}`);
   }
   if (result.count === 0) console.log("  (no SIM cards returned)");
+  console.log();
+}
+
+function presentSimActionList(result: SimActionListResult, jsonOutput: boolean): void {
+  if (jsonOutput) {
+    outputJson(result);
+    return;
+  }
+
+  printSuccess("SIM card actions retrieved!", { Count: result.count });
+  for (const action of result.sim_card_actions) {
+    const id = stringValue(action.id) || "(unknown)";
+    const details = [action.action_type, action.sim_card_id, simStatus(action)]
+      .map(stringValue)
+      .filter(Boolean)
+      .join(" · ");
+    console.log(`  • ${id}${details ? ` — ${details}` : ""}`);
+  }
+  if (result.count === 0) console.log("  (no SIM card actions returned)");
   console.log();
 }
 

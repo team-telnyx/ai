@@ -41,6 +41,26 @@ if (args[0] === "sim-cards" && args[1] === "list") {
     status: { value: "enabled", reason: "ready" },
     sim_card_group_id: "group-1"
   } }));
+} else if (args[0] === "sim-cards:actions" && args[1] === "retrieve") {
+  console.log(JSON.stringify({ data: {
+    id: flag("--id"),
+    sim_card_id: "sim-1",
+    action_type: "enable",
+    status: { value: "completed" },
+    created_at: "2026-08-17T12:00:00Z",
+    updated_at: "2026-08-17T12:00:01Z"
+  } }));
+} else if (args[0] === "sim-cards:actions" && args[1] === "list") {
+  console.log(JSON.stringify({
+    data: [{
+      id: "action-enable",
+      sim_card_id: "sim-1",
+      action_type: "enable",
+      status: { value: "completed" },
+      bulk_sim_card_action_id: "bulk-1"
+    }],
+    meta: { page_number: 3, page_size: 10, total_results: 1 }
+  }));
 } else if (args[0] === "sim-cards:actions" && (args[1] === "enable" || args[1] === "disable")) {
   console.log(JSON.stringify({ data: {
     id: "action-" + args[1],
@@ -154,6 +174,74 @@ describe("IoT SIM action commands", () => {
     assertFlag(args, "--format", "json");
   });
 
+  it("retrieves one SIM card action by an ID returned from enable or disable", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["retrieve-sim-card-action", "--id", "action-enable", "--json"], fake.env);
+
+    assert.deepEqual(JSON.parse(output), {
+      action_id: "action-enable",
+      sim_card_action: {
+        id: "action-enable",
+        sim_card_id: "sim-1",
+        action_type: "enable",
+        status: { value: "completed" },
+        created_at: "2026-08-17T12:00:00Z",
+        updated_at: "2026-08-17T12:00:01Z",
+      },
+    });
+
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["sim-cards:actions", "retrieve"]);
+    assertFlag(args, "--id", "action-enable");
+    assertFlag(args, "--format", "json");
+  });
+
+  it("lists SIM card actions with generated filters and pagination flags", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent([
+      "list-sim-card-actions",
+      "--sim-card-id", "sim-1",
+      "--status", "completed",
+      "--bulk-sim-card-action-id", "bulk-1",
+      "--action-type", "enable",
+      "--page-number", "3",
+      "--page-size", "10",
+      "--json",
+    ], fake.env);
+
+    assert.deepEqual(JSON.parse(output), {
+      count: 1,
+      sim_card_actions: [{
+        id: "action-enable",
+        sim_card_id: "sim-1",
+        action_type: "enable",
+        status: { value: "completed" },
+        bulk_sim_card_action_id: "bulk-1",
+      }],
+      meta: { page_number: 3, page_size: 10, total_results: 1 },
+    });
+
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["sim-cards:actions", "list"]);
+    assertFlag(args, "--filter.sim-card-id", "sim-1");
+    assertFlag(args, "--filter.status", "completed");
+    assertFlag(args, "--filter.bulk-sim-card-action-id", "bulk-1");
+    assertFlag(args, "--filter.action-type", "enable");
+    assertFlag(args, "--page-number", "3");
+    assertFlag(args, "--page-size", "10");
+    assertFlag(args, "--format", "raw");
+  });
+
+  it("normalizes SIM card action status objects in human output", () => {
+    const fake = setupFakeTelnyx();
+    const retrieveOutput = runAgent(["retrieve-sim-card-action", "--id", "action-enable"], fake.env);
+    const listOutput = runAgent(["list-sim-card-actions"], fake.env);
+
+    assert.match(retrieveOutput, /Status\s+completed/);
+    assert.match(listOutput, /action-enable.*completed/);
+    assert.doesNotMatch(`${retrieveOutput}${listOutput}`, /\[object Object\]/);
+  });
+
   for (const action of ["enable", "disable"] as const) {
     it(`${action}s a SIM card and normalizes the documented status object`, () => {
       const fake = setupFakeTelnyx();
@@ -192,7 +280,14 @@ describe("IoT SIM action commands", () => {
   it("advertises all direct SIM commands in help and capabilities", () => {
     const help = runAgent(["help"]);
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"]));
-    const commands = ["list-sim-cards", "retrieve-sim-card", "enable-sim-card", "disable-sim-card"];
+    const commands = [
+      "list-sim-cards",
+      "retrieve-sim-card",
+      "enable-sim-card",
+      "disable-sim-card",
+      "retrieve-sim-card-action",
+      "list-sim-card-actions",
+    ];
 
     for (const command of commands) {
       assert.match(help, new RegExp(command));
@@ -203,7 +298,14 @@ describe("IoT SIM action commands", () => {
     }
 
     const iotActions = capabilities.api_capabilities["📡 IoT"][0].actions;
-    for (const action of ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card"]) {
+    for (const action of [
+      "list_sim_cards",
+      "retrieve_sim_card",
+      "enable_sim_card",
+      "disable_sim_card",
+      "retrieve_sim_card_action",
+      "list_sim_card_actions",
+    ]) {
       assert.ok(iotActions.includes(action), `IoT capabilities should include ${action}`);
     }
   });
