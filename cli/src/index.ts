@@ -41,6 +41,11 @@ import {
   updateMessagingProfileCommand,
 } from "./commands/messaging-profiles.ts";
 import { faxSendCommand } from "./commands/fax-send.ts";
+import {
+  faxCancelCommand,
+  faxRefreshCommand,
+  faxStatusCommand,
+} from "./commands/fax-lifecycle.ts";
 import { sendGroupMmsCommand } from "./commands/send-group-mms.ts";
 import { scheduleSmsCommand } from "./commands/schedule-sms.ts";
 import { smsStatusCommand } from "./commands/sms-status.ts";
@@ -130,6 +135,9 @@ Commands:
   update-messaging-profile Update a messaging profile by ID
   delete-messaging-profile Delete a messaging profile by ID (requires --confirm)
   fax-send          Send a fax from a URL or uploaded media file
+  fax-status        Retrieve the latest status and details for a fax
+  fax-cancel        Cancel an outbound fax that is still in progress
+  fax-refresh       Refresh an expired media URL for an inbound fax
   send-group-mms    Send a group MMS to multiple recipients (--to comma-separated)
   schedule-sms      Schedule an SMS for future delivery (--send-at ISO 8601)
   sms-status        Check SMS delivery status, or cancel a scheduled message (--cancel)
@@ -294,6 +302,7 @@ Messaging Profile Flags:
   --confirm              Required safety confirmation (delete-messaging-profile)
 
 Fax Action Flags:
+  --id <fax-id>          Fax ID (fax-status, fax-cancel, fax-refresh; required)
   --connection-id <id>   Fax application connection ID (fax-send, required)
   --from <e164>          Sender number, E.164 (fax-send, required)
   --to <e164|sip-uri>    Destination number or SIP URI (fax-send, required)
@@ -561,6 +570,9 @@ Examples:
   telnyx-agent update-messaging-profile --id <profile-id> --name "Updated SMS" --enabled true --json
   telnyx-agent delete-messaging-profile --id <profile-id> --confirm --json
   telnyx-agent fax-send --connection-id <id> --from +131****0000 --to +131****0001 --media-url https://example.com/document.pdf
+  telnyx-agent fax-status --id <fax-id> --json
+  telnyx-agent fax-cancel --id <fax-id> --json
+  telnyx-agent fax-refresh --id <fax-id> --json
   telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002,+131****0003 --text "Group hi!"
   telnyx-agent send-group-mms --from +131****0000 --to +131****0001,+131****0002 --media-url https://example.com/cat.png
   telnyx-agent schedule-sms --from +131****0000 --to +131****0001 --text "Later" --send-at 2024-12-31T00:00:00Z
@@ -668,6 +680,9 @@ const COMMANDS: Record<string, (
   "update-messaging-profile": updateMessagingProfileCommand,
   "delete-messaging-profile": deleteMessagingProfileCommand,
   "fax-send": faxSendCommand,
+  "fax-status": faxStatusCommand,
+  "fax-cancel": faxCancelCommand,
+  "fax-refresh": faxRefreshCommand,
   "send-group-mms": sendGroupMmsCommand,
   "schedule-sms": scheduleSmsCommand,
   "sms-status": smsStatusCommand,
