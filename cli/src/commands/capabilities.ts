@@ -14,6 +14,9 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
     { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "delete_messaging_profile"] },
   ],
+  "📧 Email": [
+    { name: "Email", description: "Send or schedule outbound email and reply to or forward messages received by an email inbox", actions: ["send_email", "forward_email", "reply_email", "reply_all_email"] },
+  ],
   "💬 RCS": [
     { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
   ],
@@ -86,6 +89,11 @@ const CAPABILITIES: Record<string, Capability[]> = {
 const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-sms", description: "Zero to SMS: creates messaging profile, buys number, assigns it" },
   { name: "telnyx-agent send-sms", description: "Send SMS/MMS from an E.164 number, alphanumeric sender, or messaging-profile number pool" },
+  { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS)" },
+  { name: "telnyx-agent email-send", description: "Send or schedule outbound email with multiple recipients, bodies, templates, and attachments" },
+  { name: "telnyx-agent email-forward", description: "Forward an email inbox message to caller-supplied recipients" },
+  { name: "telnyx-agent email-reply", description: "Reply to the Reply-To or From address of an email inbox message" },
+  { name: "telnyx-agent email-reply-all", description: "Reply to all de-duplicated recipients of an email inbox message" },
   { name: "telnyx-agent list-messaging-profiles", description: "List messaging profiles with name filters and pagination" },
   { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination controls" },
   { name: "telnyx-agent get-messaging-profile", description: "Retrieve one messaging profile by ID" },

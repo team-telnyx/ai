@@ -121,6 +121,9 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ["list-conference-participants", new Set(["muted", "on-hold", "whispering"])],
   ["list-room-sessions", new Set(["active", "include-participants"])],
   ["get-room-session", new Set(["include-participants"])],
+  ["email-send", new Set([
+    "ignore-suppression", "inline-css", "reply-to-all", "sandbox-mode",
+  ])],
   ["create-messaging-profile", new Set([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
