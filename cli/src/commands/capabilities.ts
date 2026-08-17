@@ -37,6 +37,10 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant", "get_ai_assistant", "update_ai_assistant", "delete_ai_assistant"] },
     { name: "AI Collections", description: "Retrieve and rank RAG document chunks from an AI collection", actions: ["search_ai_collection"] },
   ],
+  "🌐 Web Intelligence": [
+    { name: "Web Search", description: "Search the live web and retrieve clean page content", actions: ["web_search", "web_contents"] },
+    { name: "Deep Research", description: "Synthesize cited answers from multiple web sources, synchronously or as a background task", actions: ["web_research", "get_web_research_status"] },
+  ],
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
     { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["list_voices"] },
@@ -126,6 +130,10 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent update-ai-assistant", description: "Update an AI assistant and create a new version" },
   { name: "telnyx-agent delete-ai-assistant", description: "Delete an AI assistant with explicit confirmation" },
   { name: "telnyx-agent search-ai-collection", description: "Search ranked RAG document chunks in an AI collection, or omit --query to list its document catalog" },
+  { name: "telnyx-agent web-search", description: "Search the web with domain, country, freshness, safe-search, and live-crawl controls" },
+  { name: "telnyx-agent web-contents", description: "Retrieve clean HTML, Markdown, or metadata for up to 20 URLs" },
+  { name: "telnyx-agent web-research", description: "Start deep web research and return an answer or asynchronous task ID" },
+  { name: "telnyx-agent web-research-status", description: "Retrieve the status, answer, and citations for a background research task" },
   { name: "telnyx-agent setup-wireguard", description: "Zero to VPN: creates network, WireGuard interface, peer — outputs ready-to-use WG config" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },

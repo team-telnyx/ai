@@ -109,6 +109,12 @@ import {
   muteRoomParticipantsCommand,
   unmuteRoomParticipantsCommand,
 } from "./commands/room-sessions.ts";
+import {
+  webContentsCommand,
+  webResearchCommand,
+  webResearchStatusCommand,
+  webSearchCommand,
+} from "./commands/web-search.ts";
 import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
 // Version is read lazily so that `--version` works without loading any command modules.
@@ -210,6 +216,10 @@ Commands:
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
   search-ai-collection Search or list RAG documents in an AI collection
+  web-search        Search the web and return structured, LLM-ready results
+  web-contents      Retrieve clean content for up to 20 URLs
+  web-research      Start synchronous or background deep web research
+  web-research-status Retrieve a background web research task by ID
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -633,6 +643,23 @@ AI Collection Retrieval Flags:
   --page-size <n>   Results per page (default: 20)
   --sources <csv>   Comma-separated source types to search, e.g. voice,message
   --filter <json>   Pre-ranking field filters, e.g. {"record_id":{"eq":"rec_123"}}
+Web Intelligence Flags:
+  --query <text>    Search query or research question (web-search, web-research — required)
+  --count <1-100>   Number of web search results to return
+  --country <code>  ISO alpha-2 country code used to bias web search results
+  --exclude-domain <host> Exclude a domain from search results (repeatable)
+  --include-domain <host> Restrict search results to a domain (repeatable)
+  --freshness <age> Search freshness filter: day, week, month, or year
+  --livecrawl <bool> Crawl search results in real time
+  --safesearch <level> Safe-search filter level
+  --url <url>       URL to retrieve (web-contents — required, repeatable, max 20)
+  --crawl-timeout <seconds> Per-URL crawl timeout from 1 to 60 seconds
+  --format <format> Content format: html, markdown, or metadata (repeatable)
+  --max-age <seconds|null> Maximum cached-content age
+  --background <bool> Run web research asynchronously and return a task ID
+  --max-sources <n> Maximum number of research sources
+  --research-effort <level> Research depth: lite or deep
+  --task-id <id>    Background research task ID (web-research-status — required)
 
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
@@ -790,6 +817,10 @@ Examples:
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
   telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
   telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
+  telnyx-agent web-search --query "latest WebRTC developments" --count 10 --freshness week --json
+  telnyx-agent web-contents --url https://example.com --format markdown --json
+  telnyx-agent web-research --query "Compare SIP trunking providers" --background true --json
+  telnyx-agent web-research-status --task-id <task-id> --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -889,6 +920,10 @@ const COMMANDS: Record<string, (
   "disable-sim-card": disableSimCardCommand,
   "retrieve-sim-card-action": retrieveSimCardActionCommand,
   "list-sim-card-actions": listSimCardActionsCommand,
+  "web-search": webSearchCommand,
+  "web-contents": webContentsCommand,
+  "web-research": webResearchCommand,
+  "web-research-status": webResearchStatusCommand,
 };
 
 // Union of every flag any command reads (kept in sync with src/commands/*).
@@ -899,51 +934,54 @@ const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "agent-id",
   "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "attachment", "audio",
-  "audio-url", "authorized-person", "bcc", "beep-enabled", "billing-group-id", "billing-phone",
-  "biz-opaque-callback-data", "black-threshold", "body", "brand-id", "brand-name",
+  "audio-url", "authorized-person", "background", "bcc", "beep-enabled", "billing-group-id",
+  "billing-phone", "biz-opaque-callback-data", "black-threshold", "body", "brand-id", "brand-name",
   "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2",
   "call-control-id-to-bridge", "call-control-id-to-bridge-with", "campaign-id", "cancel",
   "carrier-name", "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids",
   "client-state", "code", "collection-id", "comfort-noise", "command-id", "company-name",
   "component", "conference-id", "confirm", "connection-id", "connection-name", "contacts",
-  "contains", "content-type", "context", "conversation-id", "country", "country-code", "create",
-  "custom-code", "customer-group-reference", "customer-name", "customer-reference",
-  "daily-spend-limit", "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
-  "destinations", "digits", "dimensions", "disable-cache", "display-name", "document",
-  "document-id", "document-type", "dtmf-detection", "duration-minutes", "dynamic-variables",
-  "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
-  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "exclude",
-  "extension", "fallback-config", "fast-port-eligible", "features", "file-url", "filter",
-  "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-datetime-requested", "force",
-  "fork-rx", "fork-stream-type", "fork-tx", "format", "forward-of-message-id", "fqdn", "from",
-  "from-dir", "from-display-name", "from-name", "greeting", "group-id", "guided-choice",
-  "guided-json", "headers", "health-webhook-url", "help", "help-message", "hold-audio-url",
-  "hold-media-name", "html", "html-body", "iccid", "id", "idempotency-key", "ignore-suppression",
-  "image", "in-reply-to-message-id", "inbox-id", "include-participants", "include-phone-numbers",
-  "include-sim-card-group", "inline-css", "input", "instructions", "interactive",
-  "invoice-document-id", "json", "language", "limit", "loa-document-id", "locality", "location",
-  "max-items", "max-participants", "max-retries", "max-tokens", "mcp-server", "media-encryption",
-  "media-name", "media-url", "message", "message-flow", "message-id", "messaging-profile-id",
-  "metadata", "method", "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model",
-  "monochrome", "msisdn", "muted", "name", "name-contains", "national-destination-code",
-  "network-id", "new-billing-phone-number", "number-pool-settings", "number-type", "numbers",
-  "old-provider", "on-hold", "opt-in-method", "optin-message", "optout-message",
-  "outbound-voice-profile-id", "output", "output-file", "output-type", "page-number", "page-size",
-  "parameters", "parent-support-key", "participant", "participants", "payload", "phone",
-  "phone-number", "phone-number-id", "phone-numbers", "port-type", "preview-format", "privacy",
-  "profile-name", "promote-to-main", "provider", "quality", "query", "queue-name", "reaction",
-  "record", "recording-id", "region", "remaining-numbers-action", "reply-to", "reply-to-all",
-  "requirement-group-id", "resource-group-id", "response-format", "retrieval-type",
-  "retry-on-timeout", "role", "room-id", "room-participant-id", "room-session-id", "rx",
-  "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at",
-  "send-at", "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address",
-  "slug", "smart-encoding", "sole-prop", "sort", "source", "sources", "start-conference-on-create",
-  "start-message", "starts-with", "status", "sticker", "stop", "stop-message", "stop-sequence",
-  "store-media", "store-preview", "stream", "stream-type", "subject", "submit", "system",
-  "t38-enabled", "tag", "tags", "temperature", "template-id", "template-language", "template-name",
-  "template-variables", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
-  "timeout-secs", "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p", "tracking-settings",
-  "transcription", "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
+  "contains", "content-type", "context", "conversation-id", "count", "country", "country-code",
+  "crawl-timeout", "create", "custom-code", "customer-group-reference", "customer-name",
+  "customer-reference", "daily-spend-limit", "daily-spend-limit-enabled", "deepfake-detection",
+  "depth", "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
+  "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
+  "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
+  "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
+  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
+  "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
+  "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
+  "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
+  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "html",
+  "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
+  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants",
+  "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
+  "interactive", "invoice-document-id", "json", "language", "limit", "livecrawl",
+  "loa-document-id", "locality", "location", "max-age", "max-items", "max-participants",
+  "max-retries", "max-sources", "max-tokens", "mcp-server", "media-encryption", "media-name",
+  "media-url", "message", "message-flow", "message-id", "messaging-profile-id", "metadata",
+  "method", "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome",
+  "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id",
+  "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
+  "on-hold", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
+  "output", "output-file", "output-type", "page-number", "page-size", "parameters",
+  "parent-support-key", "participant", "participants", "payload", "phone", "phone-number",
+  "phone-number-id", "phone-numbers", "port-type", "preview-format", "privacy", "profile-name",
+  "promote-to-main", "provider", "quality", "query", "queue-name", "reaction", "record",
+  "recording-id", "region", "remaining-numbers-action", "reply-to", "reply-to-all",
+  "requirement-group-id", "research-effort", "resource-group-id", "response-format",
+  "retrieval-type", "retry-on-timeout", "role", "room-id", "room-participant-id",
+  "room-session-id", "rx", "safesearch", "sample-message", "sample-message-2", "sample1",
+  "sample2", "sandbox-mode", "scheduled-at", "send-at", "service-tier", "service-type",
+  "sim-card-group-id", "sim-card-id", "sip-address", "slug", "smart-encoding", "sole-prop", "sort",
+  "source", "sources", "start-conference-on-create", "start-message", "starts-with", "status",
+  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
+  "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "task-id",
+  "temperature", "template-id", "template-language", "template-name", "template-variables", "text",
+  "text-body", "text-type", "thinking", "time-limit-secs", "timeout", "timeout-secs", "to", "tool",
+  "tool-choice", "tool-ids", "top-k", "top-p", "tracking-settings", "transcription",
+  "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
   "url-shortener-settings", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id",
   "version", "version-name", "vertical", "video", "voice", "waba-id", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",

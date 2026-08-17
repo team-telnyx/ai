@@ -212,7 +212,10 @@ export class TelnyxCLIError extends Error {
  * with `--format json`, so the default is fine for those.
  *
  * @param args - CLI arguments (e.g., ['available-phone-numbers', 'list', '--filter.country-code', 'US'])
- * @param opts - Optional overrides for timeout, env, output format, and stdin request body
+ * @param opts - Optional overrides for timeout, env, output format, and stdin request body.
+ *   Set formatPosition to "root" when a subcommand defines its own --format
+ *   request flag; this places the output flag before the command hierarchy so
+ *   urfave does not bind it to the subcommand flag.
  * @returns Parsed JSON response from the CLI (typically { data: ... } or { data: [...], meta: ... })
  */
 export async function telnyxCli(
@@ -221,6 +224,7 @@ export async function telnyxCli(
     timeout?: number;
     env?: Record<string, string | undefined>;
     format?: "json" | "raw";
+    formatPosition?: "command" | "root";
     stdin?: string;
     minimumVersion?: string;
   },
@@ -228,7 +232,11 @@ export async function telnyxCli(
   const timeout = opts?.timeout ?? 60000;
   const binary = await getTelnyxBinary(opts?.minimumVersion);
   try {
-    const execution = execFileAsync(binary, [...args, "--format", opts?.format ?? "json"], {
+    const outputFormatArgs = ["--format", opts?.format ?? "json"];
+    const executionArgs = opts?.formatPosition === "root"
+      ? [...outputFormatArgs, ...args]
+      : [...args, ...outputFormatArgs];
+    const execution = execFileAsync(binary, executionArgs, {
       env: { ...process.env, ...opts?.env } as NodeJS.ProcessEnv,
       timeout,
       maxBuffer: 10 * 1024 * 1024, // 10MB — some list responses can be large

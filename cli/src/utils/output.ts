@@ -124,6 +124,8 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ["email-send", new Set([
     "ignore-suppression", "inline-css", "reply-to-all", "sandbox-mode",
   ])],
+  ["web-search", new Set(["livecrawl"])],
+  ["web-research", new Set(["background"])],
   ["create-messaging-profile", new Set([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
