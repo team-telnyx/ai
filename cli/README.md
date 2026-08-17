@@ -392,6 +392,24 @@ telnyx-agent stt-providers --provider telnyx --service-type transcription --json
 
 Output: `{ providers: [...] }`
 
+### `telnyx-agent storage-sql-query`
+
+**Run parameterized SQL against a Telnyx Storage SQL database.** The command
+requires the database ID and preserves the generated Go CLI's binding syntax.
+Repeat `--param` in positional `?` placeholder order; each value may be a
+string, number, boolean, or `null`.
+
+```bash
+telnyx-agent storage-sql-query --id <database-id> --sql "SELECT * FROM users"
+telnyx-agent storage-sql-query --id <database-id> \
+  --sql "SELECT * FROM users WHERE active = ? AND age >= ?" \
+  --param true --param 21 --json
+```
+
+Use bindings instead of interpolating values into SQL. Placeholder/parameter
+count mismatches are rejected by the API. This command requires Telnyx Go CLI
+v0.27.0 or newer; it does not change the package's vendored platform pin.
+
 ## Cookbook Copy Changes (for Deniz)
 
 > **Status:** proposed copy changes for the *Communication API Cookbook v2* (the

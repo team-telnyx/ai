@@ -55,6 +55,9 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "📡 IoT": [
     { name: "SIM Cards", description: "List, inspect, enable, and disable IoT SIM cards and observe asynchronous actions", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card", "retrieve_sim_card_action", "list_sim_card_actions"] },
   ],
+  "🗄️ Storage": [
+    { name: "SQL Databases", description: "Run parameterized SQL against a Telnyx Storage SQL database", actions: ["run_storage_sql_query"] },
+  ],
   "🔍 Lookup": [
     { name: "Number Lookup", description: "Carrier and caller ID lookups", actions: ["lookup_number"] },
   ],
@@ -183,6 +186,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent search-phone-numbers", description: "Search available phone numbers by country, type, features, location, or number pattern" },
   { name: "telnyx-agent buy-phone-number", description: "Purchase one phone number and optionally assign its connection or messaging profile" },
   { name: "telnyx-agent lookup-number", description: "Look up carrier or caller-name information for an E.164 phone number" },
+  { name: "telnyx-agent storage-sql-query", description: "Run SQL with positional parameter bindings against a Telnyx Storage SQL database" },
 ];
 
 export async function capabilitiesCommand(flags: Record<string, string | boolean>): Promise<void> {

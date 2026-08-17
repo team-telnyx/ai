@@ -115,6 +115,7 @@ import {
   webResearchStatusCommand,
   webSearchCommand,
 } from "./commands/web-search.ts";
+import { storageSqlQueryCommand } from "./commands/storage-sql.ts";
 import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
 // Version is read lazily so that `--version` works without loading any command modules.
@@ -220,6 +221,7 @@ Commands:
   web-contents      Retrieve clean content for up to 20 URLs
   web-research      Start synchronous or background deep web research
   web-research-status Retrieve a background web research task by ID
+  storage-sql-query Run SQL against a Telnyx Storage SQL database
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -676,6 +678,12 @@ IoT SIM Action Flags:
   --page-size       Results per page (SIM/action list commands)
   --sort            Sort field; prefix with - for descending (list-sim-cards)
 
+Storage SQL Query Flags:
+  --id <database-id> SQL database ID (required)
+  --sql <statement>  SQL to execute; use positional ? placeholders (required)
+  --param <value>    Positional binding in placeholder order; repeat for each ?
+                     Values use the generated CLI syntax: string, number, boolean, or null
+
 Environment:
   TELNYX_API_KEY    API key (or configure ~/.config/telnyx/config.json)
 
@@ -827,6 +835,7 @@ Examples:
   telnyx-agent disable-sim-card --id <sim-card-id> --json
   telnyx-agent retrieve-sim-card-action --id <action-id> --json
   telnyx-agent list-sim-card-actions --sim-card-id <sim-card-id> --status in-progress --json
+  telnyx-agent storage-sql-query --id <database-id> --sql "SELECT * FROM users WHERE id = ?" --param 42 --json
 `;
 
 const COMMANDS: Record<string, (
@@ -924,6 +933,7 @@ const COMMANDS: Record<string, (
   "web-contents": webContentsCommand,
   "web-research": webResearchCommand,
   "web-research-status": webResearchStatusCommand,
+  "storage-sql-query": storageSqlQueryCommand,
 };
 
 // Union of every flag any command reads (kept in sync with src/commands/*).
@@ -965,7 +975,7 @@ const KNOWN_FLAGS = new Set<string>([
   "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
   "on-hold", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
-  "output", "output-file", "output-type", "page-number", "page-size", "parameters",
+  "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "phone", "phone-number",
   "phone-number-id", "phone-numbers", "port-type", "preview-format", "privacy", "profile-name",
   "promote-to-main", "provider", "quality", "query", "queue-name", "reaction", "record",
@@ -975,9 +985,9 @@ const KNOWN_FLAGS = new Set<string>([
   "room-session-id", "rx", "safesearch", "sample-message", "sample-message-2", "sample1",
   "sample2", "sandbox-mode", "scheduled-at", "send-at", "service-tier", "service-type",
   "sim-card-group-id", "sim-card-id", "sip-address", "slug", "smart-encoding", "sole-prop", "sort",
-  "source", "sources", "start-conference-on-create", "start-message", "starts-with", "status",
-  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
-  "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "task-id",
+  "source", "sources", "sql", "start-conference-on-create", "start-message", "starts-with",
+  "status", "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview",
+  "stream", "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "task-id",
   "temperature", "template-id", "template-language", "template-name", "template-variables", "text",
   "text-body", "text-type", "thinking", "time-limit-secs", "timeout", "timeout-secs", "to", "tool",
   "tool-choice", "tool-ids", "top-k", "top-p", "tracking-settings", "transcription",
