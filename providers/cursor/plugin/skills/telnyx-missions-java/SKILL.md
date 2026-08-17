@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.84.0</version>
+    <version>6.87.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.84.0")
+implementation("com.telnyx.sdk:telnyx:6.87.0")
 ```
 
 ## Setup
