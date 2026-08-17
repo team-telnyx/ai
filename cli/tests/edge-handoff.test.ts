@@ -18,6 +18,8 @@ type FakeEdgeOptions = {
   newFuncFromDir?: boolean;
   secretsAdd?: boolean;
   ship?: boolean;
+  shipStatusFunctionUsage?: boolean;
+  shipStatusLogs?: boolean;
   resetFunc?: boolean;
   resetNoninteractiveConfirmation?: boolean;
   noninteractiveConfirmation?: boolean;
@@ -26,6 +28,8 @@ type FakeEdgeOptions = {
   kvStorage?: boolean;
   kvKeyManagement?: boolean;
   sqlDatabases?: boolean;
+  sqlParam?: boolean;
+  sqlParamJson?: boolean;
   argLog?: boolean;
 };
 
@@ -38,6 +42,8 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const newFuncFromDir = config.newFuncFromDir ?? true;
   const secretsAdd = config.secretsAdd ?? true;
   const ship = config.ship ?? true;
+  const shipStatusFunctionUsage = config.shipStatusFunctionUsage ?? true;
+  const shipStatusLogs = config.shipStatusLogs ?? true;
   const resetFunc = config.resetFunc ?? true;
   const resetNoninteractiveConfirmation = config.resetNoninteractiveConfirmation ?? false;
   const noninteractiveConfirmation = config.noninteractiveConfirmation ?? true;
@@ -46,6 +52,8 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const kvStorage = config.kvStorage ?? true;
   const kvKeyManagement = config.kvKeyManagement ?? true;
   const sqlDatabases = config.sqlDatabases ?? true;
+  const sqlParam = config.sqlParam ?? true;
+  const sqlParamJson = config.sqlParamJson ?? true;
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-edge-fake-"));
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
@@ -77,6 +85,10 @@ if (args[0] === 'secrets' && args[1] === 'add' && args.includes('--help')) {
   }
   process.stderr.write('unknown command "add"\\n');
   process.exit(1);
+}
+if (args[0] === 'ship' && args[1] === 'status' && args.includes('--help')) {
+  console.log(['Show why a function ship failed', 'Usage: telnyx-edge ship status ${shipStatusFunctionUsage ? "<function>" : "[flags]"}', ...(${shipStatusLogs} ? ['      --logs  Also print the build log or crash output'] : [])].join('\\n'));
+  process.exit(0);
 }
 if (args[0] === 'ship' && args.includes('--help')) {
   if (${ship}) {
@@ -128,7 +140,7 @@ if (args[0] === 'storage' && args[1] === 'kv' && args.includes('--help')) {
 }
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'execute' && args.includes('--help')) {
   if (${sqlDatabases}) {
-    console.log('Run SQL against a SQL database\\nUsage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote  --command string  --file string');
+    console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
     process.exit(0);
   }
   console.log('Usage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote --command string');
@@ -252,6 +264,7 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.new_func_from_dir_supported, true);
     assert.equal(data.secrets_add_supported, true);
     assert.equal(data.ship_supported, true);
+    assert.equal(data.ship_status_supported, true);
     assert.equal(data.stateful_actors_supported, true);
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
@@ -261,6 +274,7 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.kv_storage_supported, true);
     assert.equal(data.kv_key_management_supported, true);
     assert.equal(data.sql_databases_supported, true);
+    assert.equal(data.sql_bound_parameters_supported, true);
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -301,7 +315,7 @@ describe("CLI — Edge Compute handoff", () => {
     assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(["actors", "instances", "--help"])));
   });
 
-  it("edge-doctor probes v0.3 capabilities conservatively instead of inferring from version", () => {
+  it("edge-doctor probes optional capabilities conservatively instead of inferring from version", () => {
     const fake = withFakeEdgeCli({
       auth: "api_key",
       resetFunc: false,
@@ -310,21 +324,28 @@ describe("CLI — Edge Compute handoff", () => {
       kvStorage: false,
       kvKeyManagement: false,
       sqlDatabases: false,
+      shipStatusFunctionUsage: false,
+      shipStatusLogs: false,
+      sqlParam: false,
+      sqlParamJson: false,
       argLog: true,
     });
     const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
     assert.equal(data.telnyx_edge_version, "v0.2.5");
-    assert.equal(data.ready, true, "optional v0.3 capabilities do not block the core handoff");
+    assert.equal(data.ready, true, "optional capabilities do not block the core handoff");
+    assert.equal(data.ship_status_supported, false);
     assert.equal(data.reset_func_supported, false);
     assert.equal(data.noninteractive_confirmation_supported, false);
     assert.equal(data.types_supported, false);
     assert.equal(data.kv_storage_supported, false);
     assert.equal(data.kv_key_management_supported, false);
     assert.equal(data.sql_databases_supported, false);
+    assert.equal(data.sql_bound_parameters_supported, false);
     assert.ok(data.next_steps.some((step: string) => step.includes("Optional capabilities not detected")));
     const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
     for (const expected of [
       ["reset-func", "--help"],
+      ["ship", "status", "--help"],
       ["delete-func", "--help"],
       ["secrets", "add", "--help"],
       ["types", "--help"],
@@ -333,6 +354,36 @@ describe("CLI — Edge Compute handoff", () => {
       ["storage", "sqldb", "execute", "--help"],
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+  });
+
+  it("requires function usage and --logs on the ship status help surface", () => {
+    for (const config of [
+      { shipStatusFunctionUsage: false },
+      { shipStatusLogs: false },
+    ]) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config, argLog: true });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "ship diagnostics remain optional for setup handoffs");
+      assert.equal(data.ship_supported, true, "the existing ship compatibility field is unchanged");
+      assert.equal(data.ship_status_supported, false);
+      assert.ok(data.next_steps.some((step: string) => step.includes("ship status <function> --logs diagnostics")));
+      const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(["ship", "status", "--help"])));
+    }
+  });
+
+  it("requires both SQL parameter flags without changing SQL or handoff compatibility", () => {
+    for (const config of [
+      { sqlParam: false },
+      { sqlParamJson: false },
+    ]) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "bound SQL parameters remain optional for setup handoffs");
+      assert.equal(data.sql_databases_supported, true, "the existing SQL compatibility field is unchanged");
+      assert.equal(data.sql_bound_parameters_supported, false);
+      assert.ok(data.next_steps.some((step: string) => step.includes("SQL --param/--param-json bindings")));
     }
   });
 

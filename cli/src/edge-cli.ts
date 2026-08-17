@@ -76,6 +76,16 @@ export function supportsShip(): boolean {
   }
 }
 
+/** Detect the read-only failed-ship diagnostic and its detailed log output. */
+export function supportsShipStatus(): boolean {
+  try {
+    const out = runEdge(["ship", "status", "--help"]);
+    return /\bship\s+status\s+<function>(?:\s|\[|$)/i.test(out) && /--logs\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect non-interactive confirmation from a destructive command's own help. */
 export function supportsNonInteractiveConfirmation(): boolean {
   try {
@@ -160,6 +170,16 @@ export function supportsSqlDatabases(): boolean {
     const out = runEdge(["storage", "sqldb", "execute", "--help"]);
     return /\bstorage\s+sqldb\s+execute\s+<[^>]+>/i.test(out) &&
       ["remote", "command", "file"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect both forms of v0.4.1 positional SQL parameter binding directly. */
+export function supportsSqlBoundParameters(): boolean {
+  try {
+    const out = runEdge(["storage", "sqldb", "execute", "--help"]);
+    return /--param(?:[\s=,]|$)/i.test(out) && /--param-json\b/i.test(out);
   } catch {
     return false;
   }

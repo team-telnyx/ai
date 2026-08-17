@@ -21,6 +21,8 @@ import {
   supportsResetFuncNonInteractiveConfirmation,
   supportsSecretsAdd,
   supportsShip,
+  supportsShipStatus,
+  supportsSqlBoundParameters,
   supportsSqlDatabases,
   supportsStatefulActors,
   supportsTypes,
@@ -37,6 +39,7 @@ interface EdgeDoctorResult {
   new_func_from_dir_supported: boolean;
   secrets_add_supported: boolean;
   ship_supported: boolean;
+  ship_status_supported: boolean;
   stateful_actors_supported: boolean;
   inspect_supported: boolean;
   actor_instances_supported: boolean;
@@ -47,6 +50,7 @@ interface EdgeDoctorResult {
   kv_storage_supported: boolean;
   kv_key_management_supported: boolean;
   sql_databases_supported: boolean;
+  sql_bound_parameters_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -63,6 +67,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let newFuncFromDirSupported = false;
   let secretsAddSupported = false;
   let shipSupported = false;
+  let shipStatusSupported = false;
   let statefulActorsSupported = false;
   let inspectSupported = false;
   let actorInstancesSupported = false;
@@ -73,6 +78,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let kvStorageSupported = false;
   let kvKeyManagementSupported = false;
   let sqlDatabasesSupported = false;
+  let sqlBoundParametersSupported = false;
 
   try {
     getEdgeHelp();
@@ -95,6 +101,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     newFuncFromDirSupported = supportsNewFuncFromDir();
     secretsAddSupported = supportsSecretsAdd();
     shipSupported = supportsShip();
+    shipStatusSupported = supportsShipStatus();
     statefulActorsSupported = supportsStatefulActors();
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
@@ -105,6 +112,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     kvStorageSupported = supportsKvStorage();
     kvKeyManagementSupported = supportsKvKeyManagement();
     sqlDatabasesSupported = supportsSqlDatabases();
+    sqlBoundParametersSupported = supportsSqlBoundParameters();
 
     checks.push({
       name: "API-key auth supported",
@@ -129,6 +137,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       name: "Function shipping",
       ok: shipSupported,
       detail: shipSupported ? "ship is available" : "ship --help capability was not detected",
+    });
+    checks.push({
+      name: "Ship failure diagnostics",
+      ok: shipStatusSupported,
+      detail: shipStatusSupported
+        ? "ship status <function> --logs is available"
+        : "ship status --help did not advertise both <function> usage and --logs",
     });
     checks.push({
       name: "Stateful actors supported",
@@ -193,6 +208,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: sqlDatabasesSupported
         ? "storage sqldb execute supports --remote, --command, and --file"
         : "storage sqldb execute --help did not advertise --remote, --command, and --file",
+    });
+    checks.push({
+      name: "Bound SQL parameters",
+      ok: sqlBoundParametersSupported,
+      detail: sqlBoundParametersSupported
+        ? "storage sqldb execute supports --param and --param-json"
+        : "storage sqldb execute --help did not advertise both --param and --param-json",
     });
 
     try {
@@ -286,6 +308,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     } else if (statefulActorsSupported) {
       nextSteps.push("Actor scaffolding is available, but this CLI does not expose actors instances; upgrade telnyx-edge for that view.");
     }
+    if (shipStatusSupported) {
+      nextSteps.push("Diagnose the latest ship before resetting it: telnyx-edge ship status <function-name> --logs");
+    }
     if (resetFuncSupported) {
       nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${resetFuncNoninteractiveConfirmationSupported ? " --yes" : ""}`);
     }
@@ -298,7 +323,11 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlDatabasesSupported) {
       nextSteps.push("Run remote SQL with: telnyx-edge storage sqldb execute <database> --remote --command \"SELECT 1\"");
     }
+    if (sqlBoundParametersSupported) {
+      nextSteps.push("Bind SQL inputs safely with repeatable --param (strings) and --param-json (numbers, booleans, or null).");
+    }
     const missingOptional = [
+      !shipStatusSupported && "ship status <function> --logs diagnostics",
       !resetFuncSupported && "reset-func",
       resetFuncSupported && !resetFuncNoninteractiveConfirmationSupported && "reset-func --yes",
       !noninteractiveConfirmationSupported && "destructive-command --yes",
@@ -306,6 +335,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !kvStorageSupported && "KV namespaces",
       !kvKeyManagementSupported && "KV keys",
       !sqlDatabasesSupported && "remote SQL execution",
+      !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
@@ -323,6 +353,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     new_func_from_dir_supported: newFuncFromDirSupported,
     secrets_add_supported: secretsAddSupported,
     ship_supported: shipSupported,
+    ship_status_supported: shipStatusSupported,
     stateful_actors_supported: statefulActorsSupported,
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
@@ -333,6 +364,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     kv_storage_supported: kvStorageSupported,
     kv_key_management_supported: kvKeyManagementSupported,
     sql_databases_supported: sqlDatabasesSupported,
+    sql_bound_parameters_supported: sqlBoundParametersSupported,
     checks,
     next_steps: nextSteps,
   };
