@@ -19,6 +19,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "📞 Voice": [
     { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "list_voice_connections", "get_voice_connection", "list_active_calls", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection", "number_masking", "from_display_name", "time_limit", "media_encryption", "transcription", "gather", "stop_gather", "start_playback", "stop_playback", "start_transcription", "stop_transcription", "pause_recording", "resume_recording", "start_forking", "stop_forking", "start_siprec", "stop_siprec", "start_streaming", "stop_streaming", "enqueue", "leave_queue", "send_sip_info", "update_client_state", "add_ai_assistant_messages", "gather_using_ai", "gather_using_audio", "gather_using_speak", "join_ai_assistant", "start_ai_assistant", "stop_ai_assistant", "start_conversation_relay", "stop_conversation_relay", "switch_supervisor_role"] },
+    { name: "Conferences", description: "Discover, create, inspect, and control multi-party conferences and participants", actions: ["create_conference", "get_conference", "list_conferences", "list_conference_participants", "update_conference_participant", "end_conference", "gather_conference_dtmf", "hold_conference_participants", "join_conference", "leave_conference", "mute_conference_participants", "play_conference_audio", "pause_conference_recording", "resume_conference_recording", "start_conference_recording", "stop_conference_recording", "send_conference_dtmf", "speak_to_conference", "stop_conference_audio", "unhold_conference_participants", "unmute_conference_participants"] },
   ],
   "🔢 Numbers": [
     { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
@@ -140,6 +141,11 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent call-dial", description: "Make an outbound call via Call Control (AMD, deepfake detection, recording optional)" },
   { name: "telnyx-agent call-control", description: "Call Control actions: answer, hangup, transfer, DTMF, recording, noise suppression, speak (TTS), bridge, refer, reject, gather, playback, transcription, forking, siprec, streaming, enqueue, send-sip-info, update-client-state, AI assistant lifecycle/messages/gather/join, Conversation Relay, supervisor roles" },
   { name: "telnyx-agent call-status", description: "Get the status of a call by call-control-id" },
+  { name: "telnyx-agent create-conference", description: "Create a multi-party conference from an active Call Control leg" },
+  { name: "telnyx-agent get-conference", description: "Retrieve one conference by ID" },
+  { name: "telnyx-agent list-conferences", description: "Discover conferences with name/status filters and pagination" },
+  { name: "telnyx-agent list-conference-participants", description: "List and filter participants in a conference" },
+  { name: "telnyx-agent conference-control", description: "Control conference membership, mute/hold state, media, DTMF, recording, supervisor roles, and lifecycle" },
   { name: "telnyx-agent list-voice-connections", description: "List voice connections across connection types with filters and pagination" },
   { name: "telnyx-agent get-voice-connection", description: "Retrieve the high-level details of one voice connection" },
   { name: "telnyx-agent list-active-calls", description: "List active calls for a voice connection with pagination" },

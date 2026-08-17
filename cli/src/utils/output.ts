@@ -113,6 +113,12 @@ export const BOOLEAN_FLAGS = new Set<string>([
 
 const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ["call-dial", new Set(["retry-on-timeout", "transcription"])],
+  ["create-conference", new Set(["comfort-noise", "start-conference-on-create"])],
+  ["conference-control", new Set([
+    "end-conference-on-exit", "hold", "mute", "play-beep",
+    "soft-end-conference-on-exit", "start-conference-on-enter", "stop-playback-on-dtmf",
+  ])],
+  ["list-conference-participants", new Set(["muted", "on-hold", "whispering"])],
   ["create-messaging-profile", new Set([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
@@ -151,7 +157,6 @@ const BOOLEAN_VALUE_FLAGS = new Set<string>([
 
 function isBooleanValueFlag(command: string, key: string): boolean {
   return BOOLEAN_VALUE_FLAGS.has(key)
-    || (command === "call-dial" && (key === "retry-on-timeout" || key === "transcription"))
     || COMMAND_BOOLEAN_FLAGS.get(command)?.has(key) === true;
 }
 

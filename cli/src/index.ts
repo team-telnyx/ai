@@ -54,6 +54,13 @@ import { rcsCapabilitiesCommand } from "./commands/rcs-capabilities.ts";
 import { callDialCommand } from "./commands/call-dial.ts";
 import { callControlCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
+import {
+  conferenceControlCommand,
+  createConferenceCommand,
+  getConferenceCommand,
+  listConferenceParticipantsCommand,
+  listConferencesCommand,
+} from "./commands/conferences.ts";
 import { sttCommand } from "./commands/stt.ts";
 import { sttProvidersCommand } from "./commands/stt-providers.ts";
 import {
@@ -150,6 +157,11 @@ Commands:
   call-dial         Make an outbound call via Call Control
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-status       Get the status of a call by call-control-id
+  create-conference Create a multi-party conference from an active call leg
+  get-conference    Retrieve a conference by ID
+  list-conferences  Discover active conferences with filters and pagination
+  list-conference-participants List participants in a conference
+  conference-control Control conference participants, media, DTMF, recording, or lifecycle
   list-voice-connections List voice connections with filters and pagination
   get-voice-connection Retrieve one voice connection by ID
   list-active-calls List active calls for a voice connection
@@ -413,6 +425,26 @@ Voice Connection Discovery Flags:
   --page-size       Results per page (list-voice-connections, list-active-calls)
   --sort            Connection sort order; prefix with - for descending (list-voice-connections)
   --max-items       Maximum items to return; -1 for unlimited (list-voice-connections, list-active-calls)
+Conference Flags:
+  --conference-id   Conference ID (conference-control, list-conference-participants — required)
+  --id              Conference ID (get-conference; --id is also accepted by conference-control)
+  --name            Conference name (create-conference required; list-conferences exact filter)
+  --call-control-id Active call leg to bridge (create/join/leave/update) or repeatable participant target
+  --action           Conference control action (conference-control, required)
+                    Valid: update, end-conference, gather-dtmf-audio, hold, join, leave, mute,
+                    play, record-pause, record-resume, record-start, record-stop, send-dtmf,
+                    speak, stop, unhold, unmute
+                    Aliases: end, gather-dtmf, start-recording, stop-recording,
+                    pause-recording, resume-recording
+  --region           Conference data region
+  --status           Exact conference status filter (list-conferences)
+  --page-number / --page-size Conference or participant page selection
+  --max-items        Limit conferences or participants returned; -1 means all on the selected page
+  --muted / --on-hold / --whispering <bool> Participant filters
+  Action-specific flags are forwarded exactly to the generated Telnyx CLI. Common examples:
+  --payload / --voice (speak), --audio-url / --media-name (play, hold, gather),
+  --digits (send-dtmf), --format mp3|wav (record-start), --recording-id,
+  --command-id, --supervisor-role, --whisper-call-control-id, --beep-enabled
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -620,6 +652,15 @@ Examples:
   telnyx-agent call-control --action start-conversation-relay --call-control-id <id> --url wss://example.com/relay
   telnyx-agent call-control --action switch-supervisor-role --call-control-id <id> --role whisper
   telnyx-agent call-status --call-control-id <id> --json
+  telnyx-agent create-conference --call-control-id <call-id> --name support-room --json
+  telnyx-agent list-conferences --status active --json
+  telnyx-agent get-conference --id <conference-id> --json
+  telnyx-agent list-conference-participants --conference-id <conference-id> --json
+  telnyx-agent conference-control --conference-id <conference-id> --action join --call-control-id <call-id>
+  telnyx-agent conference-control --conference-id <conference-id> --action mute --call-control-id <call-id>
+  telnyx-agent conference-control --conference-id <conference-id> --action speak --payload "Welcome" --voice Telnyx.KokoroTTS.af
+  telnyx-agent conference-control --conference-id <conference-id> --action record-start --format mp3
+  telnyx-agent conference-control --conference-id <conference-id> --action end-conference
   telnyx-agent list-voice-connections --connection-name support --page-size 25 --json
   telnyx-agent get-voice-connection --id <connection-id> --json
   telnyx-agent list-active-calls --connection-id <connection-id> --json
@@ -700,6 +741,11 @@ const COMMANDS: Record<string, (
   "call-dial": callDialCommand,
   "call-control": callControlCommand,
   "call-status": callStatusCommand,
+  "create-conference": createConferenceCommand,
+  "get-conference": getConferenceCommand,
+  "list-conferences": listConferencesCommand,
+  "list-conference-participants": listConferenceParticipantsCommand,
+  "conference-control": conferenceControlCommand,
   "list-voice-connections": listVoiceConnectionsCommand,
   "get-voice-connection": getVoiceConnectionCommand,
   "list-active-calls": listActiveCallsCommand,
@@ -732,34 +778,34 @@ const COMMANDS: Record<string, (
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
   "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
-  "authorized-person", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
-  "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "authorized-person", "beep-enabled", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
+  "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "comfort-noise", "conference-id",
   "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
   "channels", "clear-tags", "clear-tool-ids", "client-state", "code", "command-id", "company-name",
   "component", "confirm", "connection-id", "connection-name", "contains", "content-type",
   "conversation-id", "country", "country-code", "create", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "deepfake-detection", "depth",
-  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
+  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name", "duration-minutes",
   "daily-spend-limit", "daily-spend-limit-enabled", "document-id", "document-type", "dtmf-detection", "dynamic-variables",
   "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
   "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "extension",
   "fallback-config", "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
   "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
   "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
-  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "iccid", "id", "include-phone-numbers",
+  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "iccid", "id", "include-phone-numbers",
   "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
-  "limit", "loa-document-id", "locality", "max-items", "max-retries", "max-tokens", "mcp-server", "media-encryption",
+  "limit", "loa-document-id", "locality", "max-items", "max-participants", "max-retries", "max-tokens", "mcp-server", "media-encryption",
   "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "metadata", "method", "model",
-  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "monochrome", "msisdn", "name", "name-contains", "national-destination-code", "network-id", "number-pool-settings",
-  "new-billing-phone-number", "number-type", "numbers", "old-provider", "opt-in-method",
+  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "monochrome", "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id", "number-pool-settings",
+  "new-billing-phone-number", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
   "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
   "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
   "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
-  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
+  "queue-name", "record", "recording-id", "region", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
   "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
   "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "sole-prop", "sort", "source",
-  "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
+  "start-conference-on-create", "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
   "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
   "smart-encoding",
   "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
@@ -767,13 +813,13 @@ const KNOWN_FLAGS = new Set<string>([
   "transcription-model", "ttl", "tx", "type", "url", "usecase", "user", "verification-id",
   "url-shortener-settings", "v1-secret", "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
   "webhook", "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
-  "whitelisted-destination", "whitelisted-destinations",
+  "whitelisted-destination", "whitelisted-destinations", "whispering",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an
 // unknown-flag warning would produce false positives. These forward flags
 // through to the Go CLI or maintain their own extensible flag lists.
-const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "ai-chat"]);
+const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "conference-control", "ai-chat"]);
 
 // Detect a help request in FLAG position only. A help token counts when it is
 // the command itself (`help`, `--help`, `-h`) or a standalone flag on a
