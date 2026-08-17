@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-export const TELNYX_CLI_VERSION = "0.24.0";
+export const TELNYX_CLI_VERSION = "0.27.0";
 
 export interface TelnyxCliRelease {
   archiveName: string;

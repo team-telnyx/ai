@@ -127,6 +127,44 @@ function getTelnyxBinary(minimumVersion?: string): Promise<string> {
 }
 
 /**
+ * Resolve the WhatsApp message subcommand exposed by the locally selected Go
+ * CLI. Legacy releases such as v0.21 used `messages send-whatsapp`; v0.27 uses
+ * `messages whatsapp` (v0.24 did not expose either spelling).
+ *
+ * Command help is authoritative because it describes the binary we are about
+ * to execute (including custom/dev builds). If help is unavailable or does not
+ * enumerate either command, fall back to the local binary's semantic version.
+ * The final fallback preserves the command bundled with this package.
+ */
+export async function resolveMessagesWhatsappSubcommand(): Promise<"send-whatsapp" | "whatsapp"> {
+  const binary = await getTelnyxBinary();
+
+  try {
+    const { stdout, stderr } = await execFileAsync(binary, ["messages", "--help"], { timeout: 10000 });
+    const help = `${stdout ?? ""}\n${stderr ?? ""}`;
+    if (/^\s*whatsapp(?:\s|$)/m.test(help)) return "whatsapp";
+    if (/^\s*send-whatsapp(?:\s|$)/m.test(help)) return "send-whatsapp";
+  } catch {
+    // Some older/custom builds do not provide parent-command help. Version
+    // detection below remains a side-effect-free compatibility probe.
+  }
+
+  try {
+    const { stdout, stderr } = await execFileAsync(binary, ["--version"], { timeout: 10000 });
+    const version = parseTelnyxGoCliVersion(`${stdout ?? ""}${stderr ?? ""}`);
+    if (version && (compareSemanticVersions(version, "0.27.0") ?? -1) >= 0) return "whatsapp";
+  } catch (err: any) {
+    // A few releases print their version to stderr and exit non-zero.
+    const version = parseTelnyxGoCliVersion(`${err?.stdout ?? ""}${err?.stderr ?? ""}`);
+    if (version && (compareSemanticVersions(version, "0.27.0") ?? -1) >= 0) return "whatsapp";
+  }
+
+  // The package bundles v0.27, so prefer its spelling if an unusual binary
+  // exposes neither usable help nor a parseable version.
+  return "whatsapp";
+}
+
+/**
  * Find the start of JSON in CLI output that may have info messages before it.
  * Looks for the first `{` or `[` that starts valid JSON.
  *

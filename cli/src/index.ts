@@ -147,9 +147,9 @@ Commands:
   tts               Generate speech from text (text-to-speech)
   tts-voices        List available TTS voices (optionally filter by provider)
   setup-whatsapp    Zero to WhatsApp: list WABA, buy number, verify, set profile
-  whatsapp-send     Send a WhatsApp message (text or template)
+  whatsapp-send     Send a WhatsApp message (text, template, media, or rich payload)
   whatsapp-templates List or create WhatsApp message templates
-  send-sms          Send an SMS or MMS message (--media-url sends MMS)
+  send-sms          Send SMS/MMS from a number, alphanumeric sender, or number pool
   list-messaging-profiles List messaging profiles with name filters and pagination
   create-messaging-profile Create a messaging profile
   get-messaging-profile Get a messaging profile by ID
@@ -295,12 +295,15 @@ TTS-voices Flags:
   --provider        Filter voices by provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (optional)
   --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., resemble)
 SMS Action Flags:
-  --from <e164>          Sender number, E.164 (send-sms, send-group-mms, schedule-sms — required)
+  --from <sender>        E.164 number or alphanumeric sender ID (send-sms); omit with
+                         --messaging-profile-id to send from its number pool
+  --from <e164>          Sender number (send-group-mms and schedule-sms — required)
   --to <e164>            Recipient number, E.164 (send-sms, schedule-sms — required)
   --to <e164,...>        Comma-separated recipients, E.164 (send-group-mms — required)
   --text <msg>           Message text (send-sms, schedule-sms — required; send-group-mms — optional)
   --media-url <url>      Media URL; sends MMS instead of SMS (send-sms, schedule-sms, send-group-mms)
-  --messaging-profile-id <id> Messaging profile to use (send-sms, schedule-sms; not supported by group MMS)
+  --messaging-profile-id <id> Required for number-pool and alphanumeric sends; optional
+                              for E.164 send-sms (not supported by group MMS)
   --webhook-url <url>    Webhook for delivery status updates (send-sms)
   --subject <text>       MMS subject line (send-sms)
   --send-at <iso8601>    Send time, ISO 8601 (schedule-sms — required, e.g., 2024-12-31T00:00:00Z)
@@ -373,7 +376,18 @@ WhatsApp Flags:
   --text            Text message body (whatsapp-send)
   --template-name   Template name to send (whatsapp-send)
   --template-language Template language code, default en_US (whatsapp-send)
+  --audio <json>    Audio object, e.g. {"link":"https://..."} (whatsapp-send)
+  --document <json> Document object (whatsapp-send)
+  --image <json>    Image object (whatsapp-send)
+  --interactive <json> Interactive message object (whatsapp-send)
+  --location <json> Location object (whatsapp-send)
+  --reaction <json> Reaction object (whatsapp-send)
+  --sticker <json>  Sticker object (whatsapp-send)
+  --contacts <json> JSON array of contact objects (whatsapp-send)
+  --video <json>    Video object (whatsapp-send)
+  --biz-opaque-callback-data <text> Custom data returned with status updates
   --messaging-profile-id Messaging profile id (whatsapp-send)
+  --webhook-url     Message status webhook URL (whatsapp-send)
   --create          Switch to create mode (whatsapp-templates)
   --name            Template name (whatsapp-templates, create)
   --language        Template language, default en_US (whatsapp-templates, create)
@@ -628,9 +642,12 @@ Examples:
   telnyx-agent setup-whatsapp --waba-id <id> --display-name "My Biz" --code 123456
   telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --text "Hello!"
   telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --template-name order_ready
+  telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --image '{"link":"https://example.com/photo.jpg","caption":"Hello"}'
   telnyx-agent whatsapp-templates --waba-id <id> --json
   telnyx-agent whatsapp-templates --waba-id <id> --create --name promo --category MARKETING --component '[]'
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello!"
+  telnyx-agent send-sms --messaging-profile-id <id> --to +131****0001 --text "From the pool"
+  telnyx-agent send-sms --from MyCompany --messaging-profile-id <id> --to +131****0001 --text "Hello!"
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "See this" --media-url https://example.com/img.png --subject "Photo"
   telnyx-agent list-messaging-profiles --name-contains production --json
   telnyx-agent create-messaging-profile --name "Production SMS" --whitelisted-destinations US,CA --webhook-url https://example.com/messages --json
@@ -821,51 +838,56 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
-  "about", "action", "active", "actor", "administrative-area", "agent-id", "agent-message", "ai-assistant-id", "alpha-sender", "amount",
-  "answering-machine-detection", "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio-url",
-  "authorized-person", "beep-enabled", "billing-group-id", "billing-phone", "black-threshold", "body", "brand-id",
-  "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "comfort-noise", "conference-id",
-  "call-control-id-to-bridge-with", "campaign-id", "cancel", "carrier-name", "category", "cause",
-  "channels", "clear-tags", "clear-tool-ids", "client-state", "code", "command-id", "company-name",
-  "component", "confirm", "connection-id", "connection-name", "contains", "content-type",
-  "context", "conversation-id", "country", "country-code", "create", "custom-code",
-  "customer-group-reference", "customer-name", "customer-reference", "deepfake-detection", "depth",
-  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name", "duration-minutes",
-  "description", "destinations", "digits", "dimensions", "disable-cache", "display-name", "exclude",
-  "daily-spend-limit", "daily-spend-limit-enabled", "document-id", "document-type", "dtmf-detection", "dynamic-variables",
+  "about", "action", "action-type", "active", "actor", "administrative-area", "agent-id",
+  "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
+  "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "audio", "audio-url",
+  "authorized-person", "beep-enabled", "billing-group-id", "billing-phone",
+  "biz-opaque-callback-data", "black-threshold", "body", "brand-id", "brand-name",
+  "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2",
+  "call-control-id-to-bridge", "call-control-id-to-bridge-with", "campaign-id", "cancel",
+  "carrier-name", "category", "cause", "channels", "clear-tags", "clear-tool-ids", "client-state",
+  "code", "comfort-noise", "command-id", "company-name", "component", "conference-id", "confirm",
+  "connection-id", "connection-name", "contacts", "contains", "content-type", "context",
+  "conversation-id", "country", "country-code", "create", "custom-code",
+  "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
+  "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "destinations",
+  "digits", "dimensions", "disable-cache", "display-name", "document", "document-id",
+  "document-type", "dtmf-detection", "duration-minutes", "dynamic-variables",
   "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
-  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "extension",
-  "fallback-config", "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
-  "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
-  "fork-tx", "format", "fqdn", "from", "from-dir", "from-display-name", "greeting",
-  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "iccid", "id", "include-phone-numbers",
-  "guided-choice", "guided-json", "health-webhook-url", "help", "help-message", "iccid", "id", "include-participants", "include-phone-numbers",
-  "include-sim-card-group", "input", "instructions", "invoice-document-id", "json", "language",
-  "limit", "loa-document-id", "locality", "max-items", "max-participants", "max-retries", "max-tokens", "mcp-server", "media-encryption",
-  "media-name", "media-url", "message", "message-flow", "messaging-profile-id", "metadata", "method", "model",
-  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "monochrome", "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id", "number-pool-settings",
-  "new-billing-phone-number", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
+  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "exclude",
+  "extension", "fallback-config", "fast-port-eligible", "features", "file-url", "filter",
+  "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-datetime-requested", "force",
+  "fork-rx", "fork-stream-type", "fork-tx", "format", "fqdn", "from", "from-dir",
+  "from-display-name", "greeting", "guided-choice", "guided-json", "health-webhook-url", "help",
+  "help-message", "hold-audio-url", "hold-media-name", "iccid", "id", "image",
+  "include-participants", "include-phone-numbers", "include-sim-card-group", "input",
+  "instructions", "interactive", "invoice-document-id", "json", "language", "limit",
+  "loa-document-id", "locality", "location", "max-items", "max-participants", "max-retries",
+  "max-tokens", "mcp-server", "media-encryption", "media-name", "media-url", "message",
+  "message-flow", "messaging-profile-id", "metadata", "method", "mms-fall-back-to-sms",
+  "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn", "muted", "name",
+  "name-contains", "national-destination-code", "network-id", "new-billing-phone-number",
+  "number-pool-settings", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
   "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
-  "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant", "participants",
-  "payload", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
-  "preview-format", "privacy", "profile-name", "promote-to-main", "provider", "quality",
-  "queue-name", "record", "recording-id", "region", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
-  "role", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
-  "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "sole-prop", "sort", "source",
-  "start-conference-on-create", "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
-  "queue-name", "record", "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format", "retry-on-timeout",
-  "role", "room-id", "room-participant-id", "room-session-id", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
-  "service-tier", "service-type", "sim-card-group-id", "sip-address", "sole-prop", "sort", "source",
-  "start-message", "starts-with", "status", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "system",
-  "stream", "stream-type", "subject", "submit", "t38-enabled", "tag", "tags", "temperature", "thinking", "timeout",
-  "smart-encoding",
-  "template-language", "template-name", "text", "text-type", "time-limit-secs", "timeout-secs",
-  "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p", "transcription", "transcription-language",
-  "transcription-model", "ttl", "tx", "type", "url", "usecase", "user", "verification-id",
-  "url-shortener-settings", "v1-secret", "verify-profile-id", "version", "version-name", "vertical", "voice", "waba-id", "wallet-key",
-  "webhook", "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method", "webhook-urls", "website", "whatsapp-message",
-  "whitelisted-destination", "whitelisted-destinations", "whispering",
+  "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
+  "participants", "payload", "phone", "phone-number", "phone-number-id", "phone-numbers",
+  "port-type", "preview-format", "privacy", "profile-name", "promote-to-main", "provider",
+  "quality", "queue-name", "reaction", "record", "recording-id", "region",
+  "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format",
+  "retry-on-timeout", "role", "room-id", "room-participant-id", "room-session-id", "rx",
+  "sample-message", "sample-message-2", "sample1", "sample2", "send-at", "service-tier",
+  "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "smart-encoding", "sole-prop",
+  "sort", "source", "start-conference-on-create", "start-message", "starts-with", "status",
+  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
+  "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "temperature",
+  "template-language", "template-name", "text", "text-type", "thinking", "time-limit-secs",
+  "timeout", "timeout-secs", "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p",
+  "transcription", "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
+  "url-shortener-settings", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id",
+  "version", "version-name", "vertical", "video", "voice", "waba-id", "wallet-key", "webhook",
+  "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
+  "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
+  "whitelisted-destinations",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an

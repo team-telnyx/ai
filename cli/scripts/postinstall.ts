@@ -14,7 +14,7 @@ import {
   vendoredTelnyxCliPath,
 } from "../src/platform-release.ts";
 
-const VERSION = TELNYX_CLI_VERSION; // Includes Anthropic Messages and calls dial --retry-on-timeout
+const VERSION = TELNYX_CLI_VERSION; // Includes messages whatsapp and the advanced messaging sender actions
 
 async function main() {
   const binDir = join(import.meta.dirname || __dirname, "..", "vendor");

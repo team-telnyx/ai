@@ -12,7 +12,7 @@ interface Capability {
 
 const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
-    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles", actions: ["send_sms", "send_mms", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "delete_messaging_profile"] },
+    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "delete_messaging_profile"] },
   ],
   "💬 RCS": [
     { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
@@ -78,13 +78,13 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
   ],
   "💬 WhatsApp": [
-    { name: "WhatsApp Business", description: "Send WhatsApp messages, manage business accounts, phone numbers, and templates", actions: ["setup_whatsapp", "send_whatsapp_message", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile"] },
+    { name: "WhatsApp Business", description: "Send text, template, media, interactive, location, reaction, sticker, contact, and video WhatsApp messages; manage business accounts, phone numbers, and templates", actions: ["setup_whatsapp", "send_whatsapp_message", "send_whatsapp_audio", "send_whatsapp_document", "send_whatsapp_image", "send_whatsapp_interactive", "send_whatsapp_location", "send_whatsapp_reaction", "send_whatsapp_sticker", "send_whatsapp_contacts", "send_whatsapp_video", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile"] },
   ],
 };
 
 const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-sms", description: "Zero to SMS: creates messaging profile, buys number, assigns it" },
-  { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS)" },
+  { name: "telnyx-agent send-sms", description: "Send SMS/MMS from an E.164 number, alphanumeric sender, or messaging-profile number pool" },
   { name: "telnyx-agent list-messaging-profiles", description: "List messaging profiles with name filters and pagination" },
   { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination controls" },
   { name: "telnyx-agent get-messaging-profile", description: "Retrieve one messaging profile by ID" },
@@ -136,6 +136,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
+  { name: "telnyx-agent whatsapp-send", description: "Send text, template, media, interactive, location, reaction, stickers, contacts, or video over WhatsApp" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts an audio URL and returns the transcript with optional language, model, and keyword biasing" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts a hosted audio file URL and returns the transcript with optional model and language selection" },
   { name: "telnyx-agent stt-providers", description: "List available speech-to-text providers, optionally filtered by provider name or service type" },

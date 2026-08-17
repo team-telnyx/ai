@@ -161,7 +161,7 @@ Output: `{ waba_id, phone_number, verified, profile_configured, ready }`
 
 ### `telnyx-agent whatsapp-send`
 
-**Send a WhatsApp message (text or template).**
+**Send a WhatsApp text, template, media, interactive, location, reaction, sticker, contacts, or video message.**
 
 Constructs the WhatsApp message JSON from simple flags and sends via the Telnyx API.
 
@@ -169,6 +169,10 @@ Constructs the WhatsApp message JSON from simple flags and sends via the Telnyx 
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hello!"
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --template-name order_ready
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hi" --messaging-profile-id msgprof_123
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 \
+  --image '{"link":"https://example.com/photo.jpg","caption":"Hello"}'
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 \
+  --location '{"latitude":41.8781,"longitude":-87.6298,"name":"Chicago"}'
 ```
 
 **Flags:**
@@ -178,9 +182,37 @@ telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hi" --m
 - `--text` — Text message body
 - `--template-name` — Template name to send
 - `--template-language` — Template language code (default: en_US)
+- `--audio`, `--document`, `--image`, `--interactive`, `--location`, `--reaction`, `--sticker`, `--video` — The selected WhatsApp payload object as JSON (mutually exclusive)
+- `--contacts` — A non-empty JSON array of WhatsApp contact objects
+- `--biz-opaque-callback-data` — Custom data returned in message status updates
 - `--messaging-profile-id` — Messaging profile ID (required if `--from` is not SMS-enabled)
+- `--webhook-url` — Message status webhook URL
+
+The wrapper inspects the local Go CLI's `messages --help` output before sending,
+so it supports both the legacy `messages send-whatsapp` spelling and v0.27's
+`messages whatsapp`. If command help is unavailable, its local semantic version
+is used as the fallback. No API request is used for compatibility detection.
 
 Output: `{ from, to, message_type, message_id, status }`
+
+### Advanced `send-sms` sender modes
+
+`send-sms` infers the correct generated Go CLI action from its sender inputs:
+
+```bash
+# E.164 sender (`messages send`)
+telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello"
+
+# Messaging-profile number pool (`messages send-number-pool`); no --from
+telnyx-agent send-sms --messaging-profile-id msgprof_123 --to +131****0001 --text "Hello"
+
+# Alphanumeric sender (`messages send-with-alphanumeric-sender`)
+telnyx-agent send-sms --from MyCompany --messaging-profile-id msgprof_123 \
+  --to +131****0001 --text "Hello"
+```
+
+Number-pool and E.164 modes also support MMS via `--media-url`. Alphanumeric
+sender IDs are SMS-only and require both `--text` and `--messaging-profile-id`.
 
 ### `telnyx-agent whatsapp-templates`
 

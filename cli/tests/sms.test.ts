@@ -40,6 +40,10 @@ function flags(f) { const out = []; for (let i = 0; i < command.length; i++) { i
 // recipient in data.to[].status — there is NO top-level status field.
 if (command[0] === "messages" && command[1] === "send") {
   console.log(JSON.stringify({ data: { id: "msg-123", record_type: "message", type: flag("--type"), from: { phone_number: flag("--from"), carrier: "", line_type: "" }, to: [{ phone_number: flag("--to"), status: "queued", carrier: "", line_type: "" }] } }));
+} else if (command[0] === "messages" && command[1] === "send-number-pool") {
+  console.log(JSON.stringify({ data: { id: "pool-123", record_type: "message", type: flag("--type"), from: { phone_number: "+131****0099" }, to: [{ phone_number: flag("--to"), status: "queued" }] } }));
+} else if (command[0] === "messages" && command[1] === "send-with-alphanumeric-sender") {
+  console.log(JSON.stringify({ data: { id: "alpha-123", record_type: "message", type: "SMS", from: { alphanumeric_sender_id: flag("--from") }, to: [{ phone_number: flag("--to"), status: "queued" }] } }));
 } else if (command[0] === "messages" && command[1] === "send-group-mms") {
   const recipients = flags("--to").map((p) => ({ phone_number: p, status: "queued", carrier: "", line_type: "" }));
   console.log(JSON.stringify({ data: { id: "grp-789", record_type: "message", type: "MMS", from: { phone_number: flag("--from") }, to: recipients } }));
@@ -258,6 +262,85 @@ describe("SMS action commands", () => {
     assertFlagValue(sendCall, "--messaging-profile-id", "prof-1");
     assertFlagValue(sendCall, "--webhook-url", "https://example.com/wh");
     assertFlagValue(sendCall, "--subject", "Sub");
+  });
+
+  it("send-sms without --from sends from a number pool with exact generated CLI argv", () => {
+    const fake = setupFakeTelnyx();
+    const out = runAgent([
+      "send-sms",
+      "--messaging-profile-id", "prof-pool",
+      "--to", "+131****0001",
+      "--text", "Pool hello",
+      "--json",
+    ], fake.env);
+
+    const data = JSON.parse(out);
+    assert.equal(data.message_id, "pool-123");
+    assert.equal(data.sender_mode, "number-pool");
+    assert.equal(data.from, "+131****0099");
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "messages", "send-number-pool",
+      "--messaging-profile-id", "prof-pool",
+      "--to", "+131****0001",
+      "--type", "SMS",
+      "--text", "Pool hello",
+      "--format", "json",
+    ]]);
+    assert.equal(
+      readFileSync(fake.logPath, "utf8"),
+      JSON.stringify(readLoggedArgs(fake.logPath)[0]) + "\n",
+      "the argv mock log must contain exactly one newline-terminated call",
+    );
+  });
+
+  it("send-sms routes an alphanumeric --from through the dedicated generated action", () => {
+    const fake = setupFakeTelnyx();
+    const out = runAgent([
+      "send-sms",
+      "--from", "MyCompany",
+      "--messaging-profile-id", "prof-alpha",
+      "--to", "+131****0001",
+      "--text", "Alpha hello",
+      "--webhook-url", "https://example.com/status",
+      "--json",
+    ], fake.env);
+
+    const data = JSON.parse(out);
+    assert.equal(data.message_id, "alpha-123");
+    assert.equal(data.sender_mode, "alphanumeric");
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "messages", "send-with-alphanumeric-sender",
+      "--from", "MyCompany",
+      "--messaging-profile-id", "prof-alpha",
+      "--text", "Alpha hello",
+      "--to", "+131****0001",
+      "--webhook-url", "https://example.com/status",
+      "--format", "json",
+    ]]);
+  });
+
+  it("send-sms requires a messaging profile for pooled and alphanumeric sends", () => {
+    const fake = setupFakeTelnyx();
+    runAgentExpectingFailure(
+      ["send-sms", "--to", "+131****0001", "--text", "pool", "--json"],
+      fake.env,
+      /--messaging-profile-id is required when sending from a number pool/,
+    );
+    runAgentExpectingFailure(
+      ["send-sms", "--from", "MyCompany", "--to", "+131****0001", "--text", "alpha", "--json"],
+      fake.env,
+      /--messaging-profile-id is required for an alphanumeric/,
+    );
+    assert.deepEqual(readLoggedArgs(fake.logPath), []);
+  });
+
+  it("send-sms rejects MMS for an alphanumeric sender", () => {
+    const fake = setupFakeTelnyx();
+    runAgentExpectingFailure([
+      "send-sms", "--from", "MyCompany", "--messaging-profile-id", "prof-alpha",
+      "--to", "+131****0001", "--media-url", "https://example.com/photo.jpg", "--json",
+    ], fake.env, /support SMS text only/);
+    assert.deepEqual(readLoggedArgs(fake.logPath), []);
   });
 
   it("send-group-mms POSTs /v2/messages/group_mms with a JSON to[] array (AIF-335)", async () => {
@@ -502,5 +585,15 @@ describe("SMS action commands", () => {
     assert.match(out, /send-group-mms/);
     assert.match(out, /schedule-sms/);
     assert.match(out, /sms-status/);
+    assert.match(out, /number pool/);
+    assert.match(out, /alphanumeric sender ID/);
+  });
+
+  it("capabilities registers number-pool and alphanumeric SMS actions", () => {
+    const fake = setupFakeTelnyx();
+    const data = JSON.parse(runAgent(["capabilities", "--json"], fake.env));
+    const actions = data.api_capabilities["📱 Messaging"][0].actions;
+    assert.ok(actions.includes("send_sms_from_number_pool"));
+    assert.ok(actions.includes("send_sms_with_alphanumeric_sender"));
   });
 });

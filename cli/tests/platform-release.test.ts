@@ -10,12 +10,12 @@ import {
 
 describe("Telnyx CLI platform releases", () => {
   const cases = [
-    ["darwin", "x64", "telnyx_0.24.0_macos_amd64.zip", "telnyx"],
-    ["darwin", "arm64", "telnyx_0.24.0_macos_arm64.zip", "telnyx"],
-    ["linux", "x64", "telnyx_0.24.0_linux_amd64.tar.gz", "telnyx"],
-    ["linux", "arm64", "telnyx_0.24.0_linux_arm64.tar.gz", "telnyx"],
-    ["win32", "x64", "telnyx_0.24.0_windows_amd64.zip", "telnyx.exe"],
-    ["win32", "arm64", "telnyx_0.24.0_windows_arm64.zip", "telnyx.exe"],
+    ["darwin", "x64", "telnyx_0.27.0_macos_amd64.zip", "telnyx"],
+    ["darwin", "arm64", "telnyx_0.27.0_macos_arm64.zip", "telnyx"],
+    ["linux", "x64", "telnyx_0.27.0_linux_amd64.tar.gz", "telnyx"],
+    ["linux", "arm64", "telnyx_0.27.0_linux_arm64.tar.gz", "telnyx"],
+    ["win32", "x64", "telnyx_0.27.0_windows_amd64.zip", "telnyx.exe"],
+    ["win32", "arm64", "telnyx_0.27.0_windows_arm64.zip", "telnyx.exe"],
   ] as const;
 
   for (const [platform, arch, archiveName, executableName] of cases) {
@@ -24,7 +24,7 @@ describe("Telnyx CLI platform releases", () => {
       assert.deepEqual(release, { archiveName, executableName });
       assert.equal(
         telnyxCliReleaseUrl(release!),
-        `https://github.com/team-telnyx/telnyx-cli/releases/download/v0.24.0/${archiveName}`,
+        `https://github.com/team-telnyx/telnyx-cli/releases/download/v0.27.0/${archiveName}`,
       );
     });
   }

@@ -38,13 +38,13 @@ function runPostinstall(options: {
     mkdirSync(dirname(vendor), { recursive: true });
     executable(vendor, `echo "${options.vendorOutput}"\nexit ${options.vendorExitCode ?? 0}`);
   }
-  executable(join(root, "fake-bin", "telnyx"), `echo "${options.pathOutput ?? "telnyx version 0.24.0"}"`);
+  executable(join(root, "fake-bin", "telnyx"), `echo "${options.pathOutput ?? "telnyx version 0.27.0"}"`);
   executable(join(root, "fake-bin", "curl"), `printf '%s\\n' "$@" > "${join(root, "download-args")}"`);
   const installAfter = (flag: string) =>
     `printf '%s\\n' "$@" > "${join(root, "extract-args")}"; ` +
     `while [ "$#" -gt 0 ] && [ "$1" != "${flag}" ]; do shift; done; ` +
     `[ "$#" -ge 2 ] || exit 64; shift; mkdir -p "$1"; ` +
-    `printf '#!/bin/sh\\necho "telnyx version 0.24.0"\\n' > "$1/telnyx"`;
+    `printf '#!/bin/sh\\necho "telnyx version 0.27.0"\\n' > "$1/telnyx"`;
   executable(join(root, "fake-bin", "tar"), installAfter("-C"));
   executable(join(root, "fake-bin", "unzip"), installAfter("-d"));
   executable(join(root, "fake-bin", "rm"), "exit 0");
@@ -70,13 +70,13 @@ describe("postinstall vendor-first version decision", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.match(result.stdout, /Vendored telnyx CLI 0\.21\.0 found/);
-    assert.match(result.installedVersion, /0\.24\.0/);
+    assert.match(result.installedVersion, /0\.27\.0/);
   });
 
   it("keeps a current preferred vendor without downloading", () => {
     const result = runPostinstall({
-      vendorOutput: "telnyx version 0.24.0",
-      pathOutput: "telnyx version 0.25.0",
+      vendorOutput: "telnyx version 0.27.0",
+      pathOutput: "telnyx version 0.28.0",
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, false);
@@ -84,7 +84,7 @@ describe("postinstall vendor-first version decision", () => {
   });
 
   it("allows compatible PATH to suppress download only when vendor is absent", () => {
-    const result = runPostinstall({ pathOutput: "telnyx version 0.25.0" });
+    const result = runPostinstall({ pathOutput: "telnyx version 0.28.0" });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, false);
     assert.match(result.stdout, /already installed on PATH/);
@@ -92,17 +92,17 @@ describe("postinstall vendor-first version decision", () => {
 
   it("refreshes an unrelated preferred vendor even when PATH is compatible", () => {
     const result = runPostinstall({
-      vendorOutput: "@telnyx/api-cli/0.25.0 darwin-arm64",
-      pathOutput: "telnyx version 0.25.0",
+      vendorOutput: "@telnyx/api-cli/0.28.0 darwin-arm64",
+      pathOutput: "telnyx version 0.28.0",
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.match(result.stdout, /Vendored telnyx CLI has an unrecognized version/);
-    assert.match(result.installedVersion, /0\.24\.0/);
+    assert.match(result.installedVersion, /0\.27\.0/);
   });
 
   it("does not let an unrelated PATH candidate suppress download", () => {
-    const result = runPostinstall({ pathOutput: "unrelated-tool v0.25.0" });
+    const result = runPostinstall({ pathOutput: "unrelated-tool v0.28.0" });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.match(result.stdout, /telnyx CLI on PATH has an unrecognized version/);
@@ -117,7 +117,7 @@ describe("postinstall vendor-first version decision", () => {
 
   it("refreshes a preferred vendor whose version command fails", () => {
     const result = runPostinstall({
-      vendorOutput: "telnyx version 0.25.0",
+      vendorOutput: "telnyx version 0.28.0",
       vendorExitCode: 1,
     });
     assert.equal(result.status, 0, result.stderr);
@@ -134,9 +134,9 @@ describe("postinstall current-host release", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.ok(result.downloadArgs.trimEnd().endsWith(release.archiveName));
-    assert.ok(result.downloadArgs.includes(`releases/download/v0.24.0/${release.archiveName}`));
+    assert.ok(result.downloadArgs.includes(`releases/download/v0.27.0/${release.archiveName}`));
     assert.ok(result.extractArgs.includes(release.archiveName));
     assert.ok(result.extractArgs.split("\n").includes(release.executableName));
-    assert.match(result.installedVersion, /0\.24\.0/);
+    assert.match(result.installedVersion, /0\.27\.0/);
   });
 });

@@ -1,8 +1,9 @@
 /**
  * Tests for WhatsApp commands.
  *
- * whatsapp-send still shells out to the Go CLI (`messages send-whatsapp`), so
- * those tests use the fake `telnyx` binary and assert flag passing.
+ * whatsapp-send still shells out to the Go CLI, detecting the legacy
+ * `messages send-whatsapp` and v0.27 `messages whatsapp` spellings locally, so
+ * those tests use the fake `telnyx` binary and assert exact flag passing.
  *
  * whatsapp-templates and setup-whatsapp now call the Telnyx REST API directly
  * (AIF-326: the pinned Go CLI built a doubled `/v2/v2/whatsapp/...` path that
@@ -13,7 +14,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,7 +27,11 @@ const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
  * Create a fake `telnyx` binary that logs its args and returns canned JSON
  * based on the subcommand being called.
  */
-function setupFakeTelnyx(): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(
+  whatsappCommand: "send-whatsapp" | "whatsapp" = "send-whatsapp",
+  advertiseWhatsappInHelp = true,
+  reportedVersion?: string,
+): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-wa-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -39,10 +44,12 @@ function setupFakeTelnyx(): { fakeTelnyx: string; logPath: string; env: NodeJS.P
 const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
+const whatsappCommand = ${JSON.stringify(whatsappCommand)};
+const reportedVersion = ${JSON.stringify(reportedVersion)};
 
 const fmtIdx = args.indexOf("--format");
 const format = fmtIdx >= 0 ? args[fmtIdx + 1] : "json";
-const cmd = args.filter((a, i) => i !== fmtIdx && i !== fmtIdx + 1);
+const cmd = fmtIdx >= 0 ? args.filter((a, i) => i !== fmtIdx && i !== fmtIdx + 1) : args;
 
 // Emulate the real Go CLI list behavior: with --format json, list commands
 // route through ShowJSONIterator and print each item as a SEPARATE
@@ -56,8 +63,15 @@ function printList(items) {
   }
 }
 
+// Side-effect-free WhatsApp command discovery used by the wrapper.
+if (cmd[0] === "messages" && cmd[1] === "--help") {
+  ${advertiseWhatsappInHelp ? 'console.log("COMMANDS:\\n   " + whatsappCommand + "  Send a WhatsApp message");' : 'console.log("COMMANDS:\\n   send  Send a message");'}
+}
+else if (cmd[0] === "--version") {
+  console.log(reportedVersion ?? ("telnyx version " + (whatsappCommand === "whatsapp" ? "0.27.0" : "0.21.0")));
+}
 // WhatsApp Business Accounts — list
-if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
+else if (cmd[0] === "whatsapp:business-accounts" && cmd[1] === "list") {
   printList([{ id: "waba_test123", name: "Test WABA" }]);
 }
 // WhatsApp Business Account phone numbers — list
@@ -88,8 +102,8 @@ else if (cmd[0] === "whatsapp:templates" && cmd[1] === "list") {
 else if (cmd[0] === "whatsapp:templates" && cmd[1] === "create") {
   console.log(JSON.stringify({ data: { id: "tpl_new", name: cmd[cmd.indexOf("--name") + 1], status: "PENDING" } }));
 }
-// Messages send-whatsapp
-else if (cmd[0] === "messages" && cmd[1] === "send-whatsapp") {
+// Messages send-whatsapp (legacy) / whatsapp (v0.27)
+else if (cmd[0] === "messages" && cmd[1] === whatsappCommand) {
   // Mirror the real Telnyx envelope: per-recipient state lives in to[0].status
   // while the top-level status is a coarse "submitted". The wrapper must
   // surface the recipient status, not the top-level one.
@@ -134,6 +148,7 @@ else {
 }
 
 function readLoggedArgs(logPath: string): string[][] {
+  if (!existsSync(logPath)) return [];
   return readFileSync(logPath, "utf8")
     .trim()
     .split("\n")
@@ -293,6 +308,9 @@ describe("WhatsApp commands", () => {
     assert.ok(output.includes("whatsapp-templates"), "help must list whatsapp-templates");
     assert.ok(output.includes("--waba-id"), "help must document --waba-id flag");
     assert.ok(output.includes("--template-name"), "help must document --template-name flag");
+    assert.ok(output.includes("--interactive <json>"), "help must document rich interactive payloads");
+    assert.ok(output.includes("--sticker <json>"), "help must document sticker payloads");
+    assert.ok(output.includes("--contacts <json>"), "help must document contacts payloads");
   });
 
   it("capabilities includes WhatsApp category", () => {
@@ -304,6 +322,9 @@ describe("WhatsApp commands", () => {
       data.api_capabilities["💬 WhatsApp"][0].actions.includes("send_whatsapp_message"),
       "WhatsApp capabilities must include send_whatsapp_message action",
     );
+    assert.ok(data.api_capabilities["💬 WhatsApp"][0].actions.includes("send_whatsapp_interactive"));
+    assert.ok(data.api_capabilities["💬 WhatsApp"][0].actions.includes("send_whatsapp_sticker"));
+    assert.ok(data.api_capabilities["💬 WhatsApp"][0].actions.includes("send_whatsapp_contacts"));
   });
 
   it("whatsapp-send constructs correct text message JSON and passes to Go CLI", () => {
@@ -329,6 +350,77 @@ describe("WhatsApp commands", () => {
     const msgJson = JSON.parse(sendCall[msgIdx + 1]);
     assert.equal(msgJson.type, "text");
     assert.equal(msgJson.text.body, "Hello World!");
+
+    const exactSendArgs = [
+      "messages", "send-whatsapp",
+      "--from", data.from,
+      "--to", data.to,
+      "--whatsapp-message", '{"type":"text","text":{"body":"Hello World!"}}',
+      "--type", "WHATSAPP",
+      "--format", "json",
+    ];
+    assert.deepEqual(calls, [["messages", "--help"], exactSendArgs]);
+    assert.equal(
+      readFileSync(fake.logPath, "utf8"),
+      `${JSON.stringify(["messages", "--help"])}\n${JSON.stringify(exactSendArgs)}\n`,
+      "compatibility probe and send argv must be exact newline-terminated JSONL",
+    );
+  });
+
+  it("whatsapp-send uses the v0.27 messages whatsapp spelling advertised by local help", () => {
+    const fake = setupFakeTelnyx("whatsapp");
+    const output = runCli([
+      "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",
+      "--image", '{"link":"https://example.com/photo.jpg","caption":"Hi"}',
+      "--messaging-profile-id", "prof-wa",
+      "--webhook-url", "https://example.com/status",
+      "--json",
+    ], fake.env);
+
+    assert.equal(JSON.parse(output).message_type, "image");
+    assert.deepEqual(readLoggedArgs(fake.logPath), [
+      ["messages", "--help"],
+      [
+        "messages", "whatsapp",
+        "--from", "+155****4567",
+        "--to", "+155****6543",
+        "--whatsapp-message", '{"type":"image","image":{"link":"https://example.com/photo.jpg","caption":"Hi"}}',
+        "--type", "WHATSAPP",
+        "--messaging-profile-id", "prof-wa",
+        "--webhook-url", "https://example.com/status",
+        "--format", "json",
+      ],
+    ]);
+  });
+
+  it("whatsapp-send falls back to local semantic version when help lacks both spellings", () => {
+    const fake = setupFakeTelnyx("whatsapp", false);
+    runCli([
+      "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",
+      "--text", "Version fallback", "--json",
+    ], fake.env);
+
+    const calls = readLoggedArgs(fake.logPath);
+    assert.deepEqual(calls.map((args) => args.slice(0, 2)), [
+      ["messages", "--help"],
+      ["--version"],
+      ["messages", "whatsapp"],
+    ]);
+  });
+
+  it("whatsapp-send defaults to the bundled v0.27 spelling when compatibility probes are inconclusive", () => {
+    const fake = setupFakeTelnyx("whatsapp", false, "custom telnyx build");
+    runCli([
+      "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",
+      "--text", "Bundled fallback", "--json",
+    ], fake.env);
+
+    const calls = readLoggedArgs(fake.logPath);
+    assert.deepEqual(calls.map((args) => args.slice(0, 2)), [
+      ["messages", "--help"],
+      ["--version"],
+      ["messages", "whatsapp"],
+    ]);
   });
 
   it("whatsapp-send constructs correct template message JSON", () => {
@@ -347,6 +439,53 @@ describe("WhatsApp commands", () => {
     assert.equal(msgJson.type, "template");
     assert.equal(msgJson.template.name, "order_ready");
     assert.equal(msgJson.template.language.code, "es_ES");
+  });
+
+  it("whatsapp-send constructs every supported rich WhatsApp payload", () => {
+    const cases: Array<{ type: string; value: string; expected: unknown }> = [
+      { type: "audio", value: '{"link":"https://example.com/a.mp3"}', expected: { link: "https://example.com/a.mp3" } },
+      { type: "document", value: '{"link":"https://example.com/a.pdf","filename":"a.pdf"}', expected: { link: "https://example.com/a.pdf", filename: "a.pdf" } },
+      { type: "image", value: '{"id":"media-image"}', expected: { id: "media-image" } },
+      { type: "interactive", value: '{"type":"button","body":{"text":"Choose"},"action":{"buttons":[]}}', expected: { type: "button", body: { text: "Choose" }, action: { buttons: [] } } },
+      { type: "location", value: '{"latitude":41.8,"longitude":-87.6,"name":"Chicago"}', expected: { latitude: 41.8, longitude: -87.6, name: "Chicago" } },
+      { type: "reaction", value: '{"message_id":"wamid.123","emoji":"👍"}', expected: { message_id: "wamid.123", emoji: "👍" } },
+      { type: "sticker", value: '{"id":"media-sticker"}', expected: { id: "media-sticker" } },
+      { type: "contacts", value: '[{"name":{"formatted_name":"Ada Lovelace"},"phones":[{"phone":"+155****6543"}]}]', expected: [{ name: { formatted_name: "Ada Lovelace" }, phones: [{ phone: "+155****6543" }] }] },
+      { type: "video", value: '{"link":"https://example.com/v.mp4","caption":"Watch"}', expected: { link: "https://example.com/v.mp4", caption: "Watch" } },
+    ];
+
+    for (const testCase of cases) {
+      const fake = setupFakeTelnyx("whatsapp");
+      const output = runCli([
+        "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",
+        `--${testCase.type}`, testCase.value,
+        "--biz-opaque-callback-data", "correlation-123",
+        "--json",
+      ], fake.env);
+      assert.equal(JSON.parse(output).message_type, testCase.type);
+
+      const sendCall = readLoggedArgs(fake.logPath)[1];
+      const payload = JSON.parse(sendCall[sendCall.indexOf("--whatsapp-message") + 1]);
+      assert.equal(payload.type, testCase.type);
+      assert.deepEqual(payload[testCase.type], testCase.expected);
+      assert.equal(payload.biz_opaque_callback_data, "correlation-123");
+      assert.equal(sendCall[sendCall.indexOf("--type") + 1], "WHATSAPP");
+    }
+  });
+
+  it("whatsapp-send rejects malformed, empty contacts, and competing payload flags", () => {
+    const fake = setupFakeTelnyx();
+    for (const args of [
+      ["--image", "not-json"],
+      ["--contacts", "[]"],
+      ["--text", "Hi", "--location", '{"latitude":1,"longitude":2}'],
+    ]) {
+      assert.throws(() => runCli([
+        "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",
+        ...args, "--json",
+      ], fake.env));
+    }
+    assert.deepEqual(readLoggedArgs(fake.logPath), [], "invalid payloads must fail before probing or sending");
   });
 
   it("whatsapp-send fails without --text or --template-name", () => {
