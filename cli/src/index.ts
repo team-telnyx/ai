@@ -13,6 +13,7 @@ import { verifyCheckCommand } from "./commands/verify-check.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
 import {
+  activatePortingOrderCommand,
   attachPortingDocumentCommand,
   cancelPortingOrderCommand,
   getPortingOrderCommand,
@@ -170,6 +171,7 @@ Commands:
   update-porting-order Update porting order details and number configuration
   submit-porting-order Confirm and submit a draft porting order
   cancel-porting-order Cancel a porting order (requires --confirm)
+  activate-porting-order Activate all numbers in a US FastPort order asynchronously
   attach-porting-document Attach an existing Telnyx document to a porting order
   list-porting-documents List documents attached to a porting order
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
@@ -315,7 +317,7 @@ Verify Flags:
   --submit          Submit the newly created porting order immediately (setup-porting)
 
 Porting Order Action Flags:
-  --id <id>         Porting order ID (get, update, submit, cancel, attach/list documents — required)
+  --id <id>         Porting order ID (get, update, submit, cancel, activate, attach/list documents — required)
   --customer-reference Customer bookkeeping reference (list, update)
   --customer-group-reference Customer group reference (list, update)
   --parent-support-key Parent support key filter (list-porting-orders)
@@ -810,6 +812,7 @@ Examples:
   telnyx-agent update-porting-order --id <porting-order-id> --connection-id <connection-id> --enable-messaging true --json
   telnyx-agent submit-porting-order --id <porting-order-id> --json
   telnyx-agent cancel-porting-order --id <porting-order-id> --confirm --json
+  telnyx-agent activate-porting-order --id <porting-order-id> --json
   telnyx-agent attach-porting-document --id <porting-order-id> --document-id <document-id> --document-type loa --json
   telnyx-agent list-porting-documents --id <porting-order-id> --document-type loa,invoice --json
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
@@ -984,6 +987,7 @@ const COMMANDS: Record<string, (
   "update-porting-order": updatePortingOrderCommand,
   "submit-porting-order": submitPortingOrderCommand,
   "cancel-porting-order": cancelPortingOrderCommand,
+  "activate-porting-order": activatePortingOrderCommand,
   "attach-porting-document": attachPortingDocumentCommand,
   "list-porting-documents": listPortingDocumentsCommand,
   "edge-doctor": edgeDoctorCommand,

@@ -53,6 +53,10 @@ if (args[0] === "porting-orders" && args[1] === "list") {
     phone_numbers_count: 2,
     end_user: { admin: { pinPasscode: "update-pin-8274", name: "Updated Admin" } }
   } }));
+} else if (args[0] === "porting-orders:actions" && args[1] === "activate") {
+  console.log(JSON.stringify({ data: {
+    id: "activation-job-1", status: "in-process", activation_type: "on-demand"
+  } }));
 } else if (args[0] === "porting-orders:actions" && (args[1] === "confirm" || args[1] === "cancel")) {
   console.log(JSON.stringify({ data: {
     id: flag("--id"), status: args[1] === "confirm" ? "submitted" : { value: "cancel-pending" }
@@ -432,6 +436,23 @@ describe("Porting-order management commands", () => {
     assertFlag(args, "--id", "po-1");
   });
 
+  it("activates a US FastPort order through the generated asynchronous action", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["activate-porting-order", "--id", "po-fastport-1", "--json"], fake.env);
+
+    assert.deepEqual(JSON.parse(output), {
+      porting_order_id: "po-fastport-1",
+      action: "activate",
+      status: "in-process",
+      activation_job_id: "activation-job-1",
+      activation_job: { id: "activation-job-1", status: "in-process", activation_type: "on-demand" },
+    });
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["porting-orders:actions", "activate"]);
+    assertFlag(args, "--id", "po-fastport-1");
+    assertFlag(args, "--format", "json");
+  });
+
   it("attaches an existing Telnyx document using exact additional-document inner flags", () => {
     const fake = setupFakeTelnyx();
     const output = runAgent([
@@ -492,6 +513,7 @@ describe("Porting-order management commands", () => {
   it("validates IDs, updates, dates, pagination, booleans, and document types before invoking telnyx", () => {
     const invalidCommands = [
       ["get-porting-order", "--json"],
+      ["activate-porting-order", "--json"],
       ["update-porting-order", "--id", "po-1", "--json"],
       ["update-porting-order", "--id", "po-1", "--foc-datetime-requested", "tomorrow", "--json"],
       ["update-porting-order", "--id", "po-1", "--enable-messaging", "maybe", "--json"],
@@ -518,6 +540,7 @@ describe("Porting-order management commands", () => {
       "update-porting-order",
       "submit-porting-order",
       "cancel-porting-order",
+      "activate-porting-order",
       "attach-porting-document",
       "list-porting-documents",
     ];
@@ -536,6 +559,7 @@ describe("Porting-order management commands", () => {
       "update_porting_order",
       "submit_porting_order",
       "cancel_porting_order",
+      "activate_porting_order",
       "attach_porting_document",
       "list_porting_documents",
     ]) {

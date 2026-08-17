@@ -33,6 +33,14 @@ interface PortingActionResult extends PortingOrderResult {
   status: string;
 }
 
+interface ActivatePortingOrderResult {
+  porting_order_id: string;
+  action: "activate";
+  status: string;
+  activation_job_id: string;
+  activation_job: JsonRecord;
+}
+
 interface PortingDocumentListResult {
   porting_order_id: string;
   count: number;
@@ -179,6 +187,34 @@ export async function cancelPortingOrderCommand(flags: Flags): Promise<void> {
     fail("cancel-porting-order is destructive; pass --confirm to continue", jsonOutput);
   }
   await runPortingAction("cancel", "cancel", flags);
+}
+
+export async function activatePortingOrderCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const portingOrderId = requireId(flags, jsonOutput);
+  try {
+    const response = await telnyxCli(["porting-orders:actions", "activate", "--id", portingOrderId]);
+    const activationJob = responseDataRecord(response);
+    const result: ActivatePortingOrderResult = {
+      porting_order_id: portingOrderId,
+      action: "activate",
+      status: statusValue(activationJob.status) || "created",
+      activation_job_id: stringValue(activationJob.id),
+      activation_job: activationJob,
+    };
+    if (jsonOutput) {
+      outputJson(result);
+    } else {
+      printSuccess("Porting order activation requested!", {
+        "Porting Order ID": result.porting_order_id,
+        "Activation Job ID": result.activation_job_id || "(not returned)",
+        Action: result.action,
+        Status: result.status,
+      });
+    }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
 }
 
 export async function attachPortingDocumentCommand(flags: Flags): Promise<void> {

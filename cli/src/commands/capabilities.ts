@@ -88,7 +88,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "x402 Crypto Payments", description: "Fund account with USDC on Base blockchain via x402 protocol", actions: ["get_payment_quote", "submit_payment"] },
   ],
   "🔄 Porting": [
-    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
+    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "activate_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
     { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
   ],
   "💬 WhatsApp": [
@@ -161,6 +161,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent update-porting-order", description: "Update references, FOC settings, documents, messaging, and post-port number configuration" },
   { name: "telnyx-agent submit-porting-order", description: "Confirm and submit a draft porting order" },
   { name: "telnyx-agent cancel-porting-order", description: "Cancel a porting order after explicit --confirm acknowledgement" },
+  { name: "telnyx-agent activate-porting-order", description: "Activate all numbers in a US FastPort order asynchronously" },
   { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
   { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
