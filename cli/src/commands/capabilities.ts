@@ -32,6 +32,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Anthropic Messages", description: "Anthropic-compatible LLM inference (executable with telnyx-agent ai-anthropic-message)", actions: ["ai_anthropic_message"] },
     { name: "Embeddings", description: "Generate text embeddings (executable with telnyx-agent ai-embed)", actions: ["ai_embed"] },
     { name: "Assistants", description: "Create and manage AI voice assistants", actions: ["list_ai_assistants", "create_ai_assistant", "get_ai_assistant", "update_ai_assistant", "delete_ai_assistant"] },
+    { name: "AI Collections", description: "Retrieve and rank RAG document chunks from an AI collection", actions: ["search_ai_collection"] },
   ],
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
@@ -116,6 +117,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent get-ai-assistant", description: "Retrieve one AI assistant by ID" },
   { name: "telnyx-agent update-ai-assistant", description: "Update an AI assistant and create a new version" },
   { name: "telnyx-agent delete-ai-assistant", description: "Delete an AI assistant with explicit confirmation" },
+  { name: "telnyx-agent search-ai-collection", description: "Search ranked RAG document chunks in an AI collection, or omit --query to list its document catalog" },
   { name: "telnyx-agent setup-wireguard", description: "Zero to VPN: creates network, WireGuard interface, peer — outputs ready-to-use WG config" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },

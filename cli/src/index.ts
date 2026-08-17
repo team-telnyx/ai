@@ -79,6 +79,7 @@ import {
   listAiAssistantsCommand,
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
+import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
 import {
   disableSimCardCommand,
   enableSimCardCommand,
@@ -197,6 +198,7 @@ Commands:
   get-ai-assistant  Retrieve an AI assistant by ID
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
+  search-ai-collection Search or list RAG documents in an AI collection
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -587,6 +589,16 @@ AI Assistant Lifecycle Flags:
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
 
+AI Collection Retrieval Flags:
+  --collection-id <slug> Collection slug to search (required; --slug alias accepted)
+  --query <text>    Natural-language query; omit for a plain document catalog listing
+  --retrieval-type <type> Override retrieval strategy: vector, hybrid, or keyword
+  --top-k <n>       Maximum ranked candidates (defaults to the collection setting)
+  --page-number <n> Result page, starting at 1 (default: 1)
+  --page-size <n>   Results per page (default: 20)
+  --sources <csv>   Comma-separated source types to search, e.g. voice,message
+  --filter <json>   Pre-ranking field filters, e.g. {"record_id":{"eq":"rec_123"}}
+
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
   --iccid           Partial ICCID filter (list-sim-cards)
@@ -737,6 +749,7 @@ Examples:
   telnyx-agent get-ai-assistant --id <assistant-id> --json
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
   telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
+  telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -825,6 +838,7 @@ const COMMANDS: Record<string, (
   "get-ai-assistant": getAiAssistantCommand,
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
+  "search-ai-collection": searchAiCollectionCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -846,9 +860,9 @@ const KNOWN_FLAGS = new Set<string>([
   "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2",
   "call-control-id-to-bridge", "call-control-id-to-bridge-with", "campaign-id", "cancel",
   "carrier-name", "category", "cause", "channels", "clear-tags", "clear-tool-ids", "client-state",
-  "code", "comfort-noise", "command-id", "company-name", "component", "conference-id", "confirm",
-  "connection-id", "connection-name", "contacts", "contains", "content-type", "context",
-  "conversation-id", "country", "country-code", "create", "custom-code",
+  "code", "collection-id", "comfort-noise", "command-id", "company-name", "component",
+  "conference-id", "confirm", "connection-id", "connection-name", "contacts", "contains",
+  "content-type", "context", "conversation-id", "country", "country-code", "create", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "destinations",
   "digits", "dimensions", "disable-cache", "display-name", "document", "document-id",
@@ -872,22 +886,22 @@ const KNOWN_FLAGS = new Set<string>([
   "output-type", "page-number", "page-size", "parameters", "parent-support-key", "participant",
   "participants", "payload", "phone", "phone-number", "phone-number-id", "phone-numbers",
   "port-type", "preview-format", "privacy", "profile-name", "promote-to-main", "provider",
-  "quality", "queue-name", "reaction", "record", "recording-id", "region",
+  "quality", "query", "queue-name", "reaction", "record", "recording-id", "region",
   "remaining-numbers-action", "requirement-group-id", "resource-group-id", "response-format",
-  "retry-on-timeout", "role", "room-id", "room-participant-id", "room-session-id", "rx",
-  "sample-message", "sample-message-2", "sample1", "sample2", "send-at", "service-tier",
-  "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "smart-encoding", "sole-prop",
-  "sort", "source", "start-conference-on-create", "start-message", "starts-with", "status",
-  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
-  "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "temperature",
-  "template-language", "template-name", "text", "text-type", "thinking", "time-limit-secs",
-  "timeout", "timeout-secs", "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p",
-  "transcription", "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
-  "url-shortener-settings", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id",
-  "version", "version-name", "vertical", "video", "voice", "waba-id", "wallet-key", "webhook",
-  "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
-  "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
-  "whitelisted-destinations",
+  "retrieval-type", "retry-on-timeout", "role", "room-id", "room-participant-id",
+  "room-session-id", "rx", "sample-message", "sample-message-2", "sample1", "sample2", "send-at",
+  "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address", "slug",
+  "smart-encoding", "sole-prop", "sort", "source", "sources", "start-conference-on-create",
+  "start-message", "starts-with", "status", "sticker", "stop", "stop-message", "stop-sequence",
+  "store-media", "store-preview", "stream", "stream-type", "subject", "submit", "system",
+  "t38-enabled", "tag", "tags", "temperature", "template-language", "template-name", "text",
+  "text-type", "thinking", "time-limit-secs", "timeout", "timeout-secs", "to", "tool",
+  "tool-choice", "tool-ids", "top-k", "top-p", "transcription", "transcription-language",
+  "transcription-model", "ttl", "tx", "type", "url", "url-shortener-settings", "usecase", "user",
+  "v1-secret", "verification-id", "verify-profile-id", "version", "version-name", "vertical",
+  "video", "voice", "waba-id", "wallet-key", "webhook", "webhook-api-version",
+  "webhook-failover-url", "webhook-url", "webhook-url-method", "webhook-urls", "website",
+  "whatsapp-message", "whispering", "whitelisted-destination", "whitelisted-destinations",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an
