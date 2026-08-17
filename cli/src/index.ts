@@ -67,6 +67,20 @@ import {
   listConferenceParticipantsCommand,
   listConferencesCommand,
 } from "./commands/conferences.ts";
+import {
+  createMeetingArtifactCommand,
+  createMeetingSessionCommand,
+  endMeetingSessionCommand,
+  getMeetingArtifactCommand,
+  getMeetingRecordingsCommand,
+  getMeetingSessionCommand,
+  getMeetingTranscriptCommand,
+  listMeetingArtifactsCommand,
+  listMeetingSessionsCommand,
+  sendMeetingChatCommand,
+  speakInMeetingCommand,
+  stopMeetingSpeakingCommand,
+} from "./commands/meeting-sessions.ts";
 import { sttCommand } from "./commands/stt.ts";
 import { sttProvidersCommand } from "./commands/stt-providers.ts";
 import {
@@ -191,6 +205,18 @@ Commands:
   list-conferences  Discover active conferences with filters and pagination
   list-conference-participants List participants in a conference
   conference-control Control conference participants, media, DTMF, recording, or lifecycle
+  create-meeting-session Create a Meeting Bot session and join a meeting
+  list-meeting-sessions List Meeting Bot sessions, optionally filtered by status
+  get-meeting-session Retrieve one Meeting Bot session by ID
+  end-meeting-session End/cancel a Meeting Bot session (the record is retained)
+  send-meeting-chat Send a chat message from a Meeting Bot
+  speak-in-meeting Speak text through a Meeting Bot
+  stop-meeting-speaking Stop active Meeting Bot text-to-speech playback
+  get-meeting-transcript Retrieve transcript segments for a Meeting Bot session
+  get-meeting-recordings Retrieve recordings for a Meeting Bot session
+  create-meeting-artifact Request summary or action-items artifact generation
+  list-meeting-artifacts List artifacts generated for a Meeting Bot session
+  get-meeting-artifact Retrieve one Meeting Bot artifact
   list-voice-connections List voice connections with filters and pagination
   get-voice-connection Retrieve one voice connection by ID
   list-active-calls List active calls for a voice connection
@@ -537,6 +563,31 @@ Room Session Moderation Flags:
   --exclude <ids>   Comma-separated participant IDs to exclude (kick/mute/unmute)
   --page-number     Result page (list-room-sessions, list-room-participants)
   --page-size       Results per page (list-room-sessions, list-room-participants)
+
+Meeting Bot Flags (requires Telnyx Go CLI v0.27+):
+  --id <session-id> Meeting session ID (get/end/live/transcript/recording/artifact commands)
+  --meeting-session-id Alias for --id
+  --meeting-url     Meeting URL (create-meeting-session, required)
+  --bot-name        Meeting Bot display name (create)
+  --join-at         Future ISO-8601 join time (create)
+  --assistant / --avatar / --camera-image JSON configuration objects (create)
+  --metadata        JSON metadata object (create)
+  --idempotency-key Safe create retry key (create)
+  --speak-on-enter  Text to speak after joining (create)
+  --voice           Default session voice (create) or utterance override (speak)
+  --webhook-url     HTTPS lifecycle callback URL (create)
+  --barge-in <bool> Interrupt bot audio when a participant speaks (create)
+  --summarize-on-end <bool> Generate a summary when the session ends (create)
+  --text            Chat or speech text (send-meeting-chat, speak-in-meeting; required)
+  --interrupt <bool> Interrupt current audio before speaking (speak-in-meeting)
+  --after           Transcript sequence cursor (get-meeting-transcript)
+  --limit           Transcript page size, 1-1000 (get-meeting-transcript)
+  --wait-seconds    Transcript long-poll duration (get-meeting-transcript)
+  --type            summary|action_items (create-meeting-artifact, required)
+  --artifact-id     Artifact ID (get-meeting-artifact, required)
+
+  Ending uses upstream "meeting-sessions delete" semantics: participation stops but the
+  persisted session record remains. A hard-delete meeting-session route is not exposed upstream.
 STT Flags:
   --audio-url <url> URL of the audio file to transcribe (required)
   --model           Transcription model (default: distil-whisper/distil-large-v2; also openai/whisper-large-v3-turbo, deepgram/nova-3)
@@ -794,6 +845,17 @@ Examples:
   telnyx-agent conference-control --conference-id <conference-id> --action speak --payload "Welcome" --voice Telnyx.KokoroTTS.af
   telnyx-agent conference-control --conference-id <conference-id> --action record-start --format mp3
   telnyx-agent conference-control --conference-id <conference-id> --action end-conference
+  telnyx-agent create-meeting-session --meeting-url https://meet.example.com/room --bot-name "Notes Bot" --json
+  telnyx-agent list-meeting-sessions --status active --json
+  telnyx-agent get-meeting-session --id <meeting-session-id> --json
+  telnyx-agent send-meeting-chat --id <meeting-session-id> --text "Hello everyone"
+  telnyx-agent speak-in-meeting --id <meeting-session-id> --text "The meeting starts now" --interrupt
+  telnyx-agent get-meeting-transcript --id <meeting-session-id> --after 0 --limit 100 --json
+  telnyx-agent get-meeting-recordings --id <meeting-session-id> --json
+  telnyx-agent create-meeting-artifact --id <meeting-session-id> --type summary --json
+  telnyx-agent list-meeting-artifacts --id <meeting-session-id> --json
+  telnyx-agent get-meeting-artifact --id <meeting-session-id> --artifact-id <artifact-id> --json
+  telnyx-agent end-meeting-session --id <meeting-session-id> --json
   telnyx-agent list-voice-connections --connection-name support --page-size 25 --json
   telnyx-agent get-voice-connection --id <connection-id> --json
   telnyx-agent list-active-calls --connection-id <connection-id> --json
@@ -897,6 +959,18 @@ const COMMANDS: Record<string, (
   "list-conferences": listConferencesCommand,
   "list-conference-participants": listConferenceParticipantsCommand,
   "conference-control": conferenceControlCommand,
+  "create-meeting-session": createMeetingSessionCommand,
+  "list-meeting-sessions": listMeetingSessionsCommand,
+  "get-meeting-session": getMeetingSessionCommand,
+  "end-meeting-session": endMeetingSessionCommand,
+  "send-meeting-chat": sendMeetingChatCommand,
+  "speak-in-meeting": speakInMeetingCommand,
+  "stop-meeting-speaking": stopMeetingSpeakingCommand,
+  "get-meeting-transcript": getMeetingTranscriptCommand,
+  "get-meeting-recordings": getMeetingRecordingsCommand,
+  "create-meeting-artifact": createMeetingArtifactCommand,
+  "list-meeting-artifacts": listMeetingArtifactsCommand,
+  "get-meeting-artifact": getMeetingArtifactCommand,
   "list-voice-connections": listVoiceConnectionsCommand,
   "get-voice-connection": getVoiceConnectionCommand,
   "list-active-calls": listActiveCallsCommand,
@@ -941,60 +1015,61 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "active", "actor", "administrative-area", "agent-id",
+  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "agent-id",
   "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "assistant", "assistant-id", "attachment", "audio",
-  "audio-url", "authorized-person", "background", "bcc", "beep-enabled", "billing-group-id",
-  "billing-phone", "biz-opaque-callback-data", "black-threshold", "body", "brand-id", "brand-name",
-  "bulk-sim-card-action-id", "bundle-id", "call-control-id", "call-control-id-2",
-  "call-control-id-to-bridge", "call-control-id-to-bridge-with", "campaign-id", "cancel",
-  "carrier-name", "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids",
-  "client-state", "code", "collection-id", "comfort-noise", "command-id", "company-name",
-  "component", "conference-id", "confirm", "connection-id", "connection-name", "contacts",
-  "contains", "content-type", "context", "conversation-id", "count", "country", "country-code",
-  "crawl-timeout", "create", "custom-code", "customer-group-reference", "customer-name",
-  "customer-reference", "daily-spend-limit", "daily-spend-limit-enabled", "deepfake-detection",
-  "depth", "description", "destinations", "digits", "dimensions", "disable-cache", "display-name",
-  "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
-  "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
-  "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
-  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
-  "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
-  "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
-  "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
-  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "html",
-  "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
+  "api-key", "api-key-ref", "area-code", "artifact-id", "assistant", "assistant-id", "attachment",
+  "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc", "beep-enabled",
+  "billing-group-id", "billing-phone", "biz-opaque-callback-data", "black-threshold", "body",
+  "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id", "bundle-id", "call-control-id",
+  "call-control-id-2", "call-control-id-to-bridge", "call-control-id-to-bridge-with",
+  "camera-image", "campaign-id", "cancel", "carrier-name", "category", "cause", "cc", "channels",
+  "clear-tags", "clear-tool-ids", "client-state", "code", "collection-id", "comfort-noise",
+  "command-id", "company-name", "component", "conference-id", "confirm", "connection-id",
+  "connection-name", "contacts", "contains", "content-type", "context", "conversation-id", "count",
+  "country", "country-code", "crawl-timeout", "create", "custom-code", "customer-group-reference",
+  "customer-name", "customer-reference", "daily-spend-limit", "daily-spend-limit-enabled",
+  "deepfake-detection", "depth", "description", "destinations", "digits", "dimensions",
+  "disable-cache", "display-name", "document", "document-id", "document-type", "dtmf-detection",
+  "duration-minutes", "dynamic-variables", "dynamic-variables-webhook-timeout-ms",
+  "dynamic-variables-webhook-url", "email", "emergency-address-id", "enable-messaging", "enabled",
+  "encoding-format", "ends-with", "exclude", "exclude-domain", "extension", "fallback-config",
+  "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
+  "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
+  "fork-tx", "format", "forward-of-message-id", "fqdn", "freshness", "from", "from-dir",
+  "from-display-name", "from-name", "greeting", "group-id", "guided-choice", "guided-json",
+  "headers", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name",
+  "html", "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
-  "interactive", "invoice-document-id", "json", "language", "limit", "livecrawl",
-  "loa-document-id", "locality", "location", "max-age", "max-items", "max-participants",
-  "max-retries", "max-sources", "max-tokens", "mcp-server", "media-encryption", "media-name",
-  "media-url", "message", "message-flow", "message-id", "messaging-profile-id", "metadata",
-  "method", "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome",
-  "msisdn", "muted", "name", "name-contains", "national-destination-code", "network-id",
-  "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
-  "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
-  "parent-support-key", "participant", "participants", "payload", "phone", "phone-number",
-  "phone-number-id", "phone-numbers", "port-type", "preview-format", "privacy", "profile-name",
-  "promote-to-main", "provider", "quality", "query", "queue-name", "reaction", "record",
-  "recording-id", "region", "remaining-numbers-action", "reply-to", "reply-to-all",
-  "requirement-group-id", "research-effort", "resource-group-id", "response-format",
-  "retrieval-type", "retry-on-timeout", "role", "room-id", "room-participant-id",
-  "room-session-id", "rx", "safesearch", "sample-message", "sample-message-2", "sample1",
-  "sample2", "sandbox-mode", "scheduled-at", "send-at", "service-tier", "service-type",
-  "sim-card-group-id", "sim-card-id", "sip-address", "slug", "smart-encoding", "sole-prop", "sort",
-  "source", "sources", "sql", "start-conference-on-create", "start-message", "starts-with",
-  "status", "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview",
-  "stream", "stream-type", "subject", "submit", "system", "t38-enabled", "tag", "tags", "task-id",
+  "interactive", "interrupt", "invoice-document-id", "join-at", "json", "language", "limit",
+  "livecrawl", "loa-document-id", "locality", "location", "max-age", "max-items",
+  "max-participants", "max-retries", "max-sources", "max-tokens", "mcp-server", "media-encryption",
+  "media-name", "media-url", "meeting-session-id", "meeting-url", "message", "message-flow",
+  "message-id", "messaging-profile-id", "metadata", "method", "mms-fall-back-to-sms",
+  "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn", "muted", "name",
+  "name-contains", "national-destination-code", "network-id", "new-billing-phone-number",
+  "number-pool-settings", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
+  "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
+  "output-type", "page-number", "page-size", "param", "parameters", "parent-support-key",
+  "participant", "participants", "payload", "phone", "phone-number", "phone-number-id",
+  "phone-numbers", "port-type", "preview-format", "privacy", "profile-name", "promote-to-main",
+  "provider", "quality", "query", "queue-name", "reaction", "record", "recording-id", "region",
+  "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
+  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
+  "role", "room-id", "room-participant-id", "room-session-id", "rx", "safesearch",
+  "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at",
+  "send-at", "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address",
+  "slug", "smart-encoding", "sole-prop", "sort", "source", "sources", "speak-on-enter", "sql",
+  "start-conference-on-create", "start-message", "starts-with", "status", "sticker", "stop",
+  "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
+  "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "temperature", "template-id", "template-language", "template-name", "template-variables", "text",
   "text-body", "text-type", "thinking", "time-limit-secs", "timeout", "timeout-secs", "to", "tool",
   "tool-choice", "tool-ids", "top-k", "top-p", "tracking-settings", "transcription",
   "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
   "url-shortener-settings", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id",
-  "version", "version-name", "vertical", "video", "voice", "waba-id", "wallet-key", "webhook",
-  "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
+  "version", "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key",
+  "webhook", "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
 ]);

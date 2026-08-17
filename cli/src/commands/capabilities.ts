@@ -27,6 +27,9 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "🎥 Rooms": [
     { name: "Room Sessions", description: "Inspect room sessions and participants, end sessions, and moderate participant audio or presence", actions: ["list_room_sessions", "get_room_session", "list_room_participants", "get_room_participant", "end_room_session", "kick_room_participants", "mute_room_participants", "unmute_room_participants"] },
   ],
+  "🤝 Meeting Bot": [
+    { name: "Meeting Sessions", description: "Create, inspect, and end Meeting Bot sessions; control chat and speech; retrieve transcripts, recordings, summaries, and action items (requires Telnyx Go CLI v0.27+)", actions: ["create_meeting_session", "list_meeting_sessions", "get_meeting_session", "end_meeting_session", "send_meeting_chat", "speak_in_meeting", "stop_meeting_speaking", "get_meeting_transcript", "get_meeting_recordings", "create_meeting_artifact", "list_meeting_artifacts", "get_meeting_artifact"] },
+  ],
   "🔢 Numbers": [
     { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
   ],
@@ -171,6 +174,18 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent list-conferences", description: "Discover conferences with name/status filters and pagination" },
   { name: "telnyx-agent list-conference-participants", description: "List and filter participants in a conference" },
   { name: "telnyx-agent conference-control", description: "Control conference membership, mute/hold state, media, DTMF, recording, supervisor roles, and lifecycle" },
+  { name: "telnyx-agent create-meeting-session", description: "Create a Meeting Bot session and join or schedule a supported meeting URL" },
+  { name: "telnyx-agent list-meeting-sessions", description: "List Meeting Bot sessions, optionally filtered by status" },
+  { name: "telnyx-agent get-meeting-session", description: "Retrieve one Meeting Bot session by ID" },
+  { name: "telnyx-agent end-meeting-session", description: "End or cancel Meeting Bot participation while retaining the persisted session record" },
+  { name: "telnyx-agent send-meeting-chat", description: "Send a chat message into an active Meeting Bot session" },
+  { name: "telnyx-agent speak-in-meeting", description: "Speak text in a Meeting Bot session, optionally interrupting current playback" },
+  { name: "telnyx-agent stop-meeting-speaking", description: "Stop active text-to-speech playback in a Meeting Bot session" },
+  { name: "telnyx-agent get-meeting-transcript", description: "Retrieve cursor-paginated transcript segments, with optional long polling" },
+  { name: "telnyx-agent get-meeting-recordings", description: "Retrieve recordings for a Meeting Bot session" },
+  { name: "telnyx-agent create-meeting-artifact", description: "Request asynchronous summary or action-items artifact generation" },
+  { name: "telnyx-agent list-meeting-artifacts", description: "List artifacts generated for a Meeting Bot session" },
+  { name: "telnyx-agent get-meeting-artifact", description: "Retrieve one Meeting Bot artifact by session and artifact IDs" },
   { name: "telnyx-agent list-voice-connections", description: "List voice connections across connection types with filters and pagination" },
   { name: "telnyx-agent get-voice-connection", description: "Retrieve the high-level details of one voice connection" },
   { name: "telnyx-agent list-active-calls", description: "List active calls for a voice connection with pagination" },

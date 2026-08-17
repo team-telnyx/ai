@@ -126,6 +126,8 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ])],
   ["web-search", new Set(["livecrawl"])],
   ["web-research", new Set(["background"])],
+  ["create-meeting-session", new Set(["barge-in", "summarize-on-end"])],
+  ["speak-in-meeting", new Set(["interrupt"])],
   ["create-messaging-profile", new Set([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
