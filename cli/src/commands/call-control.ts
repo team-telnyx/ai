@@ -15,7 +15,7 @@
  *   add-ai-assistant-messages, gather-using-ai, gather-using-audio,
  *   gather-using-speak, join-ai-assistant, start-ai-assistant,
  *   stop-ai-assistant, start-conversation-relay, stop-conversation-relay,
- *   switch-supervisor-role
+ *   switch-supervisor-role, pay
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
@@ -40,17 +40,19 @@ const ACTIONS = [
   "join-ai-assistant", "start-ai-assistant", "stop-ai-assistant",
   "start-conversation-relay", "stop-conversation-relay",
   "switch-supervisor-role",
+  "pay",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
 /**
- * Flags exposed by the generated Go commands for the ten AI/relay actions.
- * Values are forwarded exactly as supplied; omitted optional flags are left to
- * the Go CLI/API defaults. This includes the generated inner (dotted) flags.
+ * Flags exposed by generated Go Call Control commands that use the generic
+ * dispatcher. Values are forwarded exactly as supplied; omitted optional flags
+ * are left to the Go CLI/API defaults. This includes generated inner (dotted)
+ * flags.
  */
 const NEW_ACTION_FLAGS: Partial<Record<Action, readonly string[]>> = {
   "add-ai-assistant-messages": [
-    "client-state", "command-id", "message",
+    "client-state", "command-id", "message", "trigger-response",
   ],
   "gather-using-ai": [
     "parameters", "assistant", "client-state", "command-id", "gather-ended-speech", "greeting",
@@ -100,6 +102,14 @@ const NEW_ACTION_FLAGS: Partial<Record<Action, readonly string[]>> = {
   ],
   "stop-conversation-relay": ["client-state", "command-id"],
   "switch-supervisor-role": ["role"],
+  "pay": [
+    "amount", "client-state", "command-id", "connector-name", "currency", "description",
+    "inter-digit-timeout-millis", "language", "max-attempts", "metadata", "parameters",
+    "payment-method", "payment-token", "prompts", "service-level", "timeout-millis",
+    "transaction-type", "voice", "prompts.bank-account-number", "prompts.bank-routing-number",
+    "prompts.expiration-date", "prompts.payment-card-number", "prompts.postal-code",
+    "prompts.security-code",
+  ],
 };
 
 const NEW_ACTION_REQUIRED_FLAGS: Partial<Record<Action, readonly string[]>> = {
@@ -311,6 +321,11 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   }
 }
 
+/** Agent-friendly alias for the generated `calls:actions pay` command. */
+export async function callPayCommand(flags: Record<string, string | boolean>): Promise<void> {
+  await callControlCommand({ ...flags, action: "pay" });
+}
+
 function buildActionArgs(
   action: Action,
   opts: {
@@ -460,6 +475,7 @@ function buildActionArgs(
     case "start-conversation-relay":
     case "stop-conversation-relay":
     case "switch-supervisor-role":
+    case "pay":
       return buildGeneratedActionArgs(action, opts.callControlId, opts.actionFlags);
   }
 }

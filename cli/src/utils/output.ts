@@ -112,6 +112,7 @@ export const BOOLEAN_FLAGS = new Set<string>([
 ]);
 
 const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
+  ["call-control", new Set(["trigger-response"])],
   ["call-dial", new Set(["retry-on-timeout", "transcription"])],
   ["create-conference", new Set(["comfort-noise", "start-conference-on-create"])],
   ["conference-control", new Set([

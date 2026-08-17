@@ -723,8 +723,9 @@ describe("Voice API action commands", () => {
   }> = [
     {
       action: "add-ai-assistant-messages",
-      flags: ["--message", '{"role":"user","content":"hello"}', "--client-state", "state-1", "--command-id", "cmd-1"],
+      flags: ["--message", '{"role":"user","content":"hello"}', "--client-state", "state-1", "--command-id", "cmd-1", "--trigger-response"],
       values: [["--message", '{"role":"user","content":"hello"}'], ["--client-state", "state-1"], ["--command-id", "cmd-1"]],
+      bare: ["--trigger-response"],
     },
     {
       action: "gather-using-ai",
@@ -853,6 +854,63 @@ describe("Voice API action commands", () => {
     });
   }
 
+  it("call-pay forwards every upstream payment option to `calls:actions pay`", () => {
+    const fake = setupFakeTelnyx();
+    const flags = [
+      "--call-control-id", "call-pay-1",
+      "--amount", "10.50",
+      "--client-state", "c3RhdGU=",
+      "--command-id", "pay-command-1",
+      "--connector-name", "Payments",
+      "--currency", "USD",
+      "--description", "Order 12345",
+      "--inter-digit-timeout-millis", "4500",
+      "--language", "en-US",
+      "--max-attempts", "4",
+      "--metadata", '{"order_id":"12345"}',
+      "--parameters", '{"customer_id":"customer-1"}',
+      "--payment-method", "credit-card",
+      "--payment-token", "tok_abc123",
+      "--prompts", '{"security-code":"Enter security code"}',
+      "--service-level", "premium",
+      "--timeout-millis", "6000",
+      "--transaction-type", "charge",
+      "--voice", "Telnyx.KokoroTTS.af",
+      "--prompts.bank-account-number", "Enter account number",
+      "--prompts.bank-routing-number", "Enter routing number",
+      "--prompts.expiration-date", "Enter expiration date",
+      "--prompts.payment-card-number", "Enter card number",
+      "--prompts.postal-code", "Enter postal code",
+      "--prompts.security-code", "Enter security code",
+    ];
+
+    const output = JSON.parse(run(["call-pay", ...flags, "--json"], fake.env));
+    assert.equal(output.action, "pay");
+    assert.equal(output.call_control_id, "call-pay-1");
+
+    const calls = readLoggedArgs(fake.logPath);
+    const payCall = calls.find((a) => a.slice(0, 2).join(" ") === "calls:actions pay");
+    assert.ok(payCall, "should invoke `calls:actions pay`");
+    for (let index = 0; index < flags.length; index += 2) {
+      assertFlagValue(payCall!, flags[index], flags[index + 1]);
+    }
+  });
+
+  it("call-control also dispatches pay without inventing optional defaults", () => {
+    const fake = setupFakeTelnyx();
+    run(["call-control", "--action", "pay", "--call-control-id", "call-pay-2", "--json"], fake.env);
+    const payCall = readLoggedArgs(fake.logPath).find((a) => a.slice(0, 2).join(" ") === "calls:actions pay");
+    assert.ok(payCall);
+    assert.deepEqual(payCall!.slice(0, -2), ["calls:actions", "pay", "--call-control-id", "call-pay-2"]);
+  });
+
+  it("call-pay validates --call-control-id before invoking the Go CLI", () => {
+    const fake = setupFakeTelnyx();
+    const stderr = runFailure(["call-pay", "--amount", "10.50", "--json"], fake.env);
+    assert.match(stderr, /--call-control-id is required/);
+    assertNoLoggedCalls(fake.logPath);
+  });
+
   const actionSpecificRequiredFlags = [
     { action: "gather-using-ai", missing: "parameters", flags: [] },
     { action: "gather-using-speak", missing: "payload", flags: ["--voice", "Telnyx.KokoroTTS.af"] },
@@ -873,7 +931,7 @@ describe("Voice API action commands", () => {
     });
   }
 
-  it("help and capabilities advertise all ten AI/relay Call Control actions", () => {
+  it("help and capabilities advertise AI/relay and payment Call Control actions", () => {
     const help = run(["help"]);
     for (const testCase of newActionDispatches) assert.ok(help.includes(testCase.action), `help should include ${testCase.action}`);
 
@@ -884,5 +942,12 @@ describe("Voice API action commands", () => {
       const capability = testCase.action.replaceAll("-", "_");
       assert.ok(actions.includes(capability), `capabilities should include ${capability}`);
     }
+    assert.ok(help.includes("call-pay"), "help should advertise call-pay");
+    assert.ok(help.includes("--trigger-response"), "help should document --trigger-response");
+    assert.ok(actions.includes("pay"), "capabilities should include pay");
+    assert.ok(
+      capabilities.composite_commands.some((entry: { name: string }) => entry.name === "telnyx-agent call-pay"),
+      "capabilities should advertise call-pay",
+    );
   });
 });

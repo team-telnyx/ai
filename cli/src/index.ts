@@ -58,7 +58,7 @@ import { smsStatusCommand } from "./commands/sms-status.ts";
 import { rcsSendCommand } from "./commands/rcs-send.ts";
 import { rcsCapabilitiesCommand } from "./commands/rcs-capabilities.ts";
 import { callDialCommand } from "./commands/call-dial.ts";
-import { callControlCommand } from "./commands/call-control.ts";
+import { callControlCommand, callPayCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
 import {
   conferenceControlCommand,
@@ -199,6 +199,7 @@ Commands:
   rcs-capabilities  Check RCS capabilities for a recipient
   call-dial         Make an outbound call via Call Control
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
+  call-pay          Securely collect or tokenize payment details on an active call
   call-status       Get the status of a call by call-control-id
   create-conference Create a multi-party conference from an active call leg
   get-conference    Retrieve a conference by ID
@@ -482,7 +483,7 @@ Voice Call Flags:
                     enqueue, leave-queue, send-sip-info, update-client-state,
                     add-ai-assistant-messages, gather-using-ai, gather-using-audio,
                     gather-using-speak, join-ai-assistant, start-ai-assistant, stop-ai-assistant,
-                    start-conversation-relay, stop-conversation-relay, switch-supervisor-role
+                    start-conversation-relay, stop-conversation-relay, switch-supervisor-role, pay
   --digits           DTMF digits to send (call-control dtmf)
   --payload          Text/SSML to synthesize (speak; gather-using-speak, required)
   --voice            TTS voice (speak default: female; gather-using-speak, required; AI/relay optional)
@@ -513,6 +514,7 @@ Voice Call Flags:
   --body                         SIP INFO body content (call-control send-sip-info, required)
   --content-type                 SIP INFO Content-Type header (call-control send-sip-info, required, e.g. application/dtmf-relay)
   --message                      AI message array as JSON (add-ai-assistant-messages, optional)
+  --trigger-response             Immediately trigger an assistant turn after adding AI messages
   --parameters                   JSON Schema object (gather-using-ai, required)
   --assistant                    Assistant configuration as JSON (gather/start AI and conversation relay, optional)
   --greeting                     Initial spoken greeting (gather-using-ai, start-ai-assistant/start-conversation-relay, optional)
@@ -523,6 +525,28 @@ Voice Call Flags:
   --role                         Supervisor role: barge|whisper|monitor (switch-supervisor-role, required)
                     Generated optional JSON, scalar, boolean, and dotted inner flags for these actions
                     are forwarded unchanged to the Go CLI (for example --assistant.id).
+Call Pay Flags:
+  --call-control-id              Call Control ID of the active call (required)
+  --amount                       Amount to charge (required for --transaction-type charge)
+  --transaction-type             charge|tokenize; inferred from --amount when omitted
+  --connector-name               Pay connector name (Go CLI default: Default)
+  --currency                     Transaction currency (currently USD; Go CLI default: USD)
+  --description                  Description forwarded with the payment transaction
+  --payment-method               Payment method to collect (Go CLI default: credit-card)
+  --payment-token                Existing token; skips payment-detail collection
+  --metadata                     JSON metadata forwarded to the Pay connector
+  --parameters                   JSON parameters forwarded to the Pay connector
+  --prompts                      JSON object of custom payment collection prompts
+  --prompts.<step>               Custom prompt for bank-account-number, bank-routing-number,
+                                 expiration-date, payment-card-number, postal-code, or security-code
+  --language                     Prompt language (Go CLI default: en-US)
+  --voice                        Prompt voice (Go CLI default: female)
+  --service-level                Prompt TTS service level (Go CLI default: premium)
+  --inter-digit-timeout-millis   Inter-digit DTMF timeout (Go CLI default: 5000)
+  --timeout-millis               DTMF input timeout per step (Go CLI default: 5000)
+  --max-attempts                 Maximum attempts per collection step (Go CLI default: 3)
+  --client-state                 Base64 state included in subsequent webhooks
+  --command-id                   Idempotency key for the payment command
 Voice Connection Discovery Flags:
   --id <connection-id> Retrieve a voice connection (get-voice-connection — required)
   --connection-name Filter connections by name substring (list-voice-connections)
@@ -835,6 +859,8 @@ Examples:
   telnyx-agent call-control --action start-ai-assistant --call-control-id <id> --assistant.id <assistant-id>
   telnyx-agent call-control --action start-conversation-relay --call-control-id <id> --url wss://example.com/relay
   telnyx-agent call-control --action switch-supervisor-role --call-control-id <id> --role whisper
+  telnyx-agent call-pay --call-control-id <id> --amount 10.50 --transaction-type charge --description "Order 12345"
+  telnyx-agent call-pay --call-control-id <id> --transaction-type tokenize --json
   telnyx-agent call-status --call-control-id <id> --json
   telnyx-agent create-conference --call-control-id <call-id> --name support-room --json
   telnyx-agent list-conferences --status active --json
@@ -953,6 +979,7 @@ const COMMANDS: Record<string, (
   "rcs-capabilities": rcsCapabilitiesCommand,
   "call-dial": callDialCommand,
   "call-control": callControlCommand,
+  "call-pay": callPayCommand,
   "call-status": callStatusCommand,
   "create-conference": createConferenceCommand,
   "get-conference": getConferenceCommand,
@@ -1025,51 +1052,54 @@ const KNOWN_FLAGS = new Set<string>([
   "camera-image", "campaign-id", "cancel", "carrier-name", "category", "cause", "cc", "channels",
   "clear-tags", "clear-tool-ids", "client-state", "code", "collection-id", "comfort-noise",
   "command-id", "company-name", "component", "conference-id", "confirm", "connection-id",
-  "connection-name", "contacts", "contains", "content-type", "context", "conversation-id", "count",
-  "country", "country-code", "crawl-timeout", "create", "custom-code", "customer-group-reference",
-  "customer-name", "customer-reference", "daily-spend-limit", "daily-spend-limit-enabled",
-  "deepfake-detection", "depth", "description", "destinations", "digits", "dimensions",
-  "disable-cache", "display-name", "document", "document-id", "document-type", "dtmf-detection",
-  "duration-minutes", "dynamic-variables", "dynamic-variables-webhook-timeout-ms",
-  "dynamic-variables-webhook-url", "email", "emergency-address-id", "enable-messaging", "enabled",
-  "encoding-format", "ends-with", "exclude", "exclude-domain", "extension", "fallback-config",
-  "fast-port-eligible", "features", "file-url", "filter", "filter-sim-card-group-id", "flag",
-  "foc-after", "foc-before", "foc-datetime-requested", "force", "fork-rx", "fork-stream-type",
-  "fork-tx", "format", "forward-of-message-id", "fqdn", "freshness", "from", "from-dir",
-  "from-display-name", "from-name", "greeting", "group-id", "guided-choice", "guided-json",
-  "headers", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name",
-  "html", "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
+  "connection-name", "connector-name", "contacts", "contains", "content-type", "context",
+  "conversation-id", "count", "country", "country-code", "crawl-timeout", "create", "currency",
+  "custom-code", "customer-group-reference", "customer-name", "customer-reference",
+  "daily-spend-limit", "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
+  "destinations", "digits", "dimensions", "disable-cache", "display-name", "document",
+  "document-id", "document-type", "dtmf-detection", "duration-minutes", "dynamic-variables",
+  "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url", "email",
+  "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "exclude",
+  "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features", "file-url",
+  "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
+  "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
+  "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
+  "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
+  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "html",
+  "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
-  "interactive", "interrupt", "invoice-document-id", "join-at", "json", "language", "limit",
-  "livecrawl", "loa-document-id", "locality", "location", "max-age", "max-items",
-  "max-participants", "max-retries", "max-sources", "max-tokens", "mcp-server", "media-encryption",
-  "media-name", "media-url", "meeting-session-id", "meeting-url", "message", "message-flow",
-  "message-id", "messaging-profile-id", "metadata", "method", "mms-fall-back-to-sms",
-  "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn", "muted", "name",
-  "name-contains", "national-destination-code", "network-id", "new-billing-phone-number",
-  "number-pool-settings", "number-type", "numbers", "old-provider", "on-hold", "opt-in-method",
-  "optin-message", "optout-message", "outbound-voice-profile-id", "output", "output-file",
-  "output-type", "page-number", "page-size", "param", "parameters", "parent-support-key",
-  "participant", "participants", "payload", "phone", "phone-number", "phone-number-id",
-  "phone-numbers", "port-type", "preview-format", "privacy", "profile-name", "promote-to-main",
-  "provider", "quality", "query", "queue-name", "reaction", "record", "recording-id", "region",
+  "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
+  "json", "language", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
+  "max-attempts", "max-items", "max-participants", "max-retries", "max-sources", "max-tokens",
+  "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
+  "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
+  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
+  "muted", "name", "name-contains", "national-destination-code", "network-id",
+  "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
+  "on-hold", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
+  "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
+  "parent-support-key", "participant", "participants", "payload", "payment-method",
+  "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
+  "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
+  "query", "queue-name", "reaction", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "rx", "safesearch",
   "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at",
-  "send-at", "service-tier", "service-type", "sim-card-group-id", "sim-card-id", "sip-address",
-  "slug", "smart-encoding", "sole-prop", "sort", "source", "sources", "speak-on-enter", "sql",
-  "start-conference-on-create", "start-message", "starts-with", "status", "sticker", "stop",
-  "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
-  "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
-  "temperature", "template-id", "template-language", "template-name", "template-variables", "text",
-  "text-body", "text-type", "thinking", "time-limit-secs", "timeout", "timeout-secs", "to", "tool",
-  "tool-choice", "tool-ids", "top-k", "top-p", "tracking-settings", "transcription",
-  "transcription-language", "transcription-model", "ttl", "tx", "type", "url",
-  "url-shortener-settings", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id",
-  "version", "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key",
-  "webhook", "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
+  "send-at", "service-level", "service-tier", "service-type", "sim-card-group-id", "sim-card-id",
+  "sip-address", "slug", "smart-encoding", "sole-prop", "sort", "source", "sources",
+  "speak-on-enter", "sql", "start-conference-on-create", "start-message", "starts-with", "status",
+  "sticker", "stop", "stop-message", "stop-sequence", "store-media", "store-preview", "stream",
+  "stream-type", "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags",
+  "task-id", "temperature", "template-id", "template-language", "template-name",
+  "template-variables", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
+  "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-ids", "top-k", "top-p",
+  "tracking-settings", "transaction-type", "transcription", "transcription-language",
+  "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
+  "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
 ]);
@@ -1077,7 +1107,7 @@ const KNOWN_FLAGS = new Set<string>([
 // Commands that accept an arbitrary/generated flag surface, where an
 // unknown-flag warning would produce false positives. These forward flags
 // through to the Go CLI or maintain their own extensible flag lists.
-const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "conference-control", "ai-chat"]);
+const FLAG_WARN_EXEMPT_COMMANDS = new Set<string>(["call-control", "call-pay", "conference-control", "ai-chat"]);
 
 // Detect a help request in FLAG position only. A help token counts when it is
 // the command itself (`help`, `--help`, `-h`) or a standalone flag on a
