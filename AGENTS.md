@@ -62,6 +62,7 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 | `guides/`               | Step-by-step operational guides.                                          |
 | `scripts/sync-skills.sh`| Syncs `skills/` → `providers/{claude,cursor}/plugin/skills/`.             |
 | `agent.json`            | Top-level agent manifest (capabilities, auth, endpoints).                 |
+| `plugin.json`, `mcp.json` | Agent Plugins (agent-plugins.org) manifest bundling `skills/` + the hosted MCP server. |
 | `.claude-plugin/`       | Claude Code marketplace metadata.                                         |
 | `.cursor-plugin/`       | Cursor marketplace metadata.                                              |
 | `gemini-extension.json` | Gemini CLI extension manifest.                                            |
