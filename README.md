@@ -92,6 +92,12 @@ Add the Telnyx MCP server to your project's `.cursor/mcp.json`:
   }
 ```
 
+### Agent Plugins manifest (any compatible client)
+
+The repo root also carries an [Agent Plugins](https://agent-plugins.org/specification) manifest — [`plugin.json`](/plugin.json) + [`mcp.json`](/mcp.json) — so clients that speak that format can install the whole repo as one plugin: every `skills/*/SKILL.md` is bundled automatically and `mcp.json` declares the hosted Telnyx MCP server (`https://api.telnyx.com/v2/mcp`, Streamable HTTP).
+
+**Authentication.** Agent Plugins v1 has no portable credential mechanism — the spec forbids embedding secrets in `headers`/`env` and leaves authorization to the client — so `mcp.json` ships no credentials. Discovery calls (`initialize`, `tools/list`, `resources/*`) work unauthenticated; `tools/call` requires `Authorization: Bearer <TELNYX_API_KEY>`. Supply the key through your client's own credential/header settings for the `telnyx` server, or, if your client cannot attach headers to plugin-provided servers, run the [`@telnyx/mcp`](/tools/mcp) proxy (`npx -y @telnyx/mcp --api-key=YOUR_TELNYX_API_KEY`) which adds the header for you. Get a key via the portal or [`telnyx.com/agent-signup.md`](https://telnyx.com/agent-signup.md).
+
 ### Harnesses
 
 Finalized Telnyx harness plugin repositories for OpenClaw and Hermes integrations:
