@@ -6,8 +6,8 @@ metadata:
   author: telnyx
   product: numbers
   language: go
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->

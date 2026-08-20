@@ -7,8 +7,8 @@ metadata:
   author: telnyx
   product: 10dlc
   language: java
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.82.0</version>
+    <version>6.88.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.82.0")
+implementation("com.telnyx.sdk:telnyx:6.88.0")
 ```
 
 ## Setup
