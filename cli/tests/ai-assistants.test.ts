@@ -420,7 +420,7 @@ describe("AI assistant lifecycle action commands", () => {
     }
   });
 
-  it("executes assistant chat with conversation context and v0.26 streaming support", () => {
+  it("executes assistant chat with conversation context", () => {
     const fake = setupFakeTelnyx();
     const result = runAgent([
       "chat-ai-assistant",
@@ -428,7 +428,6 @@ describe("AI assistant lifecycle action commands", () => {
       "--conversation-id", "conversation-1",
       "--content", "Hello assistant",
       "--name", "Ada",
-      "--stream", "true",
       "--json",
     ], fake.env);
 
@@ -445,7 +444,7 @@ describe("AI assistant lifecycle action commands", () => {
     assertFlag(args, "--conversation-id", "conversation-1");
     assertFlag(args, "--content", "Hello assistant");
     assertFlag(args, "--name", "Ada");
-    assert.ok(args.includes("--stream=true"));
+    assert.ok(!args.includes("--stream=true"), "--stream must not be forwarded (SSE is unsupported)");
     assertFlag(args, "--format", "json");
   });
 

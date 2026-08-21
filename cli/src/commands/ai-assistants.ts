@@ -191,15 +191,12 @@ export async function chatAiAssistantCommand(flags: Flags): Promise<void> {
     "--conversation-id", conversationId,
   ];
   addMappedFlag(args, flags, "name", "--name");
-  addBooleanFlag(args, flags, "stream", "--stream", jsonOutput);
+  // Note: the Go CLI's --stream flag is intentionally not exposed. Streaming
+  // returns server-sent events, which this wrapper's JSON envelope parsing
+  // cannot consume; agents always receive the complete response.
 
   try {
-    // Streaming was added to the generated Go CLI in v0.26. The underlying
-    // chat action itself is present in the currently vendored v0.24 release.
-    const response = await telnyxCli(
-      args,
-      flags.stream === undefined ? undefined : { minimumVersion: "0.26.0" },
-    );
+    const response = await telnyxCli(args);
     const chat = responseDataRecord(response);
     const result: AiAssistantChatResult = {
       assistant_id: assistantId,

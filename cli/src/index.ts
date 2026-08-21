@@ -755,7 +755,6 @@ AI Assistant Execution Flags:
   --content <text>  User message sent to the assistant (chat required)
   --conversation-id <id> Existing conversation thread ID (chat required)
   --name <name>     Optional display name for the chat user
-  --stream <bool>   Request a streamed assistant chat response (requires Go CLI >= 0.26)
   --from / --to     SMS sender and recipient in E.164 format (assistant SMS required)
   --text <text>     Optional initial assistant SMS text
   --conversation-metadata <json> Conversation metadata object (assistant SMS)
