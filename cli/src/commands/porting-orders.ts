@@ -191,6 +191,11 @@ export async function cancelPortingOrderCommand(flags: Flags): Promise<void> {
 
 export async function activatePortingOrderCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
+  // Activation triggers the actual port of every number in the order and
+  // cannot be undone, so require the same explicit acknowledgement as cancel.
+  if (flags.confirm !== true) {
+    fail("activate-porting-order is irreversible; pass --confirm to continue", jsonOutput);
+  }
   const portingOrderId = requireId(flags, jsonOutput);
   try {
     const response = await telnyxCli(["porting-orders:actions", "activate", "--id", portingOrderId]);
@@ -198,7 +203,7 @@ export async function activatePortingOrderCommand(flags: Flags): Promise<void> {
     const result: ActivatePortingOrderResult = {
       porting_order_id: portingOrderId,
       action: "activate",
-      status: statusValue(activationJob.status) || "created",
+      status: statusValue(activationJob.status) || "unknown",
       activation_job_id: stringValue(activationJob.id),
       activation_job: activationJob,
     };

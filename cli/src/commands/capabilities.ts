@@ -161,7 +161,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent update-porting-order", description: "Update references, FOC settings, documents, messaging, and post-port number configuration" },
   { name: "telnyx-agent submit-porting-order", description: "Confirm and submit a draft porting order" },
   { name: "telnyx-agent cancel-porting-order", description: "Cancel a porting order after explicit --confirm acknowledgement" },
-  { name: "telnyx-agent activate-porting-order", description: "Activate all numbers in a US FastPort order asynchronously" },
+  { name: "telnyx-agent activate-porting-order", description: "Activate all numbers in a US FastPort order after explicit --confirm acknowledgement (irreversible)" },
   { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
   { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },

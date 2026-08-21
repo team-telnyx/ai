@@ -438,7 +438,7 @@ describe("Porting-order management commands", () => {
 
   it("activates a US FastPort order through the generated asynchronous action", () => {
     const fake = setupFakeTelnyx();
-    const output = runAgent(["activate-porting-order", "--id", "po-fastport-1", "--json"], fake.env);
+    const output = runAgent(["activate-porting-order", "--id", "po-fastport-1", "--confirm", "--json"], fake.env);
 
     assert.deepEqual(JSON.parse(output), {
       porting_order_id: "po-fastport-1",
@@ -513,7 +513,8 @@ describe("Porting-order management commands", () => {
   it("validates IDs, updates, dates, pagination, booleans, and document types before invoking telnyx", () => {
     const invalidCommands = [
       ["get-porting-order", "--json"],
-      ["activate-porting-order", "--json"],
+      ["activate-porting-order", "--confirm", "--json"],
+      ["activate-porting-order", "--id", "po-fastport-1", "--json"],
       ["update-porting-order", "--id", "po-1", "--json"],
       ["update-porting-order", "--id", "po-1", "--foc-datetime-requested", "tomorrow", "--json"],
       ["update-porting-order", "--id", "po-1", "--enable-messaging", "maybe", "--json"],

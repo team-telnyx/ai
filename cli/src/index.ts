@@ -171,7 +171,7 @@ Commands:
   update-porting-order Update porting order details and number configuration
   submit-porting-order Confirm and submit a draft porting order
   cancel-porting-order Cancel a porting order (requires --confirm)
-  activate-porting-order Activate all numbers in a US FastPort order asynchronously
+  activate-porting-order Activate all numbers in a US FastPort order (irreversible; requires --confirm)
   attach-porting-document Attach an existing Telnyx document to a porting order
   list-porting-documents List documents attached to a porting order
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
@@ -340,7 +340,7 @@ Porting Order Action Flags:
   --webhook-url     Porting order webhook URL (update)
   --remaining-numbers-action keep|disconnect (partial-port update)
   --new-billing-phone-number Required when keeping remaining numbers (update)
-  --confirm         Required safety acknowledgement (cancel-porting-order)
+  --confirm         Required safety acknowledgement (cancel-porting-order, activate-porting-order)
   --document-id     Existing Telnyx document ID (attach-porting-document — required)
   --document-type   loa|invoice|csr|other (attach required; comma-separated list filter)
 
@@ -812,7 +812,7 @@ Examples:
   telnyx-agent update-porting-order --id <porting-order-id> --connection-id <connection-id> --enable-messaging true --json
   telnyx-agent submit-porting-order --id <porting-order-id> --json
   telnyx-agent cancel-porting-order --id <porting-order-id> --confirm --json
-  telnyx-agent activate-porting-order --id <porting-order-id> --json
+  telnyx-agent activate-porting-order --id <porting-order-id> --confirm --json
   telnyx-agent attach-porting-document --id <porting-order-id> --document-id <document-id> --document-type loa --json
   telnyx-agent list-porting-documents --id <porting-order-id> --document-type loa,invoice --json
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
