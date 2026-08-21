@@ -2,7 +2,7 @@
  * telnyx-agent send-sms — Send an SMS or MMS message.
  *
  * Sender mode is inferred from the intuitive sender inputs:
- * - E.164 --from: regular phone-number send
+ * - E.164 or short-code --from: regular phone-number send
  * - alphanumeric --from + --messaging-profile-id: alphanumeric sender send
  * - no --from + --messaging-profile-id: number-pool send
  */
@@ -24,6 +24,9 @@ interface SendSmsResult {
 }
 
 const E164 = /^\+[1-9]\d{1,14}$/;
+// Short codes (e.g. 80001) are digit-only senders that `messages send` accepts
+// directly; they must not be mistaken for alphanumeric sender IDs.
+const SHORT_CODE = /^\d{4,8}$/;
 
 export async function sendSmsCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -44,7 +47,7 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
 
   const senderMode: SmsSenderMode = !from
     ? "number-pool"
-    : E164.test(from)
+    : E164.test(from) || SHORT_CODE.test(from)
       ? "phone-number"
       : "alphanumeric";
   const type: "SMS" | "MMS" = mediaUrl ? "MMS" : "SMS";

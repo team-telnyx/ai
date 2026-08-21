@@ -319,6 +319,23 @@ describe("SMS action commands", () => {
     ]]);
   });
 
+  it("send-sms treats a short-code --from as a phone-number sender, not alphanumeric", () => {
+    const fake = setupFakeTelnyx();
+    const out = runAgent([
+      "send-sms",
+      "--from", "80001",
+      "--to", "+131****0001",
+      "--text", "Short code hello",
+      "--json",
+    ], fake.env);
+
+    const data = JSON.parse(out);
+    assert.equal(data.sender_mode, "phone-number");
+    const [args] = readLoggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["messages", "send"]);
+    assert.ok(args.includes("80001"));
+  });
+
   it("send-sms requires a messaging profile for pooled and alphanumeric sends", () => {
     const fake = setupFakeTelnyx();
     runAgentExpectingFailure(
