@@ -185,16 +185,10 @@ telnyx-edge inspect my-function
 
 `inspect <function>` is the per-function detail view: deployment status, invoke URL, timestamps, and **every binding the deployed function declares**. Binding rows show the `env.<NAME>` handle, kind, target, and status; actor rows also show their owner/reference role. Probe it with `telnyx-edge inspect --help` when supporting multiple CLI releases.
 
-Before resetting a failed function, inspect the latest ship outcome. The first command prints one actionable, stage-classified reason; `--logs` also prints the build-log or crash-output snippet when the platform supplied one. The function argument may be a name or ID.
+Before resetting a failed function, inspect the latest ship outcome: `ship status <function>` prints one actionable, stage-classified reason, and `--logs` adds the build-log or crash-output snippet when the platform supplied one. A failed function can then be reset to `created` without changing its identity, fixed, and shipped again:
 
 ```bash
-telnyx-edge ship status my-function
 telnyx-edge ship status my-function --logs
-```
-
-A failed function can be reset to `created` without changing its identity, fixed, and shipped again:
-
-```bash
 telnyx-edge reset-func my-function --yes
 telnyx-edge ship --from-dir=./my-function
 ```
@@ -334,11 +328,7 @@ Declare a runtime binding in `telnyx.toml` or supported classic project manifest
 id = "<namespace-uuid>"
 ```
 
-```bash
-telnyx-edge types
-```
-
-`types` generates `telnyx-env.d.ts`; KV handles are typed as `KvNamespace`. Rerun it whenever binding declarations change.
+Then run `telnyx-edge types`: it generates `telnyx-env.d.ts` with KV handles typed as `KvNamespace`. Rerun it whenever binding declarations change.
 
 ### SQL databases (v0.3.0; bound parameters v0.4.1)
 
@@ -365,16 +355,12 @@ telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
 telnyx-edge storage sqldb execute "$SQLDB_ID" --remote -f ./schema.sql
 telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
   -c "SELECT id, url FROM links ORDER BY id" --json
-
 # Bind untrusted values instead of interpolating them into SQL.
 telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
-  --command "SELECT id, url FROM links WHERE url = ? AND id > ?" \
-  --param "https://example.com" --param-json 42
+  -c "SELECT id, url FROM links WHERE url = ? AND id > ?" --param "https://example.com" --param-json 42
 ```
 
-Do not combine `--command` and `--file`, and do not omit both. `--param` and `--param-json` are repeatable and fill `?` placeholders from left to right in the exact order the flags appear, even when the two flag forms are interleaved. `--param` always binds a string; use `--param-json` for a JSON number, boolean, or null. The number of bound values must exactly match the number of placeholders. Parameters cannot be combined with `--file`; use a parameterized `--command` instead. Prefer bindings for values from outside your own script rather than interpolating them into SQL.
-
-Versioned migrations are created locally, then listed or applied against the remote database. Applied migrations are recorded in the database, so `apply` is safe to rerun and applies only pending files in numeric order.
+Do not combine `--command` and `--file`, and do not omit both. `--param` (binds a string) and `--param-json` (binds a JSON number, boolean, or null) are repeatable and fill `?` placeholders left to right in flag order; the count must match the placeholders exactly, and they only work with `--command`. Prefer bindings over interpolating outside values into SQL. Versioned migrations are created locally, then listed or applied against the remote database. Applied migrations are recorded in the database, so `apply` is safe to rerun and applies only pending files in numeric order.
 
 ```bash
 telnyx-edge storage sqldb migrations create "$SQLDB_ID" add-links-table
