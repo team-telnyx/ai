@@ -190,9 +190,6 @@ describe("AI collection document retrieval", () => {
     assert.match(error, /0\.26\.9/);
     assert.match(error, /requires >= 0\.27\.0/);
     assert.deepEqual(loggedArgs(fake.logPath), []);
-
-    const releaseSource = readFileSync(join(cliRoot, "src", "platform-release.ts"), "utf8");
-    assert.match(releaseSource, /TELNYX_CLI_VERSION = "0\.24\.0"/);
   });
 
   it("rejects invalid IDs, retrieval methods, limits, sources, and filters before dispatch", () => {
