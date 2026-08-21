@@ -304,7 +304,11 @@ export async function callControlCommand(flags: Record<string, string | boolean>
 
   try {
     if (!jsonOutput) console.log(`\n📞 Call Control: ${act}...`);
-    const res = await telnyxCli(args);
+    // --route-to-mobile on transfer was added in Go CLI v0.25.0; gate so an
+    // older PATH/TELNYX_CLI_PATH binary gets a clear error instead of an arg-parse failure.
+    const res = await telnyxCli(args, args.includes("--route-to-mobile") || args.includes("--route-to-mobile=false")
+      ? { minimumVersion: "0.25.0" }
+      : undefined);
     const data = res?.data ?? res;
 
     const result: CallControlResult = {

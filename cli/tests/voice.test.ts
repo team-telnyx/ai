@@ -20,7 +20,7 @@ const testDialFrom = "+1" + "5551001000";
 const testDialTo = "+1" + "5551001001";
 const testTransferTo = "+1" + "3125559999";
 
-function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(version = "0.27.0"): { logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-voice-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -33,6 +33,10 @@ function setupFakeTelnyx(): { logPath: string; env: NodeJS.ProcessEnv } {
 const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
+if (args[0] === "--version") {
+  console.log("telnyx version ${version}");
+  process.exit(0);
+}
 
 // Strip --format json for command matching (the wrapper always appends it).
 const command = args.filter((a) => a !== "--format" && a !== "json");
@@ -492,6 +496,21 @@ describe("Voice API action commands", () => {
     assert.ok(transferCall, "should invoke `calls:actions transfer`");
     assert.ok(transferCall!.includes("--route-to-mobile=false"));
     assert.ok(!transferCall!.includes("--route-to-mobile"));
+  });
+
+  it("call-control transfer with --route-to-mobile rejects a pre-0.25 Go CLI before dispatch", () => {
+    const fake = setupFakeTelnyx("0.24.0");
+    const stderr = runFailure(
+      [
+        "call-control", "--action", "transfer", "--call-control-id", "call-1",
+        "--to", testTransferTo, "--route-to-mobile",
+      ],
+      fake.env,
+    );
+    assert.match(stderr, /requires >= 0\.25\.0/);
+    const transferCall = readLoggedArgs(fake.logPath)
+      .find((args) => args.slice(0, 2).join(" ") === "calls:actions transfer");
+    assert.equal(transferCall, undefined, "must not invoke calls:actions transfer on an old CLI");
   });
 
   it("call-control rejects invalid --route-to-mobile before invoking the Go CLI", () => {
