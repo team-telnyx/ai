@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: messaging-hosted
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -18,7 +18,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -253,6 +253,8 @@ Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (a
 `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
 
 ```javascript
+import fs from 'fs';
+
 const response = await client.messagingHostedNumberOrders.actions.uploadFile('550e8400-e29b-41d4-a716-446655440000');
 
 console.log(response.data);
@@ -268,7 +270,7 @@ Validate the verification codes sent to the numbers of the hosted order. The ver
 
 ```javascript
 const response = await client.messagingHostedNumberOrders.validateCodes('id', {
-  verification_codes: [{ code: 'code', phone_number: 'phone_number' }],
+  verification_codes: [{ code: 'code', phone_number: '+13125550001' }],
 });
 
 console.log(response.data);

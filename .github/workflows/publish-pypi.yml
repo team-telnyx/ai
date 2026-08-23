@@ -23,7 +23,7 @@ jobs:
     # Only run from the canonical repo
     if: github.repository == 'team-telnyx/ai'
     permissions:
-      contents: read
+      contents: write  # push per-package release tags
       id-token: write
 
     steps:

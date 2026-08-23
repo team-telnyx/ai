@@ -15,7 +15,7 @@
  *   add-ai-assistant-messages, gather-using-ai, gather-using-audio,
  *   gather-using-speak, join-ai-assistant, start-ai-assistant,
  *   stop-ai-assistant, start-conversation-relay, stop-conversation-relay,
- *   switch-supervisor-role
+ *   switch-supervisor-role, pay
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
@@ -40,17 +40,19 @@ const ACTIONS = [
   "join-ai-assistant", "start-ai-assistant", "stop-ai-assistant",
   "start-conversation-relay", "stop-conversation-relay",
   "switch-supervisor-role",
+  "pay",
 ] as const;
 type Action = (typeof ACTIONS)[number];
 
 /**
- * Flags exposed by the generated Go commands for the ten AI/relay actions.
- * Values are forwarded exactly as supplied; omitted optional flags are left to
- * the Go CLI/API defaults. This includes the generated inner (dotted) flags.
+ * Flags exposed by generated Go Call Control commands that use the generic
+ * dispatcher. Values are forwarded exactly as supplied; omitted optional flags
+ * are left to the Go CLI/API defaults. This includes generated inner (dotted)
+ * flags.
  */
 const NEW_ACTION_FLAGS: Partial<Record<Action, readonly string[]>> = {
   "add-ai-assistant-messages": [
-    "client-state", "command-id", "message",
+    "client-state", "command-id", "message", "trigger-response",
   ],
   "gather-using-ai": [
     "parameters", "assistant", "client-state", "command-id", "gather-ended-speech", "greeting",
@@ -100,6 +102,14 @@ const NEW_ACTION_FLAGS: Partial<Record<Action, readonly string[]>> = {
   ],
   "stop-conversation-relay": ["client-state", "command-id"],
   "switch-supervisor-role": ["role"],
+  "pay": [
+    "amount", "client-state", "command-id", "connector-name", "currency", "description",
+    "inter-digit-timeout-millis", "language", "max-attempts", "metadata", "parameters",
+    "payment-method", "payment-token", "prompts", "service-level", "timeout-millis",
+    "transaction-type", "voice", "prompts.bank-account-number", "prompts.bank-routing-number",
+    "prompts.expiration-date", "prompts.payment-card-number", "prompts.postal-code",
+    "prompts.security-code",
+  ],
 };
 
 const NEW_ACTION_REQUIRED_FLAGS: Partial<Record<Action, readonly string[]>> = {
@@ -144,6 +154,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   const deepfakeDetection = flags["deepfake-detection"] === true;
   const record = flags.record === true;
   const webhookUrl = flags["webhook-url"] as string | undefined;
+  const routeToMobile = flags["route-to-mobile"];
   // Flags for the advanced call-control actions.
   const audioUrl = flags["audio-url"] as string | undefined;
   const queueName = flags["queue-name"] as string | undefined;
@@ -168,6 +179,17 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     process.exit(1);
   }
   const act = action as Action;
+
+  if (
+    routeToMobile !== undefined
+    && routeToMobile !== true
+    && routeToMobile !== false
+    && routeToMobile !== "true"
+    && routeToMobile !== "false"
+  ) {
+    printError(`Invalid --route-to-mobile: ${String(routeToMobile)}. Must be true or false`);
+    process.exit(1);
+  }
 
   // Every action needs a call-control-id (bridge uses it as the first leg).
   if (!callControlId) {
@@ -266,6 +288,7 @@ export async function callControlCommand(flags: Record<string, string | boolean>
     deepfakeDetection,
     record,
     webhookUrl,
+    routeToMobile,
     audioUrl,
     queueName,
     body,
@@ -281,7 +304,11 @@ export async function callControlCommand(flags: Record<string, string | boolean>
 
   try {
     if (!jsonOutput) console.log(`\n📞 Call Control: ${act}...`);
-    const res = await telnyxCli(args);
+    // --route-to-mobile on transfer was added in Go CLI v0.25.0; gate so an
+    // older PATH/TELNYX_CLI_PATH binary gets a clear error instead of an arg-parse failure.
+    const res = await telnyxCli(args, args.includes("--route-to-mobile") || args.includes("--route-to-mobile=false")
+      ? { minimumVersion: "0.25.0" }
+      : undefined);
     const data = res?.data ?? res;
 
     const result: CallControlResult = {
@@ -311,6 +338,11 @@ export async function callControlCommand(flags: Record<string, string | boolean>
   }
 }
 
+/** Agent-friendly alias for the generated `calls:actions pay` command. */
+export async function callPayCommand(flags: Record<string, string | boolean>): Promise<void> {
+  await callControlCommand({ ...flags, action: "pay" });
+}
+
 function buildActionArgs(
   action: Action,
   opts: {
@@ -326,6 +358,7 @@ function buildActionArgs(
     deepfakeDetection: boolean;
     record: boolean;
     webhookUrl?: string;
+    routeToMobile?: string | boolean;
     audioUrl?: string;
     queueName?: string;
     body?: string;
@@ -353,7 +386,16 @@ function buildActionArgs(
     case "hangup":
       return ["calls:actions", "hangup", "--call-control-id", opts.callControlId];
     case "transfer":
-      return ["calls:actions", "transfer", "--call-control-id", opts.callControlId, "--to", opts.to!];
+      return [
+        "calls:actions", "transfer",
+        "--call-control-id", opts.callControlId,
+        "--to", opts.to!,
+        ...(opts.routeToMobile === undefined
+          ? []
+          : opts.routeToMobile === true || opts.routeToMobile === "true"
+            ? ["--route-to-mobile"]
+            : ["--route-to-mobile=false"]),
+      ];
     case "dtmf":
       return ["calls:actions", "send-dtmf", "--call-control-id", opts.callControlId, "--digits", opts.digits!];
     case "start-recording":
@@ -460,6 +502,7 @@ function buildActionArgs(
     case "start-conversation-relay":
     case "stop-conversation-relay":
     case "switch-supervisor-role":
+    case "pay":
       return buildGeneratedActionArgs(action, opts.callControlId, opts.actionFlags);
   }
 }

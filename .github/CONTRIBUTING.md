@@ -32,11 +32,15 @@ You can verify sync locally with `./scripts/check-skills-sync.sh`.
 
 ### Auto-generated skills
 
-Most skills are automatically generated from Telnyx OpenAPI specifications. Do not modify code examples directly — they will be overwritten on the next generation. If you find an error in a code example, it needs to be fixed in the upstream OpenAPI spec.
+Most skills are automatically generated from the official Telnyx OpenAPI specifications. You can tell them apart mechanically: a generated skill's `SKILL.md` frontmatter contains a `generated_by:` field; a hand-authored skill's does not.
+
+Do not PR changes to generated skills — a daily automated update regenerates them from the specs and will overwrite your edit. If you find an error in one, [open an issue](https://github.com/team-telnyx/ai/issues) describing the problem; code-example errors are fixed upstream in the OpenAPI spec.
 
 ### Hand-authored skills
 
-Skills in `telnyx-twilio-migration/`, `telnyx-webrtc-client/`, and `telnyx-import-voice-ai/` are manually authored. PRs to improve these are welcome.
+Skills without a `generated_by:` frontmatter field (the Twilio migration workflow, WebRTC client SDK skills, provider import skills, payment/signup skills, and others) are manually authored. PRs to improve these are welcome — run `./scripts/sync-skills.sh` after editing and commit the sync output.
+
+Exception: embedded SDK reference files inside some hand-authored skills (`telnyx-twilio-migration/sdk-reference/`, `telnyx-twilio-migration/references/sdk-api-details/`, `telnyx-webrtc-client-*/references/webrtc-server-api.md`) are pipeline-managed and will be overwritten — treat those like generated content.
 
 ## Questions?
 

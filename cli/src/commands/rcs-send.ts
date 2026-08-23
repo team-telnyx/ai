@@ -7,7 +7,7 @@
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { printSuccess, printError, outputJson, failWith } from "../utils/output.ts";
 import { deriveMessageStatus } from "../utils/message-status.ts";
 
 interface RcsSendResult {
@@ -29,24 +29,16 @@ export async function rcsSendCommand(flags: Record<string, string | boolean>): P
   const webhookUrl = flags["webhook-url"] as string | undefined;
 
   if (!agentId) {
-    printError("--agent-id is required");
-    process.exit(1);
-    return;
+    failWith("--agent-id is required", jsonOutput);
   }
   if (!messagingProfileId) {
-    printError("--messaging-profile-id is required");
-    process.exit(1);
-    return;
+    failWith("--messaging-profile-id is required", jsonOutput);
   }
   if (!to) {
-    printError("--to is required (E.164 format, e.g., +131****0001)");
-    process.exit(1);
-    return;
+    failWith("--to is required (E.164 format, e.g., +131****0001)", jsonOutput);
   }
   if (!text) {
-    printError("--text is required");
-    process.exit(1);
-    return;
+    failWith("--text is required", jsonOutput);
   }
 
   const args = [

@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.88.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.88.0")
 ```
 
 ## Setup
@@ -96,6 +96,40 @@ ActionUpdateClientStateResponse response = client.calls().actions().updateClient
 
 Returns: `result` (string)
 
+## Start Conversation Relay
+
+Start a Conversation Relay session on an active call. Conversation Relay connects the call audio to your WebSocket so your application can exchange realtime messages with the caller while Telnyx handles speech recognition and text-to-speech. Only one AI Assistant or Conversation Relay session can be active on a call at a time.
+
+`POST /calls/{call_control_id}/actions/conversation_relay_start`
+
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `conversation_relay_dtmf_detection` (boolean), `conversation_relay_settings` (object), `conversation_relay_url` (string), `custom_parameters` (object), `dtmf_detection` (boolean), `greeting` (string), `interruptible` (enum: none, any, speech, dtmf), `interruptible_greeting` (enum: none, any, speech, dtmf), `interruption_settings` (object), `language` (string), `languages` (array[object]), `provider` (string), `structured_provider` (object), `transcription` (object), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, A, B), `transcription_engine_config` (object), `tts_provider` (string), `url` (string), `voice` (string), `voice_settings` (object)
+
+```java
+import com.telnyx.sdk.models.calls.actions.ActionStartConversationRelayParams;
+import com.telnyx.sdk.models.calls.actions.ActionStartConversationRelayResponse;
+
+ActionStartConversationRelayResponse response = client.calls().actions().startConversationRelay("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
+```
+
+Returns: `conversation_relay_id` (string), `result` (string)
+
+## Stop Conversation Relay
+
+Stop the active Conversation Relay session on a call.
+
+`POST /calls/{call_control_id}/actions/conversation_relay_stop`
+
+Optional: `client_state` (string), `command_id` (string)
+
+```java
+import com.telnyx.sdk.models.calls.actions.ActionStopConversationRelayParams;
+import com.telnyx.sdk.models.calls.actions.ActionStopConversationRelayResponse;
+
+ActionStopConversationRelayResponse response = client.calls().actions().stopConversationRelay("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
+```
+
+Returns: `result` (string)
+
 ## Send DTMF
 
 Sends DTMF tones from this leg. DTMF tones will be heard by the other end of the call. **Expected Webhooks:**
@@ -165,7 +199,7 @@ Returns: `result` (string)
 
 `POST /calls/{call_control_id}/actions/suppression_start`
 
-Optional: `client_state` (string), `command_id` (string), `direction` (enum: inbound, outbound, both), `noise_suppression_engine` (enum: Denoiser, DeepFilterNet, Krisp, AiCoustics), `noise_suppression_engine_config` (object)
+Optional: `client_state` (string), `command_id` (string), `direction` (enum: inbound, outbound, both), `noise_suppression_engine` (enum: Denoiser, DeepFilterNet, Krisp, AiCoustics, aic_l_quail, aic_l_rook, aic_s_quail, aic_s_rook, quail_voice_focus_s, quail_voice_focus_xs), `noise_suppression_engine_config` (object)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionStartNoiseSuppressionParams;
@@ -287,6 +321,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.calling_party_type` | enum: pstn, sip | The type of calling party connection. |
 | `data.payload.conversation_id` | string | ID unique to the conversation or insight group generated for the call. |
 | `data.payload.duration_sec` | integer | Duration of the conversation in seconds. |
+| `data.payload.reason` | string \| null | Reason the conversation ended. |
 | `data.payload.from` | string | The caller's number or identifier. |
 | `data.payload.to` | string | The callee's number or SIP address. |
 | `data.payload.llm_model` | string | The large language model used during the conversation. |

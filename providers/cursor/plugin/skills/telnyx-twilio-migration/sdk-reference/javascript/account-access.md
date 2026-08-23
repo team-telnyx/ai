@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -72,7 +72,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_ad
 Optional: `description` (string)
 
 ```javascript
-const accessIPAddressResponse = await client.accessIPAddress.create({ ip_address: 'ip_address' });
+const accessIPAddressResponse = await client.accessIPAddress.create({ ip_address: '203.0.113.10' });
 
 console.log(accessIPAddressResponse.id);
 ```

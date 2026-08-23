@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: numbers-services
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.88.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.88.0")
 ```
 
 ## Setup
@@ -127,7 +127,6 @@ Optional: `created_at` (string), `extended_address` (string), `house_suffix` (st
 
 ```java
 import com.telnyx.sdk.models.dynamicemergencyaddresses.DynamicEmergencyAddress;
-import com.telnyx.sdk.models.dynamicemergencyaddresses.DynamicEmergencyAddressCreateParams;
 import com.telnyx.sdk.models.dynamicemergencyaddresses.DynamicEmergencyAddressCreateResponse;
 
 DynamicEmergencyAddress params = DynamicEmergencyAddress.builder()
@@ -198,7 +197,6 @@ Optional: `created_at` (string), `id` (string), `record_type` (string), `sip_fro
 
 ```java
 import com.telnyx.sdk.models.dynamicemergencyendpoints.DynamicEmergencyEndpoint;
-import com.telnyx.sdk.models.dynamicemergencyendpoints.DynamicEmergencyEndpointCreateParams;
 import com.telnyx.sdk.models.dynamicemergencyendpoints.DynamicEmergencyEndpointCreateResponse;
 
 DynamicEmergencyEndpoint params = DynamicEmergencyEndpoint.builder()

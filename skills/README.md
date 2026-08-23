@@ -169,7 +169,6 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |
-| `telnyx-seti-*` | Space Exploration Telecommunications Infrastructure |
 | `telnyx-oauth-*` | OAuth 2.0 authentication flows |
 
 #### Account
@@ -250,11 +249,11 @@ npx skills add team-telnyx/ai --skill telnyx-twilio-migration --agent <AGENT>
 
 Includes parameter-by-parameter mapping tables, multi-language code examples (Python, Node, Go, Java, Ruby, curl), error code mapping, and migration plan/report templates.
 
-> **Note:** After migrating, install a language plugin (e.g. `telnyx-python`) for deeper SDK examples, and `telnyx-webrtc-client` if building a calling app.
+> **Note:** After migrating, install the product plugins you use (e.g. `telnyx-messaging@telnyx`, `telnyx-voice@telnyx`) for deeper SDK examples, and `telnyx-webrtc@telnyx` if building a calling app.
 
 ## Install Claude Code Plugin
 
-Install the unified Telnyx plugin with Claude Code marketplace:
+Telnyx ships one plugin per product area, so you install only the skills your project needs (see the token-hygiene note above).
 
 **Step 1.** Add the Telnyx marketplace (one-time setup):
 
@@ -262,15 +261,23 @@ Install the unified Telnyx plugin with Claude Code marketplace:
 /plugin marketplace add team-telnyx/ai
 ```
 
-**Step 2.** Install the plugin:
+**Step 2.** Install the plugins you need — pick one or more:
 
 ```bash
-/plugin install telnyx@telnyx
+/plugin install telnyx-messaging@telnyx  # SMS / MMS
+/plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
+/plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
+/plugin install telnyx-email@telnyx      # Email API
+/plugin install telnyx-tts@telnyx        # Text-to-speech
+/plugin install telnyx-stt@telnyx        # Speech-to-text
+/plugin install telnyx-verify@telnyx     # Phone verification / 2FA
+/plugin install telnyx-numbers@telnyx    # Number management, 10DLC, porting
+/plugin install telnyx-webrtc@telnyx     # WebRTC and client SDKs
+/plugin install telnyx-ai@telnyx         # AI inference and assistants
+/plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 
-This installs MCP server access + all skills listed above.
-
-The plugin includes all skills listed above — all languages, WebRTC client SDKs, Twilio migration workflow, and CLI guidance.
+Each plugin bundles that product's skills, and every skill lives in exactly one plugin — install any combination and you'll never load duplicates or waste context. Not sure which you need? See the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server (`https://api.telnyx.com/v2/mcp`) — see the [MCP section](/README.md#model-context-protocol-mcp) of the root README.
 
 ## Skill Structure
 
@@ -293,12 +300,12 @@ git clone https://github.com/team-telnyx/ai.git
 mkdir -p .github/skills
 
 # Example:
-cp -r ai/skills/telnyx-python/skills/telnyx-messaging-python .github/skills/
+cp -r ai/skills/telnyx-messaging-python .github/skills/
 ```
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for guidelines — in particular the split between auto-generated skills (open an issue) and hand-authored skills (PRs welcome).
 
 ## Support
 

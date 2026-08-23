@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -77,8 +77,8 @@ Optional: `channel_destination` (string), `channel_type_id` (enum: sms, voice, e
 
 ```javascript
 const notificationChannel = await client.notificationChannels.create({
-    channelTypeId: 'webhook',
-    channelDestination: 'https://example.com/webhooks',
+    channel_type_id: 'webhook',
+    channel_destination: 'https://example.com/webhooks',
 });
 
 console.log(notificationChannel.data);

@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -571,7 +571,7 @@ Retrieve an existing call from an existing queue
 `GET /queues/{queue_name}/calls/{call_control_id}`
 
 ```javascript
-const call = await client.queues.calls.retrieve('call_control_id', { queue_name: 'queue_name' });
+const call = await client.queues.calls.retrieve('call_control_id', { queue_name: 'my-queue' });
 
 console.log(call.data);
 ```
@@ -587,7 +587,7 @@ Update queued call's keep_after_hangup flag
 Optional: `keep_after_hangup` (boolean)
 
 ```javascript
-await client.queues.calls.update('call_control_id', { queue_name: 'queue_name' });
+await client.queues.calls.update('call_control_id', { queue_name: 'my-queue' });
 ```
 
 ## Force remove a call from a queue
@@ -597,7 +597,7 @@ Removes an inactive call from a queue. If the call is no longer active, use this
 `DELETE /queues/{queue_name}/calls/{call_control_id}`
 
 ```javascript
-await client.queues.calls.remove('call_control_id', { queue_name: 'queue_name' });
+await client.queues.calls.remove('call_control_id', { queue_name: 'my-queue' });
 ```
 
 ---

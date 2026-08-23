@@ -56,6 +56,135 @@ export function supportsStatefulActors(): boolean {
   }
 }
 
+/** Detect the source-directory scaffold used by both setup handoffs. */
+export function supportsNewFuncFromDir(): boolean {
+  try {
+    const out = runEdge(["new-func", "--help"]);
+    return /\bnew-func\b/i.test(out) && /--from-dir\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the command used by setup handoffs to publish a function. */
+export function supportsShip(): boolean {
+  try {
+    const out = runEdge(["ship", "--help"]);
+    return /\bship\b/i.test(out) && /\bfunction\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the read-only failed-ship diagnostic and its detailed log output. */
+export function supportsShipStatus(): boolean {
+  try {
+    const out = runEdge(["ship", "status", "--help"]);
+    return /\bship\s+status\s+<function>(?:\s|\[|$)/i.test(out) && /--logs\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect non-interactive confirmation from a destructive command's own help. */
+export function supportsNonInteractiveConfirmation(): boolean {
+  try {
+    const out = runEdge(["delete-func", "--help"]);
+    return /--yes\b/i.test(out) && /confirm(?:ation)?|scripts?|\bci\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect failed-function reset directly, without relying on the CLI version. */
+export function supportsResetFunc(): boolean {
+  try {
+    const out = runEdge(["reset-func", "--help"]);
+    return /\breset-func\s+<[^>]+>/i.test(out) && /reset\b[\s\S]*\bfunction\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect reset confirmation bypass from reset-func's own help surface. */
+export function supportsResetFuncNonInteractiveConfirmation(): boolean {
+  try {
+    const out = runEdge(["reset-func", "--help"]);
+    return /--yes\b/i.test(out) && /confirm(?:ation)?|scripts?|\bci\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the exact secret write command emitted by the setup handoffs. */
+export function supportsSecretsAdd(): boolean {
+  try {
+    const out = runEdge(["secrets", "add", "--help"]);
+    return /\bsecrets\s+add\s+<[^>]+>\s+<[^>]+>/i.test(out) && /\bsecret\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect TypeScript binding declaration generation directly. */
+export function supportsTypes(): boolean {
+  try {
+    const out = runEdge(["types", "--help"]);
+    const hasTypescript = /\btypescript\b/i.test(out);
+    const hasGenerationIndicator =
+      /\btypes\b/i.test(out) || /\btelnyx-env\.d\.ts\b/i.test(out) || /\bbindings\b/i.test(out);
+    return hasTypescript && hasGenerationIndicator;
+  } catch {
+    return false;
+  }
+}
+
+/** Detect KV namespace management, including its basic lifecycle commands. */
+export function supportsKvStorage(): boolean {
+  try {
+    const out = runEdge(["storage", "kv", "--help"]);
+    return /\bstorage\s+kv\b/i.test(out) && /\bkv\b[\s\S]*\bnamespace/i.test(out) &&
+      ["create", "list", "get", "delete"].every((command) => new RegExp(`\\b${command}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect key CRUD beneath a KV namespace rather than inferring it from KV. */
+export function supportsKvKeyManagement(): boolean {
+  try {
+    const out = runEdge(["storage", "kv", "key", "--help"]);
+    return /\bstorage\s+kv\s+key\b/i.test(out) && /\bkeys?\b[\s\S]*\bkv\s+namespace/i.test(out) &&
+      ["list", "get", "put", "delete"].every((command) => new RegExp(`\\b${command}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect usable remote SQL execution. The command alone is insufficient: the
+ * v0.3 workflow requires both SQL input forms and the explicit remote switch.
+ */
+export function supportsSqlDatabases(): boolean {
+  try {
+    const out = runEdge(["storage", "sqldb", "execute", "--help"]);
+    return /\bstorage\s+sqldb\s+execute\s+<[^>]+>/i.test(out) &&
+      ["remote", "command", "file"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect both forms of v0.4.1 positional SQL parameter binding directly. */
+export function supportsSqlBoundParameters(): boolean {
+  try {
+    const out = runEdge(["storage", "sqldb", "execute", "--help"]);
+    return /--param(?:[\s=,]|$)/i.test(out) && /--param-json\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect the root function-detail command introduced before v0.2.5. */
 export function supportsInspect(): boolean {
   try {

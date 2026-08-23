@@ -6,7 +6,7 @@
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import { printSuccess, printError, outputJson, failWith } from "../utils/output.ts";
 
 interface RcsCapabilitiesResult {
   agent_id: string;
@@ -23,14 +23,10 @@ export async function rcsCapabilitiesCommand(flags: Record<string, string | bool
   const phoneNumber = flags["phone-number"] as string | undefined;
 
   if (!agentId) {
-    printError("--agent-id is required");
-    process.exit(1);
-    return;
+    failWith("--agent-id is required", jsonOutput);
   }
   if (!phoneNumber) {
-    printError("--phone-number is required (E.164 format, e.g., +131****0001)");
-    process.exit(1);
-    return;
+    failWith("--phone-number is required (E.164 format, e.g., +131****0001)", jsonOutput);
   }
 
   try {

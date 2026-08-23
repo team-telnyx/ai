@@ -1003,24 +1003,6 @@ curl \
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
-## Update a Wireless Blocklist
-
-Update a Wireless Blocklist.
-
-`PATCH /wireless_blocklists`
-
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
-
-```bash
-curl \
-  -X PATCH \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/wireless_blocklists"
-```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
-
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
@@ -1029,6 +1011,24 @@ Retrieve information about a Wireless Blocklist.
 
 ```bash
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless_blocklists/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
+```
+
+Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+
+## Update a Wireless Blocklist
+
+Update a Wireless Blocklist.
+
+`PATCH /wireless_blocklists/{id}`
+
+Optional: `name` (string), `values` (array[object])
+
+```bash
+curl \
+  -X PATCH \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/wireless_blocklists/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
 ```
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])

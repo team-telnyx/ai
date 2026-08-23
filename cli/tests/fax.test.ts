@@ -41,6 +41,26 @@ if (command[0] === "faxes" && command[1] === "create") {
       created_at: "2026-07-20T00:00:00Z"
     }
   }));
+} else if (command[0] === "faxes" && command[1] === "retrieve") {
+  console.log(JSON.stringify({
+    data: {
+      id: "fax-123",
+      record_type: "fax",
+      status: "delivered",
+      direction: "outbound",
+      connection_id: "conn-123",
+      from: "+131****0000",
+      to: "+131****0001",
+      page_count: 3,
+      created_at: "2026-07-20T00:00:00Z",
+      updated_at: "2026-07-20T00:01:00Z",
+      media_url: "https://api.example.test/faxes/fax-123.pdf"
+    }
+  }));
+} else if (command[0] === "faxes:actions" && command[1] === "cancel") {
+  console.log(JSON.stringify({ data: { result: "success" } }));
+} else if (command[0] === "faxes:actions" && command[1] === "refresh") {
+  console.log(JSON.stringify({ data: { result: "success" } }));
 } else {
   console.error("unexpected command: " + command.join(" "));
   process.exit(2);
@@ -276,18 +296,76 @@ describe("fax-send command", () => {
     assert.deepEqual(readLoggedArgs(fake.logPath), []);
   });
 
+  it("wraps fax retrieve, cancel, and refresh with newline-delimited mock invocations", () => {
+    const fake = setupFakeTelnyx();
+
+    const status = JSON.parse(runCli(["fax-status", "--id", "fax-123", "--json"], fake.env));
+    const cancel = JSON.parse(runCli(["fax-cancel", "--id", "fax-123", "--json"], fake.env));
+    const refresh = JSON.parse(runCli(["fax-refresh", "--id", "fax-123", "--json"], fake.env));
+
+    assert.deepEqual(status, {
+      fax_id: "fax-123",
+      status: "delivered",
+      direction: "outbound",
+      connection_id: "conn-123",
+      from: "+131****0000",
+      to: "+131****0001",
+      page_count: 3,
+      created_at: "2026-07-20T00:00:00Z",
+      updated_at: "2026-07-20T00:01:00Z",
+      media_url: "https://api.example.test/faxes/fax-123.pdf",
+    });
+    assert.deepEqual(cancel, {
+      fax_id: "fax-123",
+      result: "success",
+      cancelled: true,
+    });
+    assert.deepEqual(refresh, {
+      fax_id: "fax-123",
+      result: "success",
+      refreshed: true,
+    });
+
+    // The fake appends one genuine newline-terminated JSON record per process.
+    // Reading all three records verifies the fixture is JSONL, not a literal backslash-n string.
+    assert.equal(readFileSync(fake.logPath, "utf8").match(/\n/g)?.length, 3);
+    assert.deepEqual(readLoggedArgs(fake.logPath), [
+      ["faxes", "retrieve", "--id", "fax-123", "--format", "json"],
+      ["faxes:actions", "cancel", "--id", "fax-123", "--format", "json"],
+      ["faxes:actions", "refresh", "--id", "fax-123", "--format", "json"],
+    ]);
+  });
+
+  for (const command of ["fax-status", "fax-cancel", "fax-refresh"]) {
+    it(`${command} requires --id before invoking telnyx`, () => {
+      const fake = setupFakeTelnyx();
+      expectFailure([command, "--json"], fake.env, /--id is required \(fax ID\)/);
+      assert.deepEqual(readLoggedArgs(fake.logPath), []);
+    });
+  }
+
   it("is wired into help and capabilities", () => {
     const help = runCli(["help"]);
     assert.match(help, /fax-send\s+Send a fax/);
     assert.match(help, /Fax Action Flags:/);
     assert.match(help, /--connection-id <id>/);
+    assert.match(help, /fax-status\s+Retrieve the latest status/);
+    assert.match(help, /fax-cancel\s+Cancel an outbound fax/);
+    assert.match(help, /fax-refresh\s+Refresh an expired media URL/);
+    assert.match(help, /--id <fax-id>/);
 
     const capabilities = JSON.parse(runCli(["capabilities", "--json"]));
     const faxCapability = capabilities.api_capabilities["📠 Fax"][0];
-    assert.ok(faxCapability.actions.includes("send_fax"));
-    assert.ok(
-      capabilities.composite_commands.some((command: { name: string }) => command.name === "telnyx-agent fax-send"),
-      "capabilities should advertise the executable fax-send command",
-    );
+    for (const action of ["send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"]) {
+      assert.ok(faxCapability.actions.includes(action), `fax capabilities should include ${action}`);
+    }
+    for (const command of ["fax-send", "fax-status", "fax-cancel", "fax-refresh"]) {
+      assert.ok(
+        capabilities.composite_commands.some(
+          (entry: { name: string }) => entry.name === `telnyx-agent ${command}`,
+        ),
+        `capabilities should advertise the executable ${command} command`,
+      );
+    }
   });
 });

@@ -5,15 +5,22 @@ Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce mu
 ## Quick Start
 
 ```bash
+# Install
+npm install -g @telnyx/agent-cli
+
 # Set your API key
 export TELNYX_API_KEY="KEY_xxx"
 
 # Check account status
-npx tsx bin/telnyx-agent.ts status
+telnyx-agent status
 
 # See all capabilities
-npx tsx bin/telnyx-agent.ts capabilities
+telnyx-agent capabilities
 ```
+
+> **Contributors / from-source:** run the CLI with `node bin/telnyx-agent.mjs <command>`
+> (the published `bin`). The older `npx tsx bin/telnyx-agent.ts` form is dev-only and
+> is **not** what an installed user runs.
 
 ## Commands
 
@@ -45,23 +52,41 @@ Creates a messaging profile, searches for a number with SMS capability, buys it,
 telnyx-agent setup-sms                    # Default: US number
 telnyx-agent setup-sms --country GB       # UK number
 telnyx-agent setup-sms --json             # JSON output
+telnyx-agent setup-sms --force            # Provision a NEW profile + number
 ```
 
-Output: `{ profile_id, phone_number, ready: true }`
+Output: `{ profile_id, phone_number, ready: true, reused }`
+
+**Idempotent by default.** If a previous `setup-sms` already created an
+`Agent SMS Profile - …` with an assigned number, this command **reuses** it
+instead of buying another (`reused: true`). Pass `--force` to always provision a
+fresh profile and number (this buys a new ~$1/mo number).
 
 ### `telnyx-agent setup-voice`
 
 **One command: zero to making/receiving calls.**
 
-Creates a SIP credential connection, searches for a voice-capable number, buys it, and assigns it to the connection.
+Creates a Call Control Application (with webhook URL + outbound voice profile), searches for a voice-capable number, buys it, and assigns it to the app. The output `connection_id` works directly with `call-dial`.
 
 ```bash
 telnyx-agent setup-voice
 telnyx-agent setup-voice --webhook https://example.com/calls
+telnyx-agent setup-voice --outbound-voice-profile-id 2927726759434519857
 telnyx-agent setup-voice --country US --json
+telnyx-agent setup-voice --force   # Provision a NEW app + number
 ```
 
-Output: `{ connection_id, phone_number, sip_username, sip_password }`
+**Idempotent by default.** Reuses a previous `Agent Voice App - …` (and its
+assigned number) when one exists (`reused: true`); pass `--force` to provision a
+fresh Call Control App and number.
+
+**Flags:**
+- `--webhook-url` (or `--webhook`) — Webhook URL for call events (default: `https://example.com/webhook`)
+- `--outbound-voice-profile-id` — Outbound voice profile ID (default: auto-detect first available)
+- `--force` — Always provision a new app + number instead of reusing an existing agent-created one
+- `--country` — ISO country code for number search (default: `US`)
+
+Output: `{ connection_id, connection_name, phone_number, phone_number_id, webhook_url, outbound_voice_profile_id, ready }`
 
 ### `telnyx-agent setup-iot`
 
@@ -75,6 +100,26 @@ telnyx-agent setup-iot --json
 ```
 
 Output: `{ sim_id, group_id, status, apn_config }`
+
+### `telnyx-agent setup-verify`
+
+**One command: zero to phone verification.**
+
+Creates a verify profile with SMS channel settings (default timeout 300s, code length 6, whitelisted destinations US) and outputs everything you need to start sending verifications. **No number is purchased** — Telnyx delivers OTPs from its own managed sender pool, and `verify-send` only takes the phone number being verified. Re-running reuses an existing agent-created verify profile (`reused: true`) unless you pass `--force` or a custom `--profile-name`.
+
+```bash
+telnyx-agent setup-verify
+telnyx-agent setup-verify --destinations US,GB,LK
+telnyx-agent setup-verify --profile-name "My Verify Profile" --json
+telnyx-agent setup-verify --force   # Always create a new profile
+```
+
+**Flags:**
+- `--destinations` — Comma-separated ISO country codes to whitelist (default: `US`)
+- `--profile-name` — Custom profile name (also forces creating a distinct profile)
+- `--force` — Always create a new profile instead of reusing an existing agent-created one
+
+Output: `{ profile_id, profile_name, timeout_secs, test_command, ready, reused }`
 
 ### `telnyx-agent setup-ai`
 
@@ -116,7 +161,7 @@ Output: `{ waba_id, phone_number, verified, profile_configured, ready }`
 
 ### `telnyx-agent whatsapp-send`
 
-**Send a WhatsApp message (text or template).**
+**Send a WhatsApp text, template, media, interactive, location, reaction, sticker, contacts, or video message.**
 
 Constructs the WhatsApp message JSON from simple flags and sends via the Telnyx API.
 
@@ -124,6 +169,10 @@ Constructs the WhatsApp message JSON from simple flags and sends via the Telnyx 
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hello!"
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --template-name order_ready
 telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hi" --messaging-profile-id msgprof_123
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 \
+  --image '{"link":"https://example.com/photo.jpg","caption":"Hello"}'
+telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 \
+  --location '{"latitude":41.8781,"longitude":-87.6298,"name":"Chicago"}'
 ```
 
 **Flags:**
@@ -133,9 +182,37 @@ telnyx-agent whatsapp-send --from +155****4567 --to +155****6543 --text "Hi" --m
 - `--text` — Text message body
 - `--template-name` — Template name to send
 - `--template-language` — Template language code (default: en_US)
+- `--audio`, `--document`, `--image`, `--interactive`, `--location`, `--reaction`, `--sticker`, `--video` — The selected WhatsApp payload object as JSON (mutually exclusive)
+- `--contacts` — A non-empty JSON array of WhatsApp contact objects
+- `--biz-opaque-callback-data` — Custom data returned in message status updates
 - `--messaging-profile-id` — Messaging profile ID (required if `--from` is not SMS-enabled)
+- `--webhook-url` — Message status webhook URL
+
+The wrapper inspects the local Go CLI's `messages --help` output before sending,
+so it supports both the legacy `messages send-whatsapp` spelling and v0.27's
+`messages whatsapp`. If command help is unavailable, its local semantic version
+is used as the fallback. No API request is used for compatibility detection.
 
 Output: `{ from, to, message_type, message_id, status }`
+
+### Advanced `send-sms` sender modes
+
+`send-sms` infers the correct generated Go CLI action from its sender inputs:
+
+```bash
+# E.164 sender (`messages send`)
+telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello"
+
+# Messaging-profile number pool (`messages send-number-pool`); no --from
+telnyx-agent send-sms --messaging-profile-id msgprof_123 --to +131****0001 --text "Hello"
+
+# Alphanumeric sender (`messages send-with-alphanumeric-sender`)
+telnyx-agent send-sms --from MyCompany --messaging-profile-id msgprof_123 \
+  --to +131****0001 --text "Hello"
+```
+
+Number-pool and E.164 modes also support MMS via `--media-url`. Alphanumeric
+sender IDs are SMS-only and require both `--text` and `--messaging-profile-id`.
 
 ### `telnyx-agent whatsapp-templates`
 
@@ -159,6 +236,35 @@ telnyx-agent whatsapp-templates --waba-id waba_123 --create \
 - `--component` — Template components as JSON array string (create mode, required)
 - `--status` — Filter by status: APPROVED, PENDING, REJECTED (list mode)
 
+### Voice: `call-dial`, `call-control`, `call-status`
+
+**Place and manage outbound calls via Call Control.** Use the `connection_id`
+from `setup-voice`.
+
+```bash
+telnyx-agent call-dial --connection-id <id> --from +13125550000 --to +447700900123 --json
+telnyx-agent call-status --call-control-id <id> --json
+telnyx-agent call-control --call-control-id <id> --action hangup
+```
+
+- `call-dial` accepts any valid `+E.164` `--to` (posts directly to `POST /v2/calls`).
+- `call-status` reports `active` / `ended`, derived from the live call's
+  `is_alive` state.
+
+### `telnyx-agent send-group-mms`
+
+**Send one MMS to multiple recipients.**
+
+```bash
+telnyx-agent send-group-mms --from +13125550000 --to "+13125550001,+13125550002" --text "Hi team"
+telnyx-agent send-group-mms --from +13125550000 --to "+1...,+1..." --media-url https://example.com/pic.jpg
+```
+
+⚠ **Delivery verification caveat:** the group MMS returns a *group-level*
+message id that is **not** resolvable via `sms-status` / `GET /v2/messages/{id}`.
+Confirm delivery via the per-recipient statuses in the response (`recipient_statuses`)
+and/or message webhooks — not by polling the returned id.
+
 ### Edge Compute handoff commands
 
 These are **thin executable bridges**, not native Edge lifecycle support.
@@ -176,7 +282,7 @@ What they do:
 - prefer `telnyx-edge auth api-key set <your-api-key>` for agents when supported
 - point you at a real Edge example
 - give you the concrete next deploy command
-- preserve an honest handoff instead of pretending `telnyx-agent` owns Edge lifecycle
+- hand off function creation, deployment, and lifecycle management to the `telnyx-edge` CLI, which owns them
 
 ### `telnyx-agent fund-account`
 
@@ -212,6 +318,214 @@ telnyx-agent fund-account --amount 50.00 --json              # JSON output
 **Output (without --wallet-key):**
 Returns `payment_requirements` JSON for external signing by agents or wallets.
 
+### `telnyx-agent tts`
+
+**Generate speech from text (text-to-speech).**
+
+Supports multiple providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai). Returns base64-encoded audio. Run `telnyx-agent tts-voices --json` for the authoritative live list.
+
+```bash
+telnyx-agent tts --text "Hello world" --voice Telnyx.Bayan.Amanda
+telnyx-agent tts --text "Bonjour" --voice Amy --provider aws --language fr
+telnyx-agent tts --text "Hello" --provider minimax --json
+telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml
+```
+
+**Flags:**
+- `--text` — Text to synthesize (required)
+- `--voice` — Voice ID (e.g., `Telnyx.Bayan.Amanda`, `Amy`)
+- `--provider` — TTS provider (default: `telnyx`)
+- `--language` — Language code (default: `en`)
+- `--output-type` — Output format: `base64` (default). `binary_output` is not supported by this wrapper.
+- `--text-type` — `text` (default) or `ssml`
+- `--disable-cache` — Skip TTS cache
+- `--output <file>` — Also decode the audio and write it straight to this file (e.g. `speech.wav`)
+
+Output: `{ text, voice, provider, output_type, audio_data, has_audio_data, output_file? }`
+
+### `telnyx-agent tts-voices`
+
+**List available TTS voices, optionally filtered by provider.**
+
+```bash
+telnyx-agent tts-voices
+telnyx-agent tts-voices --provider aws
+telnyx-agent tts-voices --provider minimax --json
+```
+
+**Flags:**
+- `--provider` — Filter by provider (default: `telnyx`)
+
+Output: `{ provider, count, voices: [...] }`
+
+### `telnyx-agent stt`
+
+**Transcribe audio to text (speech-to-text).**
+
+Transcription requires the audio at a **publicly reachable URL** — the command
+cannot upload a local file. Host the audio (any public URL or a Telnyx storage
+bucket) first, then pass it with `--audio-url`. Note: `tts` returns base64 audio
+data, not a URL, so you cannot pipe `tts` straight into `stt` — host the audio in
+between.
+
+```bash
+telnyx-agent stt --audio-url https://example.com/audio.wav
+telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
+```
+
+**Flags:**
+- `--audio-url` — Public URL of the audio file to transcribe (required)
+- `--model` — Transcription model (default: `distil-whisper/distil-large-v2`; also `openai/whisper-large-v3-turbo`, `deepgram/nova-3`)
+- `--language` — Language hint (optional)
+- `--response-format` — `json` or `verbose_json` (optional)
+
+Output: `{ audio_url, model, transcription }`
+
+### `telnyx-agent stt-providers`
+
+**List available speech-to-text providers.**
+
+```bash
+telnyx-agent stt-providers
+telnyx-agent stt-providers --provider telnyx --service-type transcription --json
+```
+
+Output: `{ providers: [...] }`
+
+### `telnyx-agent storage-sql-query`
+
+**Run parameterized SQL against a Telnyx Storage SQL database.** The command
+requires the database ID and preserves the generated Go CLI's binding syntax.
+Repeat `--param` in positional `?` placeholder order; each value may be a
+string, number, boolean, or `null`.
+
+```bash
+telnyx-agent storage-sql-query --id <database-id> --sql "SELECT * FROM users"
+telnyx-agent storage-sql-query --id <database-id> \
+  --sql "SELECT * FROM users WHERE active = ? AND age >= ?" \
+  --param true --param 21 --json
+```
+
+Use bindings instead of interpolating values into SQL. Placeholder/parameter
+count mismatches are rejected by the API. This command requires Telnyx Go CLI
+v0.27.0 or newer; it does not change the package's vendored platform pin.
+
+## Cookbook Copy Changes (for Deniz)
+
+> **Status:** proposed copy changes for the *Communication API Cookbook v2* (the
+> "vibe-code your comms stack" PDF). Tested against the real CLI first, per Oliver's
+> Jul 27 direction. The two earlier open decisions (Verify buying a number; the TTS
+> provider list) are now **resolved in code** — the copy below is final. **Please still do
+> one full end-to-end re-test pass before publishing.** Send the review to Deniz via
+> **Slack** (not GitHub email). These reflect the fixes on branch
+> `integration/agent-cli-fixes`.
+>
+> **How to read this:** the cookbook has 6 one-page scripts (Voice, SMS, WhatsApp,
+> Verify, Text-to-Speech, Speech-to-Text). Below, each script lists the exact wording to
+> change and why, in plain English. "✅ works now, just re-test" means the command was
+> broken before and is fixed — no wording change, just run it once to confirm.
+
+### Applies to every script
+
+- **Two dashes on every flag.** Make sure flags always show two dashes — `--connection-id`,
+  not `-connection-id`. There are ~40 of these; a few lost a dash to PDF line-wrapping. Put
+  every command in a code block so it can't happen again.
+- **Fix words that got glued together by line wraps:** `callcontrol-id` → `call-control-id`,
+  `telnyxagent` → `telnyx-agent`, `verifycheck` → `verify-check`, `sendgroup-mms` →
+  `send-group-mms`, `Text-toSpeech` → `Text-to-Speech`.
+- **Add a cost note anywhere a script buys a phone number** (Voice, SMS, and — pending a
+  decision — Verify): *"Buying a number is a small recurring monthly charge. If you run the
+  setup again, it reuses the number it already bought instead of buying another."*
+- **Mention the "run again safely" behaviour.** `setup-sms` and `setup-voice` are now safe to
+  re-run: they reuse the number/profile they created before instead of buying a new one each
+  time. If someone genuinely wants a brand-new number, add `--force`.
+- **`--help` is safe.** Add a one-line reassurance (e.g. in the intro): running any command
+  with `--help` only shows help — it never buys anything or sets anything up.
+
+### Script 1 — Voice API (page 5)
+
+- **Important wording fix:** Step 5 says setup-voice creates a *"SIP credential connection."*
+  Change to *"**Call Control Application**"* — that's the correct type the calling example
+  actually needs. (The old name is simply wrong.)
+- **Webhook caveat:** the script tells the reader to pass `--webhook <url>`. Add: *"If you've
+  already set Voice up before, re-running reuses your existing app and your `--webhook` is
+  **not** re-applied to it. Add `--force` if you want a fresh app that uses your new webhook."*
+- **Soften two promises:** answering-machine detection accuracy *"varies by carrier/route,"*
+  and hiding your caller ID *"depends on the receiving carrier"* (it isn't guaranteed).
+- **✅ works now, just re-test:** the outbound-call example and `call-status` (now correctly
+  reports whether a call is active or ended).
+
+### Script 2 — SMS & Messaging (page 6)
+
+- **✅ works now, just re-test:** `schedule-sms` (scheduling a message for later) was pointing
+  at the wrong place before; it's fixed. Keep the example, just re-run it.
+- **Keep the group-MMS caveat — don't remove it:** the group-MMS *send* works, but the system
+  genuinely **can't confirm** whether each person received it. Keep wording like: *"Group MMS
+  sends, but delivery to each person can't be confirmed yet — treat a successful send as
+  'accepted,' not 'delivered.'"* Don't promise the user will "see it land."
+- **Add an international note:** a brand-new number can't text other countries by default.
+
+### Script 3 — WhatsApp (page 7)
+
+- **✅ works now, just re-test:** setup-whatsapp used to break for everyone at step 5; that's
+  fixed. Un-hold the script and re-run it.
+- **Keep Step 7 simple:** just `telnyx-agent whatsapp-templates` (lists your templates). You
+  do **not** need to add `--waba-id` — listing works without it. (Earlier drafts said to add
+  `--waba-id <id>`; don't — that made the list come back empty. It's fixed now.)
+- **Add a warning:** Meta's "555" test numbers can't actually send messages — use a real
+  WhatsApp-capable number for the send step.
+
+### Script 4 — Verify API (page 8)
+
+- **✅ works now, just re-test:** setup-verify used to fail for everyone; the profile step is
+  fixed.
+- **Remove the "buys a number" line.** Step 5 currently says it *"creates a verification
+  profile **and buys a number for it**."* Change it to just *"creates a verification
+  profile."* Verify does **not** need a phone number — Telnyx sends the codes from its own
+  managed pool. (The tool no longer buys a number, so there's no cost note needed here —
+  Verify is the one setup that's free to run.)
+- **Nice extras to add:** the same international-SMS note as SMS, and mention the
+  `--method call` option (Telnyx calls the phone and reads the code aloud) as a second way to
+  verify.
+
+### Script 5 — Text-to-Speech (page 9)
+
+- **Fix the output description:** Step 6 says *"save the audio URL … and download the file."*
+  That's not what happens — the command returns the audio **as encoded data in the output**
+  (WAV format, not MP3), not a link and not a saved file. Change to something like: *"the
+  command returns the audio as base64 data in its output — save it to a playable file, e.g.
+  by piping it through `base64 -d > speech.wav`."*
+- **Add a voice to the example:** the `tts` example should include a voice, e.g.
+  `--voice Telnyx.Bayan.Amanda`.
+- **Use this provider list (ElevenLabs is out):** the correct, live provider list is
+  **telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai**. Remove
+  **ElevenLabs** from the cookbook (the PROVIDERS box, the Step 5 list, and the "ElevenLabs
+  for expressive agents" line in the PRO TIP) — it isn't offered by the live service. If in
+  doubt, `telnyx-agent tts-voices --json` prints the current list.
+
+### Script 6 — Speech-to-Text (page 10)
+
+- **Fix the "chain them together" step:** Step 6 tells the reader to make audio with `tts` and
+  feed it straight into `stt`. That can't work — `tts` gives back encoded data, and `stt`
+  needs a **public web link** to the audio. Change it to: *"Put a sample audio file somewhere
+  public first (any public URL or a Telnyx storage bucket), then run
+  `telnyx-agent stt --audio-url <public_link>`."*
+- **Set expectations:** the transcription providers are correct, but add that brand names and
+  unusual words may come out slightly wrong.
+
+### Both earlier open questions are now settled (nothing pending for Deniz)
+
+1. **Verify buying a number — RESOLVED.** `setup-verify` no longer buys a number; Verify uses
+   Telnyx's managed sender pool. Copy: drop the "buys a number" line (handled above).
+2. **TTS provider list — RESOLVED.** The tool's list is reconciled to the live set and
+   ElevenLabs is removed. Copy: use the provider list above and drop ElevenLabs.
+
+### For engineers (not for the cookbook)
+
+The number/SMS/WhatsApp-send commands use a bundled Telnyx Go CLI installed to `vendor/` on
+`npm install`. If a command reports `command …:… not found`, an incompatible `telnyx` was
+found on `PATH` — re-run `npm install` (or `npm rebuild`) to restore `vendor/telnyx`.
+
 ## Authentication
 
 The CLI looks for an API key in this order:
@@ -228,10 +542,16 @@ The CLI looks for an API key in this order:
 
 ## Architecture
 
-- **Hybrid execution** — wraps `telnyx-cli` where available, falls back to native `fetch()` for operations without CLI support
-- **No CLI framework** — simple `process.argv` parsing for 17 commands
-- **TypeScript + tsx** — direct execution, no build step
-- **Error handling** — composite commands report what succeeded and what failed
+- **Hybrid execution** — most commands call the Telnyx REST API v2 directly via native
+  `fetch()`; a subset (number search/order, `send-sms`, `sms-status`, WhatsApp send)
+  shell out to the bundled `telnyx` Go CLI (`@telnyx/telnyx-cli`, pinned by
+  `scripts/postinstall.ts`). The Go CLI is installed into `vendor/` on `npm install`.
+- **CLI dependency** — the shell-out path expects the pinned Go CLI in `vendor/`. If it
+  is missing and an **incompatible** `telnyx` is found on `PATH`, those specific commands
+  can fail with `command …:… not found`. Re-run `npm install` (or `npm rebuild`) to
+  restore `vendor/telnyx`. (See the "Cookbook Copy Changes" section above.)
+- **No CLI framework** — simple `process.argv` parsing.
+- **Error handling** — composite commands report what succeeded and what failed.
 
 ## Development
 
@@ -239,8 +559,10 @@ The CLI looks for an API key in this order:
 cd cli
 npm install
 
-# Run directly
+# Run directly (from source, dev mode)
 npx tsx bin/telnyx-agent.ts status
+# ...or drive the published launcher exactly as an installed user would:
+node bin/telnyx-agent.mjs status
 
 # Run tests
 npm test

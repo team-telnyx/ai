@@ -13,7 +13,7 @@
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { printStep, printSuccess, printError, printWarning, outputJson, type StepResult } from "../utils/output.ts";
+import { printStep, printSuccess, printError, printWarning, outputJson, failWith, type StepResult } from "../utils/output.ts";
 
 // ─── 10DLC domain constants ──────────────────────────────────────────────────
 
@@ -240,24 +240,19 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
   const email = flags.email as string;
 
   if (!phone || !email) {
-    printError("--phone and --email are required for 10DLC brand registration.");
-    process.exit(1);
+    failWith("--phone and --email are required for 10DLC brand registration.", jsonOutput);
   }
 
   // ── Validate use case ──
   const usecase = (flags.usecase as string) || "CUSTOMER_CARE";
   if (!VALID_USE_CASES.includes(usecase as (typeof VALID_USE_CASES)[number])) {
-    printError(
-      `Invalid use case '${usecase}'. Valid values: ${VALID_USE_CASES.map((u) => USE_CASE_LABELS[u]).join(", ")}`,
-    );
-    process.exit(1);
+    failWith(`Invalid use case '${usecase}'. Valid values: ${VALID_USE_CASES.map((u) => USE_CASE_LABELS[u]).join(", ")}`, jsonOutput);
   }
 
   // ── Validate opt-in method ──
   const optInMethod = (flags["opt-in-method"] as string) || "web";
   if (!VALID_OPT_IN_METHODS.includes(optInMethod as (typeof VALID_OPT_IN_METHODS)[number])) {
-    printError(`Invalid opt-in method '${optInMethod}'. Valid values: ${VALID_OPT_IN_METHODS.join(", ")}`);
-    process.exit(1);
+    failWith(`Invalid opt-in method '${optInMethod}'. Valid values: ${VALID_OPT_IN_METHODS.join(", ")}`, jsonOutput);
   }
 
   const phoneNumberId = (flags["phone-number-id"] as string) || "";
@@ -291,11 +286,8 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     const flowIssues = lintMessageFlow(messageFlow);
     const blockingFlowIssues = flowIssues.filter((i) => i.severity === "blocking");
     if (blockingFlowIssues.length > 0) {
-      printError("Message flow failed compliance validation (blocking issues):");
-      for (const issue of blockingFlowIssues) {
-        console.error(`  • ${issue.message}`);
-      }
-      process.exit(1);
+      const issues = blockingFlowIssues.map((i) => i.message).join("; ");
+      failWith(`Message flow failed compliance validation: ${issues}`, jsonOutput);
     }
     flowIssues.filter((i) => i.severity === "warning").forEach((i) => warnings.push(i.message));
 
@@ -310,11 +302,8 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
 
     const blockingSamples = sampleIssues.filter((i) => i.severity === "blocking");
     if (blockingSamples.length > 0) {
-      printError("Sample message validation failed (blocking issues):");
-      for (const issue of blockingSamples) {
-        console.error(`  • ${issue.message}`);
-      }
-      process.exit(1);
+      const issues = blockingSamples.map((i) => i.message).join("; ");
+      failWith(`Sample message validation failed: ${issues}`, jsonOutput);
     }
     sampleIssues.filter((i) => i.severity === "warning").forEach((i) => warnings.push(i.message));
 

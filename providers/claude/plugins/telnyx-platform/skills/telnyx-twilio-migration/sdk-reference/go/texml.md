@@ -86,18 +86,18 @@ Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `n
 
 Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
 
-`POST /texml/Accounts/{account_sid}/Calls` — Required: `To`, `From`, `ApplicationSid`
+`POST /texml/Accounts/{account_sid}/Calls` — Required: `Url`
 
-Optional: `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `CancelPlaybackOnDetectMessageEnd` (boolean), `CancelPlaybackOnMachineDetection` (boolean), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular), `FallbackUrl` (string), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (enum: initiated, ringing, answered, completed), `StatusCallbackMethod` (enum: GET, POST), `SuperviseCallSid` (string), `SupervisingRole` (enum: barge, whisper, monitor), `Texml` (string), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim), `Url` (string), `UrlMethod` (enum: GET, POST)
+Optional: `Texml` (object)
 
 ```go
 	response, err := client.Texml.Accounts.Calls.Calls(
 		context.Background(),
 		"account_sid",
 		telnyx.TexmlAccountCallCallsParams{
-			ApplicationSid: "example-app-sid",
-			From:           "+13120001234",
-			To:             "+13121230000",
+			OfWithURL: &telnyx.TexmlAccountCallCallsParamsParamsWithURL{
+				URL: "https://www.example.com/texml.xml",
+			},
 		},
 	)
 	if err != nil {
@@ -752,6 +752,32 @@ Permanently deletes a recording transcription.
 		log.Fatal(err)
 	}
 ```
+
+## Initiate an outbound AI call
+
+Initiate an outbound AI call with warm-up support. Validates parameters, builds an internal TeXML with an AI Assistant configuration, encodes instructions into client state, and calls the dial API. The Twiml, Texml, and Url parameters are not allowed and will result in a 422 error.
+
+`POST /texml/ai_calls/{connection_id}` — Required: `From`, `To`, `AIAssistantId`
+
+Optional: `AIAssistantDynamicVariables` (object), `AIAssistantVersion` (string), `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `ConversationCallback` (string), `ConversationCallbackMethod` (enum: GET, POST), `ConversationCallbacks` (array[string]), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular, PremiumCallScreening), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionPromptEndTimeout` (integer), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `Passports` (string), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (string), `StatusCallbackMethod` (enum: GET, POST), `StatusCallbacks` (array[string]), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim)
+
+```go
+	response, err := client.Texml.InitiateAICall(
+		context.Background(),
+		"connection_id",
+		telnyx.TexmlInitiateAICallParams{
+			AIAssistantID: "ai-assistant-id-123",
+			From:          "+13120001234",
+			To:            "+13121230000",
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.CallSid)
+```
+
+Returns: `call_sid` (string), `from` (string), `status` (string), `to` (string)
 
 ## Create a TeXML secret
 
