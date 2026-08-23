@@ -51,7 +51,7 @@ jobs:
         run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_langchain_toolkit.py tests/test_crewai_toolkit.py tests/test_shared_schema.py tests/test_x402.py tests/test_rcs_call_control_tools.py -v
 
       # TypeScript compilation
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Install TS SDK deps
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -167,7 +167,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
