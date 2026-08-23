@@ -21,7 +21,7 @@ jobs:
     name: Check — Skills in sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify provider skill directories match source
         run: ./scripts/check-skills-sync.sh
 
@@ -29,7 +29,7 @@ jobs:
     name: Check — Skill-count markers current
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify SKILL_COUNT markers match on-disk count
         run: ./scripts/check-skill-count.sh
 
@@ -37,7 +37,7 @@ jobs:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Python unit tests
       - uses: actions/setup-python@v5
@@ -106,7 +106,7 @@ jobs:
     env:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -163,7 +163,7 @@ jobs:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
       RUN_WRITE_TESTS: "true"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
