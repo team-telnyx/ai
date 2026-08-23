@@ -26,9 +26,11 @@ pytestmark = pytest.mark.skipif(not TELNYX_API_KEY, reason="TELNYX_API_KEY not s
 TRANSIENT_STATUSES = (500, 502, 503, 504)
 READONLY_TIMEOUT = 30
 
-# Set after the first runner-side timeout so the remaining read-only tests
-# xfail immediately instead of each waiting out READONLY_TIMEOUT (41 tests
-# x 30s would otherwise stall the job for ~20 minutes on a dead network).
+# Set after the first *connection-level* failure (cannot reach api.telnyx.com
+# at all) so the remaining read-only tests xfail immediately instead of each
+# waiting out READONLY_TIMEOUT (41 tests x 30s would otherwise stall the job
+# for ~20 minutes on a dead network). A slow endpoint (ReadTimeout) only
+# xfails its own test and does not trip this.
 _runner_timeout_seen: str | None = None
 
 
@@ -47,9 +49,11 @@ def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
     kwargs.setdefault("timeout", READONLY_TIMEOUT)
     try:
         r = httpx.get(url, **kwargs)
-    except httpx.TimeoutException as exc:
+    except (httpx.ConnectTimeout, httpx.ConnectError) as exc:
         _runner_timeout_seen = what
-        pytest.xfail(f"{what} timed out from CI runner: {exc}")
+        pytest.xfail(f"{what}: CI runner cannot reach API: {exc!r}")
+    except httpx.TimeoutException as exc:
+        pytest.xfail(f"{what} timed out from CI runner: {exc!r}")
     if r.status_code in TRANSIENT_STATUSES:
         pytest.xfail(f"{what} returned transient upstream {r.status_code}")
     return r
