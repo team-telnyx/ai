@@ -24,6 +24,12 @@ RESOURCE_PREFIX = "ci-integration-test-"  # Easy to identify and cleanup
 pytestmark = pytest.mark.skipif(not TELNYX_API_KEY, reason="TELNYX_API_KEY not set")
 
 TRANSIENT_STATUSES = (500, 502, 503, 504)
+READONLY_TIMEOUT = 30
+
+# Set after the first runner-side timeout so the remaining read-only tests
+# xfail immediately instead of each waiting out READONLY_TIMEOUT (41 tests
+# x 30s would otherwise stall the job for ~20 minutes on a dead network).
+_runner_timeout_seen: str | None = None
 
 
 def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
@@ -34,11 +40,15 @@ def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
     about this repo's code, so it is reported as xfail instead of turning
     every open PR red for the duration of an outage.
     """
+    global _runner_timeout_seen
+    if _runner_timeout_seen:
+        pytest.xfail(f"skipped after earlier runner timeout ({_runner_timeout_seen})")
     kwargs.setdefault("headers", HEADERS)
-    kwargs.setdefault("timeout", 60)
+    kwargs.setdefault("timeout", READONLY_TIMEOUT)
     try:
         r = httpx.get(url, **kwargs)
     except httpx.TimeoutException as exc:
+        _runner_timeout_seen = what
         pytest.xfail(f"{what} timed out from CI runner: {exc}")
     if r.status_code in TRANSIENT_STATUSES:
         pytest.xfail(f"{what} returned transient upstream {r.status_code}")
