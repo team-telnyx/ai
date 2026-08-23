@@ -165,19 +165,15 @@ describe("TypeScript SDK — Read-Only API", () => {
     const r = await readonlyFetch(t, "ai chat completion", `${BASE}/ai/chat/completions`, {
       method: "POST",
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        // OpenAI models now require a customer-provided key on the public
+        // endpoint (error 10015); use a Telnyx-hosted model, as the Python suite does.
+        model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
         messages: [{ role: "user", content: "Say OK" }],
         max_tokens: 3,
       }),
     });
     if (!r) return;
-    if (r.status !== 200) {
-      // Known-unstable upstream (the Python suite xfails this too). Log the
-      // body so the cause is visible in CI without failing the job.
-      const text = await r.text();
-      t.skip(`/ai/chat/completions returned ${r.status} (known-unstable upstream): ${text.slice(0, 300)}`);
-      return;
-    }
+    assert.equal(r.status, 200, await r.clone().text());
     const body = (await r.json()) as any;
     assert.ok(body.choices.length > 0);
   });

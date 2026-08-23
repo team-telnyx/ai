@@ -181,11 +181,6 @@ class TestReadonly:
             assert "data" in data
             assert isinstance(data["data"], list)
 
-    @pytest.mark.xfail(
-        reason="Telnyx /ai/chat/completions returns 408 consistently from GH runners; "
-        "tracked separately — remove xfail once upstream is stable",
-        strict=False,
-    )
     def test_readonly_ai_chat_completion(self):
         """POST /v2/ai/chat/completions works with a tiny request."""
         r = _readonly_post(
