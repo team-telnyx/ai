@@ -1,113 +1,59 @@
 # Dependabot configuration.
 #
-# Before this file existed Dependabot only opened security-update PRs, one per
-# package per directory (e.g. #285/#402/#410/#411). Grouping collapses those
-# into one PR per directory per week, and adds scheduled minor/patch version
-# updates so we are not only ever reacting to CVEs. Majors are left ungrouped
-# so they get individual review.
+# Goal: as few PRs as possible. Each ecosystem is ONE entry covering every
+# directory, with a single group that spans directories and all update
+# types, so a weekly sweep is at most one PR for npm, one for uv and one for
+# GitHub Actions (plus one grouped security PR per ecosystem if needed).
+#
+# Majors of typescript / @types/node are ignored: bump those deliberately in
+# one hand-made PR when the repo is ready, not whenever upstream tags one.
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directories:
+      - "/"
+      - "/cli"
+      - "/plugins/opencode"
+      - "/tools/mcp"
+      - "/tools/mcp-apps"
+      - "/tools/typescript"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
-      npm-minor-patch:
+      npm-all:
         applies-to: version-updates
-        update-types: ["minor", "patch"]
+        patterns: ["*"]
       npm-security:
         applies-to: security-updates
         patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/cli"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      npm-security:
-        applies-to: security-updates
-        patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/plugins/opencode"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      npm-security:
-        applies-to: security-updates
-        patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/tools/mcp"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      npm-security:
-        applies-to: security-updates
-        patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/tools/mcp-apps"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      npm-security:
-        applies-to: security-updates
-        patterns: ["*"]
-  - package-ecosystem: "npm"
-    directory: "/tools/typescript"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      npm-security:
-        applies-to: security-updates
-        patterns: ["*"]
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "uv"
     directory: "/tools/python"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
-      uv-minor-patch:
+      uv-all:
         applies-to: version-updates
-        update-types: ["minor", "patch"]
+        patterns: ["*"]
       uv-security:
         applies-to: security-updates
         patterns: ["*"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     groups:
-      github_actions-minor-patch:
-        applies-to: version-updates
-        update-types: ["minor", "patch"]
-      github_actions-security:
-        applies-to: security-updates
+      actions-all:
         patterns: ["*"]
