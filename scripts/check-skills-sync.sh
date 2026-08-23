@@ -78,6 +78,17 @@ for skill_dir in "$SKILLS_SRC"/*/; do
   done
 done
 
+# Orphans: provider copies whose canonical skill was deleted. sync-skills.sh
+# rebuilds every provider tree from scratch, so anything not in skills/ is stale.
+for orphan in "$REPO_ROOT"/providers/claude/plugins/*/skills/*/; do
+  [ -d "$orphan" ] || continue
+  skill_name="$(basename "$orphan")"
+  if [ ! -d "$SKILLS_SRC/$skill_name" ]; then
+    rel="${orphan%/}"; echo "Out of sync: ${rel#$REPO_ROOT/} has no canonical skills/$skill_name (orphaned copy)"
+    out_of_sync=true
+  fi
+done
+
 target="$REPO_ROOT/providers/cursor/plugin/skills"
 if [ ! -d "$target" ]; then
   echo "WARNING: $target does not exist"
@@ -87,6 +98,14 @@ else
     skill_name="$(basename "$skill_dir")"
     if ! diff -r "$skill_dir" "$target/$skill_name" > /dev/null 2>&1; then
       echo "Out of sync: providers/cursor/plugin/skills/$skill_name"
+      out_of_sync=true
+    fi
+  done
+  for orphan in "$target"/*/; do
+    [ -d "$orphan" ] || continue
+    skill_name="$(basename "$orphan")"
+    if [ ! -d "$SKILLS_SRC/$skill_name" ]; then
+      echo "Out of sync: providers/cursor/plugin/skills/$skill_name has no canonical skill (orphaned copy)"
       out_of_sync=true
     fi
   done
