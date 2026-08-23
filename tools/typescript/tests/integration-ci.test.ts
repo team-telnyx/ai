@@ -23,7 +23,9 @@ if (!API_KEY) {
   process.exit(0);
 }
 
-const TRANSIENT_STATUSES = [500, 502, 503, 504];
+// 408 included: the API has historically returned it for /ai/chat/completions from
+// GH runners (an upstream timeout, not a problem with this repo).
+const TRANSIENT_STATUSES = [408, 500, 502, 503, 504];
 const READONLY_TIMEOUT_MS = 30_000;
 
 // Set after the first connection-level failure (runner cannot reach
