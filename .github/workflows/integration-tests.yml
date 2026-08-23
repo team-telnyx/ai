@@ -21,7 +21,7 @@ jobs:
     name: Check — Skills in sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify provider skill directories match source
         run: ./scripts/check-skills-sync.sh
 
@@ -29,7 +29,7 @@ jobs:
     name: Check — Skill-count markers current
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify SKILL_COUNT markers match on-disk count
         run: ./scripts/check-skill-count.sh
 
@@ -37,10 +37,10 @@ jobs:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Python unit tests
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install Python deps
@@ -51,7 +51,7 @@ jobs:
         run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_langchain_toolkit.py tests/test_crewai_toolkit.py tests/test_shared_schema.py tests/test_x402.py tests/test_rcs_call_control_tools.py -v
 
       # TypeScript compilation
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Install TS SDK deps
@@ -106,11 +106,11 @@ jobs:
     env:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -163,11 +163,11 @@ jobs:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
       RUN_WRITE_TESTS: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
