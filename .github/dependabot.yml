@@ -56,4 +56,8 @@ updates:
     open-pull-requests-limit: 1
     groups:
       actions-all:
+        applies-to: version-updates
+        patterns: ["*"]
+      actions-security:
+        applies-to: security-updates
         patterns: ["*"]
