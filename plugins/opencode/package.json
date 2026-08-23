@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "tsup": "^8.3.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "@types/node": "^22.0.0",
     "@opentui/core": "^0.1.101",
     "@opentui/solid": "^0.1.101",
