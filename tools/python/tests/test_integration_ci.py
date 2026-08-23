@@ -23,13 +23,34 @@ RESOURCE_PREFIX = "ci-integration-test-"  # Easy to identify and cleanup
 
 pytestmark = pytest.mark.skipif(not TELNYX_API_KEY, reason="TELNYX_API_KEY not set")
 
+TRANSIENT_STATUSES = (500, 502, 503, 504)
+
+
+def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
+    """GET for read-only smoke tests.
+
+    These tests check that an endpoint exists and responds sanely; they are
+    not uptime monitors. An upstream 5xx or a runner-side timeout says nothing
+    about this repo's code, so it is reported as xfail instead of turning
+    every open PR red for the duration of an outage.
+    """
+    kwargs.setdefault("headers", HEADERS)
+    kwargs.setdefault("timeout", 60)
+    try:
+        r = httpx.get(url, **kwargs)
+    except httpx.TimeoutException as exc:
+        pytest.xfail(f"{what} timed out from CI runner: {exc}")
+    if r.status_code in TRANSIENT_STATUSES:
+        pytest.xfail(f"{what} returned transient upstream {r.status_code}")
+    return r
+
 
 class TestReadonly:
     """Read-only tests — zero side effects, zero cost."""
 
     def test_readonly_get_balance(self):
         """GET /v2/balance returns valid balance data."""
-        r = httpx.get(f"{BASE_URL}/balance", headers=HEADERS)
+        r = _readonly_get(f"{BASE_URL}/balance", what="get balance")
         assert r.status_code == 200
         data = r.json()["data"]
         assert "balance" in data
@@ -40,8 +61,10 @@ class TestReadonly:
 
     def test_readonly_list_phone_numbers(self):
         """GET /v2/phone_numbers returns a list."""
-        r = httpx.get(
-            f"{BASE_URL}/phone_numbers", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/phone_numbers",
+            what="list phone numbers",
+            params={"page[size]": 1},
         )
         assert r.status_code == 200
         data = r.json()
@@ -51,9 +74,9 @@ class TestReadonly:
 
     def test_readonly_list_messaging_profiles(self):
         """GET /v2/messaging_profiles returns a list."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/messaging_profiles",
-            headers=HEADERS,
+            what="list messaging profiles",
             params={"page[size]": 1},
         )
         assert r.status_code == 200
@@ -63,9 +86,9 @@ class TestReadonly:
 
     def test_readonly_list_connections(self):
         """GET /v2/credential_connections returns a list."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/credential_connections",
-            headers=HEADERS,
+            what="list connections",
             params={"page[size]": 1},
         )
         assert r.status_code == 200
@@ -75,8 +98,10 @@ class TestReadonly:
 
     def test_readonly_list_ai_assistants(self):
         """GET /v2/ai/assistants returns a list."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/assistants", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/assistants",
+            what="list ai assistants",
+            params={"page[size]": 1},
         )
         assert r.status_code == 200
         data = r.json()
@@ -85,7 +110,7 @@ class TestReadonly:
 
     def test_readonly_list_ai_models(self):
         """GET /v2/ai/models returns available models."""
-        r = httpx.get(f"{BASE_URL}/ai/models", headers=HEADERS)
+        r = _readonly_get(f"{BASE_URL}/ai/models", what="list ai models")
         assert r.status_code == 200
         data = r.json()
         assert "data" in data
@@ -93,9 +118,9 @@ class TestReadonly:
 
     def test_readonly_search_phone_numbers(self):
         """GET /v2/available_phone_numbers can search without buying."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/available_phone_numbers",
-            headers=HEADERS,
+            what="search phone numbers",
             params={
                 "filter[country_code]": "US",
                 "filter[limit]": 1,
@@ -110,9 +135,9 @@ class TestReadonly:
 
     def test_readonly_list_outbound_voice_profiles(self):
         """GET /v2/outbound_voice_profiles returns a list."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/outbound_voice_profiles",
-            headers=HEADERS,
+            what="list outbound voice profiles",
             params={"page[size]": 1},
         )
         assert r.status_code == 200
@@ -122,8 +147,10 @@ class TestReadonly:
 
     def test_readonly_list_messages(self):
         """GET /v2/messages returns a list (or 404 if no messages exist)."""
-        r = httpx.get(
-            f"{BASE_URL}/messages", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/messages",
+            what="list messages",
+            params={"page[size]": 1},
         )
         # The messages list endpoint may return 404 on accounts with no message history
         assert r.status_code in (200, 404), f"Unexpected status: {r.status_code}"
@@ -176,14 +203,18 @@ class TestReadonly:
 
     def test_readonly_number_lookup(self):
         """GET /v2/number_lookup/:number works with a known number format."""
-        r = httpx.get(f"{BASE_URL}/number_lookup/+18005551234", headers=HEADERS)
+        r = _readonly_get(
+            f"{BASE_URL}/number_lookup/+18005551234", what="number lookup"
+        )
         # 200 or 404 both acceptable — we're testing the endpoint works, not the number
         assert r.status_code in (200, 404, 422)
 
     def test_readonly_list_sim_cards(self):
         """GET /v2/sim_cards returns a list."""
-        r = httpx.get(
-            f"{BASE_URL}/sim_cards", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/sim_cards",
+            what="list sim cards",
+            params={"page[size]": 1},
         )
         assert r.status_code == 200
         data = r.json()
@@ -192,8 +223,10 @@ class TestReadonly:
 
     def test_readonly_list_verify_profiles(self):
         """GET /v2/verify/profiles returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/verify/profiles", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/verify/profiles",
+            what="list verify profiles",
+            params={"page[size]": 1},
         )
         # Some accounts may not have verify access
         assert r.status_code in (200, 403, 404), (
@@ -206,8 +239,10 @@ class TestReadonly:
 
     def test_readonly_list_storage_buckets(self):
         """GET /v2/storage/buckets returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/storage/buckets", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/storage/buckets",
+            what="list storage buckets",
+            params={"page[size]": 1},
         )
         # Storage may not be enabled on all accounts
         assert r.status_code in (200, 403, 404), (
@@ -220,8 +255,10 @@ class TestReadonly:
 
     def test_readonly_list_messages_with_meta(self):
         """GET /v2/messages verifies meta pagination shape when available."""
-        r = httpx.get(
-            f"{BASE_URL}/messages", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/messages",
+            what="list messages with meta",
+            params={"page[size]": 1},
         )
         if r.status_code == 200:
             data = r.json()
@@ -232,8 +269,10 @@ class TestReadonly:
 
     def test_readonly_list_10dlc_brands(self):
         """GET /v2/10dlc/brands returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/10dlc/brands", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/10dlc/brands",
+            what="list 10dlc brands",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -245,8 +284,10 @@ class TestReadonly:
 
     def test_readonly_list_10dlc_campaigns(self):
         """GET /v2/10dlc/campaigns returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/10dlc/campaigns", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/10dlc/campaigns",
+            what="list 10dlc campaigns",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -260,8 +301,10 @@ class TestReadonly:
 
     def test_readonly_list_sim_card_groups(self):
         """GET /v2/sim_card_groups returns a list."""
-        r = httpx.get(
-            f"{BASE_URL}/sim_card_groups", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/sim_card_groups",
+            what="list sim card groups",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 403, 404), (
             f"Expected 200/403/404, got {r.status_code}"
@@ -275,8 +318,10 @@ class TestReadonly:
 
     def test_readonly_list_porting_orders(self):
         """GET /v2/porting_orders returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/porting_orders", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/porting_orders",
+            what="list porting orders",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -290,8 +335,10 @@ class TestReadonly:
 
     def test_readonly_list_e911_addresses(self):
         """GET /v2/e911_addresses returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/e911_addresses", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/e911_addresses",
+            what="list e911 addresses",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -305,8 +352,10 @@ class TestReadonly:
 
     def test_readonly_list_billing_groups(self):
         """GET /v2/billing_groups returns a list."""
-        r = httpx.get(
-            f"{BASE_URL}/billing_groups", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/billing_groups",
+            what="list billing groups",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -320,19 +369,11 @@ class TestReadonly:
 
     def test_readonly_list_webhook_deliveries(self):
         """GET /v2/webhook_deliveries returns a list or valid error."""
-        try:
-            r = httpx.get(
-                f"{BASE_URL}/webhook_deliveries",
-                headers=HEADERS,
-                params={"page[size]": 1},
-                timeout=60,
-            )
-        except httpx.TimeoutException as exc:
-            pytest.xfail(f"Webhook deliveries endpoint timed out from CI runner: {exc}")
-        if r.status_code in (500, 502, 503, 504):
-            pytest.xfail(
-                f"Webhook deliveries endpoint returned transient {r.status_code}"
-            )
+        r = _readonly_get(
+            f"{BASE_URL}/webhook_deliveries",
+            what="list webhook deliveries",
+            params={"page[size]": 1},
+        )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
         )
@@ -345,8 +386,10 @@ class TestReadonly:
 
     def test_readonly_list_networks(self):
         """GET /v2/networks returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/networks", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/networks",
+            what="list networks",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -360,17 +403,11 @@ class TestReadonly:
 
     def test_readonly_list_faxes(self):
         """GET /v2/faxes returns a list or valid error."""
-        try:
-            r = httpx.get(
-                f"{BASE_URL}/faxes",
-                headers=HEADERS,
-                params={"page[size]": 1},
-                timeout=60,
-            )
-        except httpx.TimeoutException as exc:
-            pytest.xfail(f"Fax list endpoint timed out from CI runner: {exc}")
-        if r.status_code in (500, 502, 503, 504):
-            pytest.xfail(f"Fax list endpoint returned transient {r.status_code}")
+        r = _readonly_get(
+            f"{BASE_URL}/faxes",
+            what="list faxes",
+            params={"page[size]": 1},
+        )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
         )
@@ -383,8 +420,10 @@ class TestReadonly:
 
     def test_readonly_list_missions(self):
         """GET /v2/ai/missions returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/missions", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/missions",
+            what="list missions",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -398,9 +437,9 @@ class TestReadonly:
 
     def test_readonly_list_insights(self):
         """GET /v2/ai/conversations/insights returns a list or valid error."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/ai/conversations/insights",
-            headers=HEADERS,
+            what="list insights",
             params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
@@ -415,9 +454,9 @@ class TestReadonly:
 
     def test_readonly_list_conversations(self):
         """GET /v2/ai/conversations returns a list or valid error."""
-        r = httpx.get(
+        r = _readonly_get(
             f"{BASE_URL}/ai/conversations",
-            headers=HEADERS,
+            what="list conversations",
             params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
@@ -432,8 +471,10 @@ class TestReadonly:
 
     def test_readonly_list_invoices(self):
         """GET /v2/invoices returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/invoices", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/invoices",
+            what="list invoices",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -447,8 +488,10 @@ class TestReadonly:
 
     def test_list_texml_applications_readonly(self):
         """GET /v2/texml_applications returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/texml_applications", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/texml_applications",
+            what="list texml applications",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -462,8 +505,10 @@ class TestReadonly:
 
     def test_list_push_credentials_readonly(self):
         """GET /v2/mobile_push_credentials returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/mobile_push_credentials", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/mobile_push_credentials",
+            what="list push credentials",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -477,8 +522,10 @@ class TestReadonly:
 
     def test_list_mcp_servers_readonly(self):
         """GET /v2/ai/mcp_servers returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/mcp_servers", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/mcp_servers",
+            what="list mcp servers",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -492,8 +539,10 @@ class TestReadonly:
 
     def test_list_call_control_applications_readonly(self):
         """GET /v2/call_control_applications returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/call_control_applications", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/call_control_applications",
+            what="list call control applications",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -507,8 +556,10 @@ class TestReadonly:
 
     def test_list_recordings_readonly(self):
         """GET /v2/recordings returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/recordings", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/recordings",
+            what="list recordings",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -522,8 +573,10 @@ class TestReadonly:
 
     def test_list_global_ips_readonly(self):
         """GET /v2/global_ips returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/global_ips", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/global_ips",
+            what="list global ips",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -537,8 +590,10 @@ class TestReadonly:
 
     def test_list_sim_card_orders_readonly(self):
         """GET /v2/sim_card_orders returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/sim_card_orders", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/sim_card_orders",
+            what="list sim card orders",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -552,8 +607,10 @@ class TestReadonly:
 
     def test_list_external_connections_readonly(self):
         """GET /v2/external_connections returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/external_connections", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/external_connections",
+            what="list external connections",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -567,8 +624,10 @@ class TestReadonly:
 
     def test_list_voice_clones_readonly(self):
         """GET /v2/ai/voice_clones returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/voice_clones", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/voice_clones",
+            what="list voice clones",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -582,8 +641,10 @@ class TestReadonly:
 
     def test_list_voice_designs_readonly(self):
         """GET /v2/ai/voice_designs returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/voice_designs", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/voice_designs",
+            what="list voice designs",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -597,8 +658,10 @@ class TestReadonly:
 
     def test_list_fine_tuning_jobs_readonly(self):
         """GET /v2/ai/fine_tuning/jobs returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/ai/fine_tuning/jobs", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/ai/fine_tuning/jobs",
+            what="list fine tuning jobs",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -612,8 +675,10 @@ class TestReadonly:
 
     def test_list_toll_free_verifications_readonly(self):
         """GET /v2/toll_free_verification_requests returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/toll_free_verification_requests", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/toll_free_verification_requests",
+            what="list toll free verifications",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -627,8 +692,10 @@ class TestReadonly:
 
     def test_list_detail_records_readonly(self):
         """GET /v2/reports/cdr_requests returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/reports/cdr_requests", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/reports/cdr_requests",
+            what="list detail records",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
@@ -642,8 +709,10 @@ class TestReadonly:
 
     def test_list_audit_events_readonly(self):
         """GET /v2/audit_events returns a list or valid error."""
-        r = httpx.get(
-            f"{BASE_URL}/audit_events", headers=HEADERS, params={"page[size]": 1}
+        r = _readonly_get(
+            f"{BASE_URL}/audit_events",
+            what="list audit events",
+            params={"page[size]": 1},
         )
         assert r.status_code in (200, 401, 403, 404), (
             f"Expected 200/401/403/404, got {r.status_code}"
