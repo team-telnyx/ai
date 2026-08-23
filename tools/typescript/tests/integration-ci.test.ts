@@ -23,63 +23,110 @@ if (!API_KEY) {
   process.exit(0);
 }
 
+// 408 included: the API has historically returned it for /ai/chat/completions from
+// GH runners (an upstream timeout, not a problem with this repo).
+const TRANSIENT_STATUSES = [408, 500, 502, 503, 504];
+const READONLY_TIMEOUT_MS = 30_000;
+
+// Set after the first connection-level failure (runner cannot reach
+// api.telnyx.com at all) so remaining read-only probes skip immediately
+// instead of each waiting out the timeout. Mirrors the Python suite.
+let runnerUnreachable: string | null = null;
+
+type SkipCtx = { skip: (msg?: string) => void };
+
+/**
+ * Fetch for read-only smoke tests. These check that an endpoint exists and
+ * responds sanely; they are not uptime monitors. An upstream 5xx or a
+ * runner-side connection failure says nothing about this repo's code, so it
+ * is reported as a skip instead of turning every open PR red for the
+ * duration of an outage.
+ */
+async function readonlyFetch(t: SkipCtx, what: string, url: string, init: RequestInit = {}): Promise<Response | null> {
+  if (runnerUnreachable) {
+    t.skip(`skipped after earlier runner connection failure (${runnerUnreachable})`);
+    return null;
+  }
+  let r: Response;
+  try {
+    r = await fetch(url, { headers, signal: AbortSignal.timeout(READONLY_TIMEOUT_MS), ...init });
+  } catch (err: any) {
+    if (err?.name === "TimeoutError") {
+      t.skip(`${what} timed out from CI runner`);
+      return null;
+    }
+    runnerUnreachable = what;
+    t.skip(`${what}: CI runner cannot reach API: ${err?.cause?.code ?? err?.message ?? err}`);
+    return null;
+  }
+  if (TRANSIENT_STATUSES.includes(r.status)) {
+    t.skip(`${what} returned transient upstream ${r.status}`);
+    return null;
+  }
+  return r;
+}
+
 describe("TypeScript SDK — Read-Only API", () => {
-  it("get_balance returns valid balance", async () => {
-    const r = await fetch(`${BASE}/balance`, { headers });
+  it("get_balance returns valid balance", async (t) => {
+    const r = await readonlyFetch(t, "get balance", `${BASE}/balance`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(body.data.balance !== undefined);
     assert.equal(body.data.currency, "USD");
   });
 
-  it("list_phone_numbers returns array", async () => {
-    const r = await fetch(`${BASE}/phone_numbers?page[size]=1`, { headers });
+  it("list_phone_numbers returns array", async (t) => {
+    const r = await readonlyFetch(t, "list phone numbers", `${BASE}/phone_numbers?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("list_messaging_profiles returns array", async () => {
-    const r = await fetch(`${BASE}/messaging_profiles?page[size]=1`, {
-      headers,
-    });
+  it("list_messaging_profiles returns array", async (t) => {
+    const r = await readonlyFetch(t, "list messaging profiles", `${BASE}/messaging_profiles?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("list_credential_connections returns array", async () => {
-    const r = await fetch(`${BASE}/credential_connections?page[size]=1`, {
-      headers,
-    });
+  it("list_credential_connections returns array", async (t) => {
+    const r = await readonlyFetch(t, "list credential connections", `${BASE}/credential_connections?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("list_ai_assistants returns array", async () => {
-    const r = await fetch(`${BASE}/ai/assistants?page[size]=1`, { headers });
+  it("list_ai_assistants returns array", async (t) => {
+    const r = await readonlyFetch(t, "list ai assistants", `${BASE}/ai/assistants?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("list_ai_models returns non-empty list", async () => {
-    const r = await fetch(`${BASE}/ai/models`, { headers });
+  it("list_ai_models returns non-empty list", async (t) => {
+    const r = await readonlyFetch(t, "list ai models", `${BASE}/ai/models`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(body.data.length > 0);
   });
 
-  it("list_outbound_voice_profiles returns array", async () => {
-    const r = await fetch(`${BASE}/outbound_voice_profiles?page[size]=1`, { headers });
+  it("list_outbound_voice_profiles returns array", async (t) => {
+    const r = await readonlyFetch(t, "list outbound voice profiles", `${BASE}/outbound_voice_profiles?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("list_verify_profiles returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/verify/profiles?page[size]=1`, { headers });
+  it("list_verify_profiles returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list verify profiles", `${BASE}/verify/profiles?page[size]=1`);
+    if (!r) return;
     // Some accounts may not have verify access
     assert.ok([200, 403, 404].includes(r.status), `Expected 200/403/404, got ${r.status}`);
     if (r.status === 200) {
@@ -88,8 +135,9 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  it("list_storage_buckets returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/storage/buckets?page[size]=1`, { headers });
+  it("list_storage_buckets returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list storage buckets", `${BASE}/storage/buckets?page[size]=1`);
+    if (!r) return;
     // Storage may not be enabled on all accounts
     assert.ok([200, 403, 404].includes(r.status), `Expected 200/403/404, got ${r.status}`);
     if (r.status === 200) {
@@ -98,56 +146,58 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  it("list_sim_cards returns array", async () => {
-    const r = await fetch(`${BASE}/sim_cards?page[size]=1`, { headers });
+  it("list_sim_cards returns array", async (t) => {
+    const r = await readonlyFetch(t, "list sim cards", `${BASE}/sim_cards?page[size]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(Array.isArray(body.data));
   });
 
-  it("search_available_numbers finds US numbers", async () => {
-    const r = await fetch(
-      `${BASE}/available_phone_numbers?filter[country_code]=US&filter[limit]=1`,
-      { headers }
-    );
+  it("search_available_numbers finds US numbers", async (t) => {
+    const r = await readonlyFetch(t, "search available numbers", `${BASE}/available_phone_numbers?filter[country_code]=US&filter[limit]=1`);
+    if (!r) return;
     assert.equal(r.status, 200);
     const body = (await r.json()) as any;
     assert.ok(body.data.length >= 1);
     assert.ok(body.data[0].phone_number);
   });
 
-  it("ai_chat_completion works with tiny request", async () => {
-    const r = await fetch(`${BASE}/ai/chat/completions`, {
+  it("ai_chat_completion works with tiny request", async (t) => {
+    const r = await readonlyFetch(t, "ai chat completion", `${BASE}/ai/chat/completions`, {
       method: "POST",
-      headers,
       body: JSON.stringify({
-        model: "openai/gpt-4o",
+        // OpenAI models now require a customer-provided key on the public
+        // endpoint (error 10015); use a Telnyx-hosted model, as the Python suite does.
+        model: "meta-llama/Meta-Llama-3.1-8B-Instruct",
         messages: [{ role: "user", content: "Say OK" }],
         max_tokens: 3,
       }),
     });
-    assert.equal(r.status, 200);
+    if (!r) return;
+    assert.equal(r.status, 200, await r.clone().text());
     const body = (await r.json()) as any;
     assert.ok(body.choices.length > 0);
   });
 
-  it("ai_embeddings endpoint is reachable (requires bucket)", async () => {
-    const r = await fetch(`${BASE}/ai/embeddings`, {
+  it("ai_embeddings endpoint is reachable (requires bucket)", async (t) => {
+    const r = await readonlyFetch(t, "ai embeddings", `${BASE}/ai/embeddings`, {
       method: "POST",
-      headers,
       body: JSON.stringify({
         model: "thenlper/gte-large",
         bucket_name: "ci-nonexistent-bucket",
       }),
     });
+    if (!r) return;
     assert.ok(
       [400, 404, 422].includes(r.status),
       `Expected 400/404/422 for nonexistent bucket, got ${r.status}`
     );
   });
 
-  it("list_messages returns list or 404", async () => {
-    const r = await fetch(`${BASE}/messages?page[size]=1`, { headers });
+  it("list_messages returns list or 404", async (t) => {
+    const r = await readonlyFetch(t, "list messages", `${BASE}/messages?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 404].includes(r.status), `Expected 200/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -155,15 +205,17 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  it("number_lookup endpoint is reachable", async () => {
-    const r = await fetch(`${BASE}/number_lookup/+18005551234`, { headers });
+  it("number_lookup endpoint is reachable", async (t) => {
+    const r = await readonlyFetch(t, "number lookup", `${BASE}/number_lookup/+18005551234`);
+    if (!r) return;
     assert.ok([200, 404, 422].includes(r.status), `Expected 200/404/422, got ${r.status}`);
   });
 
   // ─── New tools: 10DLC ────────────────────────────────────────
 
-  it("list_10dlc_brands returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/10dlc/brands?page[size]=1`, { headers });
+  it("list_10dlc_brands returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list 10dlc brands", `${BASE}/10dlc/brands?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -171,8 +223,9 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  it("list_10dlc_campaigns returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/10dlc/campaigns?page[size]=1`, { headers });
+  it("list_10dlc_campaigns returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list 10dlc campaigns", `${BASE}/10dlc/campaigns?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -182,8 +235,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: IoT / Wireless ───────────────────────────────
 
-  it("list_sim_card_groups returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/sim_card_groups?page[size]=1`, { headers });
+  it("list_sim_card_groups returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list sim card groups", `${BASE}/sim_card_groups?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 403, 404].includes(r.status), `Expected 200/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -193,8 +247,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Porting ──────────────────────────────────────
 
-  it("list_porting_orders returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/porting_orders?page[size]=1`, { headers });
+  it("list_porting_orders returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list porting orders", `${BASE}/porting_orders?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -204,8 +259,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: E911 ─────────────────────────────────────────
 
-  it("list_e911_addresses returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/e911_addresses?page[size]=1`, { headers });
+  it("list_e911_addresses returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list e911 addresses", `${BASE}/e911_addresses?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -215,8 +271,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Billing ──────────────────────────────────────
 
-  it("list_billing_groups returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/billing_groups?page[size]=1`, { headers });
+  it("list_billing_groups returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list billing groups", `${BASE}/billing_groups?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -227,11 +284,8 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: Webhooks ─────────────────────────────────────
 
   it("list_webhook_deliveries returns array or valid error", async (t) => {
-    const r = await fetch(`${BASE}/webhook_deliveries?page[size]=1`, { headers });
-    if ([500, 502, 503, 504].includes(r.status)) {
-      t.skip(`Webhook deliveries endpoint returned transient ${r.status}`);
-      return;
-    }
+    const r = await readonlyFetch(t, "list webhook deliveries", `${BASE}/webhook_deliveries?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -241,8 +295,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Networking ───────────────────────────────────
 
-  it("list_networks returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/networks?page[size]=1`, { headers });
+  it("list_networks returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list networks", `${BASE}/networks?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -253,11 +308,8 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: Fax ──────────────────────────────────────────
 
   it("list_faxes returns array or valid error", async (t) => {
-    const r = await fetch(`${BASE}/faxes?page[size]=1`, { headers });
-    if ([500, 502, 503, 504].includes(r.status)) {
-      t.skip(`Fax list endpoint returned transient ${r.status}`);
-      return;
-    }
+    const r = await readonlyFetch(t, "list faxes", `${BASE}/faxes?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -267,8 +319,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: AI Missions ──────────────────────────────────
 
-  it("list_missions returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/missions?page[size]=1`, { headers });
+  it("list_missions returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list missions", `${BASE}/ai/missions?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -278,8 +331,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: AI Insights ──────────────────────────────────
 
-  it("list_insights returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/conversations/insights?page[size]=1`, { headers });
+  it("list_insights returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list insights", `${BASE}/ai/conversations/insights?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -289,8 +343,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Conversations ────────────────────────────────
 
-  it("list_conversations returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/conversations?page[size]=1`, { headers });
+  it("list_conversations returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list conversations", `${BASE}/ai/conversations?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -300,8 +355,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Invoices ─────────────────────────────────────
 
-  it("list_invoices returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/invoices?page[size]=1`, { headers });
+  it("list_invoices returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list invoices", `${BASE}/invoices?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -311,8 +367,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: TeXML Applications ───────────────────────────
 
-  it("list_texml_applications returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/texml_applications?page[size]=1`, { headers });
+  it("list_texml_applications returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list texml applications", `${BASE}/texml_applications?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -322,8 +379,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Push Credentials ─────────────────────────────
 
-  it("list_push_credentials returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/mobile_push_credentials?page[size]=1`, { headers });
+  it("list_push_credentials returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list push credentials", `${BASE}/mobile_push_credentials?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -333,8 +391,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: MCP Servers ──────────────────────────────────
 
-  it("list_mcp_servers returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/mcp_servers?page[size]=1`, { headers });
+  it("list_mcp_servers returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list mcp servers", `${BASE}/ai/mcp_servers?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -344,8 +403,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Call Control Applications ────────────────────
 
-  it("list_call_control_applications returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/call_control_applications?page[size]=1`, { headers });
+  it("list_call_control_applications returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list call control applications", `${BASE}/call_control_applications?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -355,8 +415,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Recordings ───────────────────────────────────
 
-  it("list_recordings returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/recordings?page[size]=1`, { headers });
+  it("list_recordings returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list recordings", `${BASE}/recordings?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -366,8 +427,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Global IPs ───────────────────────────────────
 
-  it("list_global_ips returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/global_ips?page[size]=1`, { headers });
+  it("list_global_ips returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list global ips", `${BASE}/global_ips?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -377,8 +439,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: SIM Card Orders ──────────────────────────────
 
-  it("list_sim_card_orders returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/sim_card_orders?page[size]=1`, { headers });
+  it("list_sim_card_orders returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list sim card orders", `${BASE}/sim_card_orders?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -388,8 +451,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: External Connections ─────────────────────────
 
-  it("list_external_connections returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/external_connections?page[size]=1`, { headers });
+  it("list_external_connections returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list external connections", `${BASE}/external_connections?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -399,8 +463,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Voice Clones ─────────────────────────────────
 
-  it("list_voice_clones returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/voice_clones?page[size]=1`, { headers });
+  it("list_voice_clones returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list voice clones", `${BASE}/ai/voice_clones?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -410,8 +475,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Voice Designs ────────────────────────────────
 
-  it("list_voice_designs returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/voice_designs?page[size]=1`, { headers });
+  it("list_voice_designs returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list voice designs", `${BASE}/ai/voice_designs?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -421,8 +487,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Fine Tuning ──────────────────────────────────
 
-  it("list_fine_tuning_jobs returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/ai/fine_tuning/jobs?page[size]=1`, { headers });
+  it("list_fine_tuning_jobs returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list fine tuning jobs", `${BASE}/ai/fine_tuning/jobs?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -432,8 +499,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Toll-Free Verification ───────────────────────
 
-  it("list_toll_free_verifications returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/toll_free_verification_requests?page[size]=1`, { headers });
+  it("list_toll_free_verifications returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list toll free verifications", `${BASE}/toll_free_verification_requests?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -443,8 +511,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Detail Records ───────────────────────────────
 
-  it("list_detail_records returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/reports/cdr_requests?page[size]=1`, { headers });
+  it("list_detail_records returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list detail records", `${BASE}/reports/cdr_requests?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
@@ -454,8 +523,9 @@ describe("TypeScript SDK — Read-Only API", () => {
 
   // ─── New tools: Audit Logs ───────────────────────────────────
 
-  it("list_audit_events returns array or valid error", async () => {
-    const r = await fetch(`${BASE}/audit_events?page[size]=1`, { headers });
+  it("list_audit_events returns array or valid error", async (t) => {
+    const r = await readonlyFetch(t, "list audit events", `${BASE}/audit_events?page[size]=1`);
+    if (!r) return;
     assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
