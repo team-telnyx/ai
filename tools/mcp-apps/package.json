@@ -21,14 +21,14 @@
     "build": "tsc -p tsconfig.json && npm --workspaces run build"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.3",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "hono": "^4.13.1"
+    "@hono/node-server": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "hono": "^4.13.3"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "tsx": "^4.20.6",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.13"
+    "vitest": "^4.1.11"
   }
 }
