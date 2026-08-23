@@ -34,8 +34,8 @@ READONLY_TIMEOUT = 30
 _runner_timeout_seen: str | None = None
 
 
-def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
-    """GET for read-only smoke tests.
+def _readonly_request(method: str, url: str, *, what: str, **kwargs) -> httpx.Response:
+    """Request for read-only smoke tests (GET, or a side-effect-free POST probe).
 
     These tests check that an endpoint exists and responds sanely; they are
     not uptime monitors. An upstream 5xx or a runner-side timeout says nothing
@@ -48,7 +48,7 @@ def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
     kwargs.setdefault("headers", HEADERS)
     kwargs.setdefault("timeout", READONLY_TIMEOUT)
     try:
-        r = httpx.get(url, **kwargs)
+        r = httpx.request(method, url, **kwargs)
     except (httpx.ConnectTimeout, httpx.ConnectError) as exc:
         _runner_timeout_seen = what
         pytest.xfail(f"{what}: CI runner cannot reach API: {exc!r}")
@@ -57,6 +57,14 @@ def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
     if r.status_code in TRANSIENT_STATUSES:
         pytest.xfail(f"{what} returned transient upstream {r.status_code}")
     return r
+
+
+def _readonly_get(url: str, *, what: str, **kwargs) -> httpx.Response:
+    return _readonly_request("GET", url, what=what, **kwargs)
+
+
+def _readonly_post(url: str, *, what: str, **kwargs) -> httpx.Response:
+    return _readonly_request("POST", url, what=what, **kwargs)
 
 
 class TestReadonly:
@@ -180,9 +188,9 @@ class TestReadonly:
     )
     def test_readonly_ai_chat_completion(self):
         """POST /v2/ai/chat/completions works with a tiny request."""
-        r = httpx.post(
+        r = _readonly_post(
             f"{BASE_URL}/ai/chat/completions",
-            headers=HEADERS,
+            what="ai chat completion",
             json={
                 "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
                 "messages": [{"role": "user", "content": "Say OK"}],
@@ -200,9 +208,9 @@ class TestReadonly:
         # Telnyx embeddings API requires a storage bucket — test that the
         # endpoint responds correctly when we provide known-bad params
         # (validates auth + endpoint existence, not full embedding flow)
-        r = httpx.post(
+        r = _readonly_post(
             f"{BASE_URL}/ai/embeddings",
-            headers=HEADERS,
+            what="ai embeddings",
             json={
                 "model": "thenlper/gte-large",
                 "bucket_name": "ci-nonexistent-bucket",
