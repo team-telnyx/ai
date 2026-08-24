@@ -278,6 +278,25 @@ describe("Post-call recording discovery commands", () => {
     }
   });
 
+  it("rejects valueless or empty optional filters before invoking telnyx", () => {
+    for (const [args, filter] of [
+      [["list-call-recordings", "--call-control-id", "--json"], "call-control-id"],
+      [["list-call-recordings", "--from", "", "--json"], "from"],
+      [["list-call-recordings", "--created-at", "--json"], "created-at"],
+      [["list-call-recordings", "--start-time", "", "--json"], "start-time"],
+      [["list-recording-transcriptions", "--recording-id", "--json"], "recording-id"],
+      [["list-recording-transcriptions", "--recording-id", "", "--json"], "recording-id"],
+    ] as const) {
+      const fake = setupFakeTelnyx();
+      const failure = runFailure([...args], fake.env);
+      assert.deepEqual(JSON.parse(failure.stdout), {
+        error: `--${filter} requires a non-empty value`,
+      });
+      assert.equal(failure.stderr, "");
+      assert.deepEqual(loggedArgs(fake.logPath), [], args.join(" "));
+    }
+  });
+
   it("advertises recording discovery in help and capabilities", () => {
     const help = runAgent(["help"]);
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"]));

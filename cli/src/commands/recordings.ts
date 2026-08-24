@@ -53,7 +53,7 @@ export async function listCallRecordingsCommand(flags: Flags): Promise<void> {
   const args = ["recordings", "list"];
 
   for (const name of RECORDING_SCALAR_FILTERS) {
-    addMappedFlag(args, flags, name, `--filter.${name}`);
+    addMappedFlag(args, flags, name, `--filter.${name}`, jsonOutput);
   }
   for (const name of RECORDING_RANGE_FILTERS) {
     addJsonObjectFlag(args, flags, name, `--filter.${name}`, jsonOutput);
@@ -113,7 +113,7 @@ export async function listRecordingTranscriptionsCommand(flags: Flags): Promise<
   const jsonOutput = flags.json === true;
   const args = ["recording-transcriptions", "list"];
 
-  addMappedFlag(args, flags, "recording-id", "--filter.recording-id");
+  addMappedFlag(args, flags, "recording-id", "--filter.recording-id", jsonOutput);
   addJsonObjectFlag(args, flags, "created-at", "--filter.created-at", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
@@ -209,8 +209,14 @@ function presentTranscriptionList(result: TranscriptionListResult, jsonOutput: b
   console.log();
 }
 
-function addMappedFlag(args: string[], flags: Flags, source: string, target: string): void {
-  const value = stringFlag(flags, source);
+function addMappedFlag(
+  args: string[],
+  flags: Flags,
+  source: string,
+  target: string,
+  jsonOutput: boolean,
+): void {
+  const value = optionalStringFlag(flags, source, jsonOutput);
   if (value !== undefined) args.push(target, value);
 }
 
@@ -221,7 +227,7 @@ function addJsonObjectFlag(
   target: string,
   jsonOutput: boolean,
 ): void {
-  const value = stringFlag(flags, source);
+  const value = optionalStringFlag(flags, source, jsonOutput);
   if (value === undefined) return;
   try {
     const parsed: unknown = JSON.parse(value);
@@ -280,6 +286,15 @@ function objectArray(value: unknown): JsonRecord[] {
 function stringFlag(flags: Flags, key: string): string | undefined {
   const value = flags[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function optionalStringFlag(flags: Flags, key: string, jsonOutput: boolean): string | undefined {
+  const value = flags[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim() === "") {
+    fail(`--${key} requires a non-empty value`, jsonOutput);
+  }
+  return value;
 }
 
 function asRecord(value: unknown): JsonRecord {
