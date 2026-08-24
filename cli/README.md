@@ -2,9 +2,13 @@
 
 Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce multi-step portal workflows to a single command.
 
-Requires Node.js 18 or newer. The package's platform release pin is Telnyx Go
-CLI v0.27.0; on supported platforms, installation downloads that binary when a
-compatible local copy is not already available.
+Use Node.js 20.11 or newer for installation. Although `package.json` currently
+states Node.js 18 or newer, the ESM postinstall needs `import.meta.dirname`,
+which is available from Node.js 20.11. On older runtimes installation can finish
+without downloading the vendored Telnyx Go CLI, leaving Go-backed commands to
+require a separately installed compatible `telnyx` on `PATH`. The package's
+platform release pin is Telnyx Go CLI v0.27.0; on supported platforms, a working
+postinstall downloads that binary when a compatible local copy is unavailable.
 
 ## Quick Start
 
