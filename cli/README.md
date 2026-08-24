@@ -42,6 +42,45 @@ telnyx-agent capabilities
 telnyx-agent capabilities --json
 ```
 
+### Command and capability inventory
+
+The CLI's current command surface is grouped below. This is intentionally an
+inventory rather than a flag reference: run `telnyx-agent --help` for the
+authoritative command/flag list and `telnyx-agent capabilities --json` for the
+machine-readable API capability catalog.
+
+<!-- markdownlint-disable MD013 -->
+
+| Group | Commands |
+| --- | --- |
+| Account and discovery | `status`, `capabilities`, `fund-account` |
+| Composite provisioning | `setup-sms`, `setup-voice`, `setup-iot`, `setup-ai`, `setup-wireguard`, `setup-verify`, `setup-10dlc`, `setup-porting`, `setup-whatsapp` |
+| SMS/MMS and messaging profiles | `send-sms`, `send-group-mms`, `schedule-sms`, `sms-status`, `list-messaging-profiles`, `create-messaging-profile`, `get-messaging-profile`, `update-messaging-profile`, `delete-messaging-profile` |
+| Email | `email-send`, `email-forward`, `email-reply`, `email-reply-all` |
+| WhatsApp and RCS | `whatsapp-send`, `whatsapp-templates`, `rcs-send`, `rcs-capabilities` |
+| Verify | `verify-send`, `verify-check` (plus `setup-verify`) |
+| Numbers | `list-phone-numbers`, `search-phone-numbers`, `buy-phone-number`, `lookup-number` |
+| Voice and recordings | `call-dial`, `call-control`, `call-pay`, `call-status`, `list-voice-connections`, `get-voice-connection`, `list-active-calls`, `list-call-recordings`, `get-call-recording`, `list-recording-transcriptions`, `get-recording-transcription` |
+| Conferences and Rooms | `create-conference`, `get-conference`, `list-conferences`, `list-conference-participants`, `conference-control`, `list-room-sessions`, `get-room-session`, `list-room-participants`, `get-room-participant`, `end-room-session`, `kick-room-participants`, `mute-room-participants`, `unmute-room-participants` |
+| Meeting Bot | `create-meeting-session`, `list-meeting-sessions`, `get-meeting-session`, `end-meeting-session`, `send-meeting-chat`, `speak-in-meeting`, `stop-meeting-speaking`, `get-meeting-transcript`, `get-meeting-recordings`, `create-meeting-artifact`, `list-meeting-artifacts`, `get-meeting-artifact` |
+| AI and web intelligence | `ai-chat`, `ai-anthropic-message`, `ai-embed`, `list-ai-assistants`, `create-ai-assistant`, `get-ai-assistant`, `update-ai-assistant`, `delete-ai-assistant`, `chat-ai-assistant`, `send-ai-assistant-sms`, `trigger-ai-assistant-test-run`, `get-ai-assistant-test-run`, `list-ai-assistant-test-runs`, `test-ai-assistant-tool`, `search-ai-collection`, `web-search`, `web-contents`, `web-research`, `web-research-status` |
+| Speech and fax | `tts`, `tts-voices`, `stt`, `stt-providers`, `fax-send`, `fax-status`, `fax-cancel`, `fax-refresh` |
+| IoT SIM lifecycle | `list-sim-cards`, `retrieve-sim-card`, `enable-sim-card`, `disable-sim-card`, `retrieve-sim-card-action`, `list-sim-card-actions` |
+| Porting and Port-Out | `list-porting-orders`, `get-porting-order`, `update-porting-order`, `submit-porting-order`, `cancel-porting-order`, `activate-porting-order`, `attach-porting-document`, `list-porting-documents`, `list-portout-orders`, `get-portout-order`, `list-portout-rejection-codes`, `update-portout-status`, `create-portout-comment`, `list-portout-comments` |
+| Edge Compute handoff | `edge-doctor`, `setup-edge-mcp`, `setup-edge-webhook` |
+| Storage | `storage-sql-query` |
+
+<!-- markdownlint-enable MD013 -->
+
+Commands are not dry runs merely because `--json` is present. Setup commands
+can create billable resources, and mutation commands change live account state.
+Review `telnyx-agent <command> --help` before running them. The CLI intercepts
+help before dispatch so asking for help does not provision resources.
+`delete-messaging-profile`, `delete-ai-assistant`, `cancel-porting-order`,
+`activate-porting-order`, and `update-portout-status` require explicit
+`--confirm`; do not automate that acknowledgement without reviewing the target
+IDs and operation.
+
 ### `telnyx-agent setup-sms`
 
 **One command: zero to sending SMS.**
@@ -120,6 +159,50 @@ telnyx-agent setup-verify --force   # Always create a new profile
 - `--force` — Always create a new profile instead of reusing an existing agent-created one
 
 Output: `{ profile_id, profile_name, timeout_secs, test_command, ready, reused }`
+
+### `telnyx-agent setup-10dlc`
+
+**Create a US A2P 10DLC brand and submit a campaign for review.**
+
+The command creates a US sole-proprietor brand, validates and submits a campaign,
+and optionally assigns an existing phone number. Contact phone and email are
+required. The default campaign use case is `CUSTOMER_CARE`, and the default
+opt-in method is `web`.
+
+```bash
+telnyx-agent setup-10dlc \
+  --phone +131****0000 \
+  --email messaging@example.com \
+  --brand-name "Example Brand" \
+  --website https://example.com/sms-opt-in \
+  --sample-message \
+    "Example Brand: Your support update is ready. Reply STOP to opt out."
+
+# Assign an existing number as the third step and return structured output
+telnyx-agent setup-10dlc \
+  --phone +131****0000 \
+  --email messaging@example.com \
+  --brand-name "Example Brand" \
+  --website https://example.com/sms-opt-in \
+  --phone-number-id +131****0001 \
+  --json
+```
+
+Before creating resources, the command validates the campaign use case and
+opt-in method, checks the message flow for required consent/STOP/HELP/rates and
+no-sharing disclosures, rejects known prohibited sample-message terms, and
+generates default HELP/STOP/START responses. Supply real customer-facing sample
+messages; mixed, marketing, low-volume mixed, and polling campaigns should use
+`--sample-message-2` for a second representative example. For web opt-in, pass
+`--website` so the generated message flow does not contain a placeholder URL.
+
+This command is side-effecting and is **not idempotent**: every successful run
+creates a new brand and campaign, and a partially failed run can leave the brand
+already created. It does not buy a number. `--phone-number-id` only adds the
+optional assignment step. Campaign submission is not approval—review commonly
+remains pending after the command completes, so do not send A2P traffic until
+the campaign is approved. In JSON output, `ready: true` means the setup workflow
+completed, not that carrier review is complete.
 
 ### `telnyx-agent setup-ai`
 
