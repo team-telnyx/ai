@@ -185,6 +185,28 @@ export function supportsSqlBoundParameters(): boolean {
   }
 }
 
+/**
+ * Detect the complete custom-domain workflow from its own help surfaces. The
+ * root command must advertise every lifecycle step, certificate upload must
+ * accept both PEM paths, and deletion must be safe for agents and CI.
+ */
+export function supportsCustomDomains(): boolean {
+  try {
+    const domains = runEdge(["domains", "--help"]);
+    const certUpload = runEdge(["domains", "cert", "upload", "--help"]);
+    const deleteDomain = runEdge(["domains", "delete", "--help"]);
+    const hasLifecycle = /\bdomains?\b/i.test(domains) && /\bcustom\s+domains?\b/i.test(domains) &&
+      ["add", "verify", "list", "delete", "cert"].every((command) =>
+        new RegExp(`\\b${command}\\b`, "i").test(domains)
+      );
+    return hasLifecycle && /\bcert\s+upload\s+<[^>]+>/i.test(certUpload) &&
+      /--cert\b/i.test(certUpload) && /--key\b/i.test(certUpload) &&
+      /\bdelete\s+<[^>]+>/i.test(deleteDomain) && /--yes\b/i.test(deleteDomain);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect the root function-detail command introduced before v0.2.5. */
 export function supportsInspect(): boolean {
   try {

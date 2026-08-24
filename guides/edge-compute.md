@@ -27,14 +27,11 @@ git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 
 ```bash
 telnyx-edge --version
-
 # Interactive OAuth
 telnyx-edge auth login
-
 # Or non-interactive auth; avoid putting the literal key in shell history
 export TELNYX_API_KEY='***'
 telnyx-edge auth api-key set "$TELNYX_API_KEY"
-
 # Local auth marker, then end-to-end validation
 telnyx-edge auth status
 telnyx-edge status
@@ -80,14 +77,12 @@ Equivalent manual flow:
 ```bash
 export TELNYX_API_KEY='***'
 export SHARED_SECRET="$(openssl rand -hex 32)"
-
 EDGE_COMPUTE_SRC="$(mktemp -d)/edge-compute"
 git clone --depth 1 https://github.com/team-telnyx/edge-compute.git "$EDGE_COMPUTE_SRC"
 telnyx-edge new-func \
   --from-dir="$EDGE_COMPUTE_SRC/examples/ts/mcp-server" \
   --name=my-mcp-server
 cd my-mcp-server
-
 npm install
 npm run build
 telnyx-edge secrets add TELNYX_API_KEY "$TELNYX_API_KEY"
@@ -136,14 +131,12 @@ Equivalent manual flow:
 
 ```bash
 export WEBHOOK_SECRET="$(openssl rand -hex 32)"
-
 EDGE_COMPUTE_SRC="$(mktemp -d)/edge-compute"
 git clone --depth 1 https://github.com/team-telnyx/edge-compute.git "$EDGE_COMPUTE_SRC"
 telnyx-edge new-func \
   --from-dir="$EDGE_COMPUTE_SRC/examples/js/webhook-receiver" \
   --name=my-webhook
 cd my-webhook
-
 telnyx-edge secrets add WEBHOOK_SECRET "$WEBHOOK_SECRET"
 telnyx-edge ship
 telnyx-edge inspect my-webhook
@@ -154,7 +147,6 @@ Signed test request:
 ```bash
 PAYLOAD='{"event":"message.received","id":"evt_123"}'
 SIGNATURE="sha256=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | cut -d' ' -f2)"
-
 curl -X POST "https://<your-edge-endpoint>/" \
   -H "Content-Type: application/json" \
   -H "x-webhook-signature: $SIGNATURE" \
@@ -171,7 +163,6 @@ Do not put `WEBHOOK_SECRET` in the request body or an Authorization header unles
 # List deployed functions. Use --page and --page-size for larger accounts.
 telnyx-edge list
 telnyx-edge list --page 2 --page-size 25
-
 # New generated project
 telnyx-edge new-func --language=ts --name=my-function
 
@@ -202,6 +193,18 @@ telnyx-edge delete-func my-function --yes
 ```
 
 `delete-func` is irreversible. Use `--yes` (`-y`) in scripts, agents, and CI to skip the interactive confirmation; see [Non-interactive destructive commands](#non-interactive-destructive-commands) for the full list.
+
+### Custom domains (v0.5.0)
+
+`domains add` prints the DNS TXT record needed for ownership verification. After publishing it, complete the workflow and use `--yes` for destructive teardown:
+```bash
+telnyx-edge domains add api.example.com <function-id>
+telnyx-edge domains verify api.example.com
+telnyx-edge domains cert upload api.example.com --cert ./cert.pem --key ./key.pem
+telnyx-edge domains list
+telnyx-edge domains delete api.example.com --yes
+```
+DNS propagation can delay verification; retry `verify` before certificate upload. `domains list` reports verification and certificate status.
 
 ### Revisions and rollback
 
@@ -293,7 +296,7 @@ The runtime handle is canonicalized to uppercase with hyphens replaced by unders
 
 ### Non-interactive destructive commands
 
-Destructive commands prompt in a terminal and deliberately fail rather than hang when stdin is not a terminal. Scripts, agents, and CI must pass `--yes` (`-y`) to `delete-func`, `reset-func`, `secrets delete`, `bindings delete`, `actors delete`, `storage sqldb delete`, `storage kv delete`, and `storage kv key delete`. Piping the output of `yes` is not accepted.
+Destructive commands prompt in a terminal and deliberately fail rather than hang when stdin is not a terminal. Scripts, agents, and CI must pass `--yes` (`-y`) to `delete-func`, `reset-func`, `domains delete`, `secrets delete`, `bindings delete`, `actors delete`, `storage sqldb delete`, `storage kv delete`, and `storage kv key delete`. Piping the output of `yes` is not accepted.
 
 ```bash
 telnyx-edge delete-func my-function --yes

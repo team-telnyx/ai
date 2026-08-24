@@ -12,6 +12,7 @@ import {
   getEdgeVersion,
   supportsActorInstances,
   supportsApiKeyAuth,
+  supportsCustomDomains,
   supportsInspect,
   supportsKvKeyManagement,
   supportsKvStorage,
@@ -51,6 +52,7 @@ interface EdgeDoctorResult {
   kv_key_management_supported: boolean;
   sql_databases_supported: boolean;
   sql_bound_parameters_supported: boolean;
+  custom_domains_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -79,6 +81,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let kvKeyManagementSupported = false;
   let sqlDatabasesSupported = false;
   let sqlBoundParametersSupported = false;
+  let customDomainsSupported = false;
 
   try {
     getEdgeHelp();
@@ -113,6 +116,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     kvKeyManagementSupported = supportsKvKeyManagement();
     sqlDatabasesSupported = supportsSqlDatabases();
     sqlBoundParametersSupported = supportsSqlBoundParameters();
+    customDomainsSupported = supportsCustomDomains();
 
     checks.push({
       name: "API-key auth supported",
@@ -215,6 +219,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: sqlBoundParametersSupported
         ? "storage sqldb execute supports --param and --param-json"
         : "storage sqldb execute --help did not advertise both --param and --param-json",
+    });
+    checks.push({
+      name: "Custom domains",
+      ok: customDomainsSupported,
+      detail: customDomainsSupported
+        ? "domains add/verify/list/delete and cert upload are available with non-interactive deletion"
+        : "custom-domain help surfaces did not advertise the complete lifecycle, certificate paths, and delete --yes",
     });
 
     try {
@@ -326,6 +337,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlBoundParametersSupported) {
       nextSteps.push("Bind SQL inputs safely with repeatable --param (strings) and --param-json (numbers, booleans, or null).");
     }
+    if (customDomainsSupported) {
+      nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
+    }
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
       !resetFuncSupported && "reset-func",
@@ -336,6 +350,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !kvKeyManagementSupported && "KV keys",
       !sqlDatabasesSupported && "remote SQL execution",
       !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
+      !customDomainsSupported && "custom domains",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
@@ -365,6 +380,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     kv_key_management_supported: kvKeyManagementSupported,
     sql_databases_supported: sqlDatabasesSupported,
     sql_bound_parameters_supported: sqlBoundParametersSupported,
+    custom_domains_supported: customDomainsSupported,
     checks,
     next_steps: nextSteps,
   };
