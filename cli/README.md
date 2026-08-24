@@ -294,9 +294,12 @@ can create billable resources, and mutation commands change live account state.
 Review the command documentation before running them. The CLI intercepts
 `telnyx-agent <command> --help` before dispatch, so asking for help does not
 provision resources, but current per-command help is the same global help text
-rather than a command-scoped reference. Unknown flags emit a warning and the
-command continues; treat that warning as a typo or compatibility problem before
-trusting the result.
+rather than a command-scoped reference. Most unrecognized, non-dotted flags
+emit a warning and the command continues. `call-control`, `call-pay`,
+`conference-control`, and `ai-chat` are exempt from that warning, and dotted
+flags are always exempt, so unsupported flags on those paths can be ignored
+silently. Do not treat warning absence as validation: compare every flag with
+this README/help before dispatch, especially for live mutations.
 `delete-messaging-profile`, `delete-ai-assistant`, `cancel-porting-order`,
 `activate-porting-order`, and `update-portout-status` require explicit
 `--confirm`; do not automate that acknowledgement without reviewing the target
