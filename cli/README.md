@@ -793,16 +793,21 @@ npm run typecheck
 
 ## Testing
 
-`npm test` is the package's hermetic local suite. It exercises command behavior
-with mocks, local capture servers, and fake binaries; run it without a live API
-key or account config so it cannot select real account credentials.
+`npm test` is the package's local suite. Most tests use mocks, local capture
+servers, and fake binaries, but the suite is not network-free:
+`status-rest.test.ts` still contacts `api.telnyx.com` with a forced invalid key,
+and `integration.test.ts` can inherit `HOME`/account config and call live
+`status`. Offline runs may therefore time out or fail. Unset `TELNYX_API_KEY`
+and use an isolated temporary `HOME` to prevent selecting real account
+credentials; this reduces credential risk but does not make the suite
+network-free.
 
 ```bash
 npm test
 ```
 
-Live-network coverage is separate and controlled in CI. Inspect each job's test
-selection before treating its label as a safety boundary:
+CI adds further live-network coverage. Inspect each job's test selection before
+treating its label as a safety boundary:
 
 - **API Read-Only Tests** is a legacy job name, not a mutation guarantee. Its
   CLI `integration-ci` suite runs with a repository secret and invokes
