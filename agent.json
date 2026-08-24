@@ -160,10 +160,10 @@
     {
       "id": "payments",
       "name": "x402 Crypto Payments",
-      "description": "Fund account with USDC on Base blockchain via x402 protocol.",
+      "description": "Fund account with USDC on Base blockchain via x402 protocol (authenticated; distinct from Telnyx's keyless pay-per-call x402 endpoints at x402.telnyx.com).",
       "guide": "/guides/x402-payments.md",
       "api": "POST /v2/x402/credit_account/quote",
-      "docs": "https://developers.telnyx.com/docs/account/billing",
+      "docs": "https://telnyx.com/.well-known/agent-skills/telnyx-x402-payment/SKILL.md",
       "requires": []
     },
     {
@@ -172,7 +172,7 @@
       "description": "Fund account via Machine Payment Protocol (HTTP 402) with Stripe Link or Tempo USDC.",
       "guide": "/guides/mpp-payments.md",
       "api": "POST /v2/machine-payments/account-credit",
-      "docs": "https://developers.telnyx.com/docs/account/billing",
+      "docs": "https://telnyx.com/.well-known/agent-skills/telnyx-mpp-payment/SKILL.md",
       "requires": []
     },
     {
