@@ -70,6 +70,12 @@ import { callDialCommand } from "./commands/call-dial.ts";
 import { callControlCommand, callPayCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
 import {
+  getCallRecordingCommand,
+  getRecordingTranscriptionCommand,
+  listCallRecordingsCommand,
+  listRecordingTranscriptionsCommand,
+} from "./commands/recordings.ts";
+import {
   conferenceControlCommand,
   createConferenceCommand,
   getConferenceCommand,
@@ -223,6 +229,10 @@ Commands:
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-pay          Securely collect or tokenize payment details on an active call
   call-status       Get the status of a call by call-control-id
+  list-call-recordings List post-call recordings with call filters and pagination
+  get-call-recording Retrieve one post-call recording by ID
+  list-recording-transcriptions List recording transcriptions with filters and pagination
+  get-recording-transcription Retrieve one recording transcription by ID
   create-conference Create a multi-party conference from an active call leg
   get-conference    Retrieve a conference by ID
   list-conferences  Discover active conferences with filters and pagination
@@ -594,6 +604,21 @@ Call Pay Flags:
   --max-attempts                 Maximum attempts per collection step (Go CLI default: 3)
   --client-state                 Base64 state included in subsequent webhooks
   --command-id                   Idempotency key for the payment command
+Post-call Recording Discovery Flags:
+  --id <id>                     Recording or recording-transcription ID (get commands — required)
+  --call-control-id             Exact Call Control ID filter (list-call-recordings)
+  --call-leg-id                 Exact call-leg ID filter (list-call-recordings)
+  --call-session-id             Exact call-session ID filter (list-call-recordings)
+  --conference-id              Exact conference ID filter (list-call-recordings)
+  --conference-region          Exact conference-region filter (list-call-recordings)
+  --connection-id              Exact connection ID filter (list-call-recordings)
+  --from / --to                Exact caller/callee filter (list-call-recordings)
+  --sip-call-id                Exact SIP Call-ID filter (list-call-recordings)
+  --recording-id               Filter transcriptions by recording (list-recording-transcriptions)
+  --created-at <json>          Generated range object, e.g. {"gte":"2026-08-01T00:00:00Z"} (list commands)
+  --start-time / --end-time <json> Generated range objects (list-call-recordings)
+  --page-number / --page-size  Positive pagination values (list commands)
+  --max-items                  Maximum items retained from the selected page; -1 means all
 Voice Connection Discovery Flags:
   --id <connection-id> Retrieve a voice connection (get-voice-connection — required)
   --connection-name Filter connections by name substring (list-voice-connections)
@@ -936,6 +961,10 @@ Examples:
   telnyx-agent call-pay --call-control-id <id> --amount 10.50 --transaction-type charge --description "Order 12345"
   telnyx-agent call-pay --call-control-id <id> --transaction-type tokenize --json
   telnyx-agent call-status --call-control-id <id> --json
+  telnyx-agent list-call-recordings --call-control-id <id> --page-size 25 --json
+  telnyx-agent get-call-recording --id <recording-id> --json
+  telnyx-agent list-recording-transcriptions --recording-id <recording-id> --json
+  telnyx-agent get-recording-transcription --id <transcription-id> --json
   telnyx-agent create-conference --call-control-id <call-id> --name support-room --json
   telnyx-agent list-conferences --status active --json
   telnyx-agent get-conference --id <conference-id> --json
@@ -1068,6 +1097,10 @@ const COMMANDS: Record<string, (
   "call-control": callControlCommand,
   "call-pay": callPayCommand,
   "call-status": callStatusCommand,
+  "list-call-recordings": listCallRecordingsCommand,
+  "get-call-recording": getCallRecordingCommand,
+  "list-recording-transcriptions": listRecordingTranscriptionsCommand,
+  "get-recording-transcription": getRecordingTranscriptionCommand,
   "create-conference": createConferenceCommand,
   "get-conference": getConferenceCommand,
   "list-conferences": listConferencesCommand,
@@ -1141,19 +1174,21 @@ const KNOWN_FLAGS = new Set<string>([
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
-  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id",
+  "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids", "client-state", "code",
   "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
+  "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
-  "country", "country-code", "country-code-in", "crawl-timeout", "create", "currency", "custom-code",
+  "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-at", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with",
   "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
   "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
@@ -1182,9 +1217,9 @@ const KNOWN_FLAGS = new Set<string>([
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
-  "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "slug",
+  "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
-  "start-conference-on-create", "start-message", "starts-with", "status", "status-in", "sticker", "stop",
+  "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "temperature", "template-id", "template-language", "template-name", "template-variables",
