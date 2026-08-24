@@ -137,6 +137,7 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
     "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
   ])],
+  ["update-portout-status", new Set(["host-messaging"])],
 ]);
 
 export function isBooleanFlag(command: string, key: string): boolean {
