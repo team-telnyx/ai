@@ -794,10 +794,14 @@ key or account config so it cannot select real account credentials.
 npm test
 ```
 
-Live-network coverage is separate and controlled in CI:
+Live-network coverage is separate and controlled in CI. Inspect each job's test
+selection before treating its label as a safety boundary:
 
-- **API Read-Only Tests** runs dedicated `integration-ci` suites with a
-  repository secret.
-- **API Write + Cleanup Tests** uses `RUN_WRITE_TESTS=true`, creates and cleans
-  up real resources, and runs only on pushes to `main` or an explicitly enabled
-  manual workflow dispatch.
+- **API Read-Only Tests** is a legacy job name, not a mutation guarantee. Its
+  CLI `integration-ci` suite runs with a repository secret and invokes
+  `setup-iot`, `setup-wireguard`, and `setup-verify`; depending on account state,
+  those cases can create resources, enable or reassign a SIM, and rely on only
+  partial best-effort cleanup.
+- **API Write + Cleanup Tests** adds the explicitly write-gated coverage with
+  `RUN_WRITE_TESTS=true`. It creates and cleans up real resources and runs only
+  on pushes to `main` or an explicitly enabled manual workflow dispatch.
