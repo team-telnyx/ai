@@ -22,6 +22,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "📞 Voice": [
     { name: "Call Control", description: "Make and manage voice calls via SIP connections", actions: ["make_call", "list_connections", "list_voice_connections", "get_voice_connection", "list_active_calls", "answer_call", "hangup_call", "transfer_call", "send_dtmf", "start_recording", "stop_recording", "start_noise_suppression", "stop_noise_suppression", "speak_tts", "bridge_calls", "refer_call", "reject_call", "get_call_status", "answering_machine_detection", "deepfake_detection", "number_masking", "from_display_name", "time_limit", "media_encryption", "transcription", "gather", "stop_gather", "start_playback", "stop_playback", "start_transcription", "stop_transcription", "pause_recording", "resume_recording", "start_forking", "stop_forking", "start_siprec", "stop_siprec", "start_streaming", "stop_streaming", "enqueue", "leave_queue", "send_sip_info", "update_client_state", "add_ai_assistant_messages", "gather_using_ai", "gather_using_audio", "gather_using_speak", "join_ai_assistant", "start_ai_assistant", "stop_ai_assistant", "start_conversation_relay", "stop_conversation_relay", "switch_supervisor_role", "pay"] },
+    { name: "Call Queues", description: "Provision call queues and inspect or remove callers waiting in them", actions: ["create_call_queue", "list_call_queues", "get_call_queue", "list_queued_calls", "get_queued_call", "remove_queued_call"] },
     { name: "Conferences", description: "Discover, create, inspect, and control multi-party conferences and participants", actions: ["create_conference", "get_conference", "list_conferences", "list_conference_participants", "update_conference_participant", "end_conference", "gather_conference_dtmf", "hold_conference_participants", "join_conference", "leave_conference", "mute_conference_participants", "play_conference_audio", "pause_conference_recording", "resume_conference_recording", "start_conference_recording", "stop_conference_recording", "send_conference_dtmf", "speak_to_conference", "stop_conference_audio", "unhold_conference_participants", "unmute_conference_participants"] },
   ],
   "🎥 Rooms": [
@@ -183,6 +184,12 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent call-control", description: "Call Control actions: answer, hangup, transfer, DTMF, recording, noise suppression, speak (TTS), bridge, refer, reject, gather, playback, transcription, forking, siprec, streaming, enqueue, send-sip-info, update-client-state, AI assistant lifecycle/messages/gather/join, Conversation Relay, supervisor roles, and payment collection" },
   { name: "telnyx-agent call-pay", description: "Securely collect, charge, or tokenize payment details over DTMF on an active call" },
   { name: "telnyx-agent call-status", description: "Get the status of a call by call-control-id" },
+  { name: "telnyx-agent create-call-queue", description: "Provision a named call queue for Call Control enqueue actions" },
+  { name: "telnyx-agent list-call-queues", description: "List provisioned call queues with pagination" },
+  { name: "telnyx-agent get-call-queue", description: "Retrieve one call queue by name" },
+  { name: "telnyx-agent list-queued-calls", description: "List calls waiting in one call queue" },
+  { name: "telnyx-agent get-queued-call", description: "Retrieve one queued call by queue name and Call Control ID" },
+  { name: "telnyx-agent remove-queued-call", description: "Remove an inactive queued call after explicit confirmation" },
   { name: "telnyx-agent create-conference", description: "Create a multi-party conference from an active Call Control leg" },
   { name: "telnyx-agent get-conference", description: "Retrieve one conference by ID" },
   { name: "telnyx-agent list-conferences", description: "Discover conferences with name/status filters and pagination" },

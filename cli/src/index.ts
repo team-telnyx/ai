@@ -70,6 +70,14 @@ import { callDialCommand } from "./commands/call-dial.ts";
 import { callControlCommand, callPayCommand } from "./commands/call-control.ts";
 import { callStatusCommand } from "./commands/call-status.ts";
 import {
+  createCallQueueCommand,
+  getCallQueueCommand,
+  getQueuedCallCommand,
+  listCallQueuesCommand,
+  listQueuedCallsCommand,
+  removeQueuedCallCommand,
+} from "./commands/call-queues.ts";
+import {
   conferenceControlCommand,
   createConferenceCommand,
   getConferenceCommand,
@@ -223,6 +231,12 @@ Commands:
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-pay          Securely collect or tokenize payment details on an active call
   call-status       Get the status of a call by call-control-id
+  create-call-queue Create a call queue for Call Control enqueue actions
+  list-call-queues  List provisioned call queues
+  get-call-queue    Retrieve a call queue by name
+  list-queued-calls List calls waiting in a call queue
+  get-queued-call   Retrieve one queued call
+  remove-queued-call Remove an inactive queued call (requires --confirm)
   create-conference Create a multi-party conference from an active call leg
   get-conference    Retrieve a conference by ID
   list-conferences  Discover active conferences with filters and pagination
@@ -572,6 +586,13 @@ Voice Call Flags:
   --role                         Supervisor role: barge|whisper|monitor (switch-supervisor-role, required)
                     Generated optional JSON, scalar, boolean, and dotted inner flags for these actions
                     are forwarded unchanged to the Go CLI (for example --assistant.id).
+Call Queue Flags:
+  --queue-name                   Call queue name (create/get queue; all queued-call commands — required)
+  --max-size                     Maximum calls allowed in a queue (create; upstream default: 300)
+  --call-control-id              Queued Call Control ID (get/remove queued call — required)
+  --page-number / --page-size    Positive pagination values (list queues/queued calls)
+  --max-items                    Maximum items returned from the selected page; -1 means unlimited
+  --confirm                      Required safety confirmation (remove-queued-call; never forwarded)
 Call Pay Flags:
   --call-control-id              Call Control ID of the active call (required)
   --amount                       Amount to charge (required for --transaction-type charge)
@@ -936,6 +957,12 @@ Examples:
   telnyx-agent call-pay --call-control-id <id> --amount 10.50 --transaction-type charge --description "Order 12345"
   telnyx-agent call-pay --call-control-id <id> --transaction-type tokenize --json
   telnyx-agent call-status --call-control-id <id> --json
+  telnyx-agent create-call-queue --queue-name support --max-size 100 --json
+  telnyx-agent list-call-queues --json
+  telnyx-agent get-call-queue --queue-name support --json
+  telnyx-agent list-queued-calls --queue-name support --json
+  telnyx-agent get-queued-call --queue-name support --call-control-id <id> --json
+  telnyx-agent remove-queued-call --queue-name support --call-control-id <id> --confirm --json
   telnyx-agent create-conference --call-control-id <call-id> --name support-room --json
   telnyx-agent list-conferences --status active --json
   telnyx-agent get-conference --id <conference-id> --json
@@ -1068,6 +1095,12 @@ const COMMANDS: Record<string, (
   "call-control": callControlCommand,
   "call-pay": callPayCommand,
   "call-status": callStatusCommand,
+  "create-call-queue": createCallQueueCommand,
+  "list-call-queues": listCallQueuesCommand,
+  "get-call-queue": getCallQueueCommand,
+  "list-queued-calls": listQueuedCallsCommand,
+  "get-queued-call": getQueuedCallCommand,
+  "remove-queued-call": removeQueuedCallCommand,
   "create-conference": createConferenceCommand,
   "get-conference": getConferenceCommand,
   "list-conferences": listConferencesCommand,
@@ -1165,7 +1198,7 @@ const KNOWN_FLAGS = new Set<string>([
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
-  "max-attempts", "max-items", "max-participants", "max-retries", "max-sources", "max-tokens",
+  "max-attempts", "max-items", "max-participants", "max-retries", "max-size", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
