@@ -89,7 +89,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   ],
   "🔄 Porting": [
     { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "activate_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
-    { name: "Port-Out", description: "List and inspect port-out activity, reject or comment on port-out orders", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes"] },
+    { name: "Port-Out", description: "List and inspect Port-Out activity, authorize or reject orders, and create or list comments", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes", "update_portout_status", "create_portout_comment", "list_portout_comments"] },
   ],
   "💬 WhatsApp": [
     { name: "WhatsApp Business", description: "Send text, template, media, interactive, location, reaction, sticker, contact, and video WhatsApp messages; manage business accounts, phone numbers, and templates", actions: ["setup_whatsapp", "send_whatsapp_message", "send_whatsapp_audio", "send_whatsapp_document", "send_whatsapp_image", "send_whatsapp_interactive", "send_whatsapp_location", "send_whatsapp_reaction", "send_whatsapp_sticker", "send_whatsapp_contacts", "send_whatsapp_video", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile"] },
@@ -164,6 +164,12 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent activate-porting-order", description: "Activate all numbers in a US FastPort order after explicit --confirm acknowledgement (irreversible)" },
   { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
   { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
+  { name: "telnyx-agent list-portout-orders", description: "List Port-Out orders with generated filters and pagination" },
+  { name: "telnyx-agent get-portout-order", description: "Retrieve one Port-Out order by ID" },
+  { name: "telnyx-agent list-portout-rejection-codes", description: "List rejection codes eligible for a Port-Out order" },
+  { name: "telnyx-agent update-portout-status", description: "Authorize or reject a Port-Out order after explicit --confirm acknowledgement" },
+  { name: "telnyx-agent create-portout-comment", description: "Create a comment on a Port-Out order" },
+  { name: "telnyx-agent list-portout-comments", description: "List comments on a Port-Out order" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },

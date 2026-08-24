@@ -22,6 +22,14 @@ import {
   submitPortingOrderCommand,
   updatePortingOrderCommand,
 } from "./commands/porting-orders.ts";
+import {
+  createPortoutCommentCommand,
+  getPortoutOrderCommand,
+  listPortoutCommentsCommand,
+  listPortoutOrdersCommand,
+  listPortoutRejectionCodesCommand,
+  updatePortoutStatusCommand,
+} from "./commands/portout-orders.ts";
 import { edgeDoctorCommand } from "./commands/edge-doctor.ts";
 import { setupEdgeMcpCommand } from "./commands/setup-edge-mcp.ts";
 import { setupEdgeWebhookCommand } from "./commands/setup-edge-webhook.ts";
@@ -174,6 +182,12 @@ Commands:
   activate-porting-order Activate all numbers in a US FastPort order (irreversible; requires --confirm)
   attach-porting-document Attach an existing Telnyx document to a porting order
   list-porting-documents List documents attached to a porting order
+  list-portout-orders List Port-Out orders with filters and pagination
+  get-portout-order Retrieve one Port-Out order by ID
+  list-portout-rejection-codes List eligible rejection codes for a Port-Out order
+  update-portout-status Authorize or reject a Port-Out order (requires --confirm)
+  create-portout-comment Create a comment on a Port-Out order
+  list-portout-comments List comments on a Port-Out order
   edge-doctor       Validate Edge Compute prerequisites and handoff readiness
   setup-edge-mcp    Handoff to an Edge-hosted MCP server example
   setup-edge-webhook Handoff to an Edge-hosted webhook receiver example
@@ -343,6 +357,24 @@ Porting Order Action Flags:
   --confirm         Required safety acknowledgement (cancel-porting-order, activate-porting-order)
   --document-id     Existing Telnyx document ID (attach-porting-document — required)
   --document-type   loa|invoice|csr|other (attach required; comma-separated list filter)
+
+Port-Out Action Flags:
+  --id <id>         Port-Out order ID (get, update status, create/list comments — required)
+  --portout-id <id> Port-Out order ID (list-portout-rejection-codes — required upstream flag)
+  --filter <json>   Consolidated generated filter object (list orders/rejection codes)
+  --carrier-name / --country-code / --phone-number / --pon / --spid / --status / --support-key
+                    Scalar filters for list-portout-orders
+  --country-code-in / --status-in Comma-separated or JSON string arrays (list-portout-orders)
+  --foc-date        ISO 8601 FOC date filter (list-portout-orders)
+  --inserted-at / --ported-out-at JSON date-range objects (list-portout-orders)
+  --code            Rejection code filter (list-portout-rejection-codes)
+  --page-number / --page-size Positive pagination values (list-portout-orders)
+  --max-items       Maximum orders returned from the selected page; -1 means unlimited
+  --status          authorized|rejected-pending (update-portout-status — required)
+  --reason          Authorization or rejection reason (update-portout-status — required)
+  --host-messaging <bool> Keep messaging services with Telnyx after port-out completion
+  --confirm         Required safety acknowledgement for update-portout-status; never forwarded
+  --body            Comment text (create-portout-comment — required)
 
 Fund-account Flags:
   --amount <usd>    Amount to fund in USD (required, e.g., 50.00)
@@ -815,6 +847,12 @@ Examples:
   telnyx-agent activate-porting-order --id <porting-order-id> --confirm --json
   telnyx-agent attach-porting-document --id <porting-order-id> --document-id <document-id> --document-type loa --json
   telnyx-agent list-porting-documents --id <porting-order-id> --document-type loa,invoice --json
+  telnyx-agent list-portout-orders --status pending --page-size 25 --json
+  telnyx-agent get-portout-order --id <portout-id> --json
+  telnyx-agent list-portout-rejection-codes --portout-id <portout-id> --code 1002 --json
+  telnyx-agent update-portout-status --id <portout-id> --status authorized --reason "Verified request" --confirm --json
+  telnyx-agent create-portout-comment --id <portout-id> --body "Review complete" --json
+  telnyx-agent list-portout-comments --id <portout-id> --json
   telnyx-agent verify-send --phone-number +131****0001 --verify-profile-id prof_xxx --method sms
   telnyx-agent verify-check --verification-id ver_xxx --code 123456
   telnyx-agent verify-check --verification-id ver_xxx
@@ -990,6 +1028,12 @@ const COMMANDS: Record<string, (
   "activate-porting-order": activatePortingOrderCommand,
   "attach-porting-document": attachPortingDocumentCommand,
   "list-porting-documents": listPortingDocumentsCommand,
+  "list-portout-orders": listPortoutOrdersCommand,
+  "get-portout-order": getPortoutOrderCommand,
+  "list-portout-rejection-codes": listPortoutRejectionCodesCommand,
+  "update-portout-status": updatePortoutStatusCommand,
+  "create-portout-comment": createPortoutCommentCommand,
+  "list-portout-comments": listPortoutCommentsCommand,
   "edge-doctor": edgeDoctorCommand,
   "setup-edge-mcp": setupEdgeMcpCommand,
   "setup-edge-webhook": setupEdgeWebhookCommand,
@@ -1103,7 +1147,7 @@ const KNOWN_FLAGS = new Set<string>([
   "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
-  "country", "country-code", "crawl-timeout", "create", "currency", "custom-code",
+  "country", "country-code", "country-code-in", "crawl-timeout", "create", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
@@ -1111,13 +1155,13 @@ const KNOWN_FLAGS = new Set<string>([
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
   "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
-  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before",
+  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
-  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "html",
+  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
-  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants",
+  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
@@ -1131,16 +1175,16 @@ const KNOWN_FLAGS = new Set<string>([
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
-  "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
-  "query", "queue-name", "reaction", "record", "recording-id", "region",
+  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
+  "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "slug",
-  "smart-encoding", "sole-prop", "sort", "source", "sources", "speak-on-enter", "sql",
-  "start-conference-on-create", "start-message", "starts-with", "status", "sticker", "stop",
+  "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
+  "start-conference-on-create", "start-message", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "temperature", "template-id", "template-language", "template-name", "template-variables",
@@ -1148,7 +1192,7 @@ const KNOWN_FLAGS = new Set<string>([
   "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
-  "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
