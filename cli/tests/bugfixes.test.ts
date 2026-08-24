@@ -60,7 +60,7 @@ describe("Bug fix: --help/-h shows help instead of running the command", () => {
     const { stdout, status } = runCli(["tts", "--help"], { ...process.env, TELNYX_API_KEY: "" });
     assert.equal(status, 0, "expected --help to exit 0 without API key");
     // If the command ran, it would fail with auth error, not show help
-    assert.doesNotMatch(stdout, /error/i);
+    assert.doesNotMatch(stdout, /✗ Error:/);
     assert.match(stdout, /Usage:/);
   });
 
@@ -72,14 +72,14 @@ describe("Bug fix: --help/-h shows help instead of running the command", () => {
     const { stdout, status } = runCli(["setup-sms", "--json", "-h"], { ...process.env, TELNYX_API_KEY: "" });
     assert.equal(status, 0, "expected -h after --json to exit 0 without API key");
     assert.match(stdout, /Usage:/);
-    assert.doesNotMatch(stdout, /error/i);
+    assert.doesNotMatch(stdout, /✗ Error:/);
   });
 
   it("setup-voice --force -h shows help (does not provision) even without API key", () => {
     const { stdout, status } = runCli(["setup-voice", "--force", "-h"], { ...process.env, TELNYX_API_KEY: "" });
     assert.equal(status, 0, "expected -h after --force to exit 0 without API key");
     assert.match(stdout, /Usage:/);
-    assert.doesNotMatch(stdout, /error/i);
+    assert.doesNotMatch(stdout, /✗ Error:/);
   });
 
   it("send-sms --text \"-h\" still treats -h as a VALUE, not help", () => {

@@ -114,6 +114,12 @@ import {
   triggerAiAssistantTestRunCommand,
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
+import {
+  cancelAiAssistantScheduledEventCommand,
+  createAiAssistantScheduledEventCommand,
+  getAiAssistantScheduledEventCommand,
+  listAiAssistantScheduledEventsCommand,
+} from "./commands/ai-assistant-scheduled-events.ts";
 import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
 import {
   disableSimCardCommand,
@@ -265,6 +271,10 @@ Commands:
   get-ai-assistant  Retrieve an AI assistant by ID
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
+  create-ai-assistant-scheduled-event Schedule a future AI assistant phone call or SMS
+  get-ai-assistant-scheduled-event Retrieve one AI assistant scheduled event
+  list-ai-assistant-scheduled-events List and filter an assistant's scheduled events
+  cancel-ai-assistant-scheduled-event Cancel/delete a scheduled event (requires --confirm)
   search-ai-collection Search or list RAG documents in an AI collection
   web-search        Search the web and return structured, LLM-ready results
   web-contents      Retrieve clean content for up to 20 URLs
@@ -758,6 +768,26 @@ AI Assistant Lifecycle Flags:
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
 
+AI Assistant Scheduled Event Flags:
+  --assistant-id <id> Assistant ID (all scheduled-event commands — required)
+  --event-id <id>   Scheduled event ID (get and cancel — required)
+  --scheduled-at-fixed-datetime <iso8601> Event dispatch time (create — required)
+  --telnyx-agent-target <phone|sip> Phone number or SIP URI to dispatch from (create — required)
+  --telnyx-conversation-channel <channel> phone_call|sms_chat (create — required)
+  --telnyx-end-user-target <phone|sip> Phone number or SIP URI to dispatch to (create — required)
+  --text <text>     Message body (required when creating an sms_chat event)
+  --call-settings <json> Per-call telephony overrides (create)
+  --call-settings.sip-region <region> Nested SIP-region override (create)
+  --conversation-metadata <json> Conversation metadata object (create)
+  --dynamic-variables <json> Assistant dynamic variables object (create)
+  --max-retries-client-errors <n> Non-negative retry count for client call failures (create)
+  --retry-interval-secs <n> Non-negative delay between retries (create)
+  --conversation-channel <channel> phone_call|sms_chat filter (list)
+  --from-date / --to-date <iso8601> Inclusive scheduled-event date range (list)
+  --page-number / --page-size <n> Non-negative generated-CLI pagination values (list)
+  --max-items <n>   Maximum events returned; -1 means unlimited (list)
+  --confirm         Bare safety acknowledgement (cancel only, required; never forwarded)
+
 AI Collection Retrieval Flags:
   --collection-id <slug> Collection slug to search (required; --slug alias accepted)
   --query <text>    Natural-language query; omit for a plain document catalog listing
@@ -986,6 +1016,10 @@ Examples:
   telnyx-agent get-ai-assistant --id <assistant-id> --json
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
   telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
+  telnyx-agent create-ai-assistant-scheduled-event --assistant-id <assistant-id> --scheduled-at-fixed-datetime 2026-08-25T14:00:00Z --telnyx-agent-target +131****0000 --telnyx-conversation-channel phone_call --telnyx-end-user-target +131****0001 --json
+  telnyx-agent get-ai-assistant-scheduled-event --assistant-id <assistant-id> --event-id <event-id> --json
+  telnyx-agent list-ai-assistant-scheduled-events --assistant-id <assistant-id> --conversation-channel phone_call --json
+  telnyx-agent cancel-ai-assistant-scheduled-event --assistant-id <assistant-id> --event-id <event-id> --confirm --json
   telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
   telnyx-agent web-search --query "latest WebRTC developments" --count 10 --freshness week --json
   telnyx-agent web-contents --url https://example.com --format markdown --json
@@ -1110,6 +1144,10 @@ const COMMANDS: Record<string, (
   "get-ai-assistant": getAiAssistantCommand,
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
+  "create-ai-assistant-scheduled-event": createAiAssistantScheduledEventCommand,
+  "get-ai-assistant-scheduled-event": getAiAssistantScheduledEventCommand,
+  "list-ai-assistant-scheduled-events": listAiAssistantScheduledEventsCommand,
+  "cancel-ai-assistant-scheduled-event": cancelAiAssistantScheduledEventCommand,
   "search-ai-collection": searchAiCollectionCommand,
   "chat-ai-assistant": chatAiAssistantCommand,
   "send-ai-assistant-sms": sendAiAssistantSmsCommand,
@@ -1141,23 +1179,23 @@ const KNOWN_FLAGS = new Set<string>([
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
-  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge",
+  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-settings",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids", "client-state", "code",
   "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
-  "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
+  "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
   "country", "country-code", "country-code-in", "crawl-timeout", "create", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "ends-with", "event-id",
   "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
   "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
-  "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
+  "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
@@ -1165,7 +1203,7 @@ const KNOWN_FLAGS = new Set<string>([
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
-  "max-attempts", "max-items", "max-participants", "max-retries", "max-sources", "max-tokens",
+  "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
@@ -1178,18 +1216,18 @@ const KNOWN_FLAGS = new Set<string>([
   "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
-  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
+  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
-  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
+  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
-  "temperature", "template-id", "template-language", "template-name", "template-variables",
+  "telnyx-agent-target", "telnyx-conversation-channel", "telnyx-end-user-target", "temperature", "template-id", "template-language", "template-name", "template-variables",
   "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
-  "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
+  "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",

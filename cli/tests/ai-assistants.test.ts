@@ -641,6 +641,10 @@ describe("AI assistant lifecycle action commands", () => {
       "get_ai_assistant_test_run",
       "list_ai_assistant_test_runs",
       "test_ai_assistant_tool",
+      "create_ai_assistant_scheduled_event",
+      "get_ai_assistant_scheduled_event",
+      "list_ai_assistant_scheduled_events",
+      "cancel_ai_assistant_scheduled_event",
     ]);
   });
 });
