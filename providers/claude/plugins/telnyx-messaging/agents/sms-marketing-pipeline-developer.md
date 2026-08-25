@@ -155,7 +155,8 @@ Purchase one or more phone numbers. See `references/architecture.md` "Capacity P
 **Validate:** Number exists and is active:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
-  "https://api.telnyx.com/v2/phone_numbers?filter[phone_number]=$PHONE_NUMBER" | jq '.data[0].status'
+  -G "https://api.telnyx.com/v2/phone_numbers" \
+  --data-urlencode "filter[phone_number]=$PHONE_NUMBER" | jq '.data[0].status'
 # Must return "active"
 ```
 
