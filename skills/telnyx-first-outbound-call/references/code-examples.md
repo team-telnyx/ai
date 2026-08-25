@@ -47,9 +47,9 @@ async function makeCall() {
     const call = response.data;
 
     console.log('Call initiated!');
-    console.log(`  Call Control ID: ${call.call_control_id}`);
-    console.log(`  Call Session ID: ${call.call_session_id}`);
-    console.log(`  Is Alive: ${call.is_alive}`);
+    console.log(`  Call Control ID: ${call.callControlId}`);
+    console.log(`  Call Session ID: ${call.callSessionId}`);
+    console.log(`  Is Alive: ${call.isAlive}`);
   } catch (error) {
     console.error('Call failed:', error.message);
 
@@ -124,24 +124,22 @@ composer require telnyx/telnyx-php
 ### Java
 
 ```java
-import com.telnyx.sdk.ApiClient;
-import com.telnyx.sdk.api.CallsApi;
-import com.telnyx.sdk.model.CallDialRequest;
-import com.telnyx.sdk.model.CallDialResponse;
+import com.telnyx.sdk.client.TelnyxClient;
+import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
+import com.telnyx.sdk.models.calls.CallDialParams;
+import com.telnyx.sdk.models.calls.CallDialResponse;
 
-ApiClient client = new ApiClient();
-client.setApiKey(System.getenv("TELNYX_API_KEY"));
+TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 
-CallsApi callsApi = new CallsApi(client);
-
-CallDialRequest request = new CallDialRequest()
+CallDialParams params = CallDialParams.builder()
     .connectionId(System.getenv("CALL_CONTROL_APP_ID"))
     .to("+1XXXXXXXXXX")
-    .from(System.getenv("MY_NUMBER"));
+    .from(System.getenv("MY_NUMBER"))
+    .build();
 
-CallDialResponse response = callsApi.dial(request);
+CallDialResponse response = client.calls().dial(params);
 System.out.println("Call initiated!");
-System.out.println("  Call Control ID: " + response.getCallControlId());
+System.out.println("  Call Control ID: " + response.data().callControlId());
 ```
 
 ### Go
@@ -155,10 +153,13 @@ import (
     "os"
 
     "github.com/team-telnyx/telnyx-go"
+    "github.com/team-telnyx/telnyx-go/option"
 )
 
 func main() {
-    client := telnyx.NewClient(os.Getenv("TELNYX_API_KEY"))
+    client := telnyx.NewClient(
+        option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+    )
 
     response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
         ConnectionID: os.Getenv("CALL_CONTROL_APP_ID"),
@@ -172,7 +173,7 @@ func main() {
     }
 
     fmt.Println("Call initiated!")
-    fmt.Printf("  Call Control ID: %s\n", response.CallControlID)
+    fmt.Printf("  Call Control ID: %s\n", response.Data.CallControlID)
 }
 ```
 
@@ -186,24 +187,26 @@ set -euo pipefail
 # CONFIG — Replace these values
 # ============================================
 export TELNYX_API_KEY="KEY_YOUR_API_KEY_HERE"
+export WEBHOOK_URL="https://your-server.com/webhooks/telnyx"  # Your public webhook endpoint
 export TO_NUMBER="+1XXXXXXXXXX"   # Phone number you want to call
 
 # ============================================
 # Step 1: Create Call Control Application
 # ============================================
 echo "=== Step 1: Creating Call Control Application ==="
-APP_RESPONSE=$(curl -s -X POST https://api.telnyx.com/v2/call_control_applications \
+APP_RESPONSE=$(curl -sf -X POST https://api.telnyx.com/v2/call_control_applications \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"application_name\":\"My First Call Control App\",\"webhook_event_url\":\"${WEBHOOK_URL:?Set WEBHOOK_URL to your public webhook endpoint}\",\"webhook_api_version\":\"2\",\"active\":true}")
 export APP_ID=$(echo "$APP_RESPONSE" | jq -r '.data.id')
+[ "$APP_ID" = "null" ] && { echo "ERROR: Failed to create app"; exit 1; }
 echo "Call Control App ID: $APP_ID"
 
 # ============================================
 # Step 2: Create outbound voice profile + link to app
 # ============================================
 echo "=== Step 2: Creating outbound voice profile ==="
-OVP_RESPONSE=$(curl -s -X POST https://api.telnyx.com/v2/outbound_voice_profiles \
+OVP_RESPONSE=$(curl -sf -X POST https://api.telnyx.com/v2/outbound_voice_profiles \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -215,9 +218,10 @@ OVP_RESPONSE=$(curl -s -X POST https://api.telnyx.com/v2/outbound_voice_profiles
     "whitelisted_destinations": ["US", "CA"]
   }')
 export OVP_ID=$(echo "$OVP_RESPONSE" | jq -r '.data.id')
+[ "$OVP_ID" = "null" ] && { echo "ERROR: Failed to create OVP"; exit 1; }
 echo "OVP ID: $OVP_ID"
 
-curl -s -X PATCH "https://api.telnyx.com/v2/call_control_applications/$APP_ID" \
+curl -sf -X PATCH "https://api.telnyx.com/v2/call_control_applications/$APP_ID" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{\"outbound\": {\"outbound_voice_profile_id\": \"$OVP_ID\"}}" | jq .
@@ -240,7 +244,16 @@ curl -s -X POST https://api.telnyx.com/v2/number_orders \
   -H "Content-Type: application/json" \
   -d "{\"phone_numbers\": [{\"phone_number\": \"$MY_NUMBER\"}]}" | jq .
 
-sleep 3
+# Poll until number is active (up to 30s)
+echo "Waiting for number to become active..."
+for i in $(seq 1 10); do
+  NUM_STATUS=$(curl -sf -G "https://api.telnyx.com/v2/phone_numbers" \
+    --data-urlencode "filter[phone_number]=$MY_NUMBER" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" | jq -r '.data[0].status // "unknown"')
+  [ "$NUM_STATUS" = "active" ] && break
+  sleep 3
+done
+[ "$NUM_STATUS" != "active" ] && { echo "WARNING: Number status is '$NUM_STATUS' — may not be ready yet"; }
 
 # ============================================
 # Step 4: Assign number to app
@@ -422,7 +435,14 @@ MY_NUMBER=$(curl -sf -G "https://api.telnyx.com/v2/available_phone_numbers" \
 curl -sf -X POST https://api.telnyx.com/v2/number_orders \
   -H "Authorization: Bearer $TELNYX_API_KEY" -H "Content-Type: application/json" \
   -d "{\"phone_numbers\":[{\"phone_number\":\"$MY_NUMBER\"}]}" > /dev/null
-sleep 3
+# Poll until number is active (up to 30s)
+for i in $(seq 1 10); do
+  NUM_STATUS=$(curl -sf -G "https://api.telnyx.com/v2/phone_numbers" \
+    --data-urlencode "filter[phone_number]=$MY_NUMBER" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" | jq -r '.data[0].status // "unknown"')
+  [ "$NUM_STATUS" = "active" ] && break
+  sleep 3
+done
 
 echo "4/5 Assigning number..."
 PHONE_NUMBER_ID=$(curl -sf -G "https://api.telnyx.com/v2/phone_numbers" \

@@ -152,17 +152,25 @@ else
   if [ "$ASSIGNED" -gt 0 ]; then
     pass "$ASSIGNED number(s) assigned to a Call Control Application"
     # Cross-check that the assigned number's connection_id matches one of the OVP-linked app IDs
-    OVP_APP_IDS=$(echo "$CC_RESP" | jq -r '[.data[] | select(.active == true and .outbound.outbound_voice_profile_id != null and .outbound.outbound_voice_profile_id != "") | .id] | join("|")' 2>/dev/null || echo "")
-    if [ -n "$OVP_APP_IDS" ]; then
-      MATCHED=$(echo "$NUM_RESP" | jq --arg ids "$OVP_APP_IDS" '[.data[] | select(.connection_id != null and .connection_id != "") | .connection_id as $connection_id | select($ids | split("|") | index($connection_id))] | length' 2>/dev/null || echo "0")
+    # Cross-check: number's connection_id must match an active app whose linked OVP is ENABLED
+    # 1. Get enabled OVP IDs from Check 3
+    ENABLED_OVP_IDS=$(echo "$OVP_RESP" | jq -r '[.data[] | select(.enabled == true) | .id] | join("|")' 2>/dev/null || echo "")
+    # 2. Get active app IDs where linked OVP is in the enabled set
+    USABLE_APP_IDS=$(echo "$CC_RESP" | jq -r --arg eovps "$ENABLED_OVP_IDS" \
+      '[.data[] | select(.active == true and .outbound.outbound_voice_profile_id != null and .outbound.outbound_voice_profile_id != "") | select(($eovps | split("|")) as $elist | .outbound.outbound_voice_profile_id as $ovpid | ($elist | any(. == $ovpid))) | .id] | join("|")' 2>/dev/null || echo "")
+    if [ -n "$USABLE_APP_IDS" ]; then
+      # 3. Count numbers whose connection_id is in the usable app set (fix: use any() not index())
+      MATCHED=$(echo "$NUM_RESP" | jq --arg ids "$USABLE_APP_IDS" \
+        '[.data[] | select(.connection_id != null and .connection_id != "") | select(($ids | split("|")) as $idlist | .connection_id as $cid | ($idlist | any(. == $cid)))] | length' 2>/dev/null || echo "0")
       if [ "$MATCHED" -gt 0 ]; then
-        pass "$MATCHED number(s) assigned to an OVP-linked app (blueprint-ready)"
-        echo "$NUM_RESP" | jq -r '.data[] | select(.connection_id != null and .connection_id != "") | "       → \(.phone_number) → app: \(.connection_name // .connection_id)"'
+        pass "$MATCHED number(s) assigned to an app with enabled OVP (blueprint-ready)"
+        echo "$NUM_RESP" | jq -r --arg ids "$USABLE_APP_IDS" \
+          '.data[] | select(.connection_id != null and .connection_id != "") | select(($ids | split("|")) as $idlist | .connection_id as $cid | ($idlist | any(. == $cid))) | "       → \(.phone_number) → app: \(.connection_name // .connection_id)"'
       else
-        warn "Numbers are assigned, but none to an OVP-linked app — calls from those numbers will fail"
+        warn "Numbers are assigned, but none to an app with an enabled OVP — calls will fail"
       fi
     else
-      echo "$NUM_RESP" | jq -r '.data[] | select(.connection_id != null and .connection_id != "") | "       → \(.phone_number) → app: \(.connection_name // .connection_id)"'
+      warn "No active app has a linked + enabled OVP — number assignment cannot be validated"
     fi
   else
     fail "No phone numbers assigned to a Call Control Application" \
