@@ -233,7 +233,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
 
 **Ask:** "What's your company name, EIN (9 digits), address, website, and support contact info? Or should I create a mock brand for testing?"
 
-> Costs $4 (non-refundable). Use `"mock": true` for testing to avoid real charges (FRIC-006).
+> Brand registration costs $4 (non-refundable), and a brand cannot be deleted once it has campaigns. Use `"mock": true` for testing to avoid real charges (FRIC-006).
 > **This is the longest wait in the entire setup.** Brand vetting takes 1–7 business days. There is NO webhook notification — must poll `GET /v2/10dlc/brand/{brandId}` and check `identityStatus` (FRIC-001).
 
 Entity type requirements:

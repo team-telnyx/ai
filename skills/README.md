@@ -220,7 +220,7 @@ A specialist agent (`phone-verification-developer`) that builds a production-rea
 
 The agent guides users through 8 interactive steps with validation gates at each step. Includes 11 documented friction points, 6-language SDK reference, and an infrastructure validation script.
 
-**Agent:** Invoke with `/agent phone-verification-developer` in Claude Code.
+**Agent:** Invoke by asking Claude to use the `phone-verification-developer` agent (for example, "use the phone-verification-developer agent to set up phone verification") or `@`-mention it in Claude Code. There is no `/agent` slash command.
 
 **Reference skill:** `telnyx-phone-verification` (architecture diagrams, code examples, friction log, troubleshooting, validation script)
 

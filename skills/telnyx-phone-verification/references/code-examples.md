@@ -460,11 +460,11 @@ channel = carrier_type == 'fixed line' ? :call : :sms
 
 # 8b
 verification = channel == :sms ?
-  Telnyx::Verification.sms(phone_number: '+13035551234', verify_profile_id: 'YOUR_ID') :
-  Telnyx::Verification.call(phone_number: '+13035551234', verify_profile_id: 'YOUR_ID')
+  client.verifications.trigger_sms(phone_number: '+13035551234', verify_profile_id: 'YOUR_ID') :
+  client.verifications.trigger_call(phone_number: '+13035551234', verify_profile_id: 'YOUR_ID')
 
 # 8c
-result = Telnyx::Verification.verify(verification_id: verification.data.id, code: '123456')
+result = client.verifications.actions.verify(verification.data.id, code: '123456')
 puts result.data.response_code == 'accepted' ? '✅ Verified!' : '❌ Invalid code'
 ```
 
@@ -498,7 +498,8 @@ Usage:
   python3 e2e_test.py --verify-profile-id <uuid> --phone <+1XXXXXXXXXX>
 """
 
-import argparse, os, sys, telnyx
+import argparse, os, sys
+from telnyx import Telnyx
 
 def main():
     parser = argparse.ArgumentParser(description="Phone Verification E2E Test")
@@ -506,28 +507,29 @@ def main():
     parser.add_argument("--phone", required=True, help="Phone number (E.164)")
     args = parser.parse_args()
     
-    telnyx.api_key = os.environ.get("TELNYX_API_KEY")
-    if not telnyx.api_key:
+    api_key = os.environ.get("TELNYX_API_KEY")
+    if not api_key:
         print("❌ TELNYX_API_KEY not set"); sys.exit(1)
+    client = Telnyx(api_key=api_key)
     
     print(f"Testing phone verification for {args.phone}\n{'='*50}")
     
     # Step 1: Number Lookup
     print("\n[1/3] Number Lookup...")
-    lookup = telnyx.NumberLookup.retrieve(args.phone)
+    lookup = client.number_lookup.retrieve(args.phone)
     carrier_type = lookup.data.carrier.type if lookup.data.carrier else "unknown"
     print(f"  ✅ Type: {carrier_type}, Carrier: {lookup.data.carrier.name if lookup.data.carrier else 'unknown'}")
     
     # Step 2: Send Verification
     channel = "call" if carrier_type == "fixed line" else "sms"
     print(f"\n[2/3] Sending {channel.upper()} verification...")
-    v = (telnyx.Verification.call if channel == "call" else telnyx.Verification.sms)(
-        phone_number=args.phone, verify_profile_id=args.verify_profile_id)
+    trigger = client.verifications.trigger_call if channel == "call" else client.verifications.trigger_sms
+    v = trigger(phone_number=args.phone, verify_profile_id=args.verify_profile_id)
     print(f"  ✅ ID: {v.data.id}, Status: {v.data.status}, Timeout: {v.data.timeout_secs}s")
     
     # Step 3: Verify Code
     code = input(f"\n[3/3] Enter code received on {args.phone}: ").strip()
-    result = telnyx.Verification.verify(verification_id=v.data.id, code=code)
+    result = client.verifications.actions.verify(verification_id=v.data.id, code=code)
     
     if result.data.response_code == "accepted":
         print("  ✅ VERIFIED — Phone number confirmed!")
