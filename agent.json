@@ -4,7 +4,6 @@
   "description": "Programmable telecom platform — voice, messaging, email, IoT, AI, networking, storage.",
   "version": "1.0.0",
   "updated": "2026-07-29T00:00:00Z",
-
   "auth": {
     "type": "api_key",
     "header": "Authorization",
@@ -13,17 +12,20 @@
     "signup_manifest": "https://telnyx.com/.well-known/agent-access.json",
     "docs": "https://developers.telnyx.com/docs/api/v2/overview#authentication"
   },
-
   "capabilities": [
     {
       "id": "messaging",
       "name": "SMS & MMS",
       "description": "Send and receive SMS/MMS worldwide. A2P, P2P, toll-free, short codes.",
       "guide": "/guides/sms-messaging.md",
-      "cli": "telnyx message send --from +15551234567 --to +15559876543 --text 'Hello'",
+      "cli": "telnyx-agent send-sms --from +15551234567 --to +15559876543 --text 'Hello'",
       "api": "POST /v2/messages",
       "docs": "https://developers.telnyx.com/docs/messaging",
-      "requires": ["messaging_profile", "phone_number", "10dlc_registration"]
+      "requires": [
+        "messaging_profile",
+        "phone_number",
+        "10dlc_registration"
+      ]
     },
     {
       "id": "rcs",
@@ -33,27 +35,35 @@
       "cli": "telnyx-agent rcs-send --agent-id AGENT_ID --messaging-profile-id PROFILE_ID --to +15559876543 --text 'Hello from RCS'",
       "api": "POST /v2/messages/rcs",
       "docs": "https://developers.telnyx.com/docs/messaging/messages/rcs-capabilities",
-      "requires": ["rcs_agent", "messaging_profile"]
+      "requires": [
+        "rcs_agent",
+        "messaging_profile"
+      ]
     },
     {
       "id": "voice",
       "name": "Voice & Call Control",
       "description": "Programmable voice calls with real-time call control, conferencing, IVR, recording.",
       "guide": "/guides/voice-call-control.md",
-      "cli": "telnyx call dial --from +15551234567 --to +15559876543",
+      "cli": "telnyx-agent call-dial --from +15551234567 --to +15559876543 --connection-id CALL_CONTROL_APP_ID",
       "api": "POST /v2/calls",
       "docs": "https://developers.telnyx.com/docs/voice",
-      "requires": ["voice_connection", "phone_number"]
+      "requires": [
+        "voice_connection",
+        "phone_number"
+      ]
     },
     {
       "id": "ai_assistants",
       "name": "AI Voice Assistants",
       "description": "Deploy AI-powered voice assistants that answer calls with custom personalities and tools.",
       "guide": "/guides/ai-assistants.md",
-      "cli": "telnyx assistant create -d '{\"name\":\"Support Bot\",\"model\":\"meta-llama/Llama-3.3-70B-Instruct\",\"instructions\":\"You are a support bot.\"}'",
+      "cli": "telnyx-agent create-ai-assistant --name 'Support Bot' --model 'Qwen/Qwen3-235B-A22B' --instructions 'You are a support bot.'",
       "api": "POST /v2/ai/assistants",
       "docs": "https://developers.telnyx.com/docs/ai/assistants",
-      "requires": ["phone_number"]
+      "requires": [
+        "phone_number"
+      ]
     },
     {
       "id": "ai_inference",
@@ -71,14 +81,17 @@
       "guide": "/guides/email.md",
       "api": "POST /v2/email_messages",
       "docs": "https://developers.telnyx.com/docs/email",
-      "requires": ["sending_domain", "api_key"]
+      "requires": [
+        "sending_domain",
+        "api_key"
+      ]
     },
     {
       "id": "numbers",
       "name": "Phone Numbers",
       "description": "Search, buy, and manage phone numbers in 140+ countries.",
       "guide": "/guides/phone-numbers.md",
-      "cli": "telnyx number search --country US --json",
+      "cli": "telnyx-agent search-phone-numbers --country US --json",
       "api": "GET /v2/available_phone_numbers",
       "docs": "https://developers.telnyx.com/docs/numbers",
       "requires": []
@@ -91,22 +104,26 @@
       "cli": "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp",
       "api": "POST /v2/verifications/whatsapp",
       "docs": "https://developers.telnyx.com/docs/verify",
-      "requires": ["verify_profile"]
+      "requires": [
+        "verify_profile"
+      ]
     },
     {
       "id": "fax",
       "name": "Fax",
       "description": "Send and receive faxes programmatically.",
-      "cli": "telnyx fax send --to +15551234567 --from +15551234568 --media https://example.com/doc.pdf",
+      "cli": "telnyx-agent fax-send --to +15551234567 --from +15551234568 --media-url https://example.com/doc.pdf --connection-id FAX_CONNECTION_ID",
       "api": "POST /v2/faxes",
       "docs": "https://developers.telnyx.com/docs/fax",
-      "requires": ["phone_number"]
+      "requires": [
+        "phone_number"
+      ]
     },
     {
       "id": "iot",
       "name": "IoT & Wireless",
       "description": "Manage SIM cards, eSIMs, data plans, and global connectivity for IoT devices.",
-      "cli": "telnyx sim list --json",
+      "cli": "telnyx-agent list-sim-cards --json",
       "api": "GET /v2/sim_cards",
       "docs": "https://developers.telnyx.com/docs/wireless",
       "requires": []
@@ -115,7 +132,6 @@
       "id": "storage",
       "name": "Cloud Storage",
       "description": "S3-compatible object storage for media, recordings, and files.",
-      "cli": "telnyx bucket create -d '{\"name\":\"my-bucket\"}' --json",
       "api": "POST /v2/storage/buckets",
       "docs": "https://developers.telnyx.com/docs/storage",
       "requires": []
@@ -186,7 +202,6 @@
       "requires": []
     }
   ],
-
   "agent_cli": {
     "package": "@telnyx/agent-cli",
     "version": "0.4.2",
@@ -204,31 +219,19 @@
     ],
     "note": "Run `telnyx-agent capabilities --json` for a machine-readable catalog of API capabilities and selected composite commands (a curated catalog, not the complete command inventory — `telnyx-agent --help` lists every command)."
   },
-
   "cli": {
     "package": "@telnyx/cli",
     "version": "2.0.0",
     "bin": "telnyx",
     "install": "npm install -g @telnyx/cli",
     "docs": "https://www.npmjs.com/package/@telnyx/cli",
-    "global_flags": ["--json", "-o json|table|csv", "-v", "-p <profile>", "--timeout <seconds>"],
-    "commands": [
-      "auth", "profile", "number", "message", "billing", "call", "debugger",
-      "lookup", "sim", "fax", "verify", "resources", "messaging-profile",
-      "messaging-hosted-number-order", "connection", "credential-connection",
-      "texml-application", "call-control-application", "sip-trunk", "bucket",
-      "storage-file", "network", "network-bridge", "portability-check",
-      "porting-order", "conference", "assistant", "verify-profile",
-      "iot-package", "iot-coverage"
-    ],
-    "note": "Per-resource CRUD over the Telnyx REST API. Run `telnyx resources` to list every resource and `telnyx <command> --help` for subcommands. The former @telnyx/api-cli package is deprecated; use @telnyx/cli. Distinct from the Go platform CLI at https://github.com/team-telnyx/telnyx-cli, which uses plural-resource syntax — the commands listed here are the npm package's."
+    "note": "General-purpose, human-oriented CLI: several commands prompt interactively, and authentication requires the interactive `telnyx auth login` (it does not read TELNYX_API_KEY). For autonomous/agent use, prefer @telnyx/agent-cli above. The former @telnyx/api-cli package is deprecated. Distinct from the Go platform CLI at https://github.com/team-telnyx/telnyx-cli."
   },
-
   "quickstart": {
     "signup": "curl -s https://telnyx.com/agent-signup.md",
     "signup_guide": "https://telnyx.com/agent-signup.md",
-    "install": "npm install -g @telnyx/agent-cli @telnyx/cli",
-    "auth": "export TELNYX_API_KEY=YOUR_KEY  # telnyx-agent reads only this env var; 'telnyx auth login' works for telnyx commands only",
+    "install": "npm install -g @telnyx/agent-cli",
+    "auth": "export TELNYX_API_KEY=YOUR_KEY  # telnyx-agent reads this env var; no login step",
     "hello_world": [
       {
         "name": "Zero to sending SMS (one command)",
@@ -245,27 +248,26 @@
       {
         "name": "Send an SMS (step by step)",
         "commands": [
-          "telnyx messaging-profile create -d '{\"name\":\"My Profile\"}' --json",
-          "telnyx number search --country US --features sms --json",
-          "telnyx number order +1XXXXXXXXXX --yes --json",
-          "telnyx message send --from +1XXXXXXXXXX --to +15559876543 --text 'Hello from Telnyx!'"
+          "telnyx-agent create-messaging-profile --name 'My Profile' --whitelisted-destinations US --json",
+          "telnyx-agent search-phone-numbers --country US --json",
+          "telnyx-agent buy-phone-number --phone-number +1XXXXXXXXXX --messaging-profile-id PROFILE_ID --json",
+          "telnyx-agent send-sms --from +1XXXXXXXXXX --to +15559876543 --text 'Hello from Telnyx!' --json"
         ]
       },
       {
         "name": "Create an AI assistant",
         "commands": [
-          "telnyx assistant create -d '{\"name\":\"Support Bot\",\"model\":\"meta-llama/Llama-3.3-70B-Instruct\",\"instructions\":\"You are a support bot.\"}' --json"
+          "telnyx-agent create-ai-assistant --name 'Support Bot' --model 'Qwen/Qwen3-235B-A22B' --instructions 'You are a support bot.' --json"
         ]
       },
       {
-        "name": "Create a storage bucket",
+        "name": "Chat completion (inference)",
         "commands": [
-          "telnyx bucket create -d '{\"name\":\"my-bucket\"}' --json"
+          "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"Hello\"}' --json"
         ]
       }
     ]
   },
-
   "sdks": {
     "cli": {
       "name": "@telnyx/cli",
@@ -303,7 +305,6 @@
       "docs": "https://github.com/team-telnyx/telnyx-go"
     }
   },
-
   "links": {
     "api_reference": "https://developers.telnyx.com/docs/api/v2",
     "portal": "https://portal.telnyx.com",
