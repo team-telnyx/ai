@@ -152,7 +152,7 @@
       "name": "10DLC Registration",
       "description": "Register brands and campaigns for US A2P messaging compliance.",
       "guide": "/guides/10dlc-registration.md",
-      "cli": "telnyx-agent setup-10dlc --phone +15551234567 --email compliance@example.com",
+      "cli": "telnyx-agent setup-10dlc --phone +15551234567 --email compliance@example.com --website https://example.com",
       "api": "POST /v2/10dlc/brand",
       "docs": "https://developers.telnyx.com/docs/messaging/10dlc",
       "requires": []
