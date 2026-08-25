@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -624,7 +624,7 @@ const sessionAnalysis = await client.sessionAnalysis.retrieve(
 console.log(sessionAnalysis.session_id);
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
 ## Get Telnyx product usage data (BETA)
 

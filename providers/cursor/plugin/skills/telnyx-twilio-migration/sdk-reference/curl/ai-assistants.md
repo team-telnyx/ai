@@ -648,6 +648,7 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `client_side_tool` | object |  |
 | `timeout_ms` | integer |  |
 
 ### Update Tool
@@ -661,4 +662,5 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `client_side_tool` | object |  |
 | `timeout_ms` | integer |  |

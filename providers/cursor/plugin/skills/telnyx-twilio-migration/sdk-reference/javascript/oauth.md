@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -115,7 +115,7 @@ Create an OAuth authorization grant
 `POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```javascript
-const response = await client.oauth.grants({ allowed: true, consent_token: 'consent_token' });
+const response = await client.oauth.grants({ allowed: true, consent_token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example' });
 
 console.log(response.redirect_uri);
 ```

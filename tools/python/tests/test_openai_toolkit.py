@@ -127,3 +127,36 @@ class TestOpenAIToolkit:
                 assert "default" not in prop_schema, (
                     f"Tool {tool['function']['name']}.{prop_name} has 'default' in schema"
                 )
+
+    def test_preserves_top_level_json_schema_constraints(self) -> None:
+        """Only property defaults are removed from parameter schemas."""
+        tool_def: Any = {
+            "name": "generic_constraint_tool",
+            "description": "Exercise generic JSON Schema forwarding.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "primary": {"type": "string", "default": "first"},
+                    "secondary": {"type": "string"},
+                },
+                "required": [],
+                "anyOf": [
+                    {"required": ["primary"]},
+                    {"required": ["secondary"]},
+                ],
+                "additionalProperties": False,
+                "minProperties": 1,
+            },
+            "method": "POST",
+            "path": "/generic",
+            "category": "test",
+        }
+        adapter = OpenAIToolkit(MagicMock(), [tool_def])
+
+        parameters = adapter.get_tools()[0]["function"]["parameters"]
+
+        assert parameters["anyOf"] == tool_def["parameters"]["anyOf"]
+        assert parameters["additionalProperties"] is False
+        assert parameters["minProperties"] == 1
+        assert "default" not in parameters["properties"]["primary"]
+        assert tool_def["parameters"]["properties"]["primary"]["default"] == "first"

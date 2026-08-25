@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: storage
   language: python
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->

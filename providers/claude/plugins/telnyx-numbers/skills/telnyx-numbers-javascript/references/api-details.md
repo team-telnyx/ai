@@ -290,27 +290,27 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `countryCode` | string (ISO 3166-1 alpha-2) |  |
+| `country_code` | string (ISO 3166-1 alpha-2) |  |
 | `comments` | string |  |
 | `quantity` | integer |  |
-| `areaCode` | string |  |
-| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `area_code` | string |  |
+| `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
 | `features` | array[object] |  |
-| `customerReference` | string |  |
-| `requirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+| `customer_reference` | string |  |
+| `requirement_group_id` | string (UUID) | The ID of the requirement group to associate with this advanced order |
 
 ### Update Advanced Order — `client.advancedOrders.updateRequirementGroup()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `countryCode` | string (ISO 3166-1 alpha-2) |  |
+| `country_code` | string (ISO 3166-1 alpha-2) |  |
 | `comments` | string |  |
 | `quantity` | integer |  |
-| `areaCode` | string |  |
-| `phoneNumberType` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
+| `area_code` | string |  |
+| `phone_number_type` | enum (local, mobile, toll_free, shared_cost, national, ...) |  |
 | `features` | array[object] |  |
-| `customerReference` | string |  |
-| `requirementGroupId` | string (UUID) | The ID of the requirement group to associate with this advanced order |
+| `customer_reference` | string |  |
+| `requirement_group_id` | string (UUID) | The ID of the requirement group to associate with this advanced order |
 
 ### Create a comment — `client.comments.create()`
 
@@ -319,89 +319,89 @@
 | `id` | string (UUID) |  |
 | `body` | string |  |
 | `commenter` | string |  |
-| `commenterType` | enum (admin, user) |  |
-| `commentRecordType` | enum (sub_number_order, requirement_group) |  |
-| `commentRecordId` | string (UUID) |  |
-| `readAt` | string (date-time) | An ISO 8901 datetime string for when the comment was read. |
-| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the comment was created. |
-| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the comment was updated. |
+| `commenter_type` | enum (admin, user) |  |
+| `comment_record_type` | enum (sub_number_order, requirement_group) |  |
+| `comment_record_id` | string (UUID) |  |
+| `read_at` | string (date-time) | An ISO 8901 datetime string for when the comment was read. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the comment was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the comment was updated. |
 
 ### Create an inexplicit number order — `client.inexplicitNumberOrders.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `connectionId` | string (UUID) | Connection id to apply to phone numbers that are purchased |
-| `messagingProfileId` | string (UUID) | Messaging profile id to apply to phone numbers that are purchased |
-| `customerReference` | string | Reference label for the customer |
-| `billingGroupId` | string (UUID) | Billing group id to apply to phone numbers that are purchased |
+| `connection_id` | string (UUID) | Connection id to apply to phone numbers that are purchased |
+| `messaging_profile_id` | string (UUID) | Messaging profile id to apply to phone numbers that are purchased |
+| `customer_reference` | string | Reference label for the customer |
+| `billing_group_id` | string (UUID) | Billing group id to apply to phone numbers that are purchased |
 
 ### Create a number block order — `client.numberBlockOrders.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | string (UUID) |  |
-| `recordType` | string |  |
-| `phoneNumbersCount` | integer | The count of phone numbers in the number order. |
-| `connectionId` | string (UUID) | Identifies the connection associated with this phone number. |
-| `messagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `record_type` | string |  |
+| `phone_numbers_count` | integer | The count of phone numbers in the number order. |
+| `connection_id` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messaging_profile_id` | string (UUID) | Identifies the messaging profile associated with the phone number. |
 | `status` | enum (pending, success, failure) | The status of the order. |
-| `customerReference` | string | A customer reference string for customer look ups. |
-| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the number order was created. |
-| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the number order was updated. |
-| `requirementsMet` | boolean | True if all requirements are met for every phone number, false otherwise. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the number order was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number order was updated. |
+| `requirements_met` | boolean | True if all requirements are met for every phone number, false otherwise. |
 | `errors` | string | Errors the reservation could happen upon |
 
 ### Update requirements for a single phone number within a number order. — `client.numberOrderPhoneNumbers.updateRequirements()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `regulatoryRequirements` | array[object] |  |
+| `regulatory_requirements` | array[object] |  |
 
 ### Create a number order — `client.numberOrders.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `phoneNumbers` | array[object] |  |
-| `connectionId` | string (UUID) | Identifies the connection associated with this phone number. |
-| `messagingProfileId` | string (UUID) | Identifies the messaging profile associated with the phone number. |
-| `billingGroupId` | string (UUID) | Identifies the billing group associated with the phone number. |
-| `customerReference` | string | A customer reference string for customer look ups. |
+| `phone_numbers` | array[object] |  |
+| `connection_id` | string (UUID) | Identifies the connection associated with this phone number. |
+| `messaging_profile_id` | string (UUID) | Identifies the messaging profile associated with the phone number. |
+| `billing_group_id` | string (UUID) | Identifies the billing group associated with the phone number. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
 
 ### Update a number order — `client.numberOrders.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `regulatoryRequirements` | array[object] |  |
-| `customerReference` | string | A customer reference string for customer look ups. |
+| `regulatory_requirements` | array[object] |  |
+| `customer_reference` | string | A customer reference string for customer look ups. |
 
 ### Create a number reservation — `client.numberReservations.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `id` | string (UUID) |  |
-| `recordType` | string |  |
-| `phoneNumbers` | array[object] |  |
+| `record_type` | string |  |
+| `phone_numbers` | array[object] |  |
 | `status` | enum (pending, success, failure) | The status of the entire reservation. |
-| `customerReference` | string | A customer reference string for customer look ups. |
-| `createdAt` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
-| `updatedAt` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
+| `customer_reference` | string | A customer reference string for customer look ups. |
+| `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
+| `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
 
 ### Update a sub number order's requirements — `client.subNumberOrders.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `regulatoryRequirements` | array[object] |  |
+| `regulatory_requirements` | array[object] |  |
 
 ### Create a sub number orders report — `client.subNumberOrdersReport.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `status` | enum (pending, success, failure) | Filter by order status |
-| `countryCode` | string (ISO 3166-1 alpha-2) | Filter by country code |
-| `createdAtGt` | string (date-time) | Filter for orders created after this date |
-| `createdAtLt` | string (date-time) | Filter for orders created before this date |
-| `orderRequestId` | string (UUID) | Filter by specific order request ID |
-| `customerReference` | string | Filter by customer reference |
+| `country_code` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `created_at_gt` | string (date-time) | Filter for orders created after this date |
+| `created_at_lt` | string (date-time) | Filter for orders created before this date |
+| `order_request_id` | string (UUID) | Filter by specific order request ID |
+| `customer_reference` | string | Filter by customer reference |
 
 ## Webhook Payload Fields
 

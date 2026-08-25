@@ -73,7 +73,7 @@ class FrictionReporter:
                 "api_path": api_path,
                 "error_detail": error_message,
                 "sdk": "python",
-                "sdk_version": "0.2.0",
+                "sdk_version": "0.3.0",
             },
         }
 

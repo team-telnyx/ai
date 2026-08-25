@@ -16,15 +16,19 @@ jobs:
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'release'))
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
+
+      - name: Install TypeScript dependencies
+        working-directory: tools/typescript
+        run: npm ci
 
       - name: Check release environment
         run: bash ./.github/bin/check-release-environment

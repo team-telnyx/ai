@@ -6,9 +6,13 @@ import asyncio
 import json
 from typing import Any, Type
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel
 
 from telnyx_agent_toolkit.shared.constants import ToolDefinition
+from telnyx_agent_toolkit.shared.schema import (
+    build_pydantic_args_schema,
+    json_schema_to_pydantic_field,
+)
 from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore
 
 # Type alias — actual import deferred to avoid hard dependency
@@ -33,49 +37,13 @@ def _get_base_tool() -> Any:
 
 def _json_schema_to_pydantic_field(name: str, schema: dict[str, Any]) -> tuple[Any, Any]:
     """Convert a JSON Schema property to a Pydantic field type + Field."""
-    type_map: dict[str, type] = {
-        "string": str,
-        "integer": int,
-        "number": float,
-        "boolean": bool,
-    }
-
-    schema_type = schema.get("type", "string")
-
-    if isinstance(schema_type, list):
-        # Union type like ["string", "array"]
-        py_type: Any = str
-    elif schema_type == "array":
-        items_type = schema.get("items", {}).get("type", "string")
-        inner = type_map.get(items_type, str)
-        py_type = list[inner]  # type: ignore[valid-type]
-    elif schema_type == "object":
-        py_type = dict[str, Any]
-    else:
-        py_type = type_map.get(schema_type, str)
-
-    default = schema.get("default", ...)
-    description = schema.get("description", "")
-
-    return (py_type, Field(default=default, description=description))
+    del name  # Retained for compatibility with the adapter's existing helper API.
+    return json_schema_to_pydantic_field(schema, required=True)
 
 
 def _build_args_schema(tool_def: ToolDefinition) -> Type[BaseModel]:
     """Build a Pydantic model from a tool definition's parameters."""
-    properties = tool_def["parameters"].get("properties", {})
-    required = set(tool_def["parameters"].get("required", []))
-
-    fields: dict[str, Any] = {}
-    for prop_name, prop_schema in properties.items():
-        py_type, field = _json_schema_to_pydantic_field(prop_name, prop_schema)
-        if prop_name not in required and field.default is ...:
-            # Make optional with None default
-            py_type = py_type | None  # type: ignore[operator]
-            field = Field(default=None, description=prop_schema.get("description", ""))
-        fields[prop_name] = (py_type, field)
-
-    model_name = f"{tool_def['name'].title().replace('_', '')}Input"
-    return create_model(model_name, **fields)  # type: ignore[call-overload]
+    return build_pydantic_args_schema(tool_def)
 
 
 class LangChainToolkit:

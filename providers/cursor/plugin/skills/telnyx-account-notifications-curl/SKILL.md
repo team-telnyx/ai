@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: account-notifications
   language: curl
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->

@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: verify
   language: go
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -108,7 +108,7 @@ Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `f
 	fmt.Printf("%+v\n", byPhoneNumbers.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
 
@@ -148,7 +148,7 @@ Optional: `custom_code` (string | null), `extension` (string | null), `timeout_s
 	fmt.Printf("%+v\n", createVerificationResponse.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger Flash call verification
 
@@ -167,7 +167,7 @@ Optional: `timeout_secs` (integer)
 	fmt.Printf("%+v\n", createVerificationResponse.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
 
@@ -186,7 +186,26 @@ Optional: `custom_code` (string | null), `timeout_secs` (integer)
 	fmt.Printf("%+v\n", createVerificationResponse.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
+
+## Trigger WhatsApp verification
+
+`POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
+
+Optional: `custom_code` (string | null), `timeout_secs` (integer)
+
+```go
+	createVerificationResponse, err := client.Verifications.TriggerWhatsappVerification(context.Background(), telnyx.VerificationTriggerWhatsappVerificationParams{
+		PhoneNumber:     "+13035551234",
+		VerifyProfileID: "12ade33a-21c0-473b-b055-b3c836e1c292",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", createVerificationResponse.Data)
+```
+
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Retrieve verification
 
@@ -200,7 +219,7 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 	fmt.Printf("%+v\n", verification.Data)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
 
@@ -238,7 +257,7 @@ Gets a paginated list of Verify profiles.
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Create a Verify profile
 
@@ -246,7 +265,7 @@ Creates a new Verify profile to associate verifications with.
 
 `POST /verify_profiles` — Required: `name`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `language` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```go
 	verifyProfileData, err := client.VerifyProfiles.New(context.Background(), telnyx.VerifyProfileNewParams{
@@ -258,7 +277,7 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (obj
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Retrieve Verify profile message templates
 
@@ -330,13 +349,13 @@ Gets a single Verify profile.
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `language` (string), `name` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```go
 	verifyProfileData, err := client.VerifyProfiles.Update(
@@ -350,7 +369,7 @@ Optional: `call` (object), `flashcall` (object), `language` (string), `name` (st
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
 
@@ -364,4 +383,4 @@ Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uui
 	fmt.Printf("%+v\n", verifyProfileData.Data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)

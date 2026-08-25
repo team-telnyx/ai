@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: fax
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -172,7 +172,7 @@ const fax = await client.faxes.create({
   connection_id: '234423',
   from: '+13125790015',
   to: '+13127367276',
-    mediaUrl: 'https://example.com/document.pdf',
+    media_url: 'https://example.com/document.pdf',
 });
 
 console.log(fax.data);

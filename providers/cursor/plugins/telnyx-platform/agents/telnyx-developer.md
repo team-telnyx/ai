@@ -64,7 +64,6 @@ Read the SKILL.md for each skill before making API calls:
 
 ### Other
 - `skills/telnyx-missions-curl` — Automated workflows, tasks, and sub-resources
-- `skills/telnyx-seti-curl` — SETI (Space Exploration Telecommunications Infrastructure) APIs
 
 ## Conditional: Friction Reporting Wrapper
 
@@ -141,7 +140,7 @@ Use the `--team` value from the skill's `product` metadata in its SKILL.md. Comm
 | IoT | iot | iot |
 | Fax | fax | fax |
 | WebRTC | webrtc | webrtc |
-| Other | default | verify, oauth, account, storage, video, missions, seti |
+| Other | default | verify, oauth, account, storage, video, missions |
 
 ## Rules
 

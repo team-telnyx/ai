@@ -7,8 +7,8 @@ metadata:
   author: telnyx
   product: 10dlc
   language: curl
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -136,12 +136,10 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-      "brandId": "BXXX001",
+      "brandId": "BXXXXXX",
       "description": "Two-factor authentication messages",
       "usecase": "2FA",
-      "sample_messages": [
-          "Your verification code is {{code}}"
-      ]
+      "sample1": "Your verification code is {{code}}"
   }' \
   "https://api.telnyx.com/v2/10dlc/campaignBuilder"
 ```

@@ -1,9 +1,9 @@
 {
   "$schema": "https://agent.telnyx.com/schemas/agent-manifest-v1.json",
   "name": "Telnyx",
-  "description": "Programmable telecom platform — voice, messaging, IoT, AI, networking, storage.",
+  "description": "Programmable telecom platform — voice, messaging, email, IoT, AI, networking, storage.",
   "version": "1.0.0",
-  "updated": "2026-03-23T00:00:00Z",
+  "updated": "2026-07-29T00:00:00Z",
 
   "auth": {
     "type": "api_key",
@@ -24,6 +24,16 @@
       "api": "POST /v2/messages",
       "docs": "https://developers.telnyx.com/docs/messaging",
       "requires": ["messaging_profile", "phone_number", "10dlc_registration"]
+    },
+    {
+      "id": "rcs",
+      "name": "RCS Messaging",
+      "description": "Send rich business messages and check recipient RCS capabilities before choosing content or fallback behavior.",
+      "guide": "/guides/rcs-messaging.md",
+      "cli": "telnyx-agent rcs-send --agent-id AGENT_ID --messaging-profile-id PROFILE_ID --to +15559876543 --text 'Hello from RCS'",
+      "api": "POST /v2/messages/rcs",
+      "docs": "https://developers.telnyx.com/docs/messaging/messages/rcs-capabilities",
+      "requires": ["rcs_agent", "messaging_profile"]
     },
     {
       "id": "voice",
@@ -55,6 +65,15 @@
       "requires": []
     },
     {
+      "id": "email",
+      "name": "Email",
+      "description": "Send transactional email, manage inboxes and inbound messages, configure sending domains with DNS verification, and handle suppressions and unsubscribe groups.",
+      "guide": "/guides/email.md",
+      "api": "POST /v2/email_messages",
+      "docs": "https://developers.telnyx.com/docs/email",
+      "requires": ["sending_domain", "api_key"]
+    },
+    {
       "id": "numbers",
       "name": "Phone Numbers",
       "description": "Search, buy, and manage phone numbers in 140+ countries.",
@@ -67,10 +86,10 @@
     {
       "id": "verify",
       "name": "Phone Verification (2FA)",
-      "description": "Send and verify codes via SMS, voice call, or flash call.",
+      "description": "Send and verify codes via SMS, voice call, flash call, or WhatsApp.",
       "guide": "/guides/phone-verification.md",
-      "cli": "telnyx verify send --phone-number +15551234567",
-      "api": "POST /v2/verifications",
+      "cli": "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp",
+      "api": "POST /v2/verifications/whatsapp",
       "docs": "https://developers.telnyx.com/docs/verify",
       "requires": ["verify_profile"]
     },
@@ -144,6 +163,15 @@
       "description": "Fund account with USDC on Base blockchain via x402 protocol.",
       "guide": "/guides/x402-payments.md",
       "api": "POST /v2/x402/credit_account/quote",
+      "docs": "https://developers.telnyx.com/docs/account/billing",
+      "requires": []
+    },
+    {
+      "id": "mpp_payments",
+      "name": "MPP Payments",
+      "description": "Fund account via Machine Payment Protocol (HTTP 402) with Stripe Link or Tempo USDC.",
+      "guide": "/guides/mpp-payments.md",
+      "api": "POST /v2/machine-payments/account-credit",
       "docs": "https://developers.telnyx.com/docs/account/billing",
       "requires": []
     },

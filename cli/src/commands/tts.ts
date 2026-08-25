@@ -1,22 +1,41 @@
 /**
  * telnyx-agent tts — Text-to-speech generation.
  *
- * Shells out to the telnyx CLI's `text-to-speech generate-speech` subcommand
- * and surfaces the resulting base64-encoded audio data to the caller in
- * either human-readable or JSON form.
+ * Direct REST call to POST /text-to-speech/speech (AIF-331).
  *
- * Supported providers: telnyx, aws, azure, elevenlabs, minimax, resemble, rime, xai
+ * The Go CLI's `text-to-speech generate-speech` subcommand was not mapping
+ * `--voice` through to the API request body, causing a 422
+ * `{"errors":{"telnyx":["can't be blank"]}}` even when --voice was explicit.
+ * This bypasses the Go CLI and calls the REST API directly.
+ *
+ * Supported providers (reconciled with the live Telnyx voice service, not a
+ * stale hardcoded guess): telnyx, aws, azure, minimax, inworld, rime, resemble,
+ * fishaudio, humain, xai. Note ElevenLabs is NOT in the live set. Run
+ * `telnyx-agent tts-voices --json` for the authoritative current list.
  *
  * The API's `output_type` enum is `binary_output | base64_output`. This
  * wrapper only supports `base64_output` (exposed as the friendly alias
  * `base64`) because `binary_output` returns raw audio bytes, which cannot be
- * transported through the JSON pipeline used to parse telnyx CLI output.
+ * transported through the JSON pipeline.
+ *
+ * AIF-331 follow-up: When the voice id is namespaced as `Provider.Model.Voice`
+ * (e.g. `Telnyx.Bayan.Amanda`), the API derives the provider FROM the voice id
+ * and rejects a separately-supplied `provider` field with a 422
+ * `{"errors":{"telnyx":["can't be blank"]}}`. Verified live against the API:
+ * `provider:"telnyx"` + a namespaced telnyx voice always 422s, while omitting
+ * `provider` returns audio. So we only send `provider` in the body when the
+ * voice id is NOT namespaced (a bare name that needs the provider for routing).
+ * The `--provider` flag is still validated (typo guard) and echoed in output.
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { writeFileSync } from "node:fs";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
-const VALID_PROVIDERS = ["telnyx", "aws", "azure", "elevenlabs", "minimax", "resemble", "rime", "xai"] as const;
+// Reconciled with the live voice service (Decision #2). Kept as a typo guard
+// only; the API remains the source of truth. If Telnyx adds a provider, update
+// this list (or run `tts-voices` to see the live set).
+const VALID_PROVIDERS = ["telnyx", "aws", "azure", "minimax", "inworld", "rime", "resemble", "fishaudio", "humain", "xai"] as const;
 // Friendly alias → documented API enum value. `binary_output` is deliberately
 // unsupported: it returns raw audio bytes that would corrupt JSON parsing.
 const OUTPUT_TYPE_MAP: Record<string, string> = {
@@ -32,10 +51,11 @@ interface TtsResult {
   output_type: string;
   audio_data?: string;
   has_audio_data: boolean;
+  output_file?: string;
 }
 
 /**
- * Extract base64 audio data from a telnyx CLI text-to-speech response. With
+ * Extract base64 audio data from the API response. With
  * `output_type=base64_output`, POST /text-to-speech/speech returns
  * `{ "base64_audio": "..." }` (no `data` envelope), but we also tolerate an
  * envelope and a few legacy field names as a safety net.
@@ -61,6 +81,8 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
   const outputTypeFlag = (flags["output-type"] as string) || "base64";
   const textType = (flags["text-type"] as string) || "text";
   const disableCache = flags["disable-cache"] === true;
+  // Optional: write the decoded audio straight to a playable file.
+  const outputFile = (flags.output as string) || (flags["output-file"] as string) || "";
 
   if (!text) {
     printError("--text is required (e.g., --text \"Hello world\")");
@@ -94,17 +116,34 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       console.log("\n🔊 Generating speech...\n");
     }
 
-    const args = ["text-to-speech", "generate-speech", "--text", text];
-    if (voice) args.push("--voice", voice);
-    args.push("--language", language);
-    args.push("--provider", provider);
-    args.push("--output-type", outputType);
-    args.push("--text-type", textType);
-    if (disableCache) args.push("--disable-cache");
+    // A namespaced voice id (`Provider.Model.Voice`) already encodes the
+    // provider; the API derives it and rejects a redundant `provider` field.
+    const voiceIsNamespaced = voice.includes(".");
 
-    const response = await telnyxCli(args);
+    // Build request body — all snake_case for the REST API
+    const body: Record<string, unknown> = {
+      text,
+      language,
+      output_type: outputType,
+      text_type: textType,
+    };
+    if (voice) body.voice = voice;
+    // Only send provider when the voice id does not already namespace it.
+    if (!voiceIsNamespaced) body.provider = provider;
+    if (disableCache) body.disable_cache = true;
+
+    const client = new TelnyxClient();
+    const response = await client.post("/text-to-speech/speech", body);
     const { audioData } = extractAudio(response);
     const hasAudioData = !!audioData;
+
+    // If --output was given, decode the base64 audio to the file so callers get
+    // a playable artifact instead of having to pipe base64 themselves.
+    let writtenFile = "";
+    if (outputFile && hasAudioData) {
+      writeFileSync(outputFile, Buffer.from(audioData!, "base64"));
+      writtenFile = outputFile;
+    }
 
     const result: TtsResult = {
       text,
@@ -113,6 +152,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       output_type: outputType,
       audio_data: audioData,
       has_audio_data: hasAudioData,
+      ...(writtenFile ? { output_file: writtenFile } : {}),
     };
 
     if (jsonOutput) {
@@ -128,6 +168,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       if (hasAudioData) {
         details["Audio Data"] = `${audioData!.length} chars (base64)`;
       }
+      if (writtenFile) details["Saved To"] = writtenFile;
       printSuccess("Speech generated!", details);
     }
   } catch (err) {
@@ -142,7 +183,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
 }
 
 function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
 }

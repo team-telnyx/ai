@@ -1,6 +1,6 @@
 # Phone Verification
 
-> Send and verify one-time passcodes (OTP) via SMS, voice call, or flash call for 2FA and authentication.
+> Send and verify one-time passcodes (OTP) via SMS, voice call, flash call, or WhatsApp for 2FA and authentication.
 
 ## Prerequisites
 
@@ -125,6 +125,28 @@ curl -X POST "https://api.telnyx.com/v2/verifications/flashcall" \
     "phone_number": "+15559876543",
     "verify_profile_id": "your-profile-id"
   }'
+```
+
+### Send WhatsApp Verification
+
+**`POST /v2/verifications/whatsapp`**
+
+Send the verification code in a WhatsApp message:
+
+```bash
+curl -X POST "https://api.telnyx.com/v2/verifications/whatsapp" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone_number": "+155****6543",
+    "verify_profile_id": "your-profile-id"
+  }'
+```
+
+The agent CLI generates the same WhatsApp verification request through the Telnyx CLI:
+
+```bash
+telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp
 ```
 
 ### Verify Code

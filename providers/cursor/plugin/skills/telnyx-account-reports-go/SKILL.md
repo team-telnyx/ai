@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: account-reports
   language: go
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -700,7 +700,7 @@ Retrieves a full session analysis tree for a given event, including costs, child
 	fmt.Printf("%+v\n", sessionAnalysis.SessionID)
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
 ## Get Telnyx product usage data (BETA)
 
