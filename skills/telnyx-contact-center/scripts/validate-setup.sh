@@ -94,12 +94,22 @@ if [[ "$HTTP_CODE" == "200" ]]; then
       SAVED_CCA_ID=$(jq -r '.call_control_app_id // empty' .telnyx-contact-center.json 2>/dev/null)
     fi
     if [ -n "$SAVED_CCA_ID" ]; then
-      CCA_ID="$SAVED_CCA_ID"
-      CCA_NAME=$(jq_print "$BODY" ".data[] | select(.id==\"$SAVED_CCA_ID\") | .name" | head -1)
-      CCA_OVP=$(jq_print "$BODY" ".data[] | select(.id==\"$SAVED_CCA_ID\") | .outbound.outbound_voice_profile_id // empty" | head -1)
-      CCA_WEBHOOK=$(jq_print "$BODY" ".data[] | select(.id==\"$SAVED_CCA_ID\") | .webhook_event_url // empty" | head -1)
-      echo "  Using saved CCA ID: $CCA_ID"
-    else
+      # Verify the saved CCA still exists by fetching it directly
+      CCA_DIRECT=$(telnyx_curl --globoff -s -w "\n%{http_code}" "https://api.telnyx.com/v2/call_control_applications/${SAVED_CCA_ID}" 2>&1) || true
+      CCA_DIRECT_HTTP=$(echo "$CCA_DIRECT" | tail -1)
+      CCA_DIRECT_BODY=$(echo "$CCA_DIRECT" | sed '$d')
+      if [[ "$CCA_DIRECT_HTTP" == "200" ]]; then
+        CCA_ID="$SAVED_CCA_ID"
+        CCA_NAME=$(jq_print "$CCA_DIRECT_BODY" '.data.name')
+        CCA_OVP=$(jq_print "$CCA_DIRECT_BODY" '.data.outbound.outbound_voice_profile_id // empty')
+        CCA_WEBHOOK=$(jq_print "$CCA_DIRECT_BODY" '.data.webhook_event_url // empty')
+        echo "  Using saved CCA ID: $CCA_ID"
+      else
+        warn "Saved CCA ID $SAVED_CCA_ID not found (HTTP $CCA_DIRECT_HTTP) — falling back to first result"
+        SAVED_CCA_ID=""
+      fi
+    fi
+    if [ -z "$SAVED_CCA_ID" ]; then
       CCA_ID=$(jq_print "$BODY" '.data[0].id')
       CCA_NAME=$(jq_print "$BODY" '.data[0].name')
       CCA_OVP=$(jq_print "$BODY" '.data[0].outbound.outbound_voice_profile_id // empty')

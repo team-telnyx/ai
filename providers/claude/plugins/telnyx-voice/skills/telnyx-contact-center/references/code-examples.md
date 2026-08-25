@@ -99,9 +99,21 @@ async function handleEvent(eventType, payload) {
         // Agent leg answered — find customer leg and bridge
         for (const [custId, entry] of callStore) {
           if (entry.agentLeg === callId) {
-            await telnyxPost(`/calls/${custId}/actions/bridge`, {
-              call_control_id: callId,
-            });
+            try {
+              await telnyxPost(`/calls/${custId}/actions/bridge`, {
+                call_control_id: callId,
+              });
+            } catch (err) {
+              // FRIC-004: Retry once for transient 422
+              if (err.response && err.response.status === 422) {
+                console.log('Bridge 422 — retrying once');
+                await telnyxPost(`/calls/${custId}/actions/bridge`, {
+                  call_control_id: callId,
+                });
+              } else {
+                throw err;
+              }
+            }
             break;
           }
         }
@@ -141,6 +153,9 @@ async function handleEvent(eventType, payload) {
         }
         return;
       }
+
+      // Dedup: reject redelivered gather if agent dial is already in progress
+      if (call.state === 'dialing_agent' || call.state === 'bridged') return;
 
       if (payload.status === 'timeout' || !payload.digits) {
         // No DTMF — replay menu
@@ -234,6 +249,8 @@ async function handleEvent(eventType, payload) {
         return;
       }
 
+      // Save prior state before overwriting — TTL depends on whether recording is expected
+      const priorState = call ? call.state : null;
       if (call) {
         call.state = 'hungup';
         call.duration = payload.duration;
@@ -242,11 +259,11 @@ async function handleEvent(eventType, payload) {
       }
 
       console.log(`Call hung up: ${payload.hangup_cause} by ${payload.hangup_source}`);
-      if (call.state !== 'bridged' && call.state !== 'voicemail') {
-        setTimeout(() => callStore.delete(callId), 60000);
-      } else {
+      if (priorState === 'bridged' || priorState === 'voicemail') {
         // Keep bridged/voicemail calls briefly so recording/transcription callbacks can update metrics.
         setTimeout(() => callStore.delete(callId), 10 * 60 * 1000);
+      } else {
+        setTimeout(() => callStore.delete(callId), 60000);
       }
       break;
     }
@@ -361,9 +378,19 @@ def handle_event(event_type, payload):
             # Agent leg answered — find customer leg and bridge
             for cust_id, entry in call_store.items():
                 if entry.get('agent_leg') == call_id:
-                    telnyx_post(f'/calls/{cust_id}/actions/bridge', {
-                        'call_control_id': call_id,
-                    })
+                    try:
+                        telnyx_post(f'/calls/{cust_id}/actions/bridge', {
+                            'call_control_id': call_id,
+                        })
+                    except Exception as e:
+                        # FRIC-004: Retry once for transient 422
+                        if getattr(getattr(e, 'response', None), 'status_code', 0) == 422:
+                            logging.info('Bridge 422 — retrying once')
+                            telnyx_post(f'/calls/{cust_id}/actions/bridge', {
+                                'call_control_id': call_id,
+                            })
+                        else:
+                            raise
                     break
             return
         if call['state'] == 'answered':
@@ -379,6 +406,9 @@ def handle_event(event_type, payload):
     elif event_type == 'call.gather.ended':
         call = call_store.get(call_id)
         if not call:
+            return
+        # Dedup: reject redelivered gather if agent dial is already in progress
+        if call.get('state') in ('dialing_agent', 'bridged'):
             return
         if payload.get('status') == 'timeout' or not payload.get('digits'):
             telnyx_post(f'/calls/{call_id}/actions/gather_using_speak', {
@@ -570,9 +600,18 @@ def handle_event(event_type, payload)
       # Agent leg answered — find customer leg and bridge
       CALL_STORE.each do |cust_id, entry|
         if entry[:agent_leg] == call_id
-          telnyx_post("/calls/#{cust_id}/actions/bridge", {
-            call_control_id: call_id
-          })
+          begin
+            telnyx_post("/calls/#{cust_id}/actions/bridge", {
+              call_control_id: call_id
+            })
+          rescue => e
+            # FRIC-004: Retry once for transient 422
+            raise unless e.respond_to?(:response) && e.response&.code == '422'
+            Logger.new($stdout).info('Bridge 422 — retrying once')
+            telnyx_post("/calls/#{cust_id}/actions/bridge", {
+              call_control_id: call_id
+            })
+          end
           break
         end
       end
@@ -591,6 +630,9 @@ def handle_event(event_type, payload)
   when 'call.gather.ended'
     call = CALL_STORE.get(call_id)
     return unless call
+
+    # Dedup: reject redelivered gather if agent dial is already in progress
+    return if %w[dialing_agent bridged].include?(call[:state])
 
     menu = 'Press 1 for Sales, 2 for Support, 3 for Billing.'
 
@@ -787,9 +829,15 @@ if ($path === '/webhook' && $method === 'POST') {
                 // Agent leg answered — find customer leg and bridge
                 foreach ($store as $custId => $entry) {
                     if (isset($entry['agent_leg']) && $entry['agent_leg'] === $callId) {
-                        telnyxPost("/calls/{$custId}/actions/bridge", [
+                        $bridgeResult = telnyxPost("/calls/{$custId}/actions/bridge", [
                             'call_control_id' => $callId,
                         ]);
+                        // FRIC-004: Retry once for transient 422
+                        if (isset($bridgeResult['errors'])) {
+                            telnyxPost("/calls/{$custId}/actions/bridge", [
+                                'call_control_id' => $callId,
+                            ]);
+                        }
                         break;
                     }
                 }
@@ -809,6 +857,8 @@ if ($path === '/webhook' && $method === 'POST') {
         case 'call.gather.ended':
             $store = loadStore();
             if (!isset($store[$callId])) break;
+            // Dedup: reject redelivered gather if agent dial is already in progress
+            if (in_array($store[$callId]['state'] ?? '', ['dialing_agent', 'bridged'])) break;
             $menu = 'Press 1 for Sales, 2 for Support, 3 for Billing.';
             if (($payload['status'] ?? '') === 'timeout' || empty($payload['digits'])) {
                 telnyxPost("/calls/{$callId}/actions/gather_using_speak", [
@@ -991,8 +1041,15 @@ public class ContactCenterApplication {
                     // Agent leg answered — find customer leg and bridge
                     for (Map.Entry<String, Map<String, Object>> e : callStore.entrySet()) {
                         if (callId.equals(e.getValue().get("agent_leg"))) {
-                            telnyxPost("/calls/" + e.getKey() + "/actions/bridge",
-                                "{\"call_control_id\":\"" + callId + "\"}");
+                            try {
+                                telnyxPost("/calls/" + e.getKey() + "/actions/bridge",
+                                    "{\"call_control_id\":\"" + callId + "\"}");
+                            } catch (IOException ex) {
+                                // FRIC-004: Retry once for transient 422
+                                System.out.println("Bridge failed — retrying once");
+                                telnyxPost("/calls/" + e.getKey() + "/actions/bridge",
+                                    "{\"call_control_id\":\"" + callId + "\"}");
+                            }
                             break;
                         }
                     }
@@ -1006,6 +1063,9 @@ public class ContactCenterApplication {
             case "call.gather.ended" -> {
                 Map<String, Object> call = callStore.get(callId);
                 if (call == null) return;
+                // Dedup: reject redelivered gather if agent dial is already in progress
+                String callState = (String) call.get("state");
+                if ("dialing_agent".equals(callState) || "bridged".equals(callState)) return;
                 String status = (String) payload.get("status");
                 String digits = (String) payload.get("digits");
                 String menu = "Press 1 for Sales, 2 for Support, 3 for Billing.";
@@ -1245,9 +1305,18 @@ func handleEvent(eventType string, payload map[string]interface{}) {
 			}
 			storeMutex.RUnlock()
 			if custID != "" {
-				go telnyxPost("/calls/"+custID+"/actions/bridge", map[string]interface{}{
-					"call_control_id": callID,
-				})
+				go func() {
+					_, err := telnyxPost("/calls/"+custID+"/actions/bridge", map[string]interface{}{
+						"call_control_id": callID,
+					})
+					if err != nil {
+						// FRIC-004: Retry once for transient 422
+						log.Printf("Bridge failed — retrying once: %v", err)
+						telnyxPost("/calls/"+custID+"/actions/bridge", map[string]interface{}{
+							"call_control_id": callID,
+						})
+					}
+				}()
 			}
 			return
 		}
@@ -1271,6 +1340,11 @@ func handleEvent(eventType string, payload map[string]interface{}) {
 		call, exists := callStore[callID]
 		storeMutex.RUnlock()
 		if !exists {
+			return
+		}
+
+		// Dedup: reject redelivered gather if agent dial is already in progress
+		if call.State == "dialing_agent" || call.State == "bridged" {
 			return
 		}
 
