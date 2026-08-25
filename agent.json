@@ -187,75 +187,80 @@
     }
   ],
 
+  "agent_cli": {
+    "package": "@telnyx/agent-cli",
+    "version": "0.4.2",
+    "bin": "telnyx-agent",
+    "install": "npm install -g @telnyx/agent-cli",
+    "repo": "https://github.com/team-telnyx/ai/tree/main/cli",
+    "description": "Agent-friendly CLI: composite setup commands that take you from zero to a working capability in one call. Idempotent by default, --json everywhere.",
+    "self_describe": "telnyx-agent capabilities --json",
+    "highlights": [
+      "telnyx-agent status",
+      "telnyx-agent setup-sms --json",
+      "telnyx-agent setup-voice --json",
+      "telnyx-agent setup-ai --json",
+      "telnyx-agent setup-porting --phone-numbers +13125550001 --customer-name 'Acme Corp'"
+    ],
+    "note": "Run `telnyx-agent capabilities --json` for the authoritative, machine-readable command list."
+  },
+
   "cli": {
-    "package": "@telnyx/api-cli",
-    "version": "1.1.0",
-    "install": "npm install -g @telnyx/api-cli",
-    "global_flags": ["--json", "-o table|json|csv|tsv|ids", "-v", "-p <profile>"],
-    "topics": {
-      "10dlc": ["brand list", "brand get", "brand create", "brand delete", "campaign list", "campaign get", "campaign create", "campaign delete", "campaign submit", "assign", "usecases", "verticals", "wizard"],
-      "ai": ["chat", "embed", "models"],
-      "assistant": ["create", "delete", "get", "list", "call"],
-      "auth": ["setup", "status", "whoami"],
-      "billing": ["balance", "group list", "group get", "group create", "group delete"],
-      "call": ["dial", "hangup", "list", "speak", "transfer"],
-      "connection": ["create", "delete", "get", "list"],
-      "debugger": ["get", "list"],
-      "e911": ["address list", "address get", "address create", "address delete", "assign"],
-      "fax": ["send", "get", "list", "delete"],
-      "lookup": ["number"],
-      "message": ["send", "get", "list"],
-      "messaging-profile": ["create", "delete", "get", "list"],
-      "number": ["search", "order", "get", "list", "update", "delete"],
-      "porting": ["check", "order list", "order get", "order create", "order update", "order delete", "order submit", "order cancel", "order activate", "phone-numbers", "comments", "documents", "events", "requirements"],
-      "profile": ["list", "use", "delete"],
-      "sim": ["enable", "disable", "get", "list"],
-      "storage": ["bucket list", "bucket get", "bucket create", "bucket delete", "object list", "object get", "object put", "object delete", "presign"],
-      "usage": ["report", "options"],
-      "verify": ["send", "check", "profile list", "profile get", "profile create", "profile delete", "template list", "template get", "template create"],
-      "video": ["room list", "room get", "room create", "room delete", "session list", "session get", "recording list", "recording get", "recording delete"],
-      "voice-profile": ["create", "delete", "get", "list"]
-    }
+    "package": "@telnyx/cli",
+    "version": "2.0.0",
+    "bin": "telnyx",
+    "install": "npm install -g @telnyx/cli",
+    "repo": "https://github.com/team-telnyx/telnyx-cli",
+    "global_flags": ["--json", "-o json|table|csv", "-v", "-p <profile>", "--timeout <seconds>"],
+    "commands": [
+      "auth", "profile", "number", "message", "billing", "call", "debugger",
+      "lookup", "sim", "fax", "verify", "resources", "messaging-profile",
+      "messaging-hosted-number-order", "connection", "credential-connection",
+      "texml-application", "call-control-application", "sip-trunk", "bucket",
+      "storage-file", "network", "network-bridge", "portability-check",
+      "porting-order", "conference", "assistant", "verify-profile",
+      "iot-package", "iot-coverage"
+    ],
+    "note": "Per-resource CRUD over the Telnyx REST API. Run `telnyx resources` to list every resource and `telnyx <command> --help` for subcommands. The former @telnyx/api-cli package is deprecated; use @telnyx/cli."
   },
 
   "quickstart": {
     "signup": "curl -s https://telnyx.com/agent-signup.md",
     "signup_guide": "https://telnyx.com/agent-signup.md",
-    "install": "npm install -g @telnyx/api-cli",
-    "auth": "telnyx auth setup --api-key YOUR_KEY",
+    "install": "npm install -g @telnyx/agent-cli @telnyx/cli",
+    "auth": "export TELNYX_API_KEY=YOUR_KEY  # or: telnyx auth login",
     "hello_world": [
       {
-        "name": "Send an SMS",
+        "name": "Zero to sending SMS (one command)",
         "commands": [
-          "telnyx messaging-profile create --name 'My Profile' --json",
-          "telnyx number search --country US --type long_code --json",
-          "telnyx number order --phone-number +1XXXXXXXXXX --json",
+          "telnyx-agent setup-sms --json"
+        ]
+      },
+      {
+        "name": "Zero to AI assistant on a phone number (one command)",
+        "commands": [
+          "telnyx-agent setup-ai --json"
+        ]
+      },
+      {
+        "name": "Send an SMS (step by step)",
+        "commands": [
+          "telnyx messaging-profile create -d '{\"name\":\"My Profile\"}' --json",
+          "telnyx number search --country US --features sms --json",
+          "telnyx number order +1XXXXXXXXXX --yes --json",
           "telnyx message send --from +1XXXXXXXXXX --to +15559876543 --text 'Hello from Telnyx!'"
-        ]
-      },
-      {
-        "name": "Chat with AI",
-        "commands": [
-          "telnyx ai chat 'What can Telnyx do?'"
-        ]
-      },
-      {
-        "name": "Search for numbers",
-        "commands": [
-          "telnyx number search --country US --state CA --json"
         ]
       },
       {
         "name": "Create an AI assistant",
         "commands": [
-          "telnyx assistant create --name 'Support Bot' --json"
+          "telnyx assistant create -d '{\"name\":\"Support Bot\",\"model\":\"meta-llama/Llama-3.3-70B-Instruct\",\"instructions\":\"You are a support bot.\"}' --json"
         ]
       },
       {
-        "name": "Store a file",
+        "name": "Create a storage bucket",
         "commands": [
-          "telnyx storage bucket create --name my-bucket --json",
-          "telnyx storage object put --bucket my-bucket --key file.txt --file ./file.txt"
+          "telnyx bucket create -d '{\"name\":\"my-bucket\"}' --json"
         ]
       }
     ]
@@ -263,9 +268,14 @@
 
   "sdks": {
     "cli": {
-      "name": "@telnyx/api-cli",
-      "install": "npm install -g @telnyx/api-cli",
+      "name": "@telnyx/cli",
+      "install": "npm install -g @telnyx/cli",
       "docs": "https://github.com/team-telnyx/telnyx-cli"
+    },
+    "agent_cli": {
+      "name": "@telnyx/agent-cli",
+      "install": "npm install -g @telnyx/agent-cli",
+      "docs": "https://github.com/team-telnyx/ai/tree/main/cli"
     },
     "python": {
       "name": "telnyx",
