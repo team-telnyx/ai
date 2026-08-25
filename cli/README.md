@@ -2,6 +2,14 @@
 
 Agent-friendly CLI for Telnyx API v2 — composite setup commands that reduce multi-step portal workflows to a single command.
 
+Use Node.js 20.11 or newer for installation. Although `package.json` currently
+states Node.js 18 or newer, the ESM postinstall needs `import.meta.dirname`,
+which is available from Node.js 20.11. On older runtimes installation can finish
+without downloading the vendored Telnyx Go CLI, leaving Go-backed commands to
+require a separately installed compatible `telnyx` on `PATH`. The package's
+platform release pin is Telnyx Go CLI v0.27.0; on supported platforms, a working
+postinstall downloads that binary when a compatible local copy is unavailable.
+
 ## Quick Start
 
 ```bash
@@ -35,51 +43,268 @@ telnyx-agent status --json   # Machine-readable
 
 ### `telnyx-agent capabilities`
 
-Self-describing API surface — lists all available tools and composite commands.
+Machine-readable catalog of API capabilities and selected composite-command
+descriptions. It is not a complete router inventory; use the selection catalog
+below or `telnyx-agent --help` for all currently routed commands.
 
 ```bash
 telnyx-agent capabilities
 telnyx-agent capabilities --json
 ```
 
-### Command and capability inventory
+### Agent command selection catalog
 
-The CLI's current command surface is grouped below. This is intentionally an
-inventory rather than a flag reference: run `telnyx-agent --help` for the
-authoritative command/flag list and `telnyx-agent capabilities --json` for the
-machine-readable API capability catalog.
+#### How an agent should choose
+
+- Prefer `list-*` or search commands before `get-*` or mutation commands when
+  you do not already have an exact resource ID; retrieve the selected resource
+  before changing or deleting it.
+- Distinguish `setup-*` composites, which can coordinate several provisioning
+  steps and purchases, from lifecycle commands that act on one existing
+  resource. Use the narrower lifecycle command when the resource already exists.
+- Inspect each operational note before dispatch. Treat create, buy, send, submit,
+  activate, and delete operations as live side effects; preserve confirmation
+  gates and account for asynchronous or approval-pending states.
+
+Use the catalog below to select the smallest command that matches the intended
+workflow. It is a decision guide, not a flag reference or per-command tutorial;
+the focused sections later in this README cover common composites and nuanced
+operations, while `telnyx-agent --help` shows the complete routed command and
+flag surface. `telnyx-agent capabilities --json` is a machine-readable API
+capability catalog, not a substitute for this complete router inventory.
 
 <!-- markdownlint-disable MD013 -->
 
-| Group | Commands |
-| --- | --- |
-| Account and discovery | `status`, `capabilities`, `fund-account` |
-| Composite provisioning | `setup-sms`, `setup-voice`, `setup-iot`, `setup-ai`, `setup-wireguard`, `setup-verify`, `setup-10dlc`, `setup-porting`, `setup-whatsapp` |
-| SMS/MMS and messaging profiles | `send-sms`, `send-group-mms`, `schedule-sms`, `sms-status`, `list-messaging-profiles`, `create-messaging-profile`, `get-messaging-profile`, `update-messaging-profile`, `delete-messaging-profile` |
-| Email | `email-send`, `email-forward`, `email-reply`, `email-reply-all` |
-| WhatsApp and RCS | `whatsapp-send`, `whatsapp-templates`, `rcs-send`, `rcs-capabilities` |
-| Verify | `verify-send`, `verify-check` (plus `setup-verify`) |
-| Numbers | `list-phone-numbers`, `search-phone-numbers`, `buy-phone-number`, `lookup-number` |
-| Voice and recordings | `call-dial`, `call-control`, `call-pay`, `call-status`, `list-voice-connections`, `get-voice-connection`, `list-active-calls`, `list-call-recordings`, `get-call-recording`, `list-recording-transcriptions`, `get-recording-transcription` |
-| Conferences and Rooms | `create-conference`, `get-conference`, `list-conferences`, `list-conference-participants`, `conference-control`, `list-room-sessions`, `get-room-session`, `list-room-participants`, `get-room-participant`, `end-room-session`, `kick-room-participants`, `mute-room-participants`, `unmute-room-participants` |
-| Meeting Bot | `create-meeting-session`, `list-meeting-sessions`, `get-meeting-session`, `end-meeting-session`, `send-meeting-chat`, `speak-in-meeting`, `stop-meeting-speaking`, `get-meeting-transcript`, `get-meeting-recordings`, `create-meeting-artifact`, `list-meeting-artifacts`, `get-meeting-artifact` |
-| AI and web intelligence | `ai-chat`, `ai-anthropic-message`, `ai-embed`, `list-ai-assistants`, `create-ai-assistant`, `get-ai-assistant`, `update-ai-assistant`, `delete-ai-assistant`, `chat-ai-assistant`, `send-ai-assistant-sms`, `trigger-ai-assistant-test-run`, `get-ai-assistant-test-run`, `list-ai-assistant-test-runs`, `test-ai-assistant-tool`, `search-ai-collection`, `web-search`, `web-contents`, `web-research`, `web-research-status` |
-| Speech and fax | `tts`, `tts-voices`, `stt`, `stt-providers`, `fax-send`, `fax-status`, `fax-cancel`, `fax-refresh` |
-| IoT SIM lifecycle | `list-sim-cards`, `retrieve-sim-card`, `enable-sim-card`, `disable-sim-card`, `retrieve-sim-card-action`, `list-sim-card-actions` |
-| Porting and Port-Out | `list-porting-orders`, `get-porting-order`, `update-porting-order`, `submit-porting-order`, `cancel-porting-order`, `activate-porting-order`, `attach-porting-document`, `list-porting-documents`, `list-portout-orders`, `get-portout-order`, `list-portout-rejection-codes`, `update-portout-status`, `create-portout-comment`, `list-portout-comments` |
-| Edge Compute handoff | `edge-doctor`, `setup-edge-mcp`, `setup-edge-webhook` |
-| Storage | `storage-sql-query` |
+### Account and discovery
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `status` | Use this to inspect account health across balance, owned numbers, messaging profiles, voice connections, and AI assistants. | Read-only; direct REST |
+| `capabilities` | Use this to discover the CLI’s machine-readable API-capability catalog and selected composite workflows. | Read-only; local metadata; not the complete router inventory |
+| `fund-account` | Use this to request an x402 USDC funding quote or, with a wallet key, sign and submit account funding. | Funds account when signing; non-idempotent; direct REST |
+
+### Composite provisioning
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `setup-sms` | Use this to provision or reuse an SMS messaging profile, obtain a phone number, and assign the number to the profile in one workflow. | Creates/buys; reuses unless forced; hybrid REST + Go CLI |
+| `setup-voice` | Use this to provision or reuse a Call Control application, obtain a phone number, and assign the number for voice in one workflow. | Creates/buys; reuses unless forced; hybrid REST + Go CLI |
+| `setup-iot` | Use this to select an IoT SIM, create its SIM-card group, enable the SIM, and assign it to that group. | Creates/activates; asynchronous SIM action; hybrid REST + Go CLI |
+| `setup-ai` | Use this to create an AI assistant, buy a phone number, and connect them through a TeXML application. | Creates/buys; non-idempotent; hybrid REST + Go CLI |
+| `setup-wireguard` | Use this to create a private network, WireGuard interface, and peer and return a ready-to-use peer configuration. | Creates network resources; direct REST |
+| `setup-verify` | Use this to create or reuse a Verify profile for OTP delivery through Telnyx’s managed sender pool. | Creates profile; buys no number; direct REST |
+| `setup-10dlc` | Use this to create a US A2P 10DLC brand and campaign and optionally assign an existing number. | Creates/submits; non-idempotent; approval pending; Go CLI |
+| `setup-porting` | Use this to check number portability, create a draft port-in order, list its requirements, and optionally submit it. | Creates order; submits only when requested; direct REST |
+| `setup-whatsapp` | Use this to select a WhatsApp Business Account, reuse or buy a number, initialize and verify it, and set its business profile. | Creates/buys/sends verification; may remain pending; hybrid REST + Go CLI |
+
+### Verify
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `verify-send` | Use this to start a phone verification over SMS, call, flashcall, or WhatsApp and obtain its verification ID. | Sends/dials; non-idempotent; Go CLI |
+| `verify-check` | Use this to retrieve a verification’s status or, when a code is supplied, submit that code for validation. | Read-only without code; submits with code; Go CLI |
+
+### SMS, MMS, and messaging profiles
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `send-sms` | Use this to send an immediate SMS or MMS from a number, alphanumeric sender, or messaging-profile number pool. | Sends; non-idempotent; Go CLI |
+| `send-group-mms` | Use this to send one group MMS conversation to multiple E.164 recipients. | Sends; non-idempotent; direct REST |
+| `schedule-sms` | Use this to schedule an SMS for delivery at a future ISO 8601 time instead of sending it immediately. | Schedules send; non-idempotent; direct REST |
+| `sms-status` | Use this to retrieve one message’s delivery state or cancel it when it is still scheduled. | Read-only by default; mutates with cancel; Go CLI |
+| `list-messaging-profiles` | Use this to discover messaging profiles with name filters and pagination before choosing a profile ID. | Read-only; Go CLI |
+| `create-messaging-profile` | Use this to create a messaging profile with destination and webhook controls. | Creates; Go CLI |
+| `get-messaging-profile` | Use this to retrieve one messaging profile when its ID is already known. | Read-only; Go CLI |
+| `update-messaging-profile` | Use this to change selected settings on an existing messaging profile. | Mutates; Go CLI |
+| `delete-messaging-profile` | Use this to permanently delete a messaging profile by ID. | Deletes; requires `--confirm`; Go CLI |
+
+### Email
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `email-send` | Use this to send an outbound email now or schedule it for later, including templates, multiple recipients, and attachments. | Sends/schedules; non-idempotent; Go CLI v0.27+ |
+| `email-forward` | Use this to forward a message already received by a Telnyx email inbox to new recipients. | Sends; non-idempotent; Go CLI v0.27+ |
+| `email-reply` | Use this to reply only to the Reply-To or From address of a message received by a Telnyx email inbox. | Sends; non-idempotent; Go CLI v0.27+ |
+| `email-reply-all` | Use this to reply to all de-duplicated recipients of a message received by a Telnyx email inbox. | Sends; non-idempotent; Go CLI v0.27+ |
+
+### WhatsApp and RCS
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `whatsapp-send` | Use this to send exactly one WhatsApp payload type such as text, template, media, interactive content, location, reaction, sticker, contacts, or video. | Sends; non-idempotent; Go CLI |
+| `whatsapp-templates` | Use this to list templates for a WhatsApp Business Account or create a new template for approval. | Read-only by default; creates with create mode; approval pending; direct REST |
+| `rcs-send` | Use this to send a text message from an RCS agent through a messaging profile. | Sends; non-idempotent; Go CLI |
+| `rcs-capabilities` | Use this to check which RCS features a recipient supports before choosing RCS content. | Read-only; Go CLI |
+
+### Phone numbers and lookup
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `list-phone-numbers` | Use this to list phone numbers already owned by the account, with filters and pagination. | Read-only; Go CLI |
+| `search-phone-numbers` | Use this to search inventory of available phone numbers before purchasing one. | Read-only; Go CLI |
+| `buy-phone-number` | Use this to purchase one available phone number and optionally assign its voice connection or messaging profile. | Buys; non-idempotent; Go CLI |
+| `lookup-number` | Use this to retrieve carrier or caller-name data for an E.164 phone number. | Read-only; Go CLI |
+
+### Voice calls, connections, and recordings
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `call-dial` | Use this to originate an outbound Call Control call from a configured connection. | Dials; non-idempotent; direct REST |
+| `call-control` | Use this to perform a chosen action on an existing Call Control leg, including answer, hangup, transfer, media, recording, transcription, streaming, queue, or AI actions. | Mutates live call; Go CLI |
+| `call-pay` | Use this to securely collect and then charge or tokenize payment details over DTMF on an active call. | Submits payment action; non-idempotent; Go CLI |
+| `call-status` | Use this to retrieve the current state of one call when its call-control ID is known. | Read-only; direct REST |
+| `list-voice-connections` | Use this to discover voice connections across supported connection types with filters and pagination. | Read-only; Go CLI |
+| `get-voice-connection` | Use this to retrieve high-level configuration for one voice connection by ID. | Read-only; Go CLI |
+| `list-active-calls` | Use this to list calls currently active on one voice connection rather than inspect a single known call. | Read-only; direct REST |
+| `list-call-recordings` | Use this to list post-call recording resources and their metadata using call filters and pagination. | Read-only; Go CLI |
+| `get-call-recording` | Use this to retrieve one post-call recording resource and its metadata or media URLs, not its transcript. | Read-only; Go CLI |
+| `list-recording-transcriptions` | Use this to list transcription resources generated from recordings, filtered by recording or creation time. | Read-only; Go CLI |
+| `get-recording-transcription` | Use this to retrieve the transcript resource for one known recording-transcription ID. | Read-only; Go CLI |
+
+### Conferences
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `create-conference` | Use this to turn an active Call Control leg into a new multi-party conference. | Creates live conference; Go CLI |
+| `get-conference` | Use this to retrieve one conference when its ID is known. | Read-only; Go CLI |
+| `list-conferences` | Use this to discover conferences by name or status with pagination. | Read-only; Go CLI |
+| `list-conference-participants` | Use this to inspect participants in one conference before applying participant controls. | Read-only; Go CLI |
+| `conference-control` | Use this to control conference membership, participant state, media, DTMF, recording, supervisor roles, or lifecycle. | Mutates live conference; Go CLI |
+
+### Meeting Bot
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `create-meeting-session` | Use this to create a Meeting Bot session that joins or schedules attendance at an external meeting URL. | Creates/joins meeting; non-idempotent; Go CLI v0.27+ |
+| `list-meeting-sessions` | Use this to discover Meeting Bot sessions, optionally by status, before selecting a session ID. | Read-only; Go CLI v0.27+ |
+| `get-meeting-session` | Use this to retrieve one Meeting Bot session when its ID is known. | Read-only; Go CLI v0.27+ |
+| `end-meeting-session` | Use this to end or cancel a Meeting Bot’s participation while retaining its persisted session record. | Mutates session; Go CLI v0.27+ |
+| `send-meeting-chat` | Use this to send a chat message from the bot into an active Meeting Bot session. | Sends; non-idempotent; Go CLI v0.27+ |
+| `speak-in-meeting` | Use this to make the bot speak text in a meeting, optionally interrupting current playback. | Speaks/sends audio; non-idempotent; Go CLI v0.27+ |
+| `stop-meeting-speaking` | Use this to stop the bot’s active text-to-speech playback without ending its meeting session. | Mutates live playback; Go CLI v0.27+ |
+| `get-meeting-transcript` | Use this to retrieve cursor-paginated transcript segments from a Meeting Bot session, optionally with long polling. | Read-only; Go CLI v0.27+ |
+| `get-meeting-recordings` | Use this to retrieve recordings attached to one Meeting Bot session rather than Call Control recording resources. | Read-only; Go CLI v0.27+ |
+| `create-meeting-artifact` | Use this to request asynchronous generation of a summary or action-items artifact from a Meeting Bot session. | Creates async job; non-idempotent; Go CLI v0.27+ |
+| `list-meeting-artifacts` | Use this to list generated artifacts for one Meeting Bot session. | Read-only; Go CLI v0.27+ |
+| `get-meeting-artifact` | Use this to retrieve one generated Meeting Bot artifact by both session and artifact IDs. | Read-only; Go CLI v0.27+ |
+
+### Telnyx Rooms
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `list-room-sessions` | Use this to discover Telnyx real-time media room sessions, optionally filtering by room or active state. | Read-only; Go CLI |
+| `get-room-session` | Use this to retrieve one Telnyx room session, optionally including participants. | Read-only; Go CLI |
+| `list-room-participants` | Use this to list participants in one Telnyx room session with context and pagination controls. | Read-only; Go CLI |
+| `get-room-participant` | Use this to retrieve one Telnyx room participant by participant ID. | Read-only; Go CLI |
+| `end-room-session` | Use this to end a Telnyx room session and remove all of its current participants. | Ends live session; Go CLI |
+| `kick-room-participants` | Use this to remove selected participants from a Telnyx room session without ending the room. | Mutates live session; Go CLI |
+| `mute-room-participants` | Use this to mute selected participants in a Telnyx room session. | Mutates live session; Go CLI |
+| `unmute-room-participants` | Use this to unmute selected participants in a Telnyx room session. | Mutates live session; Go CLI |
+
+### AI inference, assistants, and collections
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `ai-chat` | Use this to make a stateless OpenAI-compatible chat-completion request, not to converse through a configured Telnyx assistant. | Inference; Go CLI |
+| `ai-anthropic-message` | Use this to make a stateless Anthropic-compatible Messages request through Telnyx AI inference. | Inference; Go CLI |
+| `ai-embed` | Use this to create OpenAI-compatible embeddings for one text or an array of texts. | Inference; Go CLI |
+| `list-ai-assistants` | Use this to discover configured AI assistants before choosing an assistant ID. | Read-only; Go CLI |
+| `create-ai-assistant` | Use this to create a reusable Telnyx AI assistant configuration with instructions and optional model or voice settings. | Creates; Go CLI |
+| `get-ai-assistant` | Use this to retrieve one configured AI assistant by ID. | Read-only; Go CLI |
+| `update-ai-assistant` | Use this to change an assistant’s configuration and create a new assistant version. | Mutates/version-creates; Go CLI |
+| `delete-ai-assistant` | Use this to permanently delete a configured AI assistant by ID. | Deletes; requires `--confirm`; Go CLI |
+| `search-ai-collection` | Use this to retrieve ranked RAG chunks for a query or, without a query, list the collection’s document catalog. | Read-only; Go CLI v0.27+ |
+| `chat-ai-assistant` | Use this to send a live chat turn through an existing assistant conversation rather than run a stateless completion or a test. | Sends conversation turn; non-idempotent; Go CLI |
+| `send-ai-assistant-sms` | Use this to start or continue an AI assistant conversation over SMS. | Sends SMS; non-idempotent; Go CLI |
+| `trigger-ai-assistant-test-run` | Use this to execute an already configured AI assistant test, not a live assistant chat turn. | Starts test execution; non-idempotent; Go CLI |
+| `get-ai-assistant-test-run` | Use this to retrieve detailed results for one known assistant test run. | Read-only; Go CLI |
+| `list-ai-assistant-test-runs` | Use this to inspect and filter execution history for one configured assistant test. | Read-only; Go CLI |
+| `test-ai-assistant-tool` | Use this to invoke one configured assistant webhook tool with test arguments and dynamic variables. | Executes webhook; may have external side effects; Go CLI |
+
+### Web intelligence
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `web-search` | Use this to find live web pages and return structured search results for a query. | Read-only retrieval; Go CLI v0.27+ |
+| `web-contents` | Use this to fetch clean HTML, Markdown, or metadata for up to 20 URLs already known to you. | Read-only retrieval; Go CLI v0.27+ |
+| `web-research` | Use this to synthesize a cited answer across multiple web sources synchronously or start a background research task. | Starts research; Go CLI v0.27+ |
+| `web-research-status` | Use this to poll a background web-research task by ID for status, answer, and citations. | Read-only; Go CLI v0.27+ |
+
+### Speech and fax
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `tts` | Use this to synthesize speech audio from text or SSML through a selected TTS provider. | Generates media; direct REST |
+| `tts-voices` | Use this to list available TTS voices, optionally filtered by provider, before synthesizing speech. | Read-only; Go CLI |
+| `stt` | Use this to transcribe a hosted audio-file URL through the OpenAI-compatible speech-to-text endpoint. | Inference; Go CLI |
+| `stt-providers` | Use this to list available speech-to-text providers and service types before selecting one. | Read-only; Go CLI |
+| `fax-send` | Use this to submit an outbound fax from a media URL or uploaded media name through a fax connection. | Sends; non-idempotent; Go CLI |
+| `fax-status` | Use this to retrieve the latest state and details for one fax. | Read-only; Go CLI |
+| `fax-cancel` | Use this to cancel an outbound fax that is still queued or in progress. | Cancels send; Go CLI |
+| `fax-refresh` | Use this to refresh an expired temporary media URL for an inbound fax. | Mutates media access; Go CLI |
+
+### IoT SIM lifecycle
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `list-sim-cards` | Use this to discover IoT SIM cards with status, group, and pagination filters. | Read-only; Go CLI |
+| `retrieve-sim-card` | Use this to retrieve one IoT SIM card when its ID is known. | Read-only; Go CLI |
+| `enable-sim-card` | Use this to request asynchronous enablement of an IoT SIM card. | Activates asynchronously; Go CLI |
+| `disable-sim-card` | Use this to request asynchronous disablement of an IoT SIM card. | Deactivates asynchronously; Go CLI |
+| `retrieve-sim-card-action` | Use this to retrieve the status and details of one asynchronous SIM-card action by action ID. | Read-only; Go CLI |
+| `list-sim-card-actions` | Use this to list asynchronous SIM-card actions by SIM, type, status, bulk action, or page. | Read-only; Go CLI |
+
+### Port-in and Port-Out lifecycle
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `list-porting-orders` | Use this to discover port-in orders with phone-number, carrier, reference, FOC-date, port-type, and pagination filters. | Read-only; Go CLI |
+| `get-porting-order` | Use this to retrieve one port-in order by ID, optionally including its phone-number objects. | Read-only; Go CLI |
+| `update-porting-order` | Use this to change a port-in order’s references, FOC settings, documents, messaging, or post-port number configuration. | Mutates order; Go CLI |
+| `submit-porting-order` | Use this to submit an existing draft port-in order for processing. | Submits; non-idempotent; Go CLI |
+| `cancel-porting-order` | Use this to cancel an existing port-in order. | Cancels; requires `--confirm`; Go CLI |
+| `activate-porting-order` | Use this to irreversibly activate all numbers in an eligible US FastPort port-in order. | Activates; irreversible; requires `--confirm`; Go CLI |
+| `attach-porting-document` | Use this to attach an existing Telnyx document resource to a port-in order. | Mutates order; Go CLI |
+| `list-porting-documents` | Use this to list documents already attached to a port-in order. | Read-only; Go CLI |
+| `list-portout-orders` | Use this to discover Port-Out orders for numbers leaving Telnyx, with filters and pagination. | Read-only; Go CLI |
+| `get-portout-order` | Use this to retrieve one Port-Out order for a number leaving Telnyx. | Read-only; Go CLI |
+| `list-portout-rejection-codes` | Use this to list rejection codes eligible for a specific Port-Out order before rejecting it. | Read-only; Go CLI |
+| `update-portout-status` | Use this to authorize or reject a Port-Out order for numbers leaving Telnyx. | Authorizes/rejects; requires `--confirm`; Go CLI |
+| `create-portout-comment` | Use this to add an operational comment to a Port-Out order. | Mutates order; Go CLI |
+| `list-portout-comments` | Use this to read comments already attached to a Port-Out order. | Read-only; Go CLI |
+
+### Edge Compute handoff
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `edge-doctor` | Use this to validate local `telnyx-edge` installation, authentication, health, and command support before an Edge workflow. | Read-only diagnostics; external Edge CLI |
+| `setup-edge-mcp` | Use this to validate readiness and emit concrete `telnyx-edge` commands for deploying the repository’s MCP-on-Edge example. | Edge handoff only; does not deploy |
+| `setup-edge-webhook` | Use this to validate readiness and emit concrete `telnyx-edge` commands for deploying the repository’s webhook-on-Edge example. | Edge handoff only; does not deploy |
+
+### Storage
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `storage-sql-query` | Use this to execute parameterized SQL statements or scripts against a Telnyx Storage SQL database. | May mutate SQL state; no dry run or confirm; Go CLI v0.27+ |
 
 <!-- markdownlint-enable MD013 -->
 
 Commands are not dry runs merely because `--json` is present. Setup commands
 can create billable resources, and mutation commands change live account state.
-Review `telnyx-agent <command> --help` before running them. The CLI intercepts
-help before dispatch so asking for help does not provision resources.
+Review the command documentation before running them. The CLI intercepts
+`telnyx-agent <command> --help` before dispatch, so asking for help does not
+provision resources, but current per-command help is the same global help text
+rather than a command-scoped reference. Most unrecognized, non-dotted flags
+emit a warning and the command continues. `call-control`, `call-pay`,
+`conference-control`, and `ai-chat` are exempt from that warning, and dotted
+flags are always exempt, so unsupported flags on those paths can be ignored
+silently. Do not treat warning absence as validation: compare every flag with
+this README/help before dispatch, especially for live mutations.
 `delete-messaging-profile`, `delete-ai-assistant`, `cancel-porting-order`,
 `activate-porting-order`, and `update-portout-status` require explicit
 `--confirm`; do not automate that acknowledgement without reviewing the target
-IDs and operation.
+IDs and operation. `storage-sql-query` can execute mutating SQL as well as
+queries and has no dry-run or `--confirm` guard.
 
 ### `telnyx-agent setup-sms`
 
@@ -184,6 +409,8 @@ telnyx-agent setup-10dlc \
   --email messaging@example.com \
   --brand-name "Example Brand" \
   --website https://example.com/sms-opt-in \
+  --sample-message \
+    "Example Brand: Your support update is ready. Reply STOP to opt out." \
   --phone-number-id +131****0001 \
   --json
 ```
@@ -375,7 +602,7 @@ Requests a payment quote, signs EIP-712 typed data (transferWithAuthorization / 
 
 ```bash
 telnyx-agent fund-account --amount 50.00                      # Get quote + payment requirements
-telnyx-agent fund-account --amount 50.00 --wallet-key 0x...   # Sign and submit automatically
+telnyx-agent fund-account --amount 50.00 --wallet-key 0x...   # Sign and submit (see warning below)
 telnyx-agent fund-account --amount 50.00 --json              # JSON output
 ```
 
@@ -400,6 +627,10 @@ telnyx-agent fund-account --amount 50.00 --json              # JSON output
 
 **Output (without --wallet-key):**
 Returns `payment_requirements` JSON for external signing by agents or wallets.
+External signing is safer because `--wallet-key` places the private key in
+process arguments and commonly in shell history. Prefer an external wallet or
+signer; if you accept that exposure for automation, keep the environment and
+history private and short-lived.
 
 ### `telnyx-agent tts`
 
@@ -490,8 +721,10 @@ telnyx-agent storage-sql-query --id <database-id> \
 ```
 
 Use bindings instead of interpolating values into SQL. Placeholder/parameter
-count mismatches are rejected by the API. This command requires Telnyx Go CLI
-v0.27.0 or newer; it does not change the package's vendored platform pin.
+count mismatches are rejected by the API. The SQL text is not restricted to
+`SELECT`: statements may mutate database state. Review the statement and target
+database before execution. This command requires Telnyx Go CLI v0.27.0 or newer;
+it does not change the package's vendored platform pin.
 
 
 ## Authentication
@@ -501,23 +734,39 @@ The CLI looks for an API key in this order:
 1. `TELNYX_API_KEY` environment variable
 2. `~/.config/telnyx/config.json` (same as `@telnyx/api-cli`)
 
+Most commands use that resolver. `setup-sms` and `setup-porting` are exceptions:
+their implementations explicitly require `TELNYX_API_KEY` and do not fall back
+to the config file.
+
 ## Global Flags
 
 | Flag | Description |
 |------|-------------|
 | `--json` | Output structured JSON instead of human-readable text |
-| `--country <code>` | ISO country code for number search (default: US) |
+
+`--country` is command-specific, not global. It is accepted by commands such as
+`setup-sms`, `setup-voice`, `setup-whatsapp`, `list-phone-numbers`,
+`search-phone-numbers`, and `web-search`, with semantics and defaults documented
+for each command.
 
 ## Architecture
 
-- **Hybrid execution** — most commands call the Telnyx REST API v2 directly via native
-  `fetch()`; a subset (number search/order, `send-sms`, `sms-status`, WhatsApp send)
-  shell out to the bundled `telnyx` Go CLI (`@telnyx/telnyx-cli`, pinned by
-  `scripts/postinstall.ts`). The Go CLI is installed into `vendor/` on `npm install`.
-- **CLI dependency** — the shell-out path expects the pinned Go CLI in `vendor/`. If it
-  is missing and an **incompatible** `telnyx` is found on `PATH`, those specific commands
-  can fail with `command …:… not found`. Re-run `npm install` (or `npm rebuild`) to
-  restore `vendor/telnyx`. (See the "Cookbook Copy Changes" section above.)
+- **Hybrid execution** — command modules use the Telnyx REST API v2 directly,
+  wrap the generated Telnyx Go CLI, or combine both transports in one workflow.
+  Many command families use the Go wrapper; it is not limited to a small number
+  of messaging and number operations.
+- **Go CLI dependency** — `scripts/postinstall.ts` pins Telnyx Go CLI v0.27.0.
+  Runtime resolution checks `TELNYX_CLI_PATH`, then the platform-specific binary
+  under `vendor/`, then `telnyx` on `PATH`. A PATH fallback is verified with
+  `telnyx --version`; missing, incompatible, or command-too-old binaries fail
+  with an actionable version/install error instead of the former downstream
+  `command … not found` failure. Re-run `npm install` or `npm rebuild` to restore
+  the vendored binary.
+- **Safe override troubleshooting** — set `TELNYX_CLI_PATH` only to the absolute
+  path of a trusted Telnyx Go CLI and verify it first with
+  `"$TELNYX_CLI_PATH" --version`. The override is authoritative, so an invalid or
+  too-old override does not silently fall through to another binary; unset it to
+  return to normal vendor/PATH resolution.
 - **No CLI framework** — simple `process.argv` parsing.
 - **Error handling** — composite commands report what succeeded and what failed.
 
@@ -532,6 +781,9 @@ npx tsx bin/telnyx-agent.ts status
 # ...or drive the published launcher exactly as an installed user would:
 node bin/telnyx-agent.mjs status
 
+# Print the agent CLI package version
+node bin/telnyx-agent.mjs --version   # -V is equivalent
+
 # Run tests
 npm test
 
@@ -541,8 +793,27 @@ npm run typecheck
 
 ## Testing
 
-Integration tests cover read-only commands (`status`, `capabilities`) against the real API. Setup commands are tested for argument parsing but don't make real purchases.
+`npm test` is the package's local suite. Most tests use mocks, local capture
+servers, and fake binaries, but the suite is not network-free:
+`status-rest.test.ts` still contacts `api.telnyx.com` with a forced invalid key,
+and `integration.test.ts` can inherit `HOME`/account config and call live
+`status`. Offline runs may therefore time out or fail. Unset `TELNYX_API_KEY`
+and use an isolated temporary `HOME` to prevent selecting real account
+credentials; this reduces credential risk but does not make the suite
+network-free.
 
 ```bash
-TELNYX_API_KEY="KEY_xxx" npm test
+npm test
 ```
+
+CI adds further live-network coverage. Inspect each job's test selection before
+treating its label as a safety boundary:
+
+- **API Read-Only Tests** is a legacy job name, not a mutation guarantee. Its
+  CLI `integration-ci` suite runs with a repository secret and invokes
+  `setup-iot`, `setup-wireguard`, and `setup-verify`; depending on account state,
+  those cases can create resources, enable or reassign a SIM, and rely on only
+  partial best-effort cleanup.
+- **API Write + Cleanup Tests** adds the explicitly write-gated coverage with
+  `RUN_WRITE_TESTS=true`. It creates and cleans up real resources and runs only
+  on pushes to `main` or an explicitly enabled manual workflow dispatch.
