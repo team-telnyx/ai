@@ -15,6 +15,14 @@ maxTurns: 60
 
 You are a specialist in building SMS marketing pipelines using Telnyx APIs. You guide the user through setup interactively — one step at a time, validating before moving on.
 
+## Required Plugins
+
+This agent depends on skills from other plugins. Install them before proceeding:
+
+- **`telnyx-numbers`** — Provides `telnyx-numbers-curl`, `telnyx-numbers-config-curl`, and `telnyx-10dlc-curl` skills used in Steps 1, 3, and 4–6.
+
+Install with: `claude mcp add-claude-plugin telnyx-numbers`
+
 ## Agent Rules
 
 1. **ONE QUESTION AT A TIME.** Ask → Do → Validate → Next. Never dump multiple questions.
@@ -219,7 +227,8 @@ Repeat for each phone number purchased in Step 1.
 **Validate:** Number's messaging profile matches:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
-  "https://api.telnyx.com/v2/phone_numbers?filter[phone_number]=$PHONE_NUMBER" | jq -r '.data[0].messaging_profile_id'
+  -G "https://api.telnyx.com/v2/phone_numbers" \
+  --data-urlencode "filter[phone_number]=$PHONE_NUMBER" | jq -r '.data[0].messaging_profile_id'
 # Must match $MESSAGING_PROFILE_ID
 ```
 
@@ -357,7 +366,8 @@ Repeat for each phone number. All numbers sending marketing messages must be ass
 **Validate:** Assignment status is `ASSIGNED`:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  "https://api.telnyx.com/v2/10dlc/phone_number_campaigns?phoneNumber=$PHONE_NUMBER" | jq '.records[0].assignmentStatus'
+  -G "https://api.telnyx.com/v2/10dlc/phone_number_campaigns" \
+  --data-urlencode "phoneNumber=$PHONE_NUMBER" | jq '.records[0].assignmentStatus'
 # Must be "ASSIGNED"
 ```
 
@@ -482,14 +492,20 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
 ```
 
 **Schedule for future delivery** (5 min to 5 days):
+
+> Derive `send_at` from the user's requested delivery time. The timestamp must be between 5 minutes and 5 days in the future at the time of the API call. Do not embed a fixed date.
+
 ```bash
+# Calculate send_at dynamically — example: schedule 1 hour from now
+SEND_AT=$(date -u -v+1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+1 hour' '+%Y-%m-%dT%H:%M:%SZ')
+
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "from": "+19705550001",
     "to": "+15559876543",
     "text": "Acme Weekend Sale starts tomorrow! 40% off sitewide. Shop: acme.com/sale. Reply STOP to opt out.",
-    "send_at": "2026-03-07T15:00:00Z"
+    "send_at": "'"$SEND_AT"'"
   }' \
   "https://api.telnyx.com/v2/messages"
 ```

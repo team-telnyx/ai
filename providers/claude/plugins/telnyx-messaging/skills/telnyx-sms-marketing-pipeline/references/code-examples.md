@@ -44,9 +44,11 @@ curl -s -X POST https://api.telnyx.com/v2/messages \
     "from": "+19705550001",
     "to": "+15559876543",
     "text": "Acme Weekend Sale starts tomorrow! Get 40% off sitewide. Shop: acme.com/sale. Reply STOP to opt out.",
-    "send_at": "2026-03-07T15:00:00Z"
+    "send_at": "'"$(date -u -v+1H '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -d '+1 hour' '+%Y-%m-%dT%H:%M:%SZ')"'"
   }' | jq .
 ```
+
+> **Note:** `send_at` must be between 5 minutes and 5 days in the future at the time of the API call. The example above derives it dynamically (1 hour from now). Replace `+1H` / `+1 hour` with the user's requested offset.
 
 Scheduling constraints: 5 minutes to 5 days in the future, up to 1 million scheduled messages.
 
@@ -259,23 +261,31 @@ const response = await client.messages.send({
 ### Schedule a Message (5 min to 5 day window)
 
 ```python
-# Python
+# Python — derive send_at from user's requested delivery time
+from datetime import datetime, timedelta, timezone
+
+# Example: schedule 1 hour from now (adjust to user's requested time)
+send_at = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 response = client.messages.send(
     from_="+15551234567",
     to="+15559876543",
     text="Acme: Flash sale starts NOW! 40% off for the next 4 hours. Shop: acme.com/flash. Reply STOP to opt out.",
-    send_at="2026-03-15T14:00:00Z",  # ISO 8601, 5 min to 5 days in future
+    send_at=send_at,  # ISO 8601, must be 5 min to 5 days in the future
 )
 print(f"Status: {response.data.to[0].status}")  # "scheduled"
 ```
 
 ```javascript
-// Node.js
+// Node.js — derive send_at from user's requested delivery time
+// Example: schedule 1 hour from now (adjust to user's requested time)
+const sendAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
 const response = await client.messages.send({
   from: '+15551234567',
   to: '+15559876543',
   text: 'Acme: Flash sale starts NOW! 40% off for the next 4 hours. Shop: acme.com/flash. Reply STOP to opt out.',
-  send_at: '2026-03-15T14:00:00Z',
+  send_at: sendAt, // must be 5 min to 5 days in the future
 });
 console.log(`Status: ${response.data.to[0].status}`); // "scheduled"
 ```
@@ -292,15 +302,34 @@ Single-number API — no native bulk endpoint. Implement batch processing with r
 import asyncio
 import aiohttp
 import os
+import time
 
 API_KEY = os.environ["TELNYX_API_KEY"]
 BASE_URL = "https://api.telnyx.com/v2/number_lookup"
+MAX_REQUESTS_PER_SEC = 60  # Global rate cap
 
-async def lookup_number(session, phone_number):
+
+class RateLimiter:
+    """Token-bucket rate limiter shared across all concurrent workers."""
+    def __init__(self, rate: float):
+        self._interval = 1.0 / rate
+        self._lock = asyncio.Lock()
+        self._next_allowed = 0.0
+
+    async def acquire(self):
+        async with self._lock:
+            now = asyncio.get_event_loop().time()
+            if now < self._next_allowed:
+                await asyncio.sleep(self._next_allowed - now)
+            self._next_allowed = max(now, self._next_allowed) + self._interval
+
+
+async def lookup_number(session, phone_number, rate_limiter):
     """Look up a single number. Returns carrier type and details."""
+    await rate_limiter.acquire()
     url = f"{BASE_URL}/{phone_number}"
     headers = {"Authorization": f"Bearer {API_KEY}"}
-    
+
     async with session.get(url, headers=headers) as resp:
         if resp.status == 200:
             data = await resp.json()
@@ -312,32 +341,34 @@ async def lookup_number(session, phone_number):
                 "sendable": carrier.get("type") in ("mobile", "voip", "fixed line or mobile"),
             }
         elif resp.status == 429:
-            await asyncio.sleep(2)  # Rate limited — back off
-            return await lookup_number(session, phone_number)
+            await asyncio.sleep(2)  # Rate limited — back off and retry
+            return await lookup_number(session, phone_number, rate_limiter)
         else:
-            return {"phone": phone_number, "carrier_type": "error", "sendable": False}
+            # Non-200 does NOT mean the number is unsendable — the lookup
+            # failed (network error, server error, etc.). Flag for review
+            # instead of silently dropping.
+            return {"phone": phone_number, "carrier_type": "lookup_failed", "sendable": True, "lookup_failed": True}
 
 
-async def validate_batch(numbers, concurrency=50, delay_per_req=0.015):
-    """Validate a batch of numbers with concurrency and rate limiting."""
+async def validate_batch(numbers, concurrency=50, max_rps=MAX_REQUESTS_PER_SEC):
+    """Validate a batch of numbers with shared global rate limiting."""
     semaphore = asyncio.Semaphore(concurrency)
-    results = []
-    
+    rate_limiter = RateLimiter(max_rps)
+
     async def limited_lookup(session, number):
         async with semaphore:
-            result = await lookup_number(session, number)
-            await asyncio.sleep(delay_per_req)  # ~66 req/sec
-            return result
-    
+            return await lookup_number(session, number, rate_limiter)
+
     async with aiohttp.ClientSession() as session:
         tasks = [limited_lookup(session, num) for num in numbers]
         results = await asyncio.gather(*tasks)
-    
+
     # Segment results
     sendable = [r for r in results if r["sendable"]]
     excluded = [r for r in results if not r["sendable"]]
-    
-    print(f"✅ Sendable: {len(sendable)} | ❌ Excluded: {len(excluded)}")
+    needs_review = [r for r in results if r.get("lookup_failed")]
+
+    print(f"✅ Sendable: {len(sendable)} | ❌ Excluded: {len(excluded)} | ⚠️ Lookup failed (included): {len(needs_review)}")
     return sendable, excluded
 
 
@@ -350,41 +381,80 @@ sendable, excluded = asyncio.run(validate_batch(numbers))
 
 ```javascript
 import Telnyx from 'telnyx';
-import pLimit from 'p-limit';
 
 const client = new Telnyx({ apiKey: process.env.TELNYX_API_KEY });
+const MAX_RPS = 60; // Global rate cap
 
-async function validateBatch(numbers, { concurrency = 50, delayMs = 15 } = {}) {
-  const limit = pLimit(concurrency);
+/**
+ * Shared rate limiter — controls request start times globally.
+ * A per-worker sleep does NOT limit aggregate throughput when many
+ * workers run concurrently.
+ */
+class RateLimiter {
+  constructor(rps) {
+    this.interval = 1000 / rps;
+    this.nextAllowed = 0;
+    this.queue = Promise.resolve();
+  }
+  acquire() {
+    this.queue = this.queue.then(
+      () =>
+        new Promise((resolve) => {
+          const now = Date.now();
+          const wait = Math.max(0, this.nextAllowed - now);
+          this.nextAllowed = Math.max(now, this.nextAllowed) + this.interval;
+          setTimeout(resolve, wait);
+        })
+    );
+    return this.queue;
+  }
+}
+
+async function validateBatch(numbers, { concurrency = 50, maxRps = MAX_RPS } = {}) {
+  const limiter = new RateLimiter(maxRps);
   let completed = 0;
 
-  const tasks = numbers.map((number) =>
-    limit(async () => {
-      try {
-        const { data } = await client.numberLookup.retrieve(number);
-        completed++;
-        if (completed % 100 === 0) console.log(`Progress: ${completed}/${numbers.length}`);
+  // Concurrency is capped by the rate limiter; semaphore limits in-flight.
+  const semaphore = { active: 0, waiters: [] };
+  const acquireSem = () =>
+    semaphore.active < concurrency
+      ? (semaphore.active++, Promise.resolve())
+      : new Promise((r) => semaphore.waiters.push(r)).then(() => { semaphore.active++; });
+  const releaseSem = () => {
+    semaphore.active--;
+    if (semaphore.waiters.length) semaphore.waiters.shift()();
+  };
 
-        const carrierType = data.carrier?.type || 'unknown';
-        return {
-          phone: number,
-          carrierType,
-          carrierName: data.carrier?.normalized_carrier || data.carrier?.name,
-          sendable: ['mobile', 'voip', 'fixed line or mobile'].includes(carrierType),
-        };
-      } catch (err) {
-        return { phone: number, carrierType: 'error', sendable: false };
-      } finally {
-        await new Promise((r) => setTimeout(r, delayMs));
-      }
-    })
-  );
+  const tasks = numbers.map(async (number) => {
+    await acquireSem();
+    await limiter.acquire();
+    try {
+      const { data } = await client.numberLookup.retrieve(number);
+      completed++;
+      if (completed % 100 === 0) console.log(`Progress: ${completed}/${numbers.length}`);
+
+      const carrierType = data.carrier?.type || 'unknown';
+      return {
+        phone: number,
+        carrierType,
+        carrierName: data.carrier?.normalized_carrier || data.carrier?.name,
+        sendable: ['mobile', 'voip', 'fixed line or mobile'].includes(carrierType),
+      };
+    } catch (err) {
+      // Lookup failure does NOT mean the number is unsendable. Flag for
+      // review instead of silently dropping valid recipients.
+      return { phone: number, carrierType: 'lookup_failed', sendable: true, lookupFailed: true };
+    } finally {
+      releaseSem();
+    }
+  });
 
   const results = await Promise.all(tasks);
   const sendable = results.filter((r) => r.sendable);
   const excluded = results.filter((r) => !r.sendable);
+  const needsReview = results.filter((r) => r.lookupFailed);
 
-  console.log(`✅ Sendable: ${sendable.length} | ❌ Excluded: ${excluded.length}`);
+  console.log(`✅ Sendable: ${sendable.length} | ❌ Excluded: ${excluded.length} | ⚠️ Lookup failed (included): ${needsReview.length}`);
   return { sendable, excluded };
 }
 
@@ -1341,17 +1411,19 @@ import express from 'express';
 import Telnyx from 'telnyx';
 
 const app = express();
-app.use(express.json());
 const telnyx = new Telnyx({ apiKey: process.env.TELNYX_API_KEY });
 
-app.post('/webhooks/messaging', (req, res) => {
+// IMPORTANT: Use express.raw() to get the exact bytes the signature was computed
+// over. express.json() parses and re-serializing with JSON.stringify() can alter
+// whitespace/escaping, breaking Ed25519 verification.
+app.post('/webhooks/messaging', express.raw({ type: 'application/json' }), (req, res) => {
   const signature = req.headers['telnyx-signature-ed25519'];
   const timestamp = req.headers['telnyx-timestamp'];
-  const payload = JSON.stringify(req.body);
+  const rawBody = req.body; // Buffer — exact bytes from the wire
 
   try {
     const event = telnyx.webhooks.constructEvent(
-      payload, signature, timestamp,
+      rawBody, signature, timestamp,
       process.env.TELNYX_PUBLIC_KEY
     );
     console.log('Verified event:', event.data.event_type);
@@ -1416,6 +1488,7 @@ if (sodium_crypto_sign_verify_detached($signature, $signedPayload, $publicKeyHex
 ### Java (Ed25519)
 
 ```java
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.security.*;
@@ -1434,15 +1507,17 @@ public class VerifiedWebhookController {
     }
 
     @PostMapping("/webhooks/messaging")
-    public String handleWebhook(@RequestBody String payload, HttpServletRequest req) throws Exception {
+    public ResponseEntity<String> handleWebhook(@RequestBody String payload, HttpServletRequest req) throws Exception {
         String signature = req.getHeader("telnyx-signature-ed25519");
         String timestamp = req.getHeader("telnyx-timestamp");
         Signature sig = Signature.getInstance("Ed25519");
         sig.initVerify(publicKey);
         sig.update((timestamp + "|" + payload).getBytes());
-        if (!sig.verify(Base64.getDecoder().decode(signature))) return "Forbidden";
+        if (!sig.verify(Base64.getDecoder().decode(signature))) {
+            return ResponseEntity.status(403).body("Forbidden");
+        }
         System.out.println("Verified event");
-        return "{\"status\":\"ok\"}";
+        return ResponseEntity.ok("{\"status\":\"ok\"}");
     }
 
     private static byte[] reverse(byte[] arr) {
@@ -1639,6 +1714,7 @@ campaign = post_10dlc('campaignBuilder', {
   sample1: 'Acme Sale! 30% off this weekend. Shop: acme.com/sale. Reply STOP to opt out.',
   messageFlow: 'Opt-in via checkbox at acme.com/checkout.',
   helpKeywords: 'HELP', optoutKeywords: 'STOP,CANCEL,END',
+  optoutMessage: 'You have been unsubscribed from Acme messages. No more messages will be sent. Reply START to re-subscribe.',
   subscriberOptin: true, subscriberOptout: true, subscriberHelp: true
 })
 puts "Campaign: #{campaign['campaignId']}"
@@ -1677,6 +1753,7 @@ $campaign = post10dlc('campaignBuilder', [
     'sample1' => 'Acme Sale! 30% off this weekend. Shop: acme.com/sale. Reply STOP to opt out.',
     'messageFlow' => 'Opt-in via checkbox at acme.com/checkout.',
     'helpKeywords' => 'HELP', 'optoutKeywords' => 'STOP,CANCEL,END',
+    'optoutMessage' => 'You have been unsubscribed from Acme messages. No more messages will be sent. Reply START to re-subscribe.',
     'subscriberOptin' => true, 'subscriberOptout' => true, 'subscriberHelp' => true,
 ]);
 echo "Campaign: {$campaign['campaignId']}\n";
@@ -1718,6 +1795,7 @@ JsonObject campaign = JsonParser.parseString(postJson("campaignBuilder",
     "\"sample1\":\"Acme Sale! 30% off. Shop: acme.com/sale. Reply STOP to opt out.\"," +
     "\"messageFlow\":\"Opt-in via checkbox at acme.com/checkout.\"," +
     "\"helpKeywords\":\"HELP\",\"optoutKeywords\":\"STOP,CANCEL,END\"," +
+    "\"optoutMessage\":\"You have been unsubscribed from Acme messages. No more messages will be sent. Reply START to re-subscribe.\"," +
     "\"subscriberOptin\":true,\"subscriberOptout\":true,\"subscriberHelp\":true}"
 )).getAsJsonObject();
 System.out.printf("Campaign: %s%n", campaign.get("campaignId").getAsString());
@@ -1767,6 +1845,7 @@ func main() {
 		"sample1": "Acme Sale! 30% off. Shop: acme.com/sale. Reply STOP to opt out.",
 		"messageFlow": "Opt-in via checkbox at acme.com/checkout.",
 		"helpKeywords": "HELP", "optoutKeywords": "STOP,CANCEL,END",
+		"optoutMessage": "You have been unsubscribed from Acme messages. No more messages will be sent. Reply START to re-subscribe.",
 		"subscriberOptin": true, "subscriberOptout": true, "subscriberHelp": true,
 	})
 	fmt.Printf("Campaign: %s\n", campaign["campaignId"])
@@ -2236,20 +2315,22 @@ function selectVariant(string $recipientId, array $variants): string {
 import java.security.MessageDigest;
 import java.util.*;
 
-Map<String, Map<String, Object>> variants = Map.of(
-    "A", Map.of("text", "🔥 Acme Flash Sale! 30%% off today. Shop: %s. Reply STOP to opt out.", "weight", 50),
-    "B", Map.of("text", "Hi %s, enjoy 30%% off. Code SAVE30: %s. Reply STOP to opt out.", "weight", 50)
-);
+// Use a LinkedHashMap (or List) to guarantee stable iteration order.
+// Map.of / HashMap do not guarantee entrySet() order, which would make
+// cumulative-weight selection non-deterministic across JVM runs.
+LinkedHashMap<String, Map<String, Object>> variants = new LinkedHashMap<>();
+variants.put("A", Map.of("text", "🔥 Acme Flash Sale! 30%% off today. Shop: %s. Reply STOP to opt out.", "weight", 50));
+variants.put("B", Map.of("text", "Hi %s, enjoy 30%% off. Code SAVE30: %s. Reply STOP to opt out.", "weight", 50));
 
 String selectVariant(String recipientId) throws Exception {
     byte[] hash = MessageDigest.getInstance("MD5").digest(recipientId.getBytes());
-    int val = Math.abs(java.nio.ByteBuffer.wrap(hash, 0, 4).getInt()) % 100;
+    int val = (java.nio.ByteBuffer.wrap(hash, 0, 4).getInt() & 0x7FFFFFFF) % 100;
     int cumulative = 0;
     for (var entry : variants.entrySet()) {
         cumulative += (int) entry.getValue().get("weight");
         if (val < cumulative) return entry.getKey();
     }
-    return "B";
+    return variants.lastEntry().getKey();
 }
 ```
 
@@ -2261,28 +2342,32 @@ package main
 import (
 	"crypto/md5"
 	"encoding/binary"
-	"math"
 )
 
 type Variant struct {
+	ID     string
 	Text   string
 	Weight int
 }
 
-var variants = map[string]Variant{
-	"A": {Text: "🔥 Acme Flash Sale! 30%% off today. Shop: %s. Reply STOP to opt out.", Weight: 50},
-	"B": {Text: "Hi %s, enjoy 30%% off. Code SAVE30: %s. Reply STOP to opt out.", Weight: 50},
+// Use an ordered slice — ranging over a map does not guarantee iteration
+// order, which would make cumulative-weight selection non-deterministic.
+var variants = []Variant{
+	{ID: "A", Text: "🔥 Acme Flash Sale! 30%% off today. Shop: %s. Reply STOP to opt out.", Weight: 50},
+	{ID: "B", Text: "Hi %s, enjoy 30%% off. Code SAVE30: %s. Reply STOP to opt out.", Weight: 50},
 }
 
 func selectVariant(recipientID string) string {
 	hash := md5.Sum([]byte(recipientID))
-	val := int(math.Abs(float64(int(binary.BigEndian.Uint32(hash[:4]))))) % 100
+	val := int(binary.BigEndian.Uint32(hash[:4])>>1) % 100 // unsigned shift avoids negative
 	cumulative := 0
-	for id, v := range variants {
+	for _, v := range variants {
 		cumulative += v.Weight
-		if val < cumulative { return id }
+		if val < cumulative {
+			return v.ID
+		}
 	}
-	return "B"
+	return variants[len(variants)-1].ID
 }
 ```
 
