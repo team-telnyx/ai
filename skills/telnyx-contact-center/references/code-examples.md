@@ -38,6 +38,21 @@ async function telnyxGet(path) {
   return axios.get(`${TELNYX_API}${path}`, { headers: authHeader });
 }
 
+function findCallForRecording(payload) {
+  const ids = new Set([
+    payload.call_control_id,
+    payload.call_leg_id,
+    payload.leg_id,
+  ].filter(Boolean));
+
+  for (const [custId, entry] of callStore) {
+    if (ids.has(custId) || ids.has(entry.customerLeg) || ids.has(entry.agentLeg) || entry.callSessionId === payload.call_session_id) {
+      return { callId: custId, call: entry };
+    }
+  }
+  return { callId: null, call: null };
+}
+
 // --- Webhook endpoint ---
 app.post('/webhook', (req, res) => {
   // Acknowledge immediately — Telnyx expects fast 200
@@ -54,7 +69,7 @@ app.post('/webhook', (req, res) => {
 });
 
 async function handleEvent(eventType, payload) {
-  let callId = payload.call_control_id;
+  let callId = payload.call_control_id || payload.call_leg_id || payload.leg_id;
 
   switch (eventType) {
     case 'call.initiated': {
@@ -70,6 +85,7 @@ async function handleEvent(eventType, payload) {
         department: null,
         state: 'ringing',
         recording: null,
+        callSessionId: payload.call_session_id,
         from: payload.from,
         to: payload.to,
       });
@@ -107,6 +123,24 @@ async function handleEvent(eventType, payload) {
     case 'call.gather.ended': {
       const call = callStore.get(callId);
       if (!call) return;
+
+      if (call.state === 'voicemail_prompt') {
+        if (payload.digits === '1') {
+          call.state = 'voicemail';
+          await telnyxPost(`/calls/${callId}/actions/record_start`, {
+            format: 'mp3',
+            channels: 'single',
+            transcription: true,
+          });
+          await telnyxPost(`/calls/${callId}/actions/speak`, {
+            payload: 'Please leave your message after the tone. You may hang up when finished.',
+            voice: 'female',
+          });
+        } else {
+          await telnyxPost(`/calls/${callId}/actions/hangup`, {});
+        }
+        return;
+      }
 
       if (payload.status === 'timeout' || !payload.digits) {
         // No DTMF — replay menu
@@ -196,6 +230,7 @@ async function handleEvent(eventType, payload) {
           maximum_digits: 1,
           timeout_millis: 10000,
         });
+        call.state = 'voicemail_prompt';
         return;
       }
 
@@ -207,22 +242,33 @@ async function handleEvent(eventType, payload) {
       }
 
       console.log(`Call hung up: ${payload.hangup_cause} by ${payload.hangup_source}`);
-      // Do NOT delete callStore — FRIC-006: recording event may arrive later
+      if (call.state !== 'bridged' && call.state !== 'voicemail') {
+        setTimeout(() => callStore.delete(callId), 60000);
+      } else {
+        // Keep bridged/voicemail calls briefly so recording/transcription callbacks can update metrics.
+        setTimeout(() => callStore.delete(callId), 10 * 60 * 1000);
+      }
       break;
     }
 
     case 'call.recording.saved': {
       // FRIC-006: Recording arrives after hangup — update retroactively
-      const call = callStore.get(callId);
+      const { call } = findCallForRecording(payload);
       if (call) {
-        call.recording = payload.recording_url;
-        call.transcription = payload.transcription || null;
+        call.recording = payload.recording_url || payload.recording_urls?.mp3 || payload.public_recording_urls?.mp3 || null;
         call.state = 'completed';
-        console.log(`Recording saved: ${payload.recording_url}`);
+        console.log(`Recording saved: ${call.recording}`);
         console.log(`Metrics: dept=${call.department}, duration=${call.duration}s, recording=${!!call.recording}`);
       }
-      // Now safe to clean up
-      setTimeout(() => callStore.delete(callId), 60000);
+      break;
+    }
+
+    case 'call.recording.transcription.saved': {
+      const { call } = findCallForRecording(payload);
+      if (call) {
+        call.transcription = payload.transcription || payload.transcription_text || payload.transcription_url || null;
+        console.log(`Transcription saved for dept=${call.department}`);
+      }
       break;
     }
 
@@ -1338,16 +1384,16 @@ func handleEvent(eventType string, payload map[string]interface{}) {
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
-	// Acknowledge immediately
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Acknowledge after reading the body, then process asynchronously.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]bool{"ok": true})
-
-	// Parse and process asynchronously
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return
-	}
 
 	go func() {
 		var event WebhookEvent
