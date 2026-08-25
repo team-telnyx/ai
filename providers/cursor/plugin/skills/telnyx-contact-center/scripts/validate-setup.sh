@@ -134,7 +134,8 @@ fi
 echo ""
 echo "→ Check 3: Active phone numbers"
 NUMBERS_RESPONSE=$(telnyx_curl --globoff -s -w "\n%{http_code}" "https://api.telnyx.com/v2/phone_numbers?filter%5Bstatus%5D=active" 2>&1) || true
-HTTP_CODE=$(echo "$NUMBERS_RESPONSE" | tail -1)
+NUM_HTTP_CODE=$(echo "$NUMBERS_RESPONSE" | tail -1)
+HTTP_CODE="$NUM_HTTP_CODE"
 BODY=$(echo "$NUMBERS_RESPONSE" | sed '$d')
 
 if [[ "$HTTP_CODE" == "200" ]]; then
@@ -162,7 +163,14 @@ fi
 # --- Check 5: Phone number assigned to CCA (connection_id matches) ---
 echo ""
 echo "→ Check 5: Phone number assigned to CCA"
-if [[ -n "${CCA_ID:-}" ]] && [[ -n "${NUMBERS_RESPONSE:-}" ]]; then
+if [[ "${NUM_HTTP_CODE:-}" != "200" ]]; then
+  # Distinguish a failed numbers request from a genuine empty result so we
+  # don't misreport a transport/auth failure as "no number assigned".
+  fail "Cannot verify phone-CCA assignment — phone numbers query failed (HTTP ${NUM_HTTP_CODE:-000})"
+  echo "  Re-run after resolving the API error above (check TELNYX_API_KEY and connectivity)"
+elif [[ -z "${CCA_ID:-}" ]]; then
+  warn "Cannot verify phone-CCA assignment (no Call Control Application found — see Check 4)"
+else
   NUM_BODY=$(echo "$NUMBERS_RESPONSE" | sed '$d')
   # Check if any number's connection_id matches the CCA ID
   MATCHING=$(echo "$NUM_BODY" | jq -r --arg cca "$CCA_ID" '.data[] | select(.connection_id == $cca) | .phone_number' 2>/dev/null | head -1)
@@ -179,8 +187,6 @@ if [[ -n "${CCA_ID:-}" ]] && [[ -n "${NUMBERS_RESPONSE:-}" ]]; then
       echo "  Assign with: PATCH /v2/phone_numbers/{id}/voice with connection_id=$CCA_ID"
     fi
   fi
-else
-  warn "Cannot verify phone-CCA assignment (missing CCA or numbers)"
 fi
 
 # --- Check 6: Outbound Voice Profile assigned to CCA ---

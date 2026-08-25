@@ -1370,6 +1370,9 @@ func handleEvent(eventType string, payload map[string]interface{}) {
 		storeMutex.Lock()
 		call.Department = dept.Name
 		call.State = "dialing_agent"
+		// Capture the customer leg number under the lock so the dial
+		// goroutine does not read shared *CallState without synchronization.
+		customerFrom := call.To
 		storeMutex.Unlock()
 
 		// FRIC-004: Build state before dialing
@@ -1377,7 +1380,7 @@ func handleEvent(eventType string, payload map[string]interface{}) {
 			res, err := telnyxPost("/calls", map[string]interface{}{
 				"connection_id": os.Getenv(ccaID),
 				"to":           dept.AgentNumber,
-				"from":          call.To,
+				"from":          customerFrom,
 				"timeout_secs":  30,
 			})
 			if err != nil {
