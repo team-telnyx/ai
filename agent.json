@@ -210,7 +210,7 @@
     "version": "2.0.0",
     "bin": "telnyx",
     "install": "npm install -g @telnyx/cli",
-    "repo": "https://github.com/team-telnyx/telnyx-cli",
+    "docs": "https://www.npmjs.com/package/@telnyx/cli",
     "global_flags": ["--json", "-o json|table|csv", "-v", "-p <profile>", "--timeout <seconds>"],
     "commands": [
       "auth", "profile", "number", "message", "billing", "call", "debugger",
@@ -221,7 +221,7 @@
       "porting-order", "conference", "assistant", "verify-profile",
       "iot-package", "iot-coverage"
     ],
-    "note": "Per-resource CRUD over the Telnyx REST API. Run `telnyx resources` to list every resource and `telnyx <command> --help` for subcommands. The former @telnyx/api-cli package is deprecated; use @telnyx/cli."
+    "note": "Per-resource CRUD over the Telnyx REST API. Run `telnyx resources` to list every resource and `telnyx <command> --help` for subcommands. The former @telnyx/api-cli package is deprecated; use @telnyx/cli. Distinct from the Go platform CLI at https://github.com/team-telnyx/telnyx-cli, which uses plural-resource syntax — the commands listed here are the npm package's."
   },
 
   "quickstart": {
