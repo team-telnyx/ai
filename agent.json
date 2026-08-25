@@ -152,7 +152,7 @@
       "name": "10DLC Registration",
       "description": "Register brands and campaigns for US A2P messaging compliance.",
       "guide": "/guides/10dlc-registration.md",
-      "cli": "telnyx-agent setup-10dlc",
+      "cli": "telnyx-agent setup-10dlc --phone +15551234567 --email compliance@example.com",
       "api": "POST /v2/10dlc/brand",
       "docs": "https://developers.telnyx.com/docs/messaging/10dlc",
       "requires": []
@@ -193,7 +193,7 @@
     "bin": "telnyx-agent",
     "install": "npm install -g @telnyx/agent-cli",
     "repo": "https://github.com/team-telnyx/ai/tree/main/cli",
-    "description": "Agent-friendly CLI: composite setup commands that take you from zero to a working capability in one call. Idempotent by default, --json everywhere.",
+    "description": "Agent-friendly CLI: composite setup commands that take you from zero to a working capability in one call. --json everywhere. setup-sms, setup-voice, and setup-verify reuse previously provisioned resources unless --force; setup-ai, setup-10dlc, and setup-porting create new resources on each run.",
     "self_describe": "telnyx-agent capabilities --json",
     "highlights": [
       "telnyx-agent status",
@@ -202,7 +202,7 @@
       "telnyx-agent setup-ai --json",
       "telnyx-agent setup-porting --phone-numbers +13125550001 --customer-name 'Acme Corp'"
     ],
-    "note": "Run `telnyx-agent capabilities --json` for the authoritative, machine-readable command list."
+    "note": "Run `telnyx-agent capabilities --json` for a machine-readable catalog of API capabilities and selected composite commands (a curated catalog, not the complete command inventory — `telnyx-agent --help` lists every command)."
   },
 
   "cli": {
