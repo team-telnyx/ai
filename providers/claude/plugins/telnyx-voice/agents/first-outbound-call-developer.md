@@ -118,6 +118,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
   -d '{
     "application_name": "My First App",
     "webhook_event_url": "https://your-server.com/webhooks/telnyx",
+    "webhook_api_version": "2",
     "active": true,
     "first_command_timeout": true,
     "first_command_timeout_secs": 30
@@ -247,15 +248,21 @@ Present a summary table of all created resources:
 **Ask:** "What number should we call? (E.164 format: +1XXXXXXXXXX) Should we override the webhook URL for this call?"
 
 ```bash
+CALL_PAYLOAD=$(jq -n \
+  --arg app "$APP_ID" \
+  --arg to "$TO_NUMBER" \
+  --arg from "$MY_NUMBER" \
+  --arg webhook "${WEBHOOK_URL:-}" \
+  '{
+    connection_id: $app,
+    to: $to,
+    from: $from,
+    from_display_name: "Test Call"
+  } + (if $webhook == "" then {} else {webhook_url: $webhook} end)')
+
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
   -H "Content-Type: application/json" \
-  -d "{
-    \"connection_id\": \"$APP_ID\",
-    \"to\": \"$TO_NUMBER\",
-    \"from\": \"$MY_NUMBER\",
-    \"from_display_name\": \"Test Call\",
-    \"webhook_url\": \"$WEBHOOK_URL\"
-  }" \
+  -d "$CALL_PAYLOAD" \
   "https://api.telnyx.com/v2/calls"
 ```
 

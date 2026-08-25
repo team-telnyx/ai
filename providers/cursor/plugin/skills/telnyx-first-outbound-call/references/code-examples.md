@@ -5,10 +5,10 @@
 ### Python
 
 ```python
-import telnyx
 import os
+from telnyx import Telnyx
 
-client = telnyx.TelnyxClient(api_key=os.environ["TELNYX_API_KEY"])
+client = Telnyx(api_key=os.environ["TELNYX_API_KEY"])
 
 # Make an outbound call
 response = client.calls.dial(
@@ -17,7 +17,7 @@ response = client.calls.dial(
     from_=os.environ["MY_NUMBER"],  # Your Telnyx number
 )
 
-call = response
+call = response.data
 
 print(f"Call initiated!")
 print(f"  Call Control ID: {call.call_control_id}")

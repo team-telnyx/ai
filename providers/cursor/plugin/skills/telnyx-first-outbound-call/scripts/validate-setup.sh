@@ -74,7 +74,7 @@ echo ""
 
 # ─── Check 2: Call Control Applications ───
 echo "[2/4] Call Control Applications..."
-CC_RESP=$(curl -s -g -H "Authorization: Bearer $TELNYX_API_KEY" \
+CC_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
   "https://api.telnyx.com/v2/call_control_applications?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 APP_COUNT=$(echo "$CC_RESP" | jq '.data | length' 2>/dev/null || echo "0")
@@ -92,6 +92,9 @@ else
     pass "$APPS_WITH_OVP app(s) active with OVP linked"
     echo "       Checking nested field: .outbound.outbound_voice_profile_id"
     echo "$CC_RESP" | jq -r '.data[] | select(.active == true and .outbound.outbound_voice_profile_id != null and .outbound.outbound_voice_profile_id != "") | "       → \(.application_name) (ID: \(.id)) — OVP: \(.outbound.outbound_voice_profile_id)"'
+  else
+    fail "No active Call Control Application has an OVP linked" \
+      "Link an OVP to your app: see SKILL.md Step 2"
   fi
 
   if [ "$APPS_NO_OVP" -gt 0 ]; then
@@ -103,7 +106,7 @@ echo ""
 
 # ─── Check 3: Outbound Voice Profiles ───
 echo "[3/4] Outbound Voice Profiles..."
-OVP_RESP=$(curl -s -g -H "Authorization: Bearer $TELNYX_API_KEY" \
+OVP_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
   "https://api.telnyx.com/v2/outbound_voice_profiles?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 OVP_COUNT=$(echo "$OVP_RESP" | jq '.data | length' 2>/dev/null || echo "0")
@@ -132,7 +135,7 @@ echo ""
 
 # ─── Check 4: Phone Numbers Assigned to Applications ───
 echo "[4/4] Phone Numbers..."
-NUM_RESP=$(curl -s -g -H "Authorization: Bearer $TELNYX_API_KEY" \
+NUM_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
   "https://api.telnyx.com/v2/phone_numbers?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 NUM_COUNT=$(echo "$NUM_RESP" | jq '.data | length' 2>/dev/null || echo "0")
@@ -151,7 +154,7 @@ else
     # Cross-check that the assigned number's connection_id matches one of the OVP-linked app IDs
     OVP_APP_IDS=$(echo "$CC_RESP" | jq -r '[.data[] | select(.active == true and .outbound.outbound_voice_profile_id != null and .outbound.outbound_voice_profile_id != "") | .id] | join("|")' 2>/dev/null || echo "")
     if [ -n "$OVP_APP_IDS" ]; then
-      MATCHED=$(echo "$NUM_RESP" | jq --arg ids "$OVP_APP_IDS" '[.data[] | select(.connection_id != null and .connection_id != "" and ($ids | split("|") | index(.connection_id)))] | length' 2>/dev/null || echo "0")
+      MATCHED=$(echo "$NUM_RESP" | jq --arg ids "$OVP_APP_IDS" '[.data[] | select(.connection_id != null and .connection_id != "") | .connection_id as $connection_id | select($ids | split("|") | index($connection_id))] | length' 2>/dev/null || echo "0")
       if [ "$MATCHED" -gt 0 ]; then
         pass "$MATCHED number(s) assigned to an OVP-linked app (blueprint-ready)"
         echo "$NUM_RESP" | jq -r '.data[] | select(.connection_id != null and .connection_id != "") | "       → \(.phone_number) → app: \(.connection_name // .connection_id)"'
