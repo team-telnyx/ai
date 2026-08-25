@@ -5,8 +5,16 @@ set -euo pipefail
 # Checks: API key, API reachability, SIMs exist, groups exist, at least one SIM enabled
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
-TELNYX_CURL="${PLUGIN_ROOT}/scripts/telnyx-curl.sh"
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  TELNYX_CURL="${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh"
+elif [ -x "$SCRIPT_DIR/../../../scripts/telnyx-curl.sh" ]; then
+  TELNYX_CURL="$SCRIPT_DIR/../../../scripts/telnyx-curl.sh"
+elif [ -x "$SCRIPT_DIR/../../../providers/claude/plugins/telnyx-platform/scripts/telnyx-curl.sh" ]; then
+  TELNYX_CURL="$SCRIPT_DIR/../../../providers/claude/plugins/telnyx-platform/scripts/telnyx-curl.sh"
+else
+  echo "Error: could not find telnyx-curl.sh. Set CLAUDE_PLUGIN_ROOT to an installed Telnyx plugin root." >&2
+  exit 1
+fi
 API_BASE="https://api.telnyx.com/v2"
 
 PASS=0
@@ -68,15 +76,12 @@ else
 fi
 
 # Check 5: At least one SIM is enabled
-ENABLED_COUNT=0
-if [ "${SIM_COUNT:-0}" -gt 0 ] 2>/dev/null; then
-  ENABLED_COUNT=$(echo "$SIMS_RESPONSE" | python3 -c "
+ENABLED_RESPONSE=$(bash "$TELNYX_CURL" --globoff "${API_BASE}/sim_cards?filter[status]=enabled&page[size]=1" 2>&1) || true
+ENABLED_COUNT=$(echo "$ENABLED_RESPONSE" | python3 -c "
 import json, sys
-data = json.load(sys.stdin)['data']
-enabled = [s for s in data if s.get('status', {}).get('value') == 'enabled']
-print(len(enabled))
+data = json.load(sys.stdin).get('data', [])
+print(len(data))
 " 2>/dev/null || echo "0")
-fi
 
 if [ "${ENABLED_COUNT:-0}" -gt 0 ] 2>/dev/null; then
   check "At least one SIM enabled ($ENABLED_COUNT active)" "true"

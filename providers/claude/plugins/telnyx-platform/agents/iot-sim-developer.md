@@ -273,7 +273,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X PATCH \
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X POST \
   -H "Content-Type: application/json" \
-  -d '{"sim_card_id": "{sim_id}", "threshold": {"amount": 80, "unit": "percent"}}' \
+  -d '{"sim_card_id": "{sim_id}", "threshold": {"amount": "1024", "unit": "MB"}}' \
   "https://api.telnyx.com/v2/sim_card_data_usage_notifications"
 ```
 
@@ -287,14 +287,16 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X POST \
 #### Wireless blocklist (create + assign to group)
 ```bash
 # Create a blocklist
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X POST \
+BLOCKLIST_RESPONSE=$(bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X POST \
   -H "Content-Type: application/json" \
-  -d '{"name": "Block Unwanted Carriers", "mcc_mncs": ["310260"]}' \
-  "https://api.telnyx.com/v2/wireless_blocklists"
+  -d '{"name": "Block Unwanted Carriers", "type": "mcc_mnc", "values": ["310260"]}' \
+  "https://api.telnyx.com/v2/wireless_blocklists")
+WIRELESS_BLOCKLIST_ID=$(echo "$BLOCKLIST_RESPONSE" | jq -r '.data.id')
 
 # Assign blocklist to group
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff -X POST \
   -H "Content-Type: application/json" \
+  -d "{\"wireless_blocklist_id\": \"$WIRELESS_BLOCKLIST_ID\"}" \
   "https://api.telnyx.com/v2/sim_card_groups/{group_id}/actions/set_wireless_blocklist"
 ```
 
