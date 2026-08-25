@@ -23,3 +23,17 @@ if [ -n "${PYPI_TOKEN:-}" ]; then
 else
   uv publish
 fi
+
+# Tag the published version so PyPI releases are traceable to commits.
+# Reached only when uv publish succeeded (set -e aborts on failure).
+PACKAGE_NAME="$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['name'])")"
+VERSION="$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")"
+GIT_TAG="$PACKAGE_NAME@$VERSION"
+if git rev-parse -q --verify "refs/tags/$GIT_TAG" >/dev/null; then
+  echo "Tag $GIT_TAG already exists; skipping tag."
+else
+  git config user.name "github-actions[bot]"
+  git config user.email "github-actions[bot]@users.noreply.github.com"
+  git tag -a "$GIT_TAG" -m "$PACKAGE_NAME $VERSION"
+  git push origin "refs/tags/$GIT_TAG" || echo "WARNING: tag push failed; publish succeeded (tag manually: $GIT_TAG)"
+fi

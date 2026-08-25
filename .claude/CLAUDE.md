@@ -84,6 +84,7 @@ out of sync. CI will catch drift.
 - `inference/` — Telnyx inference docs
 - `guides/` — operational guides
 - `agent.json` — top-level agent manifest
+- `plugin.json` / `mcp.json` — Agent Plugins (agent-plugins.org) manifest: bundles `skills/` + hosted MCP
 - `.claude-plugin/` — Claude Code marketplace metadata
 - `.cursor-plugin/` — Cursor marketplace metadata
 - `gemini-extension.json` — Gemini CLI extension manifest

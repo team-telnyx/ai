@@ -40,6 +40,21 @@ describe("agent.json validity", () => {
       );
     }
   });
+
+  it("keeps canonical RCS discovery synchronized", () => {
+    const rcs = agentJson.capabilities.find((capability: any) => capability.id === "rcs");
+    assert.ok(rcs, "agent.json missing RCS capability");
+    assert.equal(rcs.guide, "/guides/rcs-messaging.md");
+    assert.equal(rcs.api, "POST /v2/messages/rcs");
+    assert.match(rcs.cli, /telnyx-agent rcs-send/);
+
+    const guide = readFileSync(join(GUIDES_DIR, "rcs-messaging.md"), "utf-8");
+    assert.match(guide, /POST \/v2\/messages\/rcs/);
+    assert.match(guide, /GET \/v2\/messaging\/rcs\/capabilities\/\{agent_id\}\/\{phone_number\}/);
+    assert.match(guide, /telnyx-agent rcs-send/);
+    assert.match(guide, /telnyx-agent rcs-capabilities/);
+    assert.match(guide, /skills\/telnyx-messaging-hosted-curl\/SKILL\.md/);
+  });
 });
 
 describe("guide ↔ agent.json parity", () => {
@@ -68,6 +83,29 @@ describe("guide ↔ agent.json parity", () => {
       guideFiles.length,
       guidePathsFromAgent.length,
       `Guide files (${guideFiles.length}) != agent.json guide refs (${guidePathsFromAgent.length})`
+    );
+  });
+});
+
+describe("Verify discovery parity", () => {
+  const verifyCapability = agentJson.capabilities.find((c: any) => c.id === "verify");
+  const verifyGuide = readFileSync(join(GUIDES_DIR, "phone-verification.md"), "utf-8");
+
+  it("advertises WhatsApp with the current endpoint and generated CLI command", () => {
+    assert.ok(verifyCapability, 'agent.json missing the "verify" capability');
+    assert.match(verifyCapability.description, /SMS.*voice call.*flash call.*WhatsApp/i);
+    assert.equal(verifyCapability.api, "POST /v2/verifications/whatsapp");
+    assert.equal(
+      verifyCapability.cli,
+      "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp"
+    );
+
+    assert.match(verifyGuide, /SMS.*voice call.*flash call.*WhatsApp/i);
+    assert.match(verifyGuide, /### Send WhatsApp Verification/);
+    assert.match(verifyGuide, /POST \/v2\/verifications\/whatsapp/);
+    assert.ok(
+      verifyGuide.includes(verifyCapability.cli),
+      "phone verification guide must include the canonical Verify CLI example"
     );
   });
 });

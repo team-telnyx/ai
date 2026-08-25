@@ -43,6 +43,8 @@ if (joined.startsWith("verifications trigger-sms")) {
   console.log(JSON.stringify({ data: { id: "ver_call_456", record_type: "verification", status: "pending" } }));
 } else if (joined.startsWith("verifications trigger-flashcall")) {
   console.log(JSON.stringify({ data: { id: "ver_flash_789", record_type: "verification", status: "pending" } }));
+} else if (joined.startsWith("verifications trigger-whatsapp-verification")) {
+  console.log(JSON.stringify({ data: { id: "ver_whatsapp_012", record_type: "verification", status: "pending" } }));
 } else if (joined.startsWith("verifications:actions verify")) {
   // POST /verifications/{id}/actions/verify returns only phone_number and
   // response_code ("accepted" | "rejected") — no status field.
@@ -147,16 +149,34 @@ describe("verify-send command", () => {
     assert.ok(!call.includes("--custom-code"), "flashcall must not pass --custom-code");
   });
 
-  it("rejects --method whatsapp (not supported by the pinned telnyx CLI)", () => {
+  it("--method whatsapp calls trigger-whatsapp-verification and forwards supported options", () => {
     const fake = setupFakeTelnyx();
-    assert.throws(
-      () => runCli(
-        ["verify-send", "--phone-number", "+13125550001", "--verify-profile-id", "prof_abc",
-         "--method", "whatsapp", "--json"],
-        fake.env,
-      ),
-      /Command failed|exit code|Invalid --method/,
+    const out = runCli(
+      ["verify-send", "--phone-number", "+131****0001", "--verify-profile-id", "prof_abc",
+       "--method", "whatsapp", "--custom-code", "424242", "--timeout-secs", "120", "--json"],
+      fake.env,
     );
+    const data = JSON.parse(out);
+    assert.equal(data.method, "whatsapp");
+    assert.equal(data.verification_id, "ver_whatsapp_012");
+
+    const calls = readLoggedArgs(fake.logPath);
+    assert.equal(calls.length, 1, "verify-send should make exactly one CLI call");
+    const call = calls[0];
+    assert.equal(call.slice(0, 2).join(" "), "verifications trigger-whatsapp-verification");
+    assertFlagValue(call, "--phone-number", "+131****0001");
+    assertFlagValue(call, "--verify-profile-id", "prof_abc");
+    assertFlagValue(call, "--custom-code", "424242");
+    assertFlagValue(call, "--timeout-secs", "120");
+  });
+
+  it("rejects --extension with --method whatsapp", () => {
+    const fake = setupFakeTelnyx();
+    assert.throws(() => runCli(
+      ["verify-send", "--phone-number", "+131****0001", "--verify-profile-id", "prof_abc",
+       "--method", "whatsapp", "--extension", "1234", "--json"],
+      fake.env,
+    ));
   });
 
   it("forwards --custom-code and --timeout-secs when provided (sms)", () => {
@@ -256,6 +276,8 @@ describe("help text", () => {
     assert.ok(out.includes("verify-send"), "help should list verify-send");
     assert.ok(out.includes("verify-check"), "help should list verify-check");
     assert.ok(out.includes("--method"), "help should document --method flag");
+    assert.ok(out.includes("sms, call, flashcall, whatsapp"),
+      "help should list whatsapp as a verify-send method");
     assert.ok(out.includes("--verification-id"), "help should document --verification-id flag");
   });
 
@@ -274,8 +296,7 @@ describe("help text", () => {
     assert.ok(verifyActions.includes("send_verification_sms"));
     assert.ok(verifyActions.includes("send_verification_call"));
     assert.ok(verifyActions.includes("send_verification_flashcall"));
-    assert.ok(!verifyActions.includes("send_verification_whatsapp"),
-      "whatsapp is not supported by the pinned telnyx CLI (0.11.0)");
+    assert.ok(verifyActions.includes("send_verification_whatsapp"));
     assert.ok(verifyActions.includes("verify_code"));
     assert.ok(verifyActions.includes("check_verification_status"));
   });

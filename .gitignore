@@ -39,3 +39,6 @@ Thumbs.db
 
 # MCP configuration with secrets
 .mcp.json
+
+# Local Claude Code worktrees
+.claude/worktrees/

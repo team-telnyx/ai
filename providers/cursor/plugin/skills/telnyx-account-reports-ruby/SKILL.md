@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: account-reports
   language: ruby
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -599,7 +599,7 @@ session_analysis = client.session_analysis.retrieve("182bd5e5-6e1a-4fe4-a799-aa6
 puts(session_analysis)
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
 ## Get Telnyx product usage data (BETA)
 

@@ -13,7 +13,7 @@
  */
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
-import { printStep, printSuccess, printError, printWarning, outputJson, type StepResult } from "../utils/output.ts";
+import { printStep, printSuccess, printError, printWarning, outputJson, failWith, type StepResult } from "../utils/output.ts";
 
 // ─── 10DLC domain constants ──────────────────────────────────────────────────
 
@@ -89,6 +89,37 @@ interface Setup10dlcResult {
   note: string;
   ready: boolean;
   steps: StepResult[];
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function parseCampaignResponse(response: unknown): { id: string; status: string } {
+  const root = response && typeof response === "object"
+    ? response as Record<string, unknown>
+    : {};
+  const data = root.data && typeof root.data === "object"
+    ? root.data as Record<string, unknown>
+    : {};
+  const id = [data.id, data.CampaignID, data.campaignId, root.id, root.CampaignID, root.campaignId]
+    .map(nonEmptyString)
+    .find((value): value is string => value !== undefined);
+
+  if (!id) {
+    throw new Error("Campaign submission response did not include a campaign id");
+  }
+
+  return {
+    id,
+    status: nonEmptyString(data.status)
+      ?? nonEmptyString(data.Status)
+      ?? nonEmptyString(root.status)
+      ?? nonEmptyString(root.Status)
+      ?? "PENDING",
+  };
 }
 
 // ─── Compliance helpers ──────────────────────────────────────────────────────
@@ -209,24 +240,19 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
   const email = flags.email as string;
 
   if (!phone || !email) {
-    printError("--phone and --email are required for 10DLC brand registration.");
-    process.exit(1);
+    failWith("--phone and --email are required for 10DLC brand registration.", jsonOutput);
   }
 
   // ── Validate use case ──
   const usecase = (flags.usecase as string) || "CUSTOMER_CARE";
   if (!VALID_USE_CASES.includes(usecase as (typeof VALID_USE_CASES)[number])) {
-    printError(
-      `Invalid use case '${usecase}'. Valid values: ${VALID_USE_CASES.map((u) => USE_CASE_LABELS[u]).join(", ")}`,
-    );
-    process.exit(1);
+    failWith(`Invalid use case '${usecase}'. Valid values: ${VALID_USE_CASES.map((u) => USE_CASE_LABELS[u]).join(", ")}`, jsonOutput);
   }
 
   // ── Validate opt-in method ──
   const optInMethod = (flags["opt-in-method"] as string) || "web";
   if (!VALID_OPT_IN_METHODS.includes(optInMethod as (typeof VALID_OPT_IN_METHODS)[number])) {
-    printError(`Invalid opt-in method '${optInMethod}'. Valid values: ${VALID_OPT_IN_METHODS.join(", ")}`);
-    process.exit(1);
+    failWith(`Invalid opt-in method '${optInMethod}'. Valid values: ${VALID_OPT_IN_METHODS.join(", ")}`, jsonOutput);
   }
 
   const phoneNumberId = (flags["phone-number-id"] as string) || "";
@@ -260,11 +286,8 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     const flowIssues = lintMessageFlow(messageFlow);
     const blockingFlowIssues = flowIssues.filter((i) => i.severity === "blocking");
     if (blockingFlowIssues.length > 0) {
-      printError("Message flow failed compliance validation (blocking issues):");
-      for (const issue of blockingFlowIssues) {
-        console.error(`  • ${issue.message}`);
-      }
-      process.exit(1);
+      const issues = blockingFlowIssues.map((i) => i.message).join("; ");
+      failWith(`Message flow failed compliance validation: ${issues}`, jsonOutput);
     }
     flowIssues.filter((i) => i.severity === "warning").forEach((i) => warnings.push(i.message));
 
@@ -279,11 +302,8 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
 
     const blockingSamples = sampleIssues.filter((i) => i.severity === "blocking");
     if (blockingSamples.length > 0) {
-      printError("Sample message validation failed (blocking issues):");
-      for (const issue of blockingSamples) {
-        console.error(`  • ${issue.message}`);
-      }
-      process.exit(1);
+      const issues = blockingSamples.map((i) => i.message).join("; ");
+      failWith(`Sample message validation failed: ${issues}`, jsonOutput);
     }
     sampleIssues.filter((i) => i.severity === "warning").forEach((i) => warnings.push(i.message));
 
@@ -322,23 +342,26 @@ export async function setup10dlcCommand(flags: Record<string, string | boolean>)
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 2: Create campaign via CLI
+    // Step 2: Submit campaign via CLI
     const description = (flags.description as string) || "Agent-provisioned campaign for customer communications";
     const step2Start = Date.now();
     try {
       const campaignArgs = [
-        "messaging-10dlc:campaign", "create",
+        "messaging-10dlc:campaign-builder", "submit",
         "--brand-id", brandId,
         "--usecase", usecase,
         "--description", description,
         "--sample1", sample1,
         "--message-flow", messageFlow,
+        "--help-message", helpMsg,
+        "--optout-message", stopMsg,
+        "--optin-message", startMsg,
       ];
       if (sample2) campaignArgs.push("--sample2", sample2);
       const campaignRes = await telnyxCli(campaignArgs);
-      const campaignData = campaignRes.data as Record<string, unknown>;
-      campaignId = String(campaignData.id);
-      campaignStatus = String(campaignData.status ?? "PENDING");
+      const campaign = parseCampaignResponse(campaignRes);
+      campaignId = campaign.id;
+      campaignStatus = campaign.status;
       steps.push({ step: 2, name: "Create campaign", status: "completed", resourceId: campaignId, detail: USE_CASE_LABELS[usecase] ?? usecase, elapsedMs: Date.now() - step2Start });
     } catch (err) {
       steps.push({ step: 2, name: "Create campaign", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step2Start });

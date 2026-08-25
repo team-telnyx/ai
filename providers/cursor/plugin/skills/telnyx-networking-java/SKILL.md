@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: networking
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.89.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.89.0")
 ```
 
 ## Setup
@@ -258,7 +258,6 @@ Optional: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announc
 
 ```java
 import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignment;
-import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateParams;
 import com.telnyx.sdk.models.globalipassignments.GlobalIpAssignmentCreateResponse;
 
 GlobalIpAssignment params = GlobalIpAssignment.builder().build();
@@ -530,7 +529,6 @@ Optional: `created_at` (string), `id` (uuid), `record_type` (string), `updated_a
 
 ```java
 import com.telnyx.sdk.models.networks.NetworkCreate;
-import com.telnyx.sdk.models.networks.NetworkCreateParams;
 import com.telnyx.sdk.models.networks.NetworkCreateResponse;
 
 NetworkCreate params = NetworkCreate.builder()

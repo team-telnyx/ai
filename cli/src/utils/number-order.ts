@@ -16,6 +16,24 @@ export class NumberAlreadyOwnedError extends Error {
   }
 }
 
+/**
+ * Thrown when the number order was PLACED successfully (we have an orderId) but
+ * the follow-up phone-number-ID resolution failed/timed out. The number may
+ * already be purchased (and any profile/connection passed into the order
+ * attached), so callers must NOT roll back that profile/app — doing so would
+ * orphan a paid number and block a later reuse.
+ */
+export class NumberOrderedButUnresolvedError extends Error {
+  readonly phoneNumber: string;
+  readonly orderId: string;
+  constructor(phoneNumber: string, orderId: string) {
+    super(`Number ${phoneNumber} was ordered (order ${orderId}) but its resource ID could not be resolved`);
+    this.name = "NumberOrderedButUnresolvedError";
+    this.phoneNumber = phoneNumber;
+    this.orderId = orderId;
+  }
+}
+
 interface OrderResult {
   phoneNumberId: string;
   orderId: string;
@@ -82,8 +100,15 @@ export async function orderNumber(
     const orderId = String(orderData?.id ?? "");
     const orderStatus = String(orderData?.status ?? "success");
 
-    // Resolve the real phone number resource ID by looking it up via CLI
-    const phoneNumberId = await resolvePhoneNumberId(phoneNumber);
+    // Resolve the real phone number resource ID by looking it up via CLI. If
+    // the order succeeded but this lookup times out, surface a distinct error
+    // so callers know the number was likely bought (don't roll back).
+    let phoneNumberId: string;
+    try {
+      phoneNumberId = await resolvePhoneNumberId(phoneNumber);
+    } catch {
+      throw new NumberOrderedButUnresolvedError(phoneNumber, orderId);
+    }
 
     return { phoneNumberId, orderId, orderStatus };
   } catch (err) {

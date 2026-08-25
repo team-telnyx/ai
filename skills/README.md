@@ -1,10 +1,10 @@
 # Telnyx Agent Skills
 
-Official Agent Skills for building on Telnyx.
+Official Agent Skills for building on Telnyx and managing your Telnyx account.
 
-These skills give coding agents structured, up-to-date context to generate correct, production-ready code without relying on pre-training or fragile doc retrieval.
+These skills give agents structured, up-to-date context to generate correct, production-ready code — and to handle account management like signup and payments — without relying on pre-training or fragile doc retrieval.
 
-They include accurate schemas, SDK patterns, workflows, and API references, so agents can implement Telnyx APIs reliably in real-world applications.
+They include accurate schemas, SDK patterns, workflows, and API references, so agents can build production-grade applications on Telnyx — with account management (signup, funding, payments) covered alongside.
 
 Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.io/specification) and are compatible with coding agents like Claude Code, Cursor, Windsurf, and others.
 
@@ -17,6 +17,7 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Skills CLI installation](#skills-cli-installation)
 - [Claude Code plugins installation](#install-claude-code-plugins)
 - [Telnyx API and SDKs](#available-skills)
+- [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
 - [SMS Marketing Pipeline](#sms-marketing-pipeline)
 - [Twilio Migration](#twilio-migration)
@@ -162,10 +163,13 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 
 | Skill | Description |
 |-------|-------------|
+| `telnyx-email-curl` | Send transactional email, batch sends, scheduled delivery, templates, validation |
+| `telnyx-email-inbound-curl` | Manage inboxes, list/search messages, threads, reply/forward |
+| `telnyx-email-domains-curl` | Manage sending domains, DNS verification, health, domain webhooks |
+| `telnyx-email-suppressions-curl` | Suppression lists, import/export, unsubscribe groups |
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |
-| `telnyx-seti-*` | Space Exploration Telecommunications Infrastructure |
 | `telnyx-oauth-*` | OAuth 2.0 authentication flows |
 
 #### Account
@@ -178,6 +182,19 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | `telnyx-account-notifications-*` | Notification channels and settings |
 | `telnyx-account-reports-*` | Usage reports for billing and analytics |
 <!-- END GENERATED SKILLS_TABLE -->
+
+## Payments
+
+Fund a Telnyx account programmatically — built for agentic payment flows where an AI agent adds account credit on your behalf. No account yet? Agents can sign up programmatically first via the [bot signup skill](https://telnyx.com/agent-signup.md).
+
+Available payment skills:
+
+| Skill | Description |
+|-------|-------------|
+| `telnyx-mpp-payment` | Add account credit via Machine Payment Protocol (HTTP 402) using Stripe Link or Tempo USDC, then verify the transaction and balance |
+| `telnyx-x402-payment` | Fund an account with USDC on Base via the x402 protocol — quoting, EIP-712 signing, and settlement |
+
+> **Note:** These payments move real funds. Both skills include verification steps and safe support-handoff guidance.
 
 ## WebRTC Client SDKs
 
@@ -247,11 +264,11 @@ npx skills add team-telnyx/ai --skill telnyx-twilio-migration --agent <AGENT>
 
 Includes parameter-by-parameter mapping tables, multi-language code examples (Python, Node, Go, Java, Ruby, curl), error code mapping, and migration plan/report templates.
 
-> **Note:** After migrating, install a language plugin (e.g. `telnyx-python`) for deeper SDK examples, and `telnyx-webrtc-client` if building a calling app.
+> **Note:** After migrating, install the product plugins you use (e.g. `telnyx-messaging@telnyx`, `telnyx-voice@telnyx`) for deeper SDK examples, and `telnyx-webrtc@telnyx` if building a calling app.
 
 ## Install Claude Code Plugin
 
-Install the unified Telnyx plugin with Claude Code marketplace:
+Telnyx ships one plugin per product area, so you install only the skills your project needs (see the token-hygiene note above).
 
 **Step 1.** Add the Telnyx marketplace (one-time setup):
 
@@ -259,15 +276,23 @@ Install the unified Telnyx plugin with Claude Code marketplace:
 /plugin marketplace add team-telnyx/ai
 ```
 
-**Step 2.** Install the plugin:
+**Step 2.** Install the plugins you need — pick one or more:
 
 ```bash
-/plugin install telnyx@telnyx
+/plugin install telnyx-messaging@telnyx  # SMS / MMS
+/plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
+/plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
+/plugin install telnyx-email@telnyx      # Email API
+/plugin install telnyx-tts@telnyx        # Text-to-speech
+/plugin install telnyx-stt@telnyx        # Speech-to-text
+/plugin install telnyx-verify@telnyx     # Phone verification / 2FA
+/plugin install telnyx-numbers@telnyx    # Number management, 10DLC, porting
+/plugin install telnyx-webrtc@telnyx     # WebRTC and client SDKs
+/plugin install telnyx-ai@telnyx         # AI inference and assistants
+/plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 
-This installs MCP server access + all skills listed above.
-
-The plugin includes all skills listed above — all languages, WebRTC client SDKs, Twilio migration workflow, and CLI guidance.
+Each plugin bundles that product's skills, and every skill lives in exactly one plugin — install any combination and you'll never load duplicates or waste context. Not sure which you need? See the ["Which plugin do I need?" table](/plugins/README.md#which-plugin-do-i-need). For direct Telnyx API access from your assistant, also add the hosted MCP server (`https://api.telnyx.com/v2/mcp`) — see the [MCP section](/README.md#model-context-protocol-mcp) of the root README.
 
 ## Skill Structure
 
@@ -290,12 +315,12 @@ git clone https://github.com/team-telnyx/ai.git
 mkdir -p .github/skills
 
 # Example:
-cp -r ai/skills/telnyx-python/skills/telnyx-messaging-python .github/skills/
+cp -r ai/skills/telnyx-messaging-python .github/skills/
 ```
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](../.github/CONTRIBUTING.md) for guidelines — in particular the split between auto-generated skills (open an issue) and hand-authored skills (PRs welcome).
 
 ## Support
 

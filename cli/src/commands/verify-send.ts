@@ -5,9 +5,7 @@
  *   - sms       → verifications trigger-sms
  *   - call      → verifications trigger-call
  *   - flashcall → verifications trigger-flashcall
- *
- * (WhatsApp verification requires telnyx-cli >= 0.12.0; the vendored CLI is
- * pinned to 0.11.0 in scripts/postinstall.ts, so it is not offered here yet.)
+ *   - whatsapp  → verifications trigger-whatsapp-verification
  *
  * Returns the verification ID so callers can follow up with `verify-check`.
  */
@@ -15,10 +13,10 @@
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 
-const VALID_METHODS = ["sms", "call", "flashcall"] as const;
+const VALID_METHODS = ["sms", "call", "flashcall", "whatsapp"] as const;
 // flashcall authenticates by calling the number back, so there is no code to
 // pass; the other channels accept an optional self-generated --custom-code.
-const METHODS_WITH_CUSTOM_CODE = ["sms", "call"] as const;
+const METHODS_WITH_CUSTOM_CODE = ["sms", "call", "whatsapp"] as const;
 type VerifyMethod = (typeof VALID_METHODS)[number];
 
 interface VerifySendResult {
@@ -64,7 +62,7 @@ export async function verifySendCommand(flags: Record<string, string | boolean>)
     process.exit(1);
   }
   if (customCode && !(METHODS_WITH_CUSTOM_CODE as readonly string[]).includes(method)) {
-    printError(`--custom-code is not supported for method "${method}" (use sms or call)`);
+    printError(`--custom-code is not supported for method "${method}" (use sms, call, or whatsapp)`);
     process.exit(1);
   }
 
@@ -79,6 +77,9 @@ export async function verifySendCommand(flags: Record<string, string | boolean>)
       break;
     case "flashcall":
       subcommand = ["verifications", "trigger-flashcall"];
+      break;
+    case "whatsapp":
+      subcommand = ["verifications", "trigger-whatsapp-verification"];
       break;
   }
 

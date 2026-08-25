@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: iot
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -481,7 +481,7 @@ Creates a new order for SIM cards.
 const simCardOrder = await client.simCardOrders.create({
   address_id: '1293384261075731499',
   quantity: 23,
-    simCardGroupId: '550e8400-e29b-41d4-a716-446655440000',
+    sim_card_group_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
 console.log(simCardOrder.data);
@@ -803,7 +803,7 @@ Optional: `id` (string), `source_region` (string)
 
 ```javascript
 const migrationSource = await client.storage.migrationSources.create({
-  bucket_name: 'bucket_name',
+  bucket_name: 'my-bucket',
   provider: 'aws',
   provider_auth: {},
 });
@@ -860,8 +860,8 @@ Optional: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at`
 ```javascript
 const migration = await client.storage.migrations.create({
   source_id: '550e8400-e29b-41d4-a716-446655440000',
-  target_bucket_name: 'target_bucket_name',
-  target_region: 'target_region',
+  target_bucket_name: 'my-target-bucket',
+  target_region: 'us-central-1',
 });
 
 console.log(migration.data);
@@ -1019,22 +1019,6 @@ console.log(wirelessBlocklist.data);
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
-## Update a Wireless Blocklist
-
-Update a Wireless Blocklist.
-
-`PATCH /wireless_blocklists`
-
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
-
-```javascript
-const wirelessBlocklist = await client.wirelessBlocklists.update();
-
-console.log(wirelessBlocklist.data);
-```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
-
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
@@ -1043,6 +1027,24 @@ Retrieve information about a Wireless Blocklist.
 
 ```javascript
 const wirelessBlocklist = await client.wirelessBlocklists.retrieve(
+  '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
+);
+
+console.log(wirelessBlocklist.data);
+```
+
+Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+
+## Update a Wireless Blocklist
+
+Update a Wireless Blocklist.
+
+`PATCH /wireless_blocklists/{id}`
+
+Optional: `name` (string), `values` (array[object])
+
+```javascript
+const wirelessBlocklist = await client.wirelessBlocklists.update(
   '6a09cdc3-8948-47f0-aa62-74ac943d6c58',
 );
 

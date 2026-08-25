@@ -118,8 +118,8 @@ Campaign submission is the compliance-critical step that determines whether traf
 telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
   brand_id: "BXXXXXX",
   description: "Two-factor authentication messages",
-  usecase: "2FA"
-    sample_messages: ["Your verification code is {{code}}"],
+  usecase: "2FA",
+    sample1: "Your verification code is {{code}}",
 )
 
 puts(telnyx_campaign_csp)
@@ -147,7 +147,7 @@ Messaging profile assignment is the practical handoff from registration to send-
 
 ```ruby
 response = client.messaging_10dlc.phone_number_assignment_by_profile.assign(
-  messaging_profile_id: "4001767e-ce0f-4cae-9d5f-0d5e636e7809"
+  messaging_profile_id: "4001767e-ce0f-4cae-9d5f-0d5e636e7809",
     campaign_id: "CXXX001",
 )
 
