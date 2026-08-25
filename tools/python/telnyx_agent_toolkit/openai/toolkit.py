@@ -39,27 +39,23 @@ class OpenAIToolkit:
         """Get tool definitions formatted for OpenAI's `tools` parameter."""
         result: list[dict[str, Any]] = []
         for tool_def in self._tools:
-            # Build clean parameter schema
             params = dict(tool_def["parameters"])
-            # Remove non-JSON-Schema keys and normalize
             properties = params.get("properties", {})
 
-            # Clean up properties for OpenAI (remove defaults from schema)
+            # OpenAI rejects property defaults. Preserve every other JSON Schema
+            # keyword, including top-level composition constraints such as anyOf.
             clean_props: dict[str, Any] = {}
             for prop_name, prop_schema in properties.items():
                 clean_prop = {k: v for k, v in prop_schema.items() if k != "default"}
                 clean_props[prop_name] = clean_prop
+            params["properties"] = clean_props
 
             result.append({
                 "type": "function",
                 "function": {
                     "name": tool_def["name"],
                     "description": tool_def["description"],
-                    "parameters": {
-                        "type": "object",
-                        "properties": clean_props,
-                        "required": params.get("required", []),
-                    },
+                    "parameters": params,
                 },
             })
         return result

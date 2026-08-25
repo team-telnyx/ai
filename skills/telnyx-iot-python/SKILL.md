@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: iot
   language: python
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -1011,21 +1011,6 @@ print(wireless_blocklist.data)
 
 Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
-## Update a Wireless Blocklist
-
-Update a Wireless Blocklist.
-
-`PATCH /wireless_blocklists`
-
-Optional: `name` (string), `type` (enum: country, mcc, plmn), `values` (array[object])
-
-```python
-wireless_blocklist = client.wireless_blocklists.update()
-print(wireless_blocklist.data)
-```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
-
 ## Get a Wireless Blocklist
 
 Retrieve information about a Wireless Blocklist.
@@ -1035,6 +1020,23 @@ Retrieve information about a Wireless Blocklist.
 ```python
 wireless_blocklist = client.wireless_blocklists.retrieve(
     "6a09cdc3-8948-47f0-aa62-74ac943d6c58",
+)
+print(wireless_blocklist.data)
+```
+
+Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+
+## Update a Wireless Blocklist
+
+Update a Wireless Blocklist.
+
+`PATCH /wireless_blocklists/{id}`
+
+Optional: `name` (string), `values` (array[object])
+
+```python
+wireless_blocklist = client.wireless_blocklists.update(
+    id="6a09cdc3-8948-47f0-aa62-74ac943d6c58",
 )
 print(wireless_blocklist.data)
 ```

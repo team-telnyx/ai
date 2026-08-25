@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: video
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -306,8 +306,8 @@ Optional: `enable_recording` (boolean), `max_participants` (integer), `unique_na
 
 ```javascript
 const room = await client.rooms.create({
-    uniqueName: 'my-meeting-room',
-    maxParticipants: 10,
+    unique_name: 'my-meeting-room',
+    max_participants: 10,
 });
 
 console.log(room.data);

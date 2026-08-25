@@ -7,8 +7,8 @@ metadata:
   author: telnyx
   product: 10dlc
   language: python
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -143,7 +143,7 @@ telnyx_campaign_csp = client.messaging_10dlc.campaign_builder.submit(
     brand_id="BXXXXXX",
     description="Two-factor authentication messages",
     usecase="2FA",
-    sample_messages=["Your verification code is {{code}}"],
+    sample1="Your verification code is {{code}}",
 )
 print(telnyx_campaign_csp.brand_id)
 ```

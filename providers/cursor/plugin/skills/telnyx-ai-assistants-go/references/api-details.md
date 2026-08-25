@@ -383,6 +383,7 @@ dispat... |
 | `Handoff` | object |  |
 | `Invite` | object |  |
 | `Webhook` | object |  |
+| `ClientSideTool` | object |  |
 | `TimeoutMs` | integer |  |
 
 ### Update Tool — `client.AI.Tools.Update()`
@@ -396,4 +397,5 @@ dispat... |
 | `Handoff` | object |  |
 | `Invite` | object |  |
 | `Webhook` | object |  |
+| `ClientSideTool` | object |  |
 | `TimeoutMs` | integer |  |

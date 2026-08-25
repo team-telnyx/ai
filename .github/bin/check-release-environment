@@ -21,13 +21,13 @@ from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
 print(len(TOOL_DEFINITIONS))
 " 2>/dev/null || echo "?")
 
-TS_COUNT=$(node -e "
-const fs = require('fs');
-const c = fs.readFileSync('tools/typescript/src/shared/constants.ts','utf8');
-const definitions = c.slice(c.indexOf('export const TOOL_DEFINITIONS'));
-const m = definitions.match(/^  [a-z0-9_]+:\s*\{$/gm) || [];
-console.log(m.length);
-" 2>/dev/null || echo "?")
+if ! TS_COUNT=$(cd tools/typescript && npx tsx -e "
+import { TOOL_DEFINITIONS } from './src/shared/constants.ts';
+console.log(Object.keys(TOOL_DEFINITIONS).length);
+"); then
+  echo "Failed to extract the TypeScript tool count. Run 'npm ci' in tools/typescript and retry." >&2
+  exit 1
+fi
 
 if [[ "$PY_COUNT" != "?" && "$TS_COUNT" != "?" && "$PY_COUNT" != "$TS_COUNT" ]]; then
   errors+=("Tool count mismatch: Python=$PY_COUNT TypeScript=$TS_COUNT")

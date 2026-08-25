@@ -557,7 +557,7 @@ Retrieves a full session analysis tree for a given event, including costs, child
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/session_analysis/{record_type}/{event_id}"
 ```
 
-Returns: `completed_at` (date-time), `cost` (object), `created_at` (date-time), `meta` (object), `root` (object), `session_id` (string), `status` (string)
+Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
 ## Get Telnyx product usage data (BETA)
 

@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: storage
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -81,6 +81,8 @@ Uploads an SSL certificate and its matching secret so that you can use Telnyx's 
 `PUT /storage/buckets/{bucketName}/ssl_certificate`
 
 ```javascript
+import fs from 'fs';
+
 const sslCertificate = await client.storage.buckets.sslCertificate.create('');
 
 console.log(sslCertificate.data);

@@ -5,7 +5,7 @@
     "email": "support@telnyx.com"
   },
   "metadata": {
-    "description": "Official Telnyx plugin marketplace for AI coding agents — modular plugins for WhatsApp, Voice, SMS, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services",
+    "description": "Official Telnyx plugin marketplace for AI coding agents — modular plugins for WhatsApp, Voice, SMS, Email, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services",
     "version": "0.4.0"
   },
   "plugins": [
@@ -26,6 +26,12 @@
       "source": "./providers/claude/plugins/telnyx-messaging",
       "description": "Telnyx SMS/MMS — send, schedule, group MMS, delivery webhooks, opt-out handling, messaging profiles",
       "version": "0.4.0"
+    },
+    {
+      "name": "telnyx-email",
+      "source": "./providers/claude/plugins/telnyx-email",
+      "description": "Telnyx Email — send transactional email, manage inboxes, configure sending domains, suppressions, and unsubscribe groups",
+      "version": "0.1.0"
     },
     {
       "name": "telnyx-tts",

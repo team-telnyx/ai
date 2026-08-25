@@ -5,7 +5,7 @@
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -77,7 +77,7 @@ const byPhoneNumbers = await client.verifications.byPhoneNumber.list('+130355512
 console.log(byPhoneNumbers.data);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
 
@@ -109,7 +109,7 @@ const createVerificationResponse = await client.verifications.triggerCall({
 console.log(createVerificationResponse.data);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger Flash call verification
 
@@ -126,7 +126,7 @@ const createVerificationResponse = await client.verifications.triggerFlashcall({
 console.log(createVerificationResponse.data);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
 
@@ -143,7 +143,24 @@ const createVerificationResponse = await client.verifications.triggerSMS({
 console.log(createVerificationResponse.data);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
+
+## Trigger WhatsApp verification
+
+`POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
+
+Optional: `custom_code` (string | null), `timeout_secs` (integer)
+
+```javascript
+const createVerificationResponse = await client.verifications.triggerWhatsappVerification({
+  phone_number: '+13035551234',
+  verify_profile_id: '12ade33a-21c0-473b-b055-b3c836e1c292',
+});
+
+console.log(createVerificationResponse.data);
+```
+
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Retrieve verification
 
@@ -155,7 +172,7 @@ const verification = await client.verifications.retrieve('12ade33a-21c0-473b-b05
 console.log(verification.data);
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
 
@@ -186,7 +203,7 @@ for await (const verifyProfile of client.verifyProfiles.list()) {
 }
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Create a Verify profile
 
@@ -194,7 +211,7 @@ Creates a new Verify profile to associate verifications with.
 
 `POST /verify_profiles` — Required: `name`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `language` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```javascript
 const verifyProfileData = await client.verifyProfiles.create({ name: 'Test Profile' });
@@ -202,7 +219,7 @@ const verifyProfileData = await client.verifyProfiles.create({ name: 'Test Profi
 console.log(verifyProfileData.data);
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Retrieve Verify profile message templates
 
@@ -265,13 +282,13 @@ const verifyProfileData = await client.verifyProfiles.retrieve(
 console.log(verifyProfileData.data);
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `language` (string), `name` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```javascript
 const verifyProfileData = await client.verifyProfiles.update(
@@ -281,7 +298,7 @@ const verifyProfileData = await client.verifyProfiles.update(
 console.log(verifyProfileData.data);
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
 
@@ -295,4 +312,4 @@ const verifyProfileData = await client.verifyProfiles.delete(
 console.log(verifyProfileData.data);
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)

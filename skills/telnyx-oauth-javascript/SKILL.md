@@ -7,7 +7,7 @@ metadata:
   author: telnyx
   product: oauth
   language: javascript
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -17,7 +17,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -127,7 +127,7 @@ Create an OAuth authorization grant
 `POST /oauth/grants` — Required: `allowed`, `consent_token`
 
 ```javascript
-const response = await client.oauth.grants({ allowed: true, consent_token: 'consent_token' });
+const response = await client.oauth.grants({ allowed: true, consent_token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example' });
 
 console.log(response.redirect_uri);
 ```

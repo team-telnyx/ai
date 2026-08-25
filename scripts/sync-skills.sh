@@ -25,6 +25,7 @@ PLUGIN_PATTERNS=(
   "telnyx-ai|telnyx-ai-assistants-,telnyx-ai-inference-|0"
   "telnyx-numbers|telnyx-numbers-,telnyx-10dlc-,telnyx-porting-|0"
   "telnyx-webrtc|telnyx-webrtc-,telnyx-video-|0"
+  "telnyx-email|telnyx-email-|0"
   "telnyx-platform||1"
 )
 

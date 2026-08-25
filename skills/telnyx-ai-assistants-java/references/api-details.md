@@ -383,6 +383,7 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `clientSideTool` | object |  |
 | `timeoutMs` | integer |  |
 
 ### Update Tool — `client.ai().tools().update()`
@@ -396,4 +397,5 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `clientSideTool` | object |  |
 | `timeoutMs` | integer |  |

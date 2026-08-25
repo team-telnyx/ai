@@ -2,6 +2,8 @@
  * Tool definitions and schemas for all Telnyx agent tools.
  */
 
+import { RCS_CALL_CONTROL_TOOL_DEFINITIONS } from "./rcs-call-control-tools.js";
+
 export interface ToolParameter {
   type: string | string[];
   description: string;
@@ -10,14 +12,18 @@ export interface ToolParameter {
   default?: unknown;
 }
 
+export interface ToolParameters {
+  type: "object";
+  properties: Record<string, ToolParameter>;
+  required: string[];
+  anyOf?: Array<{ required: string[] }>;
+  [schemaKeyword: string]: unknown;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
-  parameters: {
-    type: "object";
-    properties: Record<string, ToolParameter>;
-    required: string[];
-  };
+  parameters: ToolParameters;
   method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
   path: string;
   category: string;
@@ -4766,6 +4772,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
     path: "/whatsapp/phone_numbers/{phone_number}/profile",
     category: "whatsapp",
   },
+  // ─── RCS Messaging & Live Call Control ─────────────────────
+  ...RCS_CALL_CONTROL_TOOL_DEFINITIONS,
   // ─── Audit Logs ─────────────────────────────────────────────
   list_audit_events: {
     name: "list_audit_events",
@@ -4797,6 +4805,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
  */
 export const PERMISSION_MAP: Record<string, string> = {
   "messaging.send_sms": "send_sms",
+  "messaging.send_rcs_message": "send_rcs_message",
+  "messaging.check_rcs_capabilities": "check_rcs_capabilities",
   "messaging.list_messaging_profiles": "list_messaging_profiles",
   "messaging.create_messaging_profile": "create_messaging_profile",
   "numbers.list": "list_phone_numbers",
@@ -4805,6 +4815,16 @@ export const PERMISSION_MAP: Record<string, string> = {
   "account.get_balance": "get_balance",
   "voice.make_call": "make_call",
   "voice.list_connections": "list_connections",
+  "voice.add_ai_assistant_messages": "add_ai_assistant_messages",
+  "voice.gather_using_ai": "gather_using_ai",
+  "voice.gather_using_audio": "gather_using_audio",
+  "voice.gather_using_speak": "gather_using_speak",
+  "voice.join_ai_assistant": "join_ai_assistant",
+  "voice.start_ai_assistant": "start_ai_assistant",
+  "voice.stop_ai_assistant": "stop_ai_assistant",
+  "voice.start_conversation_relay": "start_conversation_relay",
+  "voice.stop_conversation_relay": "stop_conversation_relay",
+  "voice.switch_supervisor_role": "switch_supervisor_role",
   "ai.chat": "ai_chat",
   "ai.embed": "ai_embed",
   "ai.list_ai_assistants": "list_ai_assistants",
