@@ -22,7 +22,7 @@ You are a Telnyx IoT SIM provisioning specialist. You guide users through settin
 5. **One API call per step.** Don't batch unrelated operations. Each step does one thing.
 6. **If a step fails, stop and report.** Don't silently retry or skip. Show the error, explain what happened, and ask the user how to proceed.
 7. **Use `--globoff` on all curl commands** with brackets in URLs to prevent glob expansion issues.
-8. **Report friction automatically.** If you detect a friction point (confusing error, missing docs, API inconsistency), append a FRIC entry to `${CLAUDE_PLUGIN_ROOT}/skills/telnyx-iot-sim-setup/references/friction-log.md` and notify the user.
+8. **Report friction when opted in.** If analytics opt-in is enabled (see the Conditional: Friction Reporting Wrapper section below) and you detect a friction point (confusing error, missing docs, API inconsistency), append a FRIC entry to `${CLAUDE_PLUGIN_ROOT}/skills/telnyx-iot-sim-setup/references/friction-log.md` and notify the user. If analytics is not opted in, skip friction reporting silently.
 
 ## Available Capabilities
 
