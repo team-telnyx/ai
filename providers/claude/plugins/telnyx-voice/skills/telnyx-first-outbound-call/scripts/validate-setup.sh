@@ -24,6 +24,12 @@ PASS=0
 FAIL=0
 WARN=0
 
+# curl wrapper — avoids leaking the API key in `ps` argv.
+# Passes the key via --config on stdin instead of -H on the command line.
+telnyx_curl() {
+  curl -s --globoff --config - "$@" <<< "header = \"Authorization: Bearer ${TELNYX_API_KEY}\""
+}
+
 pass() { echo -e "  ${GREEN}✅ $1${NC}"; PASS=$((PASS + 1)); }
 fail() { echo -e "  ${RED}❌ $1${NC}"; echo -e "       Fix: $2"; FAIL=$((FAIL + 1)); }
 warn() { echo -e "  ${YELLOW}⚠️  $1${NC}"; WARN=$((WARN + 1)); }
@@ -47,8 +53,7 @@ echo -e "  ${GREEN}✅ TELNYX_API_KEY set (${TELNYX_API_KEY:0:8}...)${NC}"
 PASS=$((PASS + 1))
 
 # Test API connectivity
-HTTP_CODE=$(curl -s -o /tmp/validate-foc-balance.json -w "%{http_code}" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
+HTTP_CODE=$(telnyx_curl -o /tmp/validate-foc-balance.json -w "%{http_code}" \
   "https://api.telnyx.com/v2/balance" 2>/dev/null || echo "000")
 
 if [ "$HTTP_CODE" = "200" ]; then
@@ -74,7 +79,7 @@ echo ""
 
 # ─── Check 2: Call Control Applications ───
 echo "[2/4] Call Control Applications..."
-CC_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
+CC_RESP=$(telnyx_curl \
   "https://api.telnyx.com/v2/call_control_applications?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 APP_COUNT=$(echo "$CC_RESP" | jq '.data | length' 2>/dev/null || echo "0")
@@ -106,7 +111,7 @@ echo ""
 
 # ─── Check 3: Outbound Voice Profiles ───
 echo "[3/4] Outbound Voice Profiles..."
-OVP_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
+OVP_RESP=$(telnyx_curl \
   "https://api.telnyx.com/v2/outbound_voice_profiles?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 OVP_COUNT=$(echo "$OVP_RESP" | jq '.data | length' 2>/dev/null || echo "0")
@@ -135,7 +140,7 @@ echo ""
 
 # ─── Check 4: Phone Numbers Assigned to Applications ───
 echo "[4/4] Phone Numbers..."
-NUM_RESP=$(curl -s --globoff -H "Authorization: Bearer $TELNYX_API_KEY" \
+NUM_RESP=$(telnyx_curl \
   "https://api.telnyx.com/v2/phone_numbers?page[size]=50" 2>/dev/null || echo '{"data":[]}')
 
 NUM_COUNT=$(echo "$NUM_RESP" | jq '.data | length' 2>/dev/null || echo "0")

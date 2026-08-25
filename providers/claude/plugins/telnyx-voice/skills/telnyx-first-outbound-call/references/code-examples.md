@@ -401,6 +401,11 @@ async def webhook(request: Request):
 
 ## E2E Smoke Test
 
+> ⚠️ **Cost warning:** this script **purchases a phone number** (a recurring monthly
+> charge) and **places a live outbound call** (per-minute charges). It is opt-in: set
+> `E2E_CONFIRM=1` to run it. By default it also **releases the number** and **deletes the
+> app/OVP** it created on exit (set `E2E_KEEP=1` to keep them).
+
 ```bash
 #!/bin/bash
 # Quick end-to-end test: create app → create OVP → link → buy number → assign → call
@@ -408,6 +413,29 @@ set -euo pipefail
 
 export TELNYX_API_KEY="${TELNYX_API_KEY:?TELNYX_API_KEY not set}"
 TO_NUMBER="${1:?Usage: $0 <to_number>}"
+WEBHOOK_URL="${WEBHOOK_URL:?Set WEBHOOK_URL to your public webhook endpoint}"
+
+if [ "${E2E_CONFIRM:-0}" != "1" ]; then
+  echo "⛔ This test buys a phone number (recurring charge) and places a paid call."
+  echo "   Re-run with E2E_CONFIRM=1 to proceed. Set E2E_KEEP=1 to keep created resources."
+  exit 2
+fi
+
+# Track created resources so we can tear them down on exit
+APP_ID=""; OVP_ID=""; PHONE_NUMBER_ID=""
+cleanup() {
+  if [ "${E2E_KEEP:-0}" = "1" ]; then
+    echo "E2E_KEEP=1 — leaving created resources in place."; return
+  fi
+  echo "Cleaning up created resources..."
+  [ -n "$PHONE_NUMBER_ID" ] && curl -s -X DELETE "https://api.telnyx.com/v2/phone_numbers/$PHONE_NUMBER_ID" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" > /dev/null && echo "  released number $PHONE_NUMBER_ID"
+  [ -n "$APP_ID" ] && curl -s -X DELETE "https://api.telnyx.com/v2/call_control_applications/$APP_ID" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" > /dev/null && echo "  deleted app $APP_ID"
+  [ -n "$OVP_ID" ] && curl -s -X DELETE "https://api.telnyx.com/v2/outbound_voice_profiles/$OVP_ID" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" > /dev/null && echo "  deleted OVP $OVP_ID"
+}
+trap cleanup EXIT
 
 echo "1/5 Creating Call Control Application..."
 APP_ID=$(curl -sf -X POST https://api.telnyx.com/v2/call_control_applications \
