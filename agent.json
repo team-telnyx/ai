@@ -59,7 +59,7 @@
       "id": "ai_inference",
       "name": "AI Inference",
       "description": "LLM chat completions and embeddings via OpenAI-compatible API.",
-      "cli": "telnyx-agent ai-chat --message 'Hello'",
+      "cli": "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"Hello\"}'",
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
       "requires": []
