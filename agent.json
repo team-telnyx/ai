@@ -50,7 +50,7 @@
       "name": "AI Voice Assistants",
       "description": "Deploy AI-powered voice assistants that answer calls with custom personalities and tools.",
       "guide": "/guides/ai-assistants.md",
-      "cli": "telnyx assistant create --name 'Support Bot'",
+      "cli": "telnyx assistant create -d '{\"name\":\"Support Bot\",\"model\":\"meta-llama/Llama-3.3-70B-Instruct\",\"instructions\":\"You are a support bot.\"}'",
       "api": "POST /v2/ai/assistants",
       "docs": "https://developers.telnyx.com/docs/ai/assistants",
       "requires": ["phone_number"]
@@ -59,7 +59,7 @@
       "id": "ai_inference",
       "name": "AI Inference",
       "description": "LLM chat completions and embeddings via OpenAI-compatible API.",
-      "cli": "telnyx ai chat 'Hello'",
+      "cli": "telnyx-agent ai-chat --message 'Hello'",
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
       "requires": []
@@ -97,7 +97,7 @@
       "id": "fax",
       "name": "Fax",
       "description": "Send and receive faxes programmatically.",
-      "cli": "telnyx fax send --to +15551234567 --media-url https://example.com/doc.pdf",
+      "cli": "telnyx fax send --to +15551234567 --from +15551234568 --media https://example.com/doc.pdf",
       "api": "POST /v2/faxes",
       "docs": "https://developers.telnyx.com/docs/fax",
       "requires": ["phone_number"]
@@ -115,7 +115,7 @@
       "id": "storage",
       "name": "Cloud Storage",
       "description": "S3-compatible object storage for media, recordings, and files.",
-      "cli": "telnyx storage bucket create --name my-bucket",
+      "cli": "telnyx bucket create -d '{\"name\":\"my-bucket\"}' --json",
       "api": "POST /v2/storage/buckets",
       "docs": "https://developers.telnyx.com/docs/storage",
       "requires": []
@@ -152,7 +152,7 @@
       "name": "10DLC Registration",
       "description": "Register brands and campaigns for US A2P messaging compliance.",
       "guide": "/guides/10dlc-registration.md",
-      "cli": "telnyx 10dlc wizard",
+      "cli": "telnyx-agent setup-10dlc",
       "api": "POST /v2/10dlc/brand",
       "docs": "https://developers.telnyx.com/docs/messaging/10dlc",
       "requires": []
@@ -228,7 +228,7 @@
     "signup": "curl -s https://telnyx.com/agent-signup.md",
     "signup_guide": "https://telnyx.com/agent-signup.md",
     "install": "npm install -g @telnyx/agent-cli @telnyx/cli",
-    "auth": "export TELNYX_API_KEY=YOUR_KEY  # or: telnyx auth login",
+    "auth": "export TELNYX_API_KEY=YOUR_KEY  # telnyx-agent reads only this env var; 'telnyx auth login' works for telnyx commands only",
     "hello_world": [
       {
         "name": "Zero to sending SMS (one command)",
