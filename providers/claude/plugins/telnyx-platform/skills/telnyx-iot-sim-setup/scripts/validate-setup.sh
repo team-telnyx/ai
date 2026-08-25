@@ -5,16 +5,29 @@ set -euo pipefail
 # Checks: API key, API reachability, SIMs exist, groups exist, at least one SIM enabled
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+
+# Resolve telnyx-curl.sh robustly; fall back to plain curl when unavailable
+TELNYX_CURL=""
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -x "${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh" ]; then
   TELNYX_CURL="${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh"
 elif [ -x "$SCRIPT_DIR/../../../scripts/telnyx-curl.sh" ]; then
   TELNYX_CURL="$SCRIPT_DIR/../../../scripts/telnyx-curl.sh"
 elif [ -x "$SCRIPT_DIR/../../../providers/claude/plugins/telnyx-platform/scripts/telnyx-curl.sh" ]; then
   TELNYX_CURL="$SCRIPT_DIR/../../../providers/claude/plugins/telnyx-platform/scripts/telnyx-curl.sh"
-else
-  echo "Error: could not find telnyx-curl.sh. Set CLAUDE_PLUGIN_ROOT to an installed Telnyx plugin root." >&2
-  exit 1
 fi
+
+# Wrapper: use telnyx-curl.sh if found, otherwise plain curl with auth header
+api_curl() {
+  if [ -n "$TELNYX_CURL" ]; then
+    bash "$TELNYX_CURL" "$@"
+  elif [ -n "${TELNYX_API_KEY:-}" ]; then
+    curl -s -H "Authorization: Bearer ${TELNYX_API_KEY}" "$@"
+  else
+    echo '{"errors":[{"detail":"No API key or telnyx-curl available"}]}'
+    return 1
+  fi
+}
+
 API_BASE="https://api.telnyx.com/v2"
 
 PASS=0
@@ -49,7 +62,7 @@ else
 fi
 
 # Check 2: Can list SIM cards (API reachable + auth works)
-SIMS_RESPONSE=$(bash "$TELNYX_CURL" --globoff "${API_BASE}/sim_cards?page[size]=5" 2>&1) || true
+SIMS_RESPONSE=$(api_curl --globoff "${API_BASE}/sim_cards?page[size]=5" 2>&1) || true
 if echo "$SIMS_RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'data' in d" 2>/dev/null; then
   check "API reachable and authenticated" "true"
   SIM_COUNT=$(echo "$SIMS_RESPONSE" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['data']))" 2>/dev/null || echo "0")
@@ -66,7 +79,7 @@ else
 fi
 
 # Check 4: Can list SIM card groups
-GROUPS_RESPONSE=$(bash "$TELNYX_CURL" --globoff "${API_BASE}/sim_card_groups?page[size]=5" 2>&1) || true
+GROUPS_RESPONSE=$(api_curl --globoff "${API_BASE}/sim_card_groups?page[size]=5" 2>&1) || true
 if echo "$GROUPS_RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'data' in d" 2>/dev/null; then
   GROUP_COUNT=$(echo "$GROUPS_RESPONSE" | python3 -c "import json,sys; print(len(json.load(sys.stdin)['data']))" 2>/dev/null || echo "0")
   check "SIM card groups accessible (${GROUP_COUNT} found)" "true"
@@ -75,12 +88,17 @@ else
   GROUP_COUNT=0
 fi
 
-# Check 5: At least one SIM is enabled
-ENABLED_RESPONSE=$(bash "$TELNYX_CURL" --globoff "${API_BASE}/sim_cards?filter[status]=enabled&page[size]=1" 2>&1) || true
+# Check 5: At least one SIM is enabled (use server-side filter to avoid pagination issues)
+ENABLED_RESPONSE=$(api_curl --globoff "${API_BASE}/sim_cards?filter[status]=enabled&page[size]=1" 2>&1) || true
 ENABLED_COUNT=$(echo "$ENABLED_RESPONSE" | python3 -c "
 import json, sys
-data = json.load(sys.stdin).get('data', [])
-print(len(data))
+resp = json.load(sys.stdin)
+# Use meta.total_results if available, otherwise count the page
+total = resp.get('meta', {}).get('total_results')
+if total is not None:
+    print(total)
+else:
+    print(len(resp.get('data', [])))
 " 2>/dev/null || echo "0")
 
 if [ "${ENABLED_COUNT:-0}" -gt 0 ] 2>/dev/null; then

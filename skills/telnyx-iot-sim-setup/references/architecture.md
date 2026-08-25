@@ -21,8 +21,8 @@ Telnyx Mission Control Portal
 ```mermaid
 graph TD
     A[Register/Purchase SIM] --> B[Create SIM Group]
-    B --> C[Enable SIM or Set Standby]
-    C --> D[Assign SIM to Group]
+    B --> C[Assign SIM to Group]
+    C --> D[Enable SIM or Set Standby]
     D --> E[Configure Device APN]
     E --> F[Verify Connectivity]
     F --> G{Optional Advanced}
@@ -54,7 +54,7 @@ graph TD
 - Per-SIM logs showing registration and data session events
 - `log_type: registration` — SIM attach/detach to carrier network
 - `log_type: data` — data session establishment and teardown
-- Includes `apn`, `ipv4`, `ipv6`, `imei`, `imsi`, `mcc`, `mnc`, `radio_access_technology`
+- Includes `apn`, `ipv4`, `ipv6`, `imei`, `imsi`, `mobile_country_code`, `mobile_network_code`, `radio_access_technology`
 
 ### Multi-IMSI Technology
 - Telnyx SIMs are eUICC with multiple IMSI profiles

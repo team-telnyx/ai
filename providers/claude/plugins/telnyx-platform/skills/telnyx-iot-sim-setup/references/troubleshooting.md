@@ -16,11 +16,11 @@
 **Triage:**
 ```bash
 # Check SIM status
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}"
 
 # Check connectivity logs
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}/wireless_connectivity_logs"
 
 # Check for active incidents
@@ -42,11 +42,11 @@ curl -s "https://status.telnyx.com/api/v2/incidents.json" | python3 -c "import j
 **Triage:**
 ```bash
 # Check data limit on group
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_card_groups/{group_id}"
 
 # Check current billing period consumed data
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}"
 # Look at: data.current_billing_period_consumed_data
 ```
@@ -66,13 +66,14 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
 **Triage:**
 ```bash
 # Pull connectivity logs and look for pattern
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}/wireless_connectivity_logs"
 
-# Check current carrier (MCC/MNC)
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+# Check current carrier (mobile_country_code / mobile_network_code)
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}"
-# Look at: data.current_mcc, data.current_mnc
+# Look at: data.current_mcc, data.current_mnc (SIM object fields)
+# In connectivity logs, the fields are mobile_country_code and mobile_network_code
 ```
 
 ---
@@ -89,11 +90,11 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
 **Triage:**
 ```bash
 # Get activation code
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}/activation_code"
 
 # Check installation status
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}"
 # Look at: data.esim_installation_status
 ```
@@ -112,11 +113,11 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
 **Triage:**
 ```bash
 # Check blocklist action status
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_card_group_actions?filter[sim_card_group_id]={group_id}"
 
 # Verify SIM is in the group
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
+curl -X GET -H "Authorization: Bearer ${TELNYX_API_KEY}" --globoff \
   "https://api.telnyx.com/v2/sim_cards/{sim_id}"
 # Look at: data.sim_card_group_id
 ```
@@ -134,8 +135,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh --globoff \
 | `ipv6` | IPv6 address assigned (if applicable) |
 | `imei` | Device IMEI (confirms which device is using the SIM) |
 | `imsi` | IMSI profile in use (identifies which carrier profile) |
-| `mcc` | Mobile Country Code (e.g., `310` = US, `234` = UK) |
-| `mnc` | Mobile Network Code (identifies specific carrier) |
+| `mobile_country_code` | Mobile Country Code (e.g., `310` = US, `234` = UK) |
+| `mobile_network_code` | Mobile Network Code (identifies specific carrier) |
 | `radio_access_technology` | `LTE`, `3G`, `2G`, etc. |
 | `start_time` / `stop_time` | Session start/end timestamps |
 | `last_seen` | Last activity timestamp |
