@@ -34,7 +34,7 @@ Fund a Telnyx account with USDC on the Base blockchain using the x402 payment pr
 
 ## Step 1: Get a Quote
 
-Request a quote for the USD amount to fund. Minimum $5.00, maximum $10,000.00. Quotes expire after 5 minutes.
+Request a quote for the USD amount to fund. Per-payment minimum and maximum limits apply; they are configurable and may change, and the API's 422 error messages state the current values. Quotes expire after 5 minutes.
 
 ```bash
 curl -s -X POST "https://api.telnyx.com/v2/x402/credit_account/quote" \
@@ -336,8 +336,8 @@ Settlement is nearly instant (~2 seconds on Base L2). Platform credit is applied
 
 | Error Code | HTTP Status | Meaning | Resolution |
 |------------|-------------|---------|------------|
-| `amount_usd must be at least 5.00` | 422 | Below minimum | Use $5.00 or more |
-| `amount_usd must not exceed 10000.00` | 422 | Above maximum | Use $10,000.00 or less |
+| `amount_usd must be at least <min>` | 422 | Below the current minimum | Retry with an amount at or above the minimum the error states |
+| `amount_usd must not exceed <max>` | 422 | Above the current maximum | Retry with an amount at or below the maximum the error states |
 | `insufficient_balance` | 422 | Wallet lacks USDC | Fund the wallet with USDC on Base |
 | `insufficient_funds` | 422 | Wallet lacks USDC (alias) | Fund the wallet with USDC on Base |
 | `insufficient_allowance` | 422 | USDC token allowance insufficient | Approve USDC spending for the facilitator contract |

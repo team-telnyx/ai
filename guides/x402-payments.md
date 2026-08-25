@@ -37,7 +37,7 @@ curl -X POST "https://api.telnyx.com/v2/x402/credit_account" \
 
 **`POST /v2/x402/credit_account/quote`**
 
-Request a quote for the USD amount to fund. Minimum $5.00, maximum $10,000.00. Quotes expire after 5 minutes.
+Request a quote for the USD amount to fund. Per-payment minimum and maximum limits apply; they are configurable and may change, and the API's 422 error messages state the current values. Quotes expire after 5 minutes.
 
 ```bash
 curl -X POST "https://api.telnyx.com/v2/x402/credit_account/quote" \
@@ -280,8 +280,8 @@ print(f"USDC amount: {int(quote['data']['amount_crypto']) / 1_000_000}")
 
 | Error | HTTP Status | Resolution |
 |-------|-------------|------------|
-| `amount_usd must be at least 5.00` | 422 | Minimum is $5.00 |
-| `amount_usd must not exceed 10000.00` | 422 | Maximum is $10,000 |
+| `amount_usd must be at least <min>` | 422 | Retry with the minimum the error states |
+| `amount_usd must not exceed <max>` | 422 | Retry with the maximum the error states |
 | `insufficient_balance` | 422 | Wallet lacks USDC |
 | `expired_authorization` | 400 | Quote expired — get new one |
 | `invalid_signature` | 400 | Verify EIP-712 signing parameters |

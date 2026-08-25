@@ -42,7 +42,7 @@ The first request returns HTTP `402 Payment Required`. This is an expected part 
 - Your Telnyx account must be active and eligible for machine payments.
 - The payment is tied to the account and amount in the challenge. Do not change either after you approve or sign it.
 - Never reuse a Link spend request, Shared Payment Token, Tempo payment credential, or completed challenge.
-- Only cards issued in the United States or Canada are currently accepted for MPP payments through Link.
+- Link accepts eligible cards in supported regions — currently cards issued in the United States or Canada.
 - Never print, commit, or send your API key, Link access token, Shared Payment Token, wallet private key, or `Authorization: Payment` value.
 
 ## Setup
@@ -91,7 +91,7 @@ npx --yes @stripe/link-cli@0.11.0 auth status
 npx --yes @stripe/link-cli@0.11.0 payment-methods list --format json
 ```
 
-Choose a card marked as eligible for agentic payments. Only cards issued in the United States or Canada are currently accepted for MPP payments through Link.
+Choose a card marked as eligible for agentic payments. Link accepts eligible cards in supported regions — currently cards issued in the United States or Canada.
 
 ```sh
 export LINK_PAYMENT_METHOD_ID='<csmrpd-id>'

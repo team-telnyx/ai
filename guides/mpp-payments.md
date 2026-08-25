@@ -9,7 +9,7 @@ This is **authenticated account funding**: every call carries your Telnyx API ke
 - Telnyx API key ([get one free](https://telnyx.com/agent-signup.md)) for the account you want to credit
 - Node.js, npm, and `curl`
 - One of:
-  - **Stripe Link** — an eligible card issued in the United States or Canada, paid via `@stripe/link-cli`
+  - **Stripe Link** — an eligible card in a supported region (currently cards issued in the United States or Canada), paid via `@stripe/link-cli`
   - **Tempo** — a funded mainnet USDC wallet, paid via `mppx`
 - Account must be active and eligible for machine payments (a `403` means it isn't — contact Telnyx Support)
 
@@ -40,7 +40,7 @@ curl -sS -X POST "$MPP_ENDPOINT" \
 ### Pay with Stripe Link
 
 ```bash
-# Sign in and pick a card marked eligible for agentic payments (US/CA-issued only)
+# Sign in and pick a card marked eligible for agentic payments (supported regions — currently US/CA)
 npx --yes @stripe/link-cli@0.11.0 auth login --client-name 'Telnyx MPP payer' --timeout 600
 npx --yes @stripe/link-cli@0.11.0 payment-methods list --format json
 export LINK_PAYMENT_METHOD_ID='<csmrpd-id>'
