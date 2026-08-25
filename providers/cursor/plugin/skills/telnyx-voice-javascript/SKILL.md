@@ -7,8 +7,8 @@ metadata:
   author: telnyx
   product: voice
   language: javascript
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -18,7 +18,7 @@ metadata:
 ## Installation
 
 ```bash
-npm install telnyx
+npm install telnyx@6.74.2
 ```
 
 ## Setup
@@ -95,10 +95,10 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 |-----------|------|----------|-------------|
 | `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
 | `from` | string (E.164) | Yes | The `from` number to be used as the caller id presented to t... |
-| `connectionId` | string (UUID) | Yes | The ID of the Call Control App (formerly ID of the connectio... |
-| `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
-| `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
+| `connection_id` | string (UUID) | Yes | The ID of the Call Control App (formerly ID of the connectio... |
+| `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -127,10 +127,10 @@ Primary inbound call-control command.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
-| `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
 | ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -152,10 +152,10 @@ Common post-answer control path with downstream webhook implications.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `to` | string (E.164) | Yes | The DID or SIP URI to dial out to. |
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
-| `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
 | ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -252,10 +252,10 @@ End a live call from your webhook-driven control flow.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
-| `customHeaders` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `custom_headers` | array[object] | No | Custom headers to be added to the SIP BYE message. |
 
 ```javascript
 const response = await client.calls.actions.hangup('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -274,11 +274,11 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `callControlId` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
-| `videoRoomId` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
+| `call_control_id` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `video_room_id` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
 | ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
@@ -301,9 +301,9 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
-| `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `client_state` | string | No | Use this field to add state to every subsequent webhook. |
+| `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```javascript
 const response = await client.calls.actions.reject('call_control_id', { cause: 'USER_BUSY' });
@@ -322,7 +322,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
+| `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 
 ```javascript
 const response = await client.calls.retrieveStatus('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -346,7 +346,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `connectionId` | string (UUID) | Yes | Telnyx connection id |
+| `connection_id` | string (UUID) | Yes | Telnyx connection id |
 | `page` | object | No | Consolidated page parameter (deepObject style). |
 
 ```javascript
@@ -410,12 +410,12 @@ Before using any operation below, read [the optional-parameters section](referen
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
-| Create a call control application | `client.callControlApplications.create()` | `POST /call_control_applications` | Create or provision an additional resource when the core tasks do not cover this flow. | `applicationName`, `webhookEventUrl` |
+| Create a call control application | `client.callControlApplications.create()` | `POST /call_control_applications` | Create or provision an additional resource when the core tasks do not cover this flow. | `application_name`, `webhook_event_url` |
 | Retrieve a call control application | `client.callControlApplications.retrieve()` | `GET /call_control_applications/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
-| Update a call control application | `client.callControlApplications.update()` | `PATCH /call_control_applications/{id}` | Modify an existing resource without recreating it. | `applicationName`, `webhookEventUrl`, `id` |
+| Update a call control application | `client.callControlApplications.update()` | `PATCH /call_control_applications/{id}` | Modify an existing resource without recreating it. | `application_name`, `webhook_event_url`, `id` |
 | Delete a call control application | `client.callControlApplications.delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
-| SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sipAddress`, `callControlId` |
-| Send SIP info | `client.calls.actions.sendSipInfo()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `contentType`, `body`, `callControlId` |
+| SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
+| Send SIP info | `client.calls.actions.sendSipInfo()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
 
 ### Other Webhook Events
 

@@ -3,63 +3,65 @@
  * Postinstall script — downloads the telnyx CLI (Go binary) for the current platform.
  * Same pattern as esbuild, prisma, turbo.
  */
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, chmodSync } from "node:fs";
 import { join } from "node:path";
+import { compareSemanticVersions, parseTelnyxGoCliVersion } from "../src/semantic-version.ts";
+import {
+  getTelnyxCliRelease,
+  TELNYX_CLI_VERSION,
+  telnyxCliReleaseUrl,
+  vendoredTelnyxCliPath,
+} from "../src/platform-release.ts";
 
-const VERSION = "0.21.0"; // Pin to known working version (adds whatsapp:user-data, conversation windows, and CLI bug fixes)
-
-const PLATFORM_MAP: Record<string, string> = {
-  "darwin-arm64": `telnyx_${VERSION}_macos_arm64.zip`,
-  "darwin-x64": `telnyx_${VERSION}_macos_amd64.zip`,
-  "linux-x64": `telnyx_${VERSION}_linux_amd64.tar.gz`,
-  "linux-arm64": `telnyx_${VERSION}_linux_arm64.tar.gz`,
-  "win32-x64": `telnyx_${VERSION}_windows_amd64.zip`,
-};
-
-/** True when `found` (e.g. [0,21,0]) is >= `want`, comparing major.minor.patch. */
-function isAtLeast(found: number[], want: number[]): boolean {
-  for (let i = 0; i < 3; i++) {
-    if ((found[i] ?? 0) !== (want[i] ?? 0)) return (found[i] ?? 0) > (want[i] ?? 0);
-  }
-  return true;
-}
+const VERSION = TELNYX_CLI_VERSION; // Includes messages whatsapp and the advanced messaging sender actions
 
 async function main() {
-  // Skip if telnyx is already on PATH AND at the required version.
-  // An older CLI on PATH would leave WhatsApp and other commands broken,
-  // so we check the version before skipping the download.
+  const binDir = join(import.meta.dirname || __dirname, "..", "vendor");
+  const binaryPath = vendoredTelnyxCliPath(binDir, process.platform);
+  const vendorExists = existsSync(binaryPath);
+
+  // Runtime prefers the platform-specific vendored executable, so validate it before considering PATH. A
+  // stale vendor must be refreshed even when PATH contains a compatible CLI.
+  const candidate = vendorExists ? binaryPath : "telnyx";
   try {
-    const out = execSync("telnyx --version", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    const installedVersion = out.match(/v?(\d+\.\d+\.\d+)/)?.[1];
+    const out = execFileSync(candidate, ["--version"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const installedVersion = parseTelnyxGoCliVersion(out);
     if (installedVersion) {
-      const [maj, min] = installedVersion.split(".").map(Number);
-      const [reqMaj, reqMin] = VERSION.split(".").map(Number);
-      if (maj > reqMaj || (maj === reqMaj && min >= reqMin)) {
-        console.log(`✓ telnyx CLI ${installedVersion} already installed (>= ${VERSION})`);
+      const comparison = compareSemanticVersions(installedVersion, VERSION);
+      if (comparison !== null && comparison >= 0) {
+        const location = vendorExists ? "vendored" : "on PATH";
+        console.log(`✓ telnyx CLI ${installedVersion} already installed ${location} (>= ${VERSION})`);
         return;
       }
-      console.log(`⚠ telnyx CLI ${installedVersion} found but ${VERSION} required — downloading…`);
+      const location = vendorExists ? "Vendored telnyx CLI" : "telnyx CLI on PATH";
+      console.log(`⚠ ${location} ${installedVersion} found but ${VERSION} required — downloading…`);
     } else {
-      console.log("✓ telnyx CLI already installed");
-      return;
+      const location = vendorExists ? "Vendored telnyx CLI" : "telnyx CLI on PATH";
+      console.log(`⚠ ${location} has an unrecognized version — downloading v${VERSION}…`);
     }
-  } catch {}
+  } catch {
+    if (vendorExists) {
+      console.log(`⚠ Vendored telnyx CLI could not be validated — downloading v${VERSION}…`);
+    }
+  }
 
   const key = `${process.platform}-${process.arch}`;
-  const filename = PLATFORM_MAP[key];
-  if (!filename) {
+  const release = getTelnyxCliRelease(process.platform, process.arch);
+  if (!release) {
     console.warn(
       `⚠ No prebuilt telnyx CLI for ${key}. Install manually: go install github.com/team-telnyx/telnyx-cli/cmd/telnyx@latest`,
     );
     return;
   }
 
-  const binDir = join(import.meta.dirname || __dirname, "..", "vendor");
   mkdirSync(binDir, { recursive: true });
 
-  const url = `https://github.com/team-telnyx/telnyx-cli/releases/download/v${VERSION}/${filename}`;
-  const archivePath = join(binDir, filename);
+  const url = telnyxCliReleaseUrl(release);
+  const archivePath = join(binDir, release.archiveName);
 
   console.log(`Downloading telnyx CLI v${VERSION} for ${key}...`);
 
@@ -67,12 +69,12 @@ async function main() {
   execSync(`curl -fsSL -o "${archivePath}" "${url}"`);
 
   // Extract
-  if (filename.endsWith(".tar.gz")) {
-    execSync(`tar -xzf "${archivePath}" -C "${binDir}" telnyx`, {
+  if (release.archiveName.endsWith(".tar.gz")) {
+    execSync(`tar -xzf "${archivePath}" -C "${binDir}" "${release.executableName}"`, {
       stdio: "inherit",
     });
-  } else if (filename.endsWith(".zip")) {
-    execSync(`unzip -o "${archivePath}" telnyx -d "${binDir}"`, {
+  } else if (release.archiveName.endsWith(".zip")) {
+    execSync(`unzip -o "${archivePath}" "${release.executableName}" -d "${binDir}"`, {
       stdio: "inherit",
     });
   }
@@ -81,7 +83,6 @@ async function main() {
   execSync(`rm -f "${archivePath}"`);
 
   // Make executable
-  const binaryPath = join(binDir, "telnyx");
   if (existsSync(binaryPath)) {
     chmodSync(binaryPath, 0o755);
     console.log(`✓ telnyx CLI v${VERSION} installed to ${binaryPath}`);

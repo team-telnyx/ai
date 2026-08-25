@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.89.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.89.0")
 ```
 
 ## Setup
@@ -75,9 +75,9 @@ Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `n
 
 Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
 
-`POST /texml/Accounts/{account_sid}/Calls` — Required: `To`, `From`, `ApplicationSid`
+`POST /texml/Accounts/{account_sid}/Calls` — Required: `Url`
 
-Optional: `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `CancelPlaybackOnDetectMessageEnd` (boolean), `CancelPlaybackOnMachineDetection` (boolean), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular), `FallbackUrl` (string), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (enum: initiated, ringing, answered, completed), `StatusCallbackMethod` (enum: GET, POST), `SuperviseCallSid` (string), `SupervisingRole` (enum: barge, whisper, monitor), `Texml` (string), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim), `Url` (string), `UrlMethod` (enum: GET, POST)
+Optional: `Texml` (object)
 
 ```java
 import com.telnyx.sdk.models.texml.accounts.calls.CallCallsParams;
@@ -85,9 +85,9 @@ import com.telnyx.sdk.models.texml.accounts.calls.CallCallsResponse;
 
 CallCallsParams params = CallCallsParams.builder()
     .accountSid("550e8400-e29b-41d4-a716-446655440000")
-    .applicationSid("example-app-sid")
-    .from("+13120001234")
-    .to("+13121230000")
+    .params(CallCallsParams.Params.WithUrl.builder()
+        .url("https://www.example.com/texml.xml")
+        .build())
     .build();
 CallCallsResponse response = client.texml().accounts().calls().calls(params);
 ```
@@ -639,6 +639,29 @@ JsonDeleteRecordingTranscriptionSidJsonParams params = JsonDeleteRecordingTransc
     .build();
 client.texml().accounts().transcriptions().json().deleteRecordingTranscriptionSidJson(params);
 ```
+
+## Initiate an outbound AI call
+
+Initiate an outbound AI call with warm-up support. Validates parameters, builds an internal TeXML with an AI Assistant configuration, encodes instructions into client state, and calls the dial API. The Twiml, Texml, and Url parameters are not allowed and will result in a 422 error.
+
+`POST /texml/ai_calls/{connection_id}` — Required: `From`, `To`, `AIAssistantId`
+
+Optional: `AIAssistantDynamicVariables` (object), `AIAssistantVersion` (string), `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `ConversationCallback` (string), `ConversationCallbackMethod` (enum: GET, POST), `ConversationCallbacks` (array[string]), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular, PremiumCallScreening), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionPromptEndTimeout` (integer), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `Passports` (string), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (string), `StatusCallbackMethod` (enum: GET, POST), `StatusCallbacks` (array[string]), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim)
+
+```java
+import com.telnyx.sdk.models.texml.TexmlInitiateAiCallParams;
+import com.telnyx.sdk.models.texml.TexmlInitiateAiCallResponse;
+
+TexmlInitiateAiCallParams params = TexmlInitiateAiCallParams.builder()
+    .connectionId("550e8400-e29b-41d4-a716-446655440000")
+    .aiAssistantId("ai-assistant-id-123")
+    .from("+13120001234")
+    .to("+13121230000")
+    .build();
+TexmlInitiateAiCallResponse response = client.texml().initiateAiCall(params);
+```
+
+Returns: `call_sid` (string), `from` (string), `status` (string), `to` (string)
 
 ## Create a TeXML secret
 

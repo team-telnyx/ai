@@ -257,7 +257,7 @@ Let a messaging profile or number pool choose the sender for you.
 ```ruby
 response = client.messages.send_number_pool(
   messaging_profile_id: "abc85f64-5717-4562-b3fc-2c9600000000",
-  to: "+13125550002"
+  to: "+13125550002",
     text: "Hello from Telnyx!",
 )
 

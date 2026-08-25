@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: messaging-hosted
   language: java
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.36.0</version>
+    <version>6.89.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.36.0")
+implementation("com.telnyx.sdk:telnyx:6.89.0")
 ```
 
 ## Setup
@@ -369,7 +369,6 @@ Submit a new tollfree verification request
 Optional: `ageGatedContent` (boolean), `businessAddr2` (string), `businessRegistrationCountry` (string | null), `businessRegistrationNumber` (string | null), `businessRegistrationType` (string | null), `campaignVerifyAuthorizationToken` (string | null), `doingBusinessAs` (string | null), `entityType` (object), `helpMessageResponse` (string | null), `isvReseller` (string | null), `optInConfirmationResponse` (string | null), `optInKeywords` (string | null), `privacyPolicyURL` (string | null), `termsAndConditionURL` (string | null), `webhookUrl` (string)
 
 ```java
-import com.telnyx.sdk.models.messagingtollfree.verification.requests.RequestCreateParams;
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.TfPhoneNumber;
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.TfVerificationRequest;
 import com.telnyx.sdk.models.messagingtollfree.verification.requests.Url;

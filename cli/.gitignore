@@ -1,1 +1,4 @@
 node_modules/
+
+# Bundled Telnyx Go CLI (fetched by postinstall; never commit the binary)
+vendor/

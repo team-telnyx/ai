@@ -169,51 +169,51 @@
 |-----------|------|-------------|
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Import assistants from external provider — `client.ai.assistants.imports()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `importIds` | array[string] | Optional list of assistant IDs to import from the external provider. |
+| `import_ids` | array[string] | Optional list of assistant IDs to import from the external provider. |
 
 ### Create a new assistant test — `client.ai.assistants.tests.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `description` | string | Optional detailed description of what this test evaluates and its purpose. |
-| `telnyxConversationChannel` | object | The communication channel through which the test will be conducted. |
-| `maxDurationSeconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
-| `testSuite` | string | Optional test suite name to group related tests together. |
+| `telnyx_conversation_channel` | object | The communication channel through which the test will be conducted. |
+| `max_duration_seconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
+| `test_suite` | string | Optional test suite name to group related tests together. |
 
 ### Trigger test suite execution — `client.ai.assistants.tests.testSuites.runs.trigger()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `destinationVersionId` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
+| `destination_version_id` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
 
 ### Update an assistant test — `client.ai.assistants.tests.update()`
 
@@ -221,10 +221,10 @@
 |-----------|------|-------------|
 | `name` | string | Updated name for the assistant test. |
 | `description` | string | Updated description of the test's purpose and evaluation criteria. |
-| `telnyxConversationChannel` | enum (phone_call, web_call, sms_chat, web_chat) |  |
+| `telnyx_conversation_channel` | enum (phone_call, web_call, sms_chat, web_chat) |  |
 | `destination` | string | Updated target destination for test conversations. |
-| `maxDurationSeconds` | integer | Updated maximum test duration in seconds. |
-| `testSuite` | string | Updated test suite assignment for better organization. |
+| `max_duration_seconds` | integer | Updated maximum test duration in seconds. |
+| `test_suite` | string | Updated test suite assignment for better organization. |
 | `instructions` | string | Updated test scenario instructions and objectives. |
 | `rubric` | array[object] | Updated evaluation criteria for assessing assistant performance. |
 
@@ -232,7 +232,7 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `destinationVersionId` | string (UUID) | Optional assistant version ID to use for this test run. |
+| `destination_version_id` | string (UUID) | Optional assistant version ID to use for this test run. |
 
 ### Update an assistant — `client.ai.assistants.update()`
 
@@ -242,32 +242,32 @@
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `versionName` | string | Human-readable name for the assistant version. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
-| `promoteToMain` | boolean | Indicates whether the assistant should be promoted to the main version. |
+| `version_name` | string | Human-readable name for the assistant version. |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
+| `promote_to_main` | boolean | Indicates whether the assistant should be promoted to the main version. |
 
 ### Create Canary Deploy — `client.ai.assistants.canaryDeploys.create()`
 
@@ -292,14 +292,14 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `text` | string |  |
-| `conversationMetadata` | object |  |
-| `shouldCreateConversation` | boolean |  |
+| `conversation_metadata` | object |  |
+| `should_create_conversation` | boolean |  |
 
 ### Enhance Assistant Instructions — `client.ai.assistants.instructions.enhance()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `enhancementPrompt` | object | Optional guidance describing how the instructions should be enhanced. |
+| `enhancement_prompt` | object | Optional guidance describing how the instructions should be enhanced. |
 | `instructions` | object | The instructions to enhance. |
 
 ### Create a scheduled event — `client.ai.assistants.scheduledEvents.create()`
@@ -307,11 +307,11 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `text` | string | Required for sms scheduled events. |
-| `conversationMetadata` | object | Metadata associated with the conversation. |
-| `dynamicVariables` | object | A map of dynamic variable names to values. |
-| `maxRetriesClientErrors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
-| `retryIntervalSecs` | integer |  |
-| `callSettings` | object | Per-call telephony overrides applied when a scheduled phone-call event
+| `conversation_metadata` | object | Metadata associated with the conversation. |
+| `dynamic_variables` | object | A map of dynamic variable names to values. |
+| `max_retries_client_errors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
+| `retry_interval_secs` | integer |  |
+| `call_settings` | object | Per-call telephony overrides applied when a scheduled phone-call event
 dispat... |
 
 ### Test Assistant Tool — `client.ai.assistants.tools.test()`
@@ -319,7 +319,7 @@ dispat... |
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `arguments` | object | Key-value arguments to use for the webhook test |
-| `dynamicVariables` | object | Key-value dynamic variables to use for the webhook test |
+| `dynamic_variables` | object | Key-value dynamic variables to use for the webhook test |
 
 ### Update a specific assistant version — `client.ai.assistants.versions.update()`
 
@@ -329,38 +329,38 @@ dispat... |
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
-| `mcpServers` | array[object] | MCP servers attached to the assistant. |
-| `toolIds` | array[string] | IDs of shared tools to attach to the assistant. |
+| `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
-| `llmApiKeyRef` | string | This is only needed when using third-party inference providers selected by `m... |
-| `externalLlm` | object |  |
-| `fallbackConfig` | object |  |
-| `voiceSettings` | object |  |
+| `llm_api_key_ref` | string | This is only needed when using third-party inference providers selected by `m... |
+| `external_llm` | object |  |
+| `fallback_config` | object |  |
+| `voice_settings` | object |  |
 | `transcription` | object |  |
-| `telephonySettings` | object |  |
-| `messagingSettings` | object |  |
-| `enabledFeatures` | array[object] |  |
-| `insightSettings` | object |  |
-| `privacySettings` | object |  |
-| `dynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
-| `dynamicVariablesWebhookTimeoutMs` | integer | Timeout in milliseconds for the dynamic variables webhook. |
-| `dynamicVariables` | object | Map of dynamic variables and their default values |
-| `widgetSettings` | object | Configuration settings for the assistant's web widget. |
-| `interruptionSettings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
+| `telephony_settings` | object |  |
+| `messaging_settings` | object |  |
+| `enabled_features` | array[object] |  |
+| `insight_settings` | object |  |
+| `privacy_settings` | object |  |
+| `dynamic_variables_webhook_url` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
+| `dynamic_variables_webhook_timeout_ms` | integer | Timeout in milliseconds for the dynamic variables webhook. |
+| `dynamic_variables` | object | Map of dynamic variables and their default values |
+| `widget_settings` | object | Configuration settings for the assistant's web widget. |
+| `interruption_settings` | object | Settings for interruptions and how the assistant decides the user has finishe... |
 | `integrations` | array[object] | Connected integrations attached to the assistant. |
-| `observabilitySettings` | object |  |
+| `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
-| `versionName` | string | Human-readable name for the assistant version. |
-| `postConversationSettings` | object | Configuration for post-conversation processing. |
-| `conversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
+| `version_name` | string | Human-readable name for the assistant version. |
+| `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Create MCP Server — `client.ai.mcpServers.create()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apiKeyRef` | string |  |
-| `allowedTools` | array[string] |  |
+| `api_key_ref` | string |  |
+| `allowed_tools` | array[string] |  |
 
 ### Update MCP Server — `client.ai.mcpServers.update()`
 
@@ -370,9 +370,9 @@ dispat... |
 | `name` | string |  |
 | `type` | string |  |
 | `url` | string (URL) |  |
-| `apiKeyRef` | string |  |
-| `allowedTools` | array[string] |  |
-| `createdAt` | string (date-time) |  |
+| `api_key_ref` | string |  |
+| `allowed_tools` | array[string] |  |
+| `created_at` | string (date-time) |  |
 
 ### Create Tool — `client.ai.tools.create()`
 
@@ -383,17 +383,19 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
-| `timeoutMs` | integer |  |
+| `client_side_tool` | object |  |
+| `timeout_ms` | integer |  |
 
 ### Update Tool — `client.ai.tools.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `type` | string |  |
-| `displayName` | string |  |
+| `display_name` | string |  |
 | `function` | object |  |
 | `retrieval` | object |  |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
-| `timeoutMs` | integer |  |
+| `client_side_tool` | object |  |
+| `timeout_ms` | integer |  |

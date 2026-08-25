@@ -8,8 +8,6 @@ metadata:
   author: telnyx
   product: stt
   language: python
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
 ---
 
 # Telnyx Speech-to-Text - Python

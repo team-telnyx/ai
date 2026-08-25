@@ -22,8 +22,8 @@
     "directory": "tools/mcp-apps/apps/number-intelligence"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^1.7.2",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "dotenv": "^17.4.2"
   }
 }

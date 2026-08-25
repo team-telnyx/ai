@@ -7,8 +7,8 @@ metadata:
   author: telnyx
   product: 10dlc
   language: go
-  generated_by: telnyx-ext-skills-generator
-  profile: northstar-v2
+  generated_by: telnyx-openapi-pipeline
+  contract: v2
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -157,7 +157,7 @@ Campaign submission is the compliance-critical step that determines whether traf
 		BrandID: "BXXXXXX",
 		Description: "Two-factor authentication messages",
 		Usecase: "2FA",
-		SampleMessages: []string{"Your verification code is {{code}}"},
+		Sample1: telnyx.String("Your verification code is {{code}}"),
 	})
 	if err != nil {
 		log.Fatal(err)

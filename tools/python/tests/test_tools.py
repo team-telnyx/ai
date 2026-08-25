@@ -28,8 +28,8 @@ class TestToolDefinitions:
             assert "category" in tool_def, f"{name} missing 'category'"
             assert tool_def["name"] == name
 
-    def test_199_tools_defined(self) -> None:
-        assert len(TOOL_DEFINITIONS) == 199
+    def test_211_tools_defined(self) -> None:
+        assert len(TOOL_DEFINITIONS) == 211
 
     def test_tool_categories(self) -> None:
         categories = {t["category"] for t in TOOL_DEFINITIONS.values()}
