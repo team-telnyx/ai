@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: verify
   language: ruby
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->
@@ -87,7 +87,7 @@ by_phone_numbers = client.verifications.by_phone_number.list("+13035551234")
 puts(by_phone_numbers)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
 
@@ -120,7 +120,7 @@ create_verification_response = client.verifications.trigger_call(
 puts(create_verification_response)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger Flash call verification
 
@@ -137,7 +137,7 @@ create_verification_response = client.verifications.trigger_flashcall(
 puts(create_verification_response)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
 
@@ -154,7 +154,24 @@ create_verification_response = client.verifications.trigger_sms(
 puts(create_verification_response)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
+
+## Trigger WhatsApp verification
+
+`POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
+
+Optional: `custom_code` (string | null), `timeout_secs` (integer)
+
+```ruby
+create_verification_response = client.verifications.trigger_whatsapp_verification(
+  phone_number: "+13035551234",
+  verify_profile_id: "12ade33a-21c0-473b-b055-b3c836e1c292"
+)
+
+puts(create_verification_response)
+```
+
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Retrieve verification
 
@@ -166,7 +183,7 @@ verification = client.verifications.retrieve("12ade33a-21c0-473b-b055-b3c836e1c2
 puts(verification)
 ```
 
-Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall), `updated_at` (string), `verify_profile_id` (uuid)
+Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
 
@@ -194,7 +211,7 @@ page = client.verify_profiles.list
 puts(page)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Create a Verify profile
 
@@ -202,7 +219,7 @@ Creates a new Verify profile to associate verifications with.
 
 `POST /verify_profiles` — Required: `name`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `language` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```ruby
 verify_profile_data = client.verify_profiles.create(name: "Test Profile")
@@ -210,7 +227,7 @@ verify_profile_data = client.verify_profiles.create(name: "Test Profile")
 puts(verify_profile_data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Retrieve Verify profile message templates
 
@@ -269,13 +286,13 @@ verify_profile_data = client.verify_profiles.retrieve("12ade33a-21c0-473b-b055-b
 puts(verify_profile_data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
-Optional: `call` (object), `flashcall` (object), `language` (string), `name` (string), `rcs` (object), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string)
+Optional: `call` (object), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `language` (string), `name` (string), `sms` (object), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ```ruby
 verify_profile_data = client.verify_profiles.update("12ade33a-21c0-473b-b055-b3c836e1c292")
@@ -283,7 +300,7 @@ verify_profile_data = client.verify_profiles.update("12ade33a-21c0-473b-b055-b3c
 puts(verify_profile_data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
 
@@ -295,4 +312,4 @@ verify_profile_data = client.verify_profiles.delete("12ade33a-21c0-473b-b055-b3c
 puts(verify_profile_data)
 ```
 
-Returns: `call` (object), `created_at` (string), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `rcs` (object), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)

@@ -8,7 +8,7 @@ This file is a complement to `README.md` (human-facing) and `.github/CONTRIBUTIN
 
 ## What this repo is
 
-The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, a unified plugin for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, 235+ Agent Skills, and operational guides.
+The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, per-product plugins for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, <!-- SKILL_COUNT -->236<!-- /SKILL_COUNT --> Agent Skills, and operational guides.
 
 ---
 
@@ -48,7 +48,7 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 
 | Path                    | What it contains                                                          |
 | ----------------------- | ------------------------------------------------------------------------- |
-| `skills/`               | Canonical agent skills (SKILL.md files). 235+ skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
+| `skills/`               | Canonical agent skills (SKILL.md files). <!-- SKILL_COUNT -->236<!-- /SKILL_COUNT --> skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
 | `providers/claude/`     | Claude Code plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
 | `providers/cursor/`     | Cursor plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
 | `plugins/opencode/`     | OpenCode plugin (auth + TUI for Telnyx-hosted models).                    |
@@ -62,19 +62,25 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 | `guides/`               | Step-by-step operational guides.                                          |
 | `scripts/sync-skills.sh`| Syncs `skills/` → `providers/{claude,cursor}/plugin/skills/`.             |
 | `agent.json`            | Top-level agent manifest (capabilities, auth, endpoints).                 |
+| `plugin.json`, `mcp.json` | Agent Plugins (agent-plugins.org) manifest bundling `skills/` + the hosted MCP server. |
 | `.claude-plugin/`       | Claude Code marketplace metadata.                                         |
 | `.cursor-plugin/`       | Cursor marketplace metadata.                                              |
 | `gemini-extension.json` | Gemini CLI extension manifest.                                            |
 
 ### Editing skills
 
-`skills/` is the canonical source. After editing any skill, run:
+`skills/` is the canonical source **within this repo** — the `providers/` copies derive from it. But not every skill is editable here. Check the skill's `SKILL.md` frontmatter first:
+
+- **Has a `generated_by:` field** (~90% of skills): the skill is regenerated from the official Telnyx OpenAPI specifications by an automated pipeline, and a daily auto-update PR will overwrite any direct edit. Don't PR changes to these — open an issue describing the problem instead; code-example errors are fixed upstream in the spec.
+- **No `generated_by:` field**: the skill is hand-authored. PRs welcome. After editing, run:
 
 ```bash
 ./scripts/sync-skills.sh
 ```
 
 This propagates changes to `providers/claude/` and `providers/cursor/`. Commit the sync output alongside your skill edits — don't leave them out of sync.
+
+One exception inside hand-authored skills: embedded SDK reference files (`telnyx-twilio-migration/sdk-reference/`, `telnyx-twilio-migration/references/sdk-api-details/`, and `telnyx-webrtc-client-*/references/webrtc-server-api.md`) are pipeline-managed and will also be overwritten — treat those like generated content.
 
 ### Editing `agent.json`
 

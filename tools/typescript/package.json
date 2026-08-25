@@ -1,6 +1,6 @@
 {
   "name": "@telnyx/agent-toolkit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Telnyx Agent Toolkit for TypeScript — tools for OpenAI, Vercel AI SDK, and LangChain.js",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsx tests/integration.test.ts",
+    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -77,7 +77,8 @@
   "devDependencies": {
     "typescript": "^5.4.0",
     "@types/node": "^20.0.0",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "zod": "^4.3.6"
   },
   "engines": {
     "node": ">=18.0.0"

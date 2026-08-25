@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "telnyx-agent-toolkit"
-version = "0.2.0"
+version = "0.3.0"
 description = "Telnyx Agent Toolkit — tools for building AI agents with Telnyx APIs"
 readme = "README.md"
 license = "MIT"

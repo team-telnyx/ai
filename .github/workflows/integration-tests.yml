@@ -21,18 +21,26 @@ jobs:
     name: Check — Skills in sync
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify provider skill directories match source
         run: ./scripts/check-skills-sync.sh
+
+  skill-count-check:
+    name: Check — Skill-count markers current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify SKILL_COUNT markers match on-disk count
+        run: ./scripts/check-skill-count.sh
 
   unit-tests:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Python unit tests
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install Python deps
@@ -40,10 +48,10 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Python unit tests
         working-directory: tools/python
-        run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_x402.py -v
+        run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_langchain_toolkit.py tests/test_crewai_toolkit.py tests/test_shared_schema.py tests/test_x402.py tests/test_rcs_call_control_tools.py -v
 
       # TypeScript compilation
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Install TS SDK deps
@@ -52,6 +60,9 @@ jobs:
       - name: TypeScript SDK compilation
         working-directory: tools/typescript
         run: npx tsc --noEmit
+      - name: TypeScript adapter contract tests
+        working-directory: tools/typescript
+        run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts
       - name: Install CLI deps
         working-directory: cli
         run: npm ci
@@ -65,29 +76,23 @@ jobs:
       # Cross-package parity
       - name: Cross-package parity check
         run: |
-          PY_TOOLS=$(python3 -c "
-          import ast, sys
-          sys.path.insert(0, 'tools/python')
+          PY_TOOLS=$(cd tools/python && python3 -c "
           from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
-          print('\n'.join(sorted(TOOL_DEFINITIONS.keys())))
+          print('\n'.join(sorted(TOOL_DEFINITIONS)))
           ")
-          TS_TOOLS=$(node -e "
-          const fs = require('fs');
-          const content = fs.readFileSync('tools/typescript/src/shared/constants.ts', 'utf8');
-          const toolSection = content.split('TOOL_DEFINITIONS')[1] || '';
-          const names = [];
-          for (const line of toolSection.split('\n')) {
-            const m = line.match(/^  (\w+): \{$/);
-            if (m) names.push(m[1]);
-          }
-          console.log(names.sort().join('\n'));
+          TS_TOOLS=$(cd tools/typescript && npx tsx -e "
+          import { TOOL_DEFINITIONS } from './src/shared/constants.ts';
+          console.log(Object.keys(TOOL_DEFINITIONS).sort().join('\n'));
           ")
           if [ "$PY_TOOLS" != "$TS_TOOLS" ]; then
-            echo "MISMATCH!"
-            diff <(echo "$PY_TOOLS") <(echo "$TS_TOOLS")
+            echo "MISMATCH! Missing from TypeScript:"
+            comm -23 <(printf '%s\n' "$PY_TOOLS") <(printf '%s\n' "$TS_TOOLS")
+            echo "MISMATCH! Missing from Python:"
+            comm -13 <(printf '%s\n' "$PY_TOOLS") <(printf '%s\n' "$TS_TOOLS")
             exit 1
           fi
-          echo "✅ Python and TypeScript SDKs have identical tool sets"
+          TOOL_COUNT=$(printf '%s\n' "$PY_TOOLS" | wc -l | tr -d ' ')
+          echo "✅ Python and TypeScript SDKs have identical tool sets ($TOOL_COUNT tools each)"
 
       # Guide structural tests
       - name: Guide structural tests
@@ -101,11 +106,11 @@ jobs:
     env:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -158,11 +163,11 @@ jobs:
       TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
       RUN_WRITE_TESTS: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 

@@ -8,7 +8,7 @@ metadata:
   author: telnyx
   product: account-access
   language: ruby
-  generated_by: telnyx-ext-skills-generator
+  generated_by: telnyx-openapi-pipeline
 ---
 
 <!-- Auto-generated from Telnyx OpenAPI specs. Do not edit. -->

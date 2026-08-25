@@ -1,7 +1,7 @@
 /**
  * Telnyx API client — ONLY for operations with no CLI equivalent.
  *
- * The following 8 operations have no `telnyx` CLI command and must use direct API calls:
+ * The following 9 operations have no `telnyx` CLI command and must use direct API calls:
  * 1. POST /texml_applications (setup-ai)
  * 2. POST /sim_card_groups (setup-iot)
  * 3. PATCH /sim_cards/:id (setup-iot)
@@ -10,8 +10,19 @@
  * 6. POST /wireguard_peers (setup-wireguard)
  * 7. POST /x402/credit_account/quote (fund-account)
  * 8. POST /x402/credit_account (fund-account)
+ * 9. POST /verify_profiles (setup-verify)
  *
- * All other operations go through the telnyx CLI wrapper (see telnyx-cli.ts).
+ * Additionally, some operations use direct REST due to Go CLI bugs (see commit history):
+ * - POST /text-to-speech/speech (tts — Go CLI does not map --voice to the API body)
+ * - POST /messages (schedule-sms — Go CLI hits nonexistent /messages/schedule endpoint)
+ * - POST /verify_profiles (setup-verify — Go CLI sends no channel settings)
+ * - PATCH /phone_numbers/:id (setup-voice, setup-sms — Go CLI doesn't support --force / --messaging-profile-id)
+ * - POST /call_control_applications (setup-voice — Go CLI creates credential connections, not Call Control Apps)
+ * - GET /outbound_voice_profiles (setup-voice — needed to resolve default outbound profile)
+ *
+ * All other operations go through the telnyx CLI wrapper (see telnyx-cli.ts),
+ * except active-call listing: pinned CLI v0.21.0 generates unsupported numbered
+ * pagination for that cursor endpoint and does not safely encode connection IDs.
  */
 
 import { readFileSync } from "node:fs";
@@ -47,7 +58,7 @@ export class TelnyxClient {
 
   constructor(apiKey?: string, baseUrl?: string, timeout?: number) {
     this.apiKey = apiKey || resolveApiKey();
-    this.baseUrl = (baseUrl ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
+    this.baseUrl = (baseUrl ?? process.env.TELNYX_API_BASE_URL ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
     this.timeout = timeout ?? 30000;
     this.telemetry = new TelemetryReporter();
     this.friction = new FrictionReporter();
@@ -106,7 +117,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("GET", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("GET", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("GET", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("GET", path, httpStatus, error);
@@ -130,7 +142,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("POST", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("POST", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("POST", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("POST", path, httpStatus, error);
@@ -154,7 +167,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("PATCH", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("PATCH", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("PATCH", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("PATCH", path, httpStatus, error);
@@ -177,7 +191,8 @@ export class TelnyxClient {
       const result = await this.handleResponse(res);
       this.reportTelemetry("DELETE", path, Math.round(performance.now() - start), res.status);
       return result;
-    } catch (error) {
+    } catch (rawError) {
+      const error = this.normalizeNetworkError("DELETE", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("DELETE", path, Math.round(performance.now() - start), httpStatus, error);
       this.reportFriction("DELETE", path, httpStatus, error);
@@ -185,6 +200,34 @@ export class TelnyxClient {
     } finally {
       clearTimeout(tid);
     }
+  }
+
+  /**
+   * Turn an opaque low-level fetch failure into an actionable message. Node's
+   * fetch throws a bare `TypeError: fetch failed` with the real reason buried in
+   * `.cause`, which surfaced to newcomers as just "fetch failed". This unwraps
+   * the cause (ECONNREFUSED / ENOTFOUND / abort/timeout) into plain guidance and
+   * leaves already-structured errors (TelnyxAPIError) untouched.
+   */
+  private normalizeNetworkError(method: string, path: string, error: unknown): unknown {
+    if (error instanceof TelnyxAPIError) return error;
+    const url = `${this.baseUrl}${path}`;
+    // AbortController fires on timeout.
+    if (error instanceof Error && error.name === "AbortError") {
+      return new Error(`Request timed out after ${this.timeout}ms: ${method} ${url}. Check your network or increase the timeout.`);
+    }
+    if (error instanceof Error && error.message === "fetch failed") {
+      const cause = (error as any).cause;
+      const code = cause?.code as string | undefined;
+      const hint =
+        code === "ECONNREFUSED" ? "connection refused — is the API base URL correct and reachable?"
+        : code === "ENOTFOUND" ? "DNS lookup failed — check the API host / your internet connection."
+        : code === "ETIMEDOUT" ? "connection timed out — check your network."
+        : code === "CERT_HAS_EXPIRED" || code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE" ? "TLS certificate problem contacting the API."
+        : cause?.message || "could not reach the API.";
+      return new Error(`Network error calling ${method} ${url}: ${hint}${code ? ` (${code})` : ""}`);
+    }
+    return error;
   }
 
   private reportFriction(method: string, path: string, httpStatus: number, error: unknown): void {

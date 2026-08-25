@@ -1,10 +1,16 @@
 /**
  * telnyx-agent schedule-sms — Schedule an SMS for later delivery.
  *
- * Shells out to the Go telnyx CLI `messages schedule` subcommand.
+ * Uses direct REST call: POST /v2/messages with a `send_at` field.
+ * The old Go CLI `messages schedule` subcommand posted to a nonexistent
+ * /v2/messages/schedule endpoint (404). See AIF-332.
+ *
+ * API quirk: the create response echoes `send_at: null` even though
+ * scheduling is in effect — the per-recipient `to[].status` field
+ * correctly reports "scheduled".
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import { TelnyxClient, TelnyxAPIError } from "../client.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
 import { deriveMessageStatus } from "../utils/message-status.ts";
 
@@ -43,21 +49,30 @@ export async function scheduleSmsCommand(flags: Record<string, string | boolean>
     process.exit(1);
   }
 
-  const args: string[] = [
-    "messages", "schedule",
-    "--from", from,
-    "--to", to,
-    "--text", text,
-    "--send-at", sendAt,
-  ];
-  if (messagingProfileId) args.push("--messaging-profile-id", messagingProfileId);
-  if (mediaUrl) args.push("--media-url", mediaUrl);
+  // Validate ISO 8601 — quick sanity check, not a full parser
+  if (isNaN(Date.parse(sendAt))) {
+    printError(`--send-at must be a valid ISO 8601 datetime, got: ${sendAt}`);
+    process.exit(1);
+  }
+
+  const client = new TelnyxClient();
+
+  const body: Record<string, unknown> = {
+    from,
+    to,
+    text,
+    send_at: sendAt,
+  };
+  if (messagingProfileId) body.messaging_profile_id = messagingProfileId;
+  if (mediaUrl) body.media_urls = [mediaUrl];
 
   try {
-    const res = await telnyxCli(args);
-    const data = (res?.data ?? res) as Record<string, unknown>;
+    const res = await client.post("/messages", body);
+    const data = (res.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
     // Delivery state lives on each recipient (data.to[].status), not top-level.
+    // The API quirk: send_at may echo back as null, but to[].status = "scheduled"
+    // confirms the message is scheduled.
     const status = deriveMessageStatus(data, "scheduled");
 
     const result: ScheduleSmsResult = {
@@ -66,7 +81,7 @@ export async function scheduleSmsCommand(flags: Record<string, string | boolean>
       from,
       to,
       send_at: sendAt,
-      scheduled: true,
+      scheduled: status.includes("scheduled"),
     };
 
     if (jsonOutput) {
@@ -91,7 +106,7 @@ export async function scheduleSmsCommand(flags: Record<string, string | boolean>
 }
 
 function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
+  if (err instanceof TelnyxAPIError) return err.detail || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
 }
