@@ -405,15 +405,17 @@ print(f"Type: {carrier_type}, Channel: {channel}")
 
 # 8b: Send verification
 if channel == "sms":
-    verification = telnyx.Verification.sms(
+    verification = client.verifications.trigger_sms(
         phone_number="+13035551234", verify_profile_id="YOUR_VERIFY_PROFILE_ID")
 else:
-    verification = telnyx.Verification.call(
+    verification = client.verifications.trigger_call(
         phone_number="+13035551234", verify_profile_id="YOUR_VERIFY_PROFILE_ID")
 print(f"Verification ID: {verification.data.id}, Status: {verification.data.status}")
 
 # 8c: Verify code
-result = telnyx.Verification.verify(verification_id=verification.data.id, code="123456")
+result = client.verifications.actions.verify(
+    verification_id=verification.data.id,
+    code="123456")
 print("✅ Verified!" if result.data.response_code == "accepted" else "❌ Invalid code")
 ```
 
@@ -427,14 +429,19 @@ const channel = carrierType === 'fixed line' ? 'call' : 'sms';
 console.log(`Type: ${carrierType}, Channel: ${channel}`);
 
 // 8b: Send verification
-const verification = await client.verifications[channel]({
-  phone_number: '+13035551234',
-  verify_profile_id: 'YOUR_VERIFY_PROFILE_ID'
-});
+const verification = channel === 'sms'
+  ? await client.verifications.triggerSMS({
+      phone_number: '+13035551234',
+      verify_profile_id: 'YOUR_VERIFY_PROFILE_ID'
+    })
+  : await client.verifications.triggerCall({
+      phone_number: '+13035551234',
+      verify_profile_id: 'YOUR_VERIFY_PROFILE_ID'
+    });
 console.log(`Verification ID: ${verification.data.id}`);
 
 // 8c: Verify code
-const result = await client.verifications.verify(verification.data.id, { code: '123456' });
+const result = await client.verifications.actions.verify(verification.data.id, { code: '123456' });
 console.log(result.data.response_code === 'accepted' ? '✅ Verified!' : '❌ Invalid code');
 ```
 

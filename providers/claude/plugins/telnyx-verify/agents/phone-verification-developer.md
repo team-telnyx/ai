@@ -139,7 +139,8 @@ If existing config is found, present it to the user and confirm whether to reuse
 **Validate:** Number exists and is active:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  "https://api.telnyx.com/v2/phone_numbers?filter[phone_number]=$PHONE_NUMBER" | jq '.data[0].status'
+  -G "https://api.telnyx.com/v2/phone_numbers" \
+  --data-urlencode "filter[phone_number]=$PHONE_NUMBER" | jq '.data[0].status'
 # Must return "active"
 ```
 
@@ -182,7 +183,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X PATCH \
 **Validate:** Number's messaging profile matches:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  "https://api.telnyx.com/v2/phone_numbers?filter[phone_number]=$PHONE_NUMBER" | jq -r '.data[0].messaging_profile_id'
+  -G "https://api.telnyx.com/v2/phone_numbers" \
+  --data-urlencode "filter[phone_number]=$PHONE_NUMBER" | jq -r '.data[0].messaging_profile_id'
 # Must match $MESSAGING_PROFILE_ID
 ```
 
@@ -289,7 +291,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
 **Validate:** Assignment status is `ASSIGNED`:
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  "https://api.telnyx.com/v2/10dlc/phone_number_campaigns?phoneNumber=$PHONE_NUMBER" | jq '.records[0].assignmentStatus'
+  "https://api.telnyx.com/v2/10dlc/phone_number_campaigns/$PHONE_NUMBER" | jq '.assignmentStatus'
 # Must be "ASSIGNED"
 ```
 
