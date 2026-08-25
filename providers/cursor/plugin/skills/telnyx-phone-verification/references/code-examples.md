@@ -397,8 +397,13 @@ echo "Verify Profile ID: " . $profile->data->id . "\n";
 ### Python (Full flow with routing)
 
 ```python
+from telnyx import Telnyx
+import os
+
+client = Telnyx(api_key=os.environ["TELNYX_API_KEY"])
+
 # 8a: Lookup
-result = telnyx.NumberLookup.retrieve("+13035551234")
+result = client.number_lookup.retrieve("+13035551234")
 carrier_type = result.data.carrier.type if result.data.carrier else "unknown"
 channel = "call" if carrier_type == "fixed line" else "sms"
 print(f"Type: {carrier_type}, Channel: {channel}")

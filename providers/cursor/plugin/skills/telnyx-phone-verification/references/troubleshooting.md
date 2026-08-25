@@ -98,14 +98,13 @@ app.listen(8080, () => console.log('Webhook server running on port 8080'));
 
 ```python
 import time
-import telnyx
 import os
-
-telnyx.api_key = os.environ["TELNYX_API_KEY"]
+from telnyx import Telnyx
 
 class PhoneVerifier:
     def __init__(self, verify_profile_id, max_retries=3,
                  resend_cooldown=60, max_resends=2):
+        self.client = Telnyx(api_key=os.environ["TELNYX_API_KEY"])
         self.verify_profile_id = verify_profile_id
         self.max_retries = max_retries
         self.resend_cooldown = resend_cooldown
@@ -113,7 +112,7 @@ class PhoneVerifier:
     
     def lookup(self, phone_number):
         try:
-            result = telnyx.NumberLookup.retrieve(phone_number)
+            result = self.client.number_lookup.retrieve(phone_number)
             carrier_type = result.data.carrier.type if result.data.carrier else "unknown"
             if carrier_type in ("mobile", "voip", "fixed line or mobile"):
                 return {"channel": "sms", "type": carrier_type}
@@ -130,11 +129,11 @@ class PhoneVerifier:
     def send(self, phone_number, channel="sms"):
         try:
             if channel == "sms":
-                v = telnyx.Verification.sms(
+                v = self.client.verifications.trigger_sms(
                     phone_number=phone_number,
                     verify_profile_id=self.verify_profile_id)
             elif channel == "call":
-                v = telnyx.Verification.call(
+                v = self.client.verifications.trigger_call(
                     phone_number=phone_number,
                     verify_profile_id=self.verify_profile_id)
             else:
@@ -146,7 +145,7 @@ class PhoneVerifier:
     
     def check(self, verification_id, code):
         try:
-            result = telnyx.Verification.verify(
+            result = self.client.verifications.actions.verify(
                 verification_id=verification_id, code=code)
             return {"verified": result.data.response_code == "accepted",
                     "response_code": result.data.response_code}
@@ -220,10 +219,15 @@ class PhoneVerifier {
   
   async send(phoneNumber, channel = 'sms') {
     try {
-      const v = await this.client.verifications[channel]({
-        phone_number: phoneNumber,
-        verify_profile_id: this.verifyProfileId
-      });
+      const v = channel === 'sms'
+        ? await this.client.verifications.triggerSMS({
+            phone_number: phoneNumber,
+            verify_profile_id: this.verifyProfileId
+          })
+        : await this.client.verifications.triggerCall({
+            phone_number: phoneNumber,
+            verify_profile_id: this.verifyProfileId
+          });
       return { success: true, verificationId: v.data.id,
                channel, timeoutSecs: v.data.timeout_secs };
     } catch (e) {
@@ -233,7 +237,7 @@ class PhoneVerifier {
   
   async check(verificationId, code) {
     try {
-      const result = await this.client.verifications.verify(
+      const result = await this.client.verifications.actions.verify(
         verificationId, { code });
       return { verified: result.data.response_code === 'accepted',
                responseCode: result.data.response_code };
