@@ -265,7 +265,7 @@
     "cli": {
       "name": "@telnyx/cli",
       "install": "npm install -g @telnyx/cli",
-      "docs": "https://github.com/team-telnyx/telnyx-cli"
+      "docs": "https://www.npmjs.com/package/@telnyx/cli"
     },
     "agent_cli": {
       "name": "@telnyx/agent-cli",
