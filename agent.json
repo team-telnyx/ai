@@ -213,7 +213,7 @@
     "highlights": [
       "telnyx-agent status",
       "telnyx-agent setup-sms --json",
-      "telnyx-agent setup-voice --json",
+      "telnyx-agent setup-voice --webhook-url https://your-app.example/telnyx-events --json",
       "telnyx-agent setup-porting --phone-numbers +13125550001 --customer-name 'Acme Corp'"
     ],
     "note": "Run `telnyx-agent capabilities --json` for a machine-readable catalog of API capabilities and selected composite commands (a curated catalog, not the complete command inventory — `telnyx-agent --help` lists every command)."
