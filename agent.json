@@ -233,10 +233,11 @@
     "auth": "export TELNYX_API_KEY=YOUR_KEY  # telnyx-agent reads this env var; no login step",
     "hello_world": [
       {
-        "name": "Zero to sending SMS (one command)",
+        "name": "Provision for SMS (one command)",
         "commands": [
           "telnyx-agent setup-sms --json"
-        ]
+        ],
+        "note": "Provisions a messaging profile and number. US A2P delivery additionally requires 10DLC registration (telnyx-agent setup-10dlc — creates a brand/campaign with carrier fees); without it, messages to US numbers can be rejected as not_10dlc_registered."
       },
       {
         "name": "Send an SMS (step by step)",
@@ -245,7 +246,8 @@
           "telnyx-agent search-phone-numbers --country US --json",
           "telnyx-agent buy-phone-number --phone-number +1XXXXXXXXXX --messaging-profile-id PROFILE_ID --json",
           "telnyx-agent send-sms --from +1XXXXXXXXXX --to +15559876543 --text 'Hello from Telnyx!' --json"
-        ]
+        ],
+        "note": "For US A2P traffic, register 10DLC before sending (telnyx-agent setup-10dlc); see the 10dlc capability above."
       },
       {
         "name": "Create an AI assistant",
