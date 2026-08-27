@@ -208,13 +208,12 @@
     "bin": "telnyx-agent",
     "install": "npm install -g @telnyx/agent-cli",
     "repo": "https://github.com/team-telnyx/ai/tree/main/cli",
-    "description": "Agent-friendly CLI: composite setup commands that take you from zero to a working capability in one call. --json everywhere. setup-sms, setup-voice, and setup-verify reuse previously provisioned resources unless --force; setup-ai, setup-10dlc, and setup-porting create new resources on each run.",
+    "description": "Agent-friendly CLI: composite setup commands that take you from zero to a working capability in one call. --json everywhere. setup-sms, setup-voice, and setup-verify reuse previously provisioned resources unless --force; setup-ai, setup-10dlc, and setup-porting create new resources on each run (setup-ai's number-wiring step is broken in v0.4.2 — use create-ai-assistant until fixed).",
     "self_describe": "telnyx-agent capabilities --json",
     "highlights": [
       "telnyx-agent status",
       "telnyx-agent setup-sms --json",
       "telnyx-agent setup-voice --json",
-      "telnyx-agent setup-ai --json",
       "telnyx-agent setup-porting --phone-numbers +13125550001 --customer-name 'Acme Corp'"
     ],
     "note": "Run `telnyx-agent capabilities --json` for a machine-readable catalog of API capabilities and selected composite commands (a curated catalog, not the complete command inventory — `telnyx-agent --help` lists every command)."
@@ -237,12 +236,6 @@
         "name": "Zero to sending SMS (one command)",
         "commands": [
           "telnyx-agent setup-sms --json"
-        ]
-      },
-      {
-        "name": "Zero to AI assistant on a phone number (one command)",
-        "commands": [
-          "telnyx-agent setup-ai --json"
         ]
       },
       {
