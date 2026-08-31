@@ -156,6 +156,7 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | Skill | Description |
 |-------|-------------|
 | `telnyx-iot-*` | IoT SIM cards, eSIMs, data plans |
+| `telnyx-iot-sim-setup` | IoT SIM provisioning flow: register, group, enable, verify connectivity (agent skill) |
 | `telnyx-networking-*` | Private networks, VPN gateways |
 
 #### Other
