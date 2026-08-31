@@ -19,6 +19,7 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Telnyx API and SDKs](#available-skills)
 - [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
+- [Blueprint Agents](#blueprint-agents)
 - [Twilio Migration](#twilio-migration)
 
 ## Installation Quickstart
@@ -212,6 +213,24 @@ These are platform-specific native libraries — separate from the server-side l
 Each skill covers authentication, making/receiving calls, call controls (hold, mute, transfer), push notifications, call quality metrics, and AI Agent integration.
 
 > **Note:** Building a calling app typically requires multiple skills — a server-side plugin (e.g. `telnyx-voice-python`) to create WebRTC credentials and generate login tokens, and `telnyx-webrtc-client-X` for the client-side calling UI.
+
+## Blueprint Agents
+
+Blueprint agents are specialist agents that guide users through building complete solutions on Telnyx — interactively, one step at a time, with validation gates at each step. Each blueprint includes architecture diagrams, code examples, friction logs, troubleshooting guides, and a validation script.
+
+### Contact Center
+
+A specialist agent (`contact-center-developer`) that builds a production-ready inbound contact center with IVR, agent routing (mobile/SIP/WebRTC), call recording, voicemail, and metrics using Telnyx Call Control API.
+
+The agent guides users through 10 interactive steps (0–9) with validation gates at each step. Includes 9 documented friction points, 6-language webhook server examples, and an infrastructure validation script (8 checks).
+
+**Agent:** Invoke with `/agent contact-center-developer` in Claude Code.
+
+**Reference skill:** `telnyx-contact-center` (architecture diagrams, code examples, friction log, troubleshooting, validation script)
+
+**Telnyx Services:** Call Control API · Phone Numbers · SIP Credential Connections · WebRTC · Outbound Voice Profiles · Call Recording · DTMF Gather · Conferencing
+
+**Estimated cost:** ~$1.00/mo phone number + ~$0.01/min outbound calls + ~$0.005/min recording
 
 ## Twilio Migration
 
