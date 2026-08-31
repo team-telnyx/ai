@@ -21,7 +21,7 @@ PLUGIN_PATTERNS=(
   "telnyx-messaging|telnyx-messaging-|0"
   "telnyx-tts|telnyx-tts-|0"
   "telnyx-stt|telnyx-stt-|0"
-  "telnyx-verify|telnyx-verify-|0"
+  "telnyx-verify|telnyx-verify-,telnyx-phone-verification|0"
   "telnyx-ai|telnyx-ai-assistants-,telnyx-ai-inference-|0"
   "telnyx-numbers|telnyx-numbers-,telnyx-10dlc-,telnyx-porting-|0"
   "telnyx-webrtc|telnyx-webrtc-,telnyx-video-|0"

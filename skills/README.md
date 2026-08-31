@@ -19,6 +19,7 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Telnyx API and SDKs](#available-skills)
 - [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
+- [Phone Verification](#phone-verification)
 - [Twilio Migration](#twilio-migration)
 
 ## Installation Quickstart
@@ -212,6 +213,20 @@ These are platform-specific native libraries — separate from the server-side l
 Each skill covers authentication, making/receiving calls, call controls (hold, mute, transfer), push notifications, call quality metrics, and AI Agent integration.
 
 > **Note:** Building a calling app typically requires multiple skills — a server-side plugin (e.g. `telnyx-voice-python`) to create WebRTC credentials and generate login tokens, and `telnyx-webrtc-client-X` for the client-side calling UI.
+
+## Phone Verification
+
+A specialist agent (`phone-verification-developer`) that builds a production-ready phone verification system end-to-end — infrastructure setup (number purchase, messaging profile, 10DLC compliance, verify profile) and runtime OTP verification with intelligent SMS/voice routing based on carrier type.
+
+The agent guides users through 8 interactive steps with validation gates at each step. Includes 11 documented friction points, 6-language SDK reference, and an infrastructure validation script.
+
+**Agent:** Invoke by asking Claude to use the `phone-verification-developer` agent (for example, "use the phone-verification-developer agent to set up phone verification") or `@`-mention it in Claude Code. There is no `/agent` slash command.
+
+**Reference skill:** `telnyx-phone-verification` (architecture diagrams, code examples, friction log, troubleshooting, validation script)
+
+**Telnyx Services:** Verify API · Number Lookup · Global Numbers · Messaging Profiles · 10DLC Registration
+
+**Estimated per-verification cost:** ~$0.015
 
 ## Twilio Migration
 
