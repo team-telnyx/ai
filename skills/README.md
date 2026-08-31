@@ -20,6 +20,8 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
 - [Twilio Migration](#twilio-migration)
+- [Blueprint Agents](#blueprint-agents)
+- [First Outbound Call](#first-outbound-call)
 
 ## Installation Quickstart
 
@@ -250,6 +252,32 @@ npx skills add team-telnyx/ai --skill telnyx-twilio-migration --agent <AGENT>
 Includes parameter-by-parameter mapping tables, multi-language code examples (Python, Node, Go, Java, Ruby, curl), error code mapping, and migration plan/report templates.
 
 > **Note:** After migrating, install the product plugins you use (e.g. `telnyx-messaging@telnyx`, `telnyx-voice@telnyx`) for deeper SDK examples, and `telnyx-webrtc@telnyx` if building a calling app.
+
+## Blueprint Agents
+
+Blueprint agents are specialized Telnyx developer agents that guide users through building complete solutions step-by-step. Each agent follows the pattern: interactive setup → validation → friction reporting.
+
+### First Outbound Call
+
+Makes your first outbound call using the Telnyx Call Control API — from zero to a ringing phone in under 15 minutes. Covers Call Control Application setup, Outbound Voice Profile configuration, phone number purchase, assignment, and `POST /v2/calls`.
+
+**Agent:** Invoke with `/agent first-outbound-call-developer`
+
+**Reference skill:** `telnyx-first-outbound-call` (not user-invocable — the agent is the entry point)
+
+**What's covered:**
+
+| Step | Description |
+|------|-------------|
+| Call Control Application | Create the entry point for API-driven calls with webhook URL |
+| Outbound Voice Profile | Create and link OVP — required for routing (90% of first-call failures happen here) |
+| Phone Number | Search, purchase, and assign a voice-enabled number |
+| Make the Call | `POST /v2/calls` with connection_id, to, from |
+| Verify | CDR check — status, duration, SIP response |
+
+Includes 8 friction points (FRIC-001 to FRIC-008), validation script, architecture diagrams, code examples in 6 languages, webhook handler examples, and SIP troubleshooting guide.
+
+> **Note:** This agent requires a Telnyx account with API key and sufficient balance (~$1 for a number + <$0.01 for a test call).
 
 ## Install Claude Code Plugin
 
