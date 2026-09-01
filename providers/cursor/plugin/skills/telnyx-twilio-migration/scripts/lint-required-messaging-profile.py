@@ -1007,6 +1007,162 @@ def _heredoc_langs(suffix: str) -> bool:
     return suffix in {".sh", ".php", ".rb"}
 
 
+_JS_REGEX_PREFIX_WORDS = {
+    "await",
+    "break",
+    "case",
+    "continue",
+    "debugger",
+    "delete",
+    "do",
+    "else",
+    "in",
+    "instanceof",
+    "new",
+    "of",
+    "return",
+    "throw",
+    "typeof",
+    "void",
+    "yield",
+}
+_JS_CONTROL_PAREN_WORDS = {"catch", "for", "if", "switch", "while", "with"}
+
+
+def _previous_code_index(code: list[str], before: int) -> int | None:
+    for index in range(before - 1, -1, -1):
+        if not code[index].isspace():
+            return index
+    return None
+
+
+def _word_before(code: list[str], before: int) -> str:
+    end = before
+    start = end
+    while start > 0 and (code[start - 1].isalnum() or code[start - 1] in "_$"):
+        start -= 1
+    return "".join(code[start:end])
+
+
+def _javascript_control_paren(code: list[str], closing: int) -> bool:
+    """Whether `closing` ends a control header after which a statement starts."""
+
+    depth = 0
+    for index in range(closing, -1, -1):
+        if code[index] == ")":
+            depth += 1
+        elif code[index] == "(":
+            depth -= 1
+            if depth == 0:
+                previous = _previous_code_index(code, index)
+                return (
+                    previous is not None
+                    and _word_before(code, previous + 1).lower()
+                    in _JS_CONTROL_PAREN_WORDS
+                )
+    return False
+
+
+def _javascript_block_brace(code: list[str], closing: int) -> bool:
+    """Conservatively identify a closing statement/class/function block."""
+
+    depth = 0
+    for index in range(closing, -1, -1):
+        if code[index] == "}":
+            depth += 1
+        elif code[index] == "{":
+            depth -= 1
+            if depth != 0:
+                continue
+            previous = _previous_code_index(code, index)
+            if previous is None:
+                return True
+            if code[previous] == ")":
+                return True
+            if code[previous] == ">" and previous > 0 and code[previous - 1] == "=":
+                return True
+            return _word_before(code, previous + 1).lower() in {
+                "class",
+                "do",
+                "else",
+                "finally",
+                "function",
+                "try",
+            }
+    return False
+
+
+def _javascript_regex_can_start(
+    source: str, code: list[str], index: int, last_opaque_end: int
+) -> bool:
+    """Approximate ECMAScript's regexp lexical goal from the preceding token.
+
+    JavaScript uses the same slash for division and regexp literals. The
+    distinction is grammatical: a regexp can begin where an expression is
+    expected, but not after an operand. `code` already has earlier comments and
+    literals blanked, while `last_opaque_end` prevents a preceding string,
+    template, or regexp operand from disappearing from that decision.
+    """
+
+    previous = _previous_code_index(code, index)
+    if last_opaque_end and (previous is None or previous < last_opaque_end):
+        if all(character.isspace() for character in code[last_opaque_end:index]):
+            return False
+    if previous is None:
+        return True
+
+    character = code[previous]
+    if (
+        character == "<"
+        and previous == index - 1
+        and index + 1 < len(source)
+        and (source[index + 1].isalpha() or source[index + 1] in "_$>")
+    ):
+        # JSX closing tags (`</Panel>` and `</>`) are markup delimiters, not a
+        # regexp in the expression position that `<` would otherwise permit.
+        return False
+    if character in "([,;:=!?&|^~<>*%":
+        return True
+    if character in "+-":
+        return previous == 0 or code[previous - 1] != character
+    if character == ")":
+        return _javascript_control_paren(code, previous)
+    if character == "}":
+        return _javascript_block_brace(code, previous)
+    if character.isalnum() or character in "_$":
+        return _word_before(code, previous + 1).lower() in _JS_REGEX_PREFIX_WORDS
+    return False
+
+
+def _javascript_regex_end(source: str, start: int) -> int | None:
+    """Return the end of a valid-looking JS regexp literal, including flags."""
+
+    if source.startswith(("//", "/*"), start):
+        return None
+    index = start + 1
+    in_class = False
+    while index < len(source):
+        character = source[index]
+        if character in {"\r", "\n", "\u2028", "\u2029"}:
+            return None
+        if character == "\\":
+            index += 2
+            continue
+        if character == "[":
+            in_class = True
+        elif character == "]" and in_class:
+            in_class = False
+        elif character == "/" and not in_class:
+            index += 1
+            while index < len(source) and (
+                source[index].isalpha() or source[index] in "_$"
+            ):
+                index += 1
+            return index
+        index += 1
+    return None
+
+
 def lex_source(source: str, suffix: str) -> LexedSource:
     """Mask comments and strings while preserving offsets and newlines."""
 
@@ -1017,8 +1173,24 @@ def lex_source(source: str, suffix: str) -> LexedSource:
     c_block_comments = c_line_comments
     hash_comments = suffix in {".php", ".py", ".rb", ".sh"}
     index = 0
+    last_js_opaque_end = 0
 
     while index < len(source):
+        if (
+            suffix in JS_TS_SUFFIXES
+            and source[index] == "/"
+            and _javascript_regex_can_start(
+                source, code, index, last_js_opaque_end
+            )
+        ):
+            regex_end = _javascript_regex_end(source, index)
+            if regex_end is not None:
+                _blank(code, index, regex_end)
+                _blank(without_comments, index, regex_end)
+                last_js_opaque_end = regex_end
+                index = regex_end
+                continue
+
         if c_block_comments and source.startswith("/*", index):
             end = source.find("*/", index + 2)
             end = len(source) if end < 0 else end + 2
@@ -1170,6 +1342,8 @@ def lex_source(source: str, suffix: str) -> LexedSource:
         strings.append(
             StringToken(string_start, index, source[contents_start:contents_end])
         )
+        if suffix in JS_TS_SUFFIXES:
+            last_js_opaque_end = index
 
     return LexedSource(source, "".join(code), "".join(without_comments), tuple(strings))
 

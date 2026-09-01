@@ -2278,6 +2278,136 @@ class CorrectnessLinterContracts(unittest.TestCase):
                     }
                 )
 
+    def test_javascript_regex_literals_do_not_become_comments(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        contexts = {
+            "character-class-block-marker": "const r = /[/*]/gu;",
+            "character-class-line-marker": "const r = /[//]/;",
+            "escaped-block-marker": r"const r = /\/\*/;",
+            "escaped-url-slashes": r"const r = /https?:\/\/[^/]+/;",
+            "return-expression": "function f(){ return /[/*]/; }",
+            "control-body": "if (ok) /[/*]/.test(value);",
+            "array-element": "const xs = [/[/*]/];",
+            "call-argument": "use(/[/*]/);",
+            "template-interpolation": "const x = `${/[/*]/.test(v)}`;",
+            "after-block": "if(ok) {}\n/[/*]/.test(v);",
+            "arrow-expression": "const f = () => /[/*]/;",
+            "ternary-arms": "const x = ok ? /[/*]/ : /[//]/;",
+            "throw-expression": "function f(){ throw /[/*]/; }",
+            "yield-expression": "function* f(){ yield /[/*]/; }",
+            "await-expression": "async function f(){ await /[/*]/.test(v); }",
+            "else-body": "if(ok) use(); else /[/*]/.test(v);",
+            "do-body": "do /[/*]/.test(v); while(false);",
+            "while-body": "while(false) /[/*]/.test(v);",
+            "for-body": "for(;false;) /[/*]/.test(v);",
+            "catch-body": "try{} catch(e) /[/*]/.test(e);",
+            "logical-rhs": "const x = ok && /[/*]/.test(v);",
+            "unary-operand": "const x = !/[/*]/.test(v);",
+            "case-body": "switch(x){case 1: /[/*]/.test(x); break;}",
+            "object-value": "const o = {r: /[/*]/};",
+        }
+        send = (
+            f"fetch('{url}',{{method:'POST',body:JSON.stringify("
+            "{to:'+1'PROFILE})});"
+        )
+        for context, prefix in contexts.items():
+            for polarity, profile in (
+                ("missing", ""),
+                ("valid", ",messaging_profile_id:'mp'"),
+            ):
+                with self.subTest(context=context, polarity=polarity):
+                    result = self.run_required_profile_analyzer(
+                        {"send.js": prefix + "\n" + send.replace("PROFILE", profile)}
+                    )
+                    rows = result.stdout.splitlines()
+                    self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+                    findings = [row for row in rows[1:] if "send.js" in row]
+                    if polarity == "missing":
+                        self.assertTrue(findings, result.stdout)
+                    else:
+                        self.assertEqual([], findings, result.stdout)
+
+    def test_javascript_division_and_comments_remain_distinct_from_regex(
+        self,
+    ) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        prefixes = {
+            "division": "const ratio = total / count;",
+            "division-assignment": "total /= count;",
+            "parenthesized-operand": "const ratio = (total + 1) / count;",
+            "string-operand": 'const ratio = "xx".length / count;',
+            "regex-operand": "const ratio = /x/.source.length / count;",
+            "postfix-operand": "const ratio = value++ / count;",
+            "object-operand": "const ratio = ({n: 1}).n / count;",
+            "call-operand": "const ratio = fn() / count;",
+            "array-operand": "const ratio = arr[0] / count;",
+            "number-operand": "const ratio = 10 / count;",
+            "boolean-operand": "const ratio = true / count;",
+            "null-operand": "const ratio = null / count;",
+            "template-operand": "const ratio = `xx`.length / count;",
+            "regex-direct-operand": "const ratio = /x/ / count;",
+            "block-comment": "/* regex example: /[/*]/ */",
+            "line-comment": "// regex example: /[/*]/",
+        }
+        send = (
+            f"fetch('{url}',{{method:'POST',"
+            "body:JSON.stringify({to:'+1'})});"
+        )
+        for context, prefix in prefixes.items():
+            with self.subTest(context=context):
+                result = self.run_required_profile_analyzer(
+                    {"send.js": prefix + "\n" + send}
+                )
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+                self.assertTrue(
+                    any("send.js" in row for row in rows[1:]), result.stdout
+                )
+
+        # Regex text is data, not an SDK call or endpoint-bearing request.
+        result = self.run_required_profile_analyzer(
+            {
+                "decoy.js": (
+                    r"const example = /client\.messages\.sendNumberPool\(\{to:1\}\)/;"
+                    "\n"
+                )
+            }
+        )
+        self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+        # JSX closing tags also use slash but cannot begin regexp literals.
+        result = self.run_required_profile_analyzer(
+            {
+                "view.jsx": (
+                    "const view = <Panel><span>/[/*]/</span></Panel>;\n"
+                    + send
+                )
+            }
+        )
+        rows = result.stdout.splitlines()
+        self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+        self.assertTrue(any("view.jsx" in row for row in rows[1:]), result.stdout)
+
+    def test_javascript_regex_comment_ambiguity_is_blocked_by_public_wrapper(
+        self,
+    ) -> None:
+        source = (
+            "const separator = /[/*]/;\n"
+            "client.messages.sendNumberPool({to:'+1',text:'hi'PROFILE});\n"
+        )
+        result, payload = self.run_messaging_linter(
+            {"send.js": source.replace("PROFILE", "")}
+        )
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, "send.js")
+        self.assert_required_profile_passes(
+            {
+                "send.js": source.replace(
+                    "PROFILE", ",messaging_profile_id:'mp'"
+                )
+            }
+        )
+
     def test_finding_rows_escape_newline_bearing_paths(self) -> None:
         result = self.run_required_profile_analyzer(
             {
