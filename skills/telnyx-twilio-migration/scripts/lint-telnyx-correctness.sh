@@ -142,38 +142,36 @@ grep_allow_no_match() {
 # repo CLIs) are source files no --include glob can ever match; the Phase-1
 # scanner greps without includes and sees them, so skipping them here made
 # the validator certify trees the scanner had put in migration scope.
-SHEBANG_JS_FILES=""
-SHEBANG_PY_FILES=""
-SHEBANG_RB_FILES=""
-SHEBANG_SH_FILES=""
+SHEBANG_FILES=()
+SHEBANG_CATEGORIES=()
 
 collect_shebang_files() {
-  local _f _first
+  local _f _first _category
   while IFS= read -r -d '' _f; do
-    IFS= read -r _first < "$_f" 2>/dev/null || _first=""
+    _first=""
+    IFS= read -r _first < "$_f" 2>/dev/null || [ -n "$_first" ] || _first=""
     case "$_first" in
-      '#!'*node*)   SHEBANG_JS_FILES="${SHEBANG_JS_FILES}${_f}"$'\n' ;;
-      '#!'*python*) SHEBANG_PY_FILES="${SHEBANG_PY_FILES}${_f}"$'\n' ;;
-      '#!'*ruby*)   SHEBANG_RB_FILES="${SHEBANG_RB_FILES}${_f}"$'\n' ;;
-      '#!'*sh*)     SHEBANG_SH_FILES="${SHEBANG_SH_FILES}${_f}"$'\n' ;;
+      '#!'*node*)   _category="javascript" ;;
+      '#!'*python*) _category="python" ;;
+      '#!'*ruby*)   _category="ruby" ;;
+      '#!'*sh*)     _category="shell" ;;
+      *)            _category="" ;;
     esac
+    if [ -n "$_category" ]; then
+      # Bash variables cannot contain NUL, and LF-delimited path lists cannot
+      # represent every legal pathname. Indexed arrays retain each `find
+      # -print0` record as one argument all the way through grep.
+      SHEBANG_FILES+=("$_f")
+      SHEBANG_CATEGORIES+=("$_category")
+    fi
   done < <(find "$PROJECT_ROOT" \
     \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
     -o -type f ! -name '*.*' -size -1048576c -print0 2>/dev/null)
 }
 
-shebang_files_for_glob() {
-  case "$1" in
-    '*.js'|'*.ts') printf '%s' "$SHEBANG_JS_FILES" ;;
-    '*.py')        printf '%s' "$SHEBANG_PY_FILES" ;;
-    '*.rb')        printf '%s' "$SHEBANG_RB_FILES" ;;
-    '*.sh')        printf '%s' "$SHEBANG_SH_FILES" ;;
-  esac
-}
-
 grep_shebang_files() {
   local pattern="$1"; shift
-  local glob list _f category seen_categories=""
+  local glob _index _f category seen_categories=""
   for glob in "$@"; do
     case "$glob" in
       '*.js'|'*.ts') category="javascript" ;;
@@ -187,11 +185,11 @@ grep_shebang_files() {
       *" $category "*) continue ;;
     esac
     seen_categories="$seen_categories $category"
-    list=$(shebang_files_for_glob "$glob")
-    [ -z "$list" ] && continue
-    while IFS= read -r _f; do
-      [ -n "$_f" ] && grep_allow_no_match -a -nH --null -E "$pattern" "$_f"
-    done <<< "$list"
+    for _index in "${!SHEBANG_FILES[@]}"; do
+      [ "${SHEBANG_CATEGORIES[$_index]}" = "$category" ] || continue
+      _f=${SHEBANG_FILES[$_index]}
+      grep_allow_no_match -a -nH --null -E "$pattern" "$_f"
+    done
   done
 }
 

@@ -1230,6 +1230,15 @@ def lex_source(source: str, suffix: str) -> LexedSource:
                 end = _line_comment_end(source, index + 2, suffix)
                 index = end
                 continue
+            if suffix == ".php" and source.startswith("#[", index):
+                # PHP 8 attributes begin with `#[`. Treating that opener as a
+                # legacy hash comment masks the rest of the physical line,
+                # including a declaration and request that legally follow the
+                # attribute. The attribute body remains ordinary PHP syntax;
+                # the normal string and block-comment branches below still
+                # mask data nested inside it.
+                index += 2
+                continue
             end = _line_comment_end(source, index + 1, suffix)
             _blank(code, index, end)
             _blank(without_comments, index, end)

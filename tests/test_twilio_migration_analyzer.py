@@ -1181,6 +1181,41 @@ class CorrectnessLinterContracts(unittest.TestCase):
         )
         self.assertEqual("issue", check["status"], json.dumps(payload["checks"]))
 
+    def test_php_attributes_do_not_mask_required_sends(self) -> None:
+        missing = "$client->send_number_pool(['to' => '+1'%s]);"
+        wrappers = {
+            "same-line": "#[Route('/send')] function handler() { %s }\n",
+            "stacked": "#[Route('/send')]\n#[Audit('message')]\nfunction handler() { %s }\n",
+            "method": "class Sender { #[Route('/send')] public function run() { %s } }\n",
+            "parameter": "function handler(#[SensitiveParameter] $to) { %s }\n",
+        }
+        for label, wrapper in wrappers.items():
+            with self.subTest(shape=label, polarity="missing"):
+                _, payload = self.run_messaging_linter(
+                    {"send.php": "<?php\n" + wrapper % (missing % "")}
+                )
+                self.assert_required_profile_detected(payload, "send.php")
+            with self.subTest(shape=label, polarity="compliant"):
+                self.assert_required_profile_passes(
+                    {
+                        "send.php": "<?php\n"
+                        + wrapper
+                        % (missing % ", 'messaging_profile_id' => 'mp'")
+                    }
+                )
+
+        # Legacy PHP hash comments remain comments, and call-like text inside
+        # an attribute string remains data rather than an executable send.
+        self.assert_required_profile_passes(
+            {
+                "comments.php": (
+                    "<?php\n# $client->send_number_pool(['to' => '+1']);\n"
+                    "#[Example(\"send_number_pool(['to' => '+1'])\")]\n"
+                    "function handler() {}\n"
+                )
+            }
+        )
+
     def test_phtml_php_tag_family_preserves_only_executable_regions(self) -> None:
         missing = (
             '$client->post("https://api.telnyx.com/v2/messages/number_pool", '
@@ -1382,6 +1417,43 @@ class CorrectnessLinterContracts(unittest.TestCase):
             if item["name"] == "messaging_response_builder"
         )
         self.assertEqual(1, len(check["details"]["files"]))
+
+    def test_extensionless_shebang_paths_keep_structured_identity(self) -> None:
+        """Shebang discovery preserves every legal path byte except NUL."""
+
+        clean = "#!/usr/bin/env node\nconsole.log('ok');\n"
+        missing = (
+            "#!/usr/bin/env node\n"
+            "client.messages.sendNumberPool({to:'+1'});\n"
+        )
+        compliant = missing.replace("to:'+1'", "to:'+1',messaging_profile_id:'mp'")
+        for relative in (
+            "bin/send\nnow",
+            "bin/send\rnow",
+            r"bin/send\nnow",
+        ):
+            with self.subTest(path=repr(relative), polarity="clean"):
+                result, _ = self.run_messaging_linter({relative: clean})
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            with self.subTest(path=repr(relative), polarity="missing"):
+                result, payload = self.run_messaging_linter({relative: missing})
+                self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+                check = next(
+                    item
+                    for item in payload["checks"]
+                    if item["name"] == "required_messaging_profile_id"
+                )
+                self.assertEqual("issue", check["status"], check)
+                self.assertEqual(1, len(check["details"]["files"]), check)
+                escaped_name = (
+                    Path(relative).name.replace("\\", r"\\")
+                    .replace("\r", r"\r")
+                    .replace("\n", r"\n")
+                )
+                self.assertIn(escaped_name, check["details"]["files"][0])
+            with self.subTest(path=repr(relative), polarity="compliant"):
+                result, _ = self.run_messaging_linter({relative: compliant})
+                self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_component_template_handlers_are_executable_javascript(self) -> None:
         violating = {
