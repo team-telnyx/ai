@@ -2128,6 +2128,90 @@ class CorrectnessLinterContracts(unittest.TestCase):
             }
         )
 
+    def test_javascript_nonrelative_import_endpoints_fail_closed(self) -> None:
+        """Configured aliases and package imports retain URL provenance."""
+
+        forms = {
+            "named-at": "import { poolUrl } from '@/endpoints';\n",
+            "named-tilde": "import { poolUrl } from '~/endpoints';\n",
+            "named-hash": "import { poolUrl } from '#endpoints';\n",
+            "default": "import poolUrl from '#endpoints';\n",
+            "namespace": "import * as routes from '@/endpoints';\n",
+            "require-default": "const poolUrl = require('~/endpoints');\n",
+            "require-member": "const {poolUrl} = require('@/endpoints');\n",
+            "require-renamed": (
+                "const {poolUrl: endpoint} = require('#endpoints');\n"
+            ),
+        }
+        suffixes = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+        for suffix in suffixes:
+            for form, declaration in forms.items():
+                name = "routes.poolUrl" if form == "namespace" else (
+                    "endpoint" if form == "require-renamed" else "poolUrl"
+                )
+                source = declaration + (
+                    f"fetch({name}, {{method:'POST', "
+                    "body:JSON.stringify({to:'+1'})}});\n"
+                )
+                with self.subTest(suffix=suffix, form=form):
+                    result = self.run_required_profile_analyzer(
+                        {"send" + suffix: source}
+                    )
+                    rows = result.stdout.splitlines()
+                    self.assertEqual("1", rows[0], result.stdout)
+                    self.assertTrue(
+                        any(
+                            "could not resolve the imported endpoint" in row
+                            for row in rows[1:]
+                        ),
+                        result.stdout,
+                    )
+
+        # The provenance guard is method-aware: importing an identifier and
+        # merely reading it with fetch's default GET is not a message send.
+        result = self.run_required_profile_analyzer(
+            {
+                "read.ts": (
+                    "import { poolUrl } from '@/endpoints';\n"
+                    "fetch(poolUrl);\n"
+                )
+            }
+        )
+        self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+        configured = self.run_required_profile_analyzer(
+            {
+                "tsconfig.json": json.dumps(
+                    {
+                        "compilerOptions": {
+                            "paths": {"@app/*": ["src/*"]}
+                        }
+                    }
+                ),
+                "configured.ts": (
+                    "import { poolUrl } from '@app/endpoints';\n"
+                    "fetch(poolUrl,{method:'POST',"
+                    "body:JSON.stringify({to:'+1'})});\n"
+                ),
+            }
+        )
+        self.assertIn(
+            "could not resolve the imported endpoint", configured.stdout
+        )
+
+        non_object_config = self.run_required_profile_analyzer(
+            {
+                "tsconfig.json": "null\n",
+                "package.json": "[]\n",
+                "package.js": (
+                    "import endpoint from 'third-party-config';\n"
+                    "fetch(endpoint,{method:'POST',"
+                    "body:JSON.stringify({to:'+1'})});\n"
+                ),
+            }
+        )
+        self.assertEqual("0", non_object_config.stdout.strip(), non_object_config.stdout)
+
     def test_javascript_default_module_endpoint_provenance_matrix(self) -> None:
         pool = "https://api.telnyx.com/v2/messages/number_pool"
         normal = "https://api.telnyx.com/v2/messages"
@@ -2432,6 +2516,70 @@ class CorrectnessLinterContracts(unittest.TestCase):
         self.assertEqual(1, shell_result.returncode, payload)
         self.assertEqual(1, len(check["details"]["files"]), check)
         self.assertIn(r"odd\nname.js:1:", check["details"]["files"][0])
+
+        literal_backslash = self.run_required_profile_analyzer(
+            {
+                r"literal\nname.js": (
+                    "client.messages.sendNumberPool({to:'+1'});\n"
+                )
+            }
+        )
+        self.assertIn(r"literal\\nname.js:1:", literal_backslash.stdout)
+
+    def test_hybrid_migrated_paths_keep_structured_identity(self) -> None:
+        """Hybrid waivers never split or alias legal POSIX path bytes."""
+
+        for relative in (
+            "src/odd\nname.js",
+            "src/odd\rname.js",
+            r"src/literal\nname.js",
+        ):
+            with self.subTest(relative=repr(relative)):
+                with tempfile.TemporaryDirectory(
+                    prefix="telnyx-hybrid-structured-path-"
+                ) as directory:
+                    root = Path(directory)
+                    source = root / relative
+                    source.parent.mkdir(parents=True, exist_ok=True)
+                    source.write_text(
+                        "const twilio = require('twilio');\n",
+                        encoding="utf-8",
+                    )
+                    state = root / "migration-state.json"
+                    state.write_text(
+                        json.dumps(
+                            {
+                                "kept_on_twilio": {"conversations": True},
+                                "migrated_files": {"messaging": [relative]},
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    result = subprocess.run(
+                        [
+                            BASH,
+                            str(CORRECTNESS_LINTER),
+                            str(root),
+                            "--product",
+                            "all",
+                            "--state-file",
+                            str(state),
+                            "--json",
+                        ],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        check=False,
+                    )
+                self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+                payload = json.loads(result.stdout)
+                residual = next(
+                    check
+                    for check in payload["checks"]
+                    if check["name"] == "residual_twilio_imports"
+                )
+                self.assertEqual("issue", residual["status"], residual)
 
     def test_url_constructor_base_is_combined_with_the_path(self) -> None:
         # new URL(path, base) resolves the path relative to the base, so

@@ -2644,8 +2644,14 @@ def finding_row(path: Path, line: int, detail: str) -> str:
     # The analyzer-to-shell protocol is LF-delimited. POSIX permits CR and LF
     # in filenames, so emitting a raw path can turn one finding into several
     # records and inflate both counts and details.files. Escape only the record
-    # delimiters; keep the rest of the path byte-for-byte displayable.
-    display_path = str(path).replace("\r", "\\r").replace("\n", "\\n")
+    # delimiters. Escape backslashes first so a literal `\n` path segment and
+    # an actual newline cannot collapse to the same display identity.
+    display_path = (
+        str(path)
+        .replace("\\", "\\\\")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+    )
     return f"{display_path}:{line}:{detail}"
 
 
@@ -11365,12 +11371,53 @@ def external_static_values(
     return resolved
 
 
-def external_reference_names(source: str, suffix: str) -> set[str]:
+def _matches_js_alias_key(module: str, key: str) -> bool:
+    pattern = re.escape(key).replace(r"\*", ".*")
+    return re.fullmatch(pattern, module) is not None
+
+
+def _js_module_has_local_provenance(module: str, project_root: Path) -> bool:
+    """Return whether a JS module spelling denotes project-controlled code."""
+
+    if module.startswith((".", "@/", "~/", "#")):
+        return True
+    for filename in ("tsconfig.json", "jsconfig.json"):
+        try:
+            config = json.loads((project_root / filename).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(config, dict):
+            continue
+        compiler_options = config.get("compilerOptions", {})
+        if not isinstance(compiler_options, dict):
+            continue
+        paths = compiler_options.get("paths", {})
+        if isinstance(paths, dict) and any(
+            isinstance(key, str) and _matches_js_alias_key(module, key)
+            for key in paths
+        ):
+            return True
+    try:
+        package = json.loads((project_root / "package.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        package = {}
+    imports = package.get("imports", {}) if isinstance(package, dict) else {}
+    return isinstance(imports, dict) and any(
+        isinstance(key, str) and _matches_js_alias_key(module, key)
+        for key in imports
+    )
+
+
+def external_reference_names(
+    source: str, suffix: str, project_root: Path
+) -> set[str]:
     """Return local names whose values originate outside the current file.
 
-    Exact static exports are resolved separately. This index covers the wider
-    language-level import boundary so an unresolved mutating request fails
-    closed instead of silently passing. Sentinels are intentionally narrow:
+    Exact relative static exports are resolved separately. This index covers
+    the wider language-level import boundary—including configured aliases
+    such as ``@/``, ``~/``, tsconfig paths, and package
+    ``imports``—so an unresolved mutating request fails closed instead of
+    silently passing. Sentinels are intentionally narrow:
     uppercase constants after require/include, qualified package/class members,
     and shell variables only when a source command is present.
     """
@@ -11383,16 +11430,23 @@ def external_reference_names(source: str, suffix: str) -> set[str]:
             for match in re.finditer(
                 r"\bimport\s+(?P<local>[A-Za-z_$]\w*)\s*"
                 r"(?:,\s*(?:\{[^{}]*\}|\*\s+as\s+[A-Za-z_$]\w*)\s*)?"
-                r"from\s*(['\"])\.[^'\"]*\2",
+                r"from\s*(['\"])(?P<module>[^'\"]+)\2",
                 visible,
+            )
+            if _js_module_has_local_provenance(
+                match.group("module"), project_root
             )
         )
         for match in re.finditer(
             r"\bimport\s+(?:[A-Za-z_$]\w*\s*,\s*)?"
             r"\{(?P<members>[^{}]*)\}\s*from\s*"
-            r"(['\"])\.[^'\"]*\2",
+            r"(['\"])(?P<module>[^'\"]+)\2",
             visible,
         ):
+            if not _js_module_has_local_provenance(
+                match.group("module"), project_root
+            ):
+                continue
             for member in match.group("members").split(","):
                 parsed = re.fullmatch(
                     r"\s*([A-Za-z_$]\w*)(?:\s+as\s+([A-Za-z_$]\w*))?\s*",
@@ -11405,23 +11459,33 @@ def external_reference_names(source: str, suffix: str) -> set[str]:
             for match in re.finditer(
                 r"\bimport\s+(?:[A-Za-z_$]\w*\s*,\s*)?"
                 r"\*\s+as\s+([A-Za-z_$]\w*)\s+from\s*"
-                r"(['\"])\.[^'\"]*\2",
+                r"(['\"])(?P<module>[^'\"]+)\2",
                 visible,
+            )
+            if _js_module_has_local_provenance(
+                match.group("module"), project_root
             )
         )
         names.update(
             match.group(1)
             for match in re.finditer(
                 r"\b(?:const|let|var)\s+([A-Za-z_$]\w*)\s*=\s*"
-                r"require\s*\(\s*(['\"])\.[^'\"]*\2",
+                r"require\s*\(\s*(['\"])(?P<module>[^'\"]+)\2",
                 visible,
+            )
+            if _js_module_has_local_provenance(
+                match.group("module"), project_root
             )
         )
         for match in re.finditer(
             r"\b(?:const|let|var)\s*\{(?P<members>[^{}]*)\}\s*=\s*"
-            r"require\s*\(\s*(['\"])\.[^'\"]*\2",
+            r"require\s*\(\s*(['\"])(?P<module>[^'\"]+)\2",
             visible,
         ):
+            if not _js_module_has_local_provenance(
+                match.group("module"), project_root
+            ):
+                continue
             for member in match.group("members").split(","):
                 parsed = re.fullmatch(
                     r"\s*([A-Za-z_$]\w*)(?:\s*:\s*([A-Za-z_$]\w*))?\s*",
@@ -11499,7 +11563,7 @@ def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
         lexed,
         suffix,
         external_static_values(path, project_root, source, suffix),
-        external_reference_names(source, suffix),
+        external_reference_names(source, suffix, project_root),
     )
     profile_resolver = PayloadStateResolver(
         lexed,

@@ -47,7 +47,12 @@ def grep_records(data: bytes) -> Iterator[tuple[Path, int]]:
 def display_path(path: Path) -> str:
     """Keep one finding per output line even for control characters in paths."""
 
-    return str(path).replace("\r", "\\r").replace("\n", "\\n")
+    return (
+        str(path)
+        .replace("\\", "\\\\")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+    )
 
 
 def load_analyzer(path: Path):

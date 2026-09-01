@@ -45,7 +45,7 @@ PROJECT_ROOT=""
 SCAN_JSON=""
 STATE_FILE=""
 HYBRID_PRODUCTS=""
-MIGRATED_FILES=""
+MIGRATED_FILES_JSON="[]"
 JSON_CHECKS="[]"
 
 EXCLUDE_DIRS="node_modules .git vendor __pycache__ venv .venv dist build .next .nuxt coverage .tox"
@@ -75,6 +75,18 @@ build_exclude_args() {
 }
 
 GREP_EXCLUDES=""
+
+# Finding records are LF-delimited, so path identity uses a reversible display
+# encoding. Escape backslashes first to distinguish a literal `\n` filename
+# segment from an actual newline. The Python analyzer and grep adapter use this
+# exact contract too.
+escape_record_path() {
+  local value="$1"
+  value=${value//\\/\\\\}
+  value=${value//$'\r'/\\r}
+  value=${value//$'\n'/\\n}
+  printf '%s' "$value"
+}
 
 # Build every find(1) prune expression from the same policy as grep.  Keeping
 # literal copies in each traversal caused generated directories to re-enter
@@ -372,12 +384,12 @@ hybrid_waiver_applies() {
     # A retained product never waives a residual inside a file explicitly
     # recorded as migrated. Only downgrade when every matched path is outside
     # that set; mixed or migrated-only results must keep the gate blocking.
-    [ -n "$MIGRATED_FILES" ] || return 0
+    [ "$MIGRATED_FILES_JSON" != "[]" ] || return 0
     while IFS= read -r match; do
       [ -n "$match" ] || continue
-      while IFS= read -r migrated_file; do
+      while IFS= read -r -d '' migrated_file; do
         [ -n "$migrated_file" ] || continue
-        migrated_path="$PROJECT_ROOT/$migrated_file"
+        migrated_path=$(escape_record_path "$PROJECT_ROOT/$migrated_file")
         # Filtered grep output is `<absolute path>:<line>:<text>`. Do not
         # recover the path with a colon regex: POSIX paths may themselves
         # contain `:<digits>:`. Instead compare each complete, known migrated
@@ -392,7 +404,7 @@ hybrid_waiver_applies() {
         if [ "$migrated_path" = "$match" ] || [[ "$migrated_path" = "$match"/* ]]; then
           return 1
         fi
-      done <<<"$MIGRATED_FILES"
+      done < <(printf '%s' "$MIGRATED_FILES_JSON" | jq -j '.[] | ., "\u0000"')
     done <<<"${1:-}"
     return 0
   fi
@@ -507,13 +519,13 @@ if [ -n "$STATE_FILE" ]; then
       echo "Error: --state-file '$STATE_FILE' is not valid migration state JSON" >&2
       exit 2
     }
-    MIGRATED_FILES=$(jq -r --arg root "$PROJECT_ROOT/" '
+    MIGRATED_FILES_JSON=$(jq -c --arg root "$PROJECT_ROOT/" '
       [(.migrated_files? // {}) | .. | arrays | .[]?
        | select(type == "string")
        | if startswith($root) then .[($root | length):]
          elif startswith("./") then .[2:]
          else . end]
-      | unique[]
+      | unique
     ' "$STATE_FILE" 2>/dev/null) || {
       echo "Error: --state-file '$STATE_FILE' has invalid migrated_files" >&2
       exit 2
@@ -1017,9 +1029,12 @@ else
 fi
 
 # Check 12: Directory/path names containing "twilio"
-twilio_dirs=$(find "$PROJECT_ROOT" -mindepth 1 \
+twilio_dirs=""
+while IFS= read -r -d '' twilio_dir; do
+  twilio_dirs+="$(escape_record_path "$twilio_dir")"$'\n'
+done < <(find "$PROJECT_ROOT" -mindepth 1 \
   \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
-  -o -type d -iname '*twilio*' -print 2>/dev/null || true)
+  -o -type d -iname '*twilio*' -print0 2>/dev/null || true)
 twilio_dir_count=$(echo "$twilio_dirs" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$twilio_dir_count" -gt 0 ] && [ -n "$(echo "$twilio_dirs" | sed '/^$/d')" ]; then
   if hybrid_waiver_applies "$twilio_dirs"; then
