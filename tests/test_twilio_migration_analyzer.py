@@ -2085,6 +2085,142 @@ class CorrectnessLinterContracts(unittest.TestCase):
             }
         )
 
+    def test_javascript_default_module_endpoint_provenance_matrix(self) -> None:
+        pool = "https://api.telnyx.com/v2/messages/number_pool"
+        normal = "https://api.telnyx.com/v2/messages"
+        forms = {
+            "esm-direct": (
+                "export default '%s';\n",
+                "import endpoint from './config.js';\n",
+            ),
+            "esm-template": (
+                "export default `%s`;\n",
+                "import endpoint from './config.js';\n",
+            ),
+            "esm-alias": (
+                "const pool = '%s'; export default pool;\n",
+                "import endpoint from './config.js';\n",
+            ),
+            "esm-braced-alias": (
+                "const pool = '%s'; const other = '/health'; "
+                "export {other, pool as default};\n",
+                "import endpoint from './config.js';\n",
+            ),
+            "esm-default-plus-named": (
+                "export default '%s'; export const other = '/health';\n",
+                "import endpoint, {other} from './config.js';\n",
+            ),
+            "esm-default-plus-namespace": (
+                "export default '%s'; export const other = '/health';\n",
+                "import endpoint, * as config from './config.js';\n",
+            ),
+            "commonjs-module": (
+                "module.exports = '%s';\n",
+                "const endpoint = require('./config');\n",
+            ),
+            "commonjs-default-member": (
+                "exports.default = '%s';\n",
+                "const endpoint = require('./config').default;\n",
+            ),
+            "commonjs-default-destructure": (
+                "module.exports.default = '%s';\n",
+                "const {default: endpoint} = require('./config');\n",
+            ),
+        }
+
+        def run_form(exporter: str, importer: str, url: str, profile: bool):
+            payload = "{to:'+1'"
+            if profile:
+                payload += ",messaging_profile_id:'mp'"
+            payload += "}"
+            return self.run_required_profile_analyzer(
+                {
+                    "config.js": exporter % url,
+                    "send.js": importer
+                    + "fetch(endpoint,{method:'POST',body:JSON.stringify("
+                    + payload
+                    + ")});\n",
+                }
+            )
+
+        for label, (exporter, importer) in forms.items():
+            with self.subTest(form=label, polarity="missing"):
+                result = run_form(exporter, importer, pool, False)
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+                self.assertTrue(
+                    any("send.js" in row for row in rows[1:]), result.stdout
+                )
+            with self.subTest(form=label, polarity="valid"):
+                result = run_form(exporter, importer, pool, True)
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+                self.assertFalse(any(row.strip() for row in rows[1:]), result.stdout)
+            with self.subTest(form=label, polarity="non-required"):
+                result = run_form(exporter, importer, normal, False)
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+        # A dynamic local default export cannot be classified statically, but
+        # its mutating use must fail closed rather than certify the migration.
+        result = self.run_required_profile_analyzer(
+            {
+                "config.js": "export default chooseEndpoint();\n",
+                "send.js": (
+                    "import endpoint from './config.js';\n"
+                    "fetch(endpoint,{method:'POST',body:JSON.stringify({to:'+1'})});\n"
+                ),
+            }
+        )
+        self.assertIn("could not resolve the imported endpoint", result.stdout)
+
+        result = self.run_required_profile_analyzer(
+            {
+                "config.js": (
+                    f"export default '/health'; export const pool = '{pool}';\n"
+                ),
+                "send.js": (
+                    "import health, * as config from './config.js';\n"
+                    "fetch(config.pool,{method:'POST',"
+                    "body:JSON.stringify({to:'+1'})});\n"
+                ),
+            }
+        )
+        self.assertIn("could not resolve the imported endpoint", result.stdout)
+
+        # Package defaults are outside this bounded local-module contract and
+        # must not be guessed to be customer endpoints.
+        result = self.run_required_profile_analyzer(
+            {
+                "send.js": (
+                    "import endpoint from 'third-party-config';\n"
+                    "fetch(endpoint,{method:'POST',body:JSON.stringify({to:'+1'})});\n"
+                )
+            }
+        )
+        self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+    def test_default_esm_endpoint_is_enforced_by_public_wrapper(self) -> None:
+        pool = "https://api.telnyx.com/v2/messages/number_pool"
+        support = {"config.js": f"export default '{pool}';\n"}
+        missing = (
+            "import endpoint from './config.js';\n"
+            "fetch(endpoint,{method:'POST',body:JSON.stringify({to:'+1'})});\n"
+        )
+        result, payload = self.run_messaging_linter(
+            {**support, "send.js": missing}
+        )
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, "send.js")
+
+        self.assert_required_profile_passes(
+            {
+                **support,
+                "send.js": missing.replace(
+                    "{to:'+1'}", "{to:'+1',messaging_profile_id:'mp'}"
+                ),
+            }
+        )
+
     def test_javascript_line_comment_terminators_do_not_hide_sends(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
         for terminator in ("\r", "\u2028", "\u2029"):

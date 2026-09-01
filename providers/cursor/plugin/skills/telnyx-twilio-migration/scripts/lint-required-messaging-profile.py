@@ -10898,16 +10898,95 @@ def _exported_scalar(source: str, suffix: str, name: str) -> str | None:
 
     lexed = lex_source(source, suffix)
     visible = lexed.without_comments
-    escaped = re.escape(name)
     if suffix in JS_TS_SUFFIXES:
-        assignment = re.search(
+        def literal(
+            pattern: str, separator: str = r"\s*=\s*"
+        ) -> str | None:
+            match = re.search(
+                pattern
+                + separator
+                + r"(?P<quote>['\"`])(?P<value>.*?)(?P=quote)",
+                visible,
+                re.S,
+            )
+            if match is None:
+                return None
+            value = match.group("value")
+            if match.group("quote") == "`" and "${" in value:
+                return None
+            return value
+
+        def local_literal(local: str) -> str | None:
+            escaped_local = re.escape(local)
+            return literal(
+                rf"\b(?:const|let|var)\s+{escaped_local}"
+            )
+
+        if name == "default":
+            direct = literal(r"\bexport\s+default", r"\s+")
+            if direct is None:
+                direct = literal(
+                    r"(?:\b(?:module\s*\.\s*)?exports\s*\.\s*default|"
+                    r"\bmodule\s*\.\s*exports)"
+                )
+            if direct is not None:
+                return direct
+            alias = re.search(
+                r"(?:\bexport\s+default\s+"
+                r"|\bmodule\s*\.\s*exports\s*=\s*"
+                r"|\b(?:module\s*\.\s*)?exports\s*\.\s*default\s*=\s*)"
+                r"(?P<local>[A-Za-z_$]\w*)\b"
+                r"|\bexport\s*\{\s*(?P<braced>[A-Za-z_$]\w*)"
+                r"\s+as\s+default\s*\}",
+                visible,
+            )
+            if alias is not None:
+                return local_literal(alias.group("local") or alias.group("braced"))
+            for export_list in re.finditer(
+                r"\bexport\s*\{(?P<members>[^{}]*)\}", visible
+            ):
+                for member in export_list.group("members").split(","):
+                    parsed = re.fullmatch(
+                        r"\s*(?P<local>[A-Za-z_$]\w*)\s+as\s+default\s*",
+                        member,
+                    )
+                    if parsed is not None:
+                        return local_literal(parsed.group("local"))
+            return None
+        if name == "<module>":
+            direct = literal(r"\bmodule\s*\.\s*exports")
+            if direct is not None:
+                return direct
+            alias = re.search(
+                r"\bmodule\s*\.\s*exports\s*=\s*"
+                r"(?P<local>[A-Za-z_$]\w*)\b",
+                visible,
+            )
+            return local_literal(alias.group("local")) if alias is not None else None
+
+        escaped = re.escape(name)
+        direct = literal(
             rf"(?:\bexport\s+(?:const|let|var)\s+{escaped}"
             rf"|\b(?:module\s*\.\s*)?exports\s*\.\s*{escaped})"
-            r"\s*=\s*(['\"])(?P<value>.*?)\1",
-            visible,
-            re.S,
         )
+        if direct is not None:
+            return direct
+        for export_list in re.finditer(
+            r"\bexport\s*\{(?P<members>[^{}]*)\}", visible
+        ):
+            for member in export_list.group("members").split(","):
+                parsed = re.fullmatch(
+                    rf"\s*(?P<local>[A-Za-z_$]\w*)"
+                    rf"(?:\s+as\s+{escaped})?\s*",
+                    member,
+                )
+                if parsed is not None and (
+                    " as " in member or parsed.group("local") == name
+                ):
+                    return local_literal(parsed.group("local"))
+        return None
     elif suffix == ".py":
+        escaped = re.escape(name)
         assignment = re.search(
             rf"(?m)^[ \t]*{escaped}\s*=\s*(['\"])(?P<value>.*?)\1",
             visible,
@@ -10931,7 +11010,17 @@ def external_static_values(
     imports: list[tuple[str, str, str]] = []
     if suffix in JS_TS_SUFFIXES:
         for match in re.finditer(
-            r"\bimport\s*\{(?P<members>[^{}]*)\}\s*from\s*"
+            r"\bimport\s+(?P<local>[A-Za-z_$]\w*)\s*"
+            r"(?:,\s*(?:\{[^{}]*\}|\*\s+as\s+[A-Za-z_$]\w*)\s*)?"
+            r"from\s*(['\"])(?P<module>\.[^'\"]*)\2",
+            visible,
+        ):
+            imports.append(
+                (match.group("module"), "default", match.group("local"))
+            )
+        for match in re.finditer(
+            r"\bimport\s+(?:[A-Za-z_$]\w*\s*,\s*)?"
+            r"\{(?P<members>[^{}]*)\}\s*from\s*"
             r"(['\"])(?P<module>\.[^'\"]*)\2",
             visible,
         ):
@@ -10949,6 +11038,19 @@ def external_static_values(
                             parsed.group("local") or parsed.group("export"),
                         )
                     )
+        for match in re.finditer(
+            r"\b(?:const|let|var)\s+(?P<local>[A-Za-z_$]\w*)\s*=\s*"
+            r"require\s*\(\s*(['\"])(?P<module>\.[^'\"]*)\2\s*\)"
+            r"(?P<default>\s*\.\s*default)?",
+            visible,
+        ):
+            imports.append(
+                (
+                    match.group("module"),
+                    "default" if match.group("default") else "<module>",
+                    match.group("local"),
+                )
+            )
         for match in re.finditer(
             r"\b(?:const|let|var)\s*\{(?P<members>[^{}]*)\}\s*=\s*"
             r"require\s*\(\s*(['\"])(?P<module>\.[^'\"]*)\2\s*\)",
@@ -11022,8 +11124,18 @@ def external_reference_names(source: str, suffix: str) -> set[str]:
     visible = lex_source(source, suffix).without_comments
     names: set[str] = set()
     if suffix in JS_TS_SUFFIXES:
+        names.update(
+            match.group("local")
+            for match in re.finditer(
+                r"\bimport\s+(?P<local>[A-Za-z_$]\w*)\s*"
+                r"(?:,\s*(?:\{[^{}]*\}|\*\s+as\s+[A-Za-z_$]\w*)\s*)?"
+                r"from\s*(['\"])\.[^'\"]*\2",
+                visible,
+            )
+        )
         for match in re.finditer(
-            r"\bimport\s*\{(?P<members>[^{}]*)\}\s*from\s*"
+            r"\bimport\s+(?:[A-Za-z_$]\w*\s*,\s*)?"
+            r"\{(?P<members>[^{}]*)\}\s*from\s*"
             r"(['\"])\.[^'\"]*\2",
             visible,
         ):
@@ -11037,7 +11149,8 @@ def external_reference_names(source: str, suffix: str) -> set[str]:
         names.update(
             match.group(1)
             for match in re.finditer(
-                r"\bimport\s+\*\s+as\s+([A-Za-z_$]\w*)\s+from\s*"
+                r"\bimport\s+(?:[A-Za-z_$]\w*\s*,\s*)?"
+                r"\*\s+as\s+([A-Za-z_$]\w*)\s+from\s*"
                 r"(['\"])\.[^'\"]*\2",
                 visible,
             )
