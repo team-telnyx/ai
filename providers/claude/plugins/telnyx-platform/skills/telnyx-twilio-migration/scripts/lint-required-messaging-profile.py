@@ -569,11 +569,14 @@ def executable_source(path: Path, source: str) -> str:
                 razor_source,
             )
         )
-    elif suffix == ".phtml":
-        # PHTML is a mixed HTML/PHP template, not a plain PHP source file.
-        # Feeding its markup to the PHP lexer lets an apostrophe in page text
-        # open a string that masks a later request inside <?php ... ?>.
-        ranges.extend(
+    elif suffix in {".php", ".phtml"}:
+        # Both extensions may be mixed HTML/PHP templates. Feeding surrounding
+        # markup to the PHP lexer lets an apostrophe in page text open a string
+        # that masks a later request inside <?php ... ?>. Preserve only PHP
+        # regions whenever tags are present. Tagless `.php` remains supported
+        # because many analyzer fixtures and generated snippets contain raw PHP
+        # statements without an opening tag; tagless `.phtml` remains markup.
+        php_ranges = [
             match.span("code")
             for match in re.finditer(
                 # Plain ``<?`` is executable when short_open_tag is enabled.
@@ -584,7 +587,14 @@ def executable_source(path: Path, source: str) -> str:
                 source,
                 flags=re.IGNORECASE | re.DOTALL,
             )
-        )
+        ]
+        if (
+            suffix == ".php"
+            and not php_ranges
+            and re.search(r"</?[A-Za-z!]", source) is None
+        ):
+            return source
+        ranges.extend(php_ranges)
     elif suffix in {".ejs", ".erb", ".jsp"}:
         if suffix == ".ejs":
             # EJS scriptlets execute on the server, while ordinary <script>

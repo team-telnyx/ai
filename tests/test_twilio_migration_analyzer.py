@@ -1210,6 +1210,49 @@ class CorrectnessLinterContracts(unittest.TestCase):
             }
         )
 
+    def test_mixed_php_tag_family_preserves_only_executable_regions(self) -> None:
+        missing = (
+            "$client->post('https://api.telnyx.com/v2/messages/number_pool', "
+            "['json' => ['to' => '+1', 'text' => 'hi']]);"
+        )
+        valid = missing.replace(
+            "'text' => 'hi'",
+            "'text' => 'hi', 'messaging_profile_id' => 'mp'",
+        )
+        wrappers = {
+            "normal": ("<?php ", " ?>"),
+            "short": ("<? ", " ?>"),
+            "echo": ("<?= ", " ?>"),
+            "unclosed": ("<?php ", ""),
+            "multiple-blocks": ("<?php $title = 'ready'; ?>\n<?php ", " ?>"),
+        }
+        for tag, (opening, closing) in wrappers.items():
+            for polarity, body in (("missing", missing), ("valid", valid)):
+                with self.subTest(tag=tag, polarity=polarity):
+                    files = {
+                        "send.php": (
+                            "<p>It's ready</p>\n"
+                            + opening
+                            + body
+                            + closing
+                            + "\n"
+                        )
+                    }
+                    if polarity == "missing":
+                        _, payload = self.run_messaging_linter(files)
+                        self.assert_required_profile_detected(payload, "send.php")
+                    else:
+                        self.assert_required_profile_passes(files)
+
+        # Markup examples outside PHP tags are prose, while raw tagless PHP is
+        # retained for generated snippets and the analyzer's documented input
+        # convention.
+        self.assert_required_profile_passes(
+            {"example.php": "<code>" + missing + "</code>\n"}
+        )
+        _, payload = self.run_messaging_linter({"raw.php": missing + "\n"})
+        self.assert_required_profile_detected(payload, "raw.php")
+
     def test_multiline_template_comments_preserve_speech_model_line(self) -> None:
         source = (
             "<!-- comment\n"
