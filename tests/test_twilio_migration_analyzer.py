@@ -1181,6 +1181,35 @@ class CorrectnessLinterContracts(unittest.TestCase):
         )
         self.assertEqual("issue", check["status"], json.dumps(payload["checks"]))
 
+    def test_phtml_php_tag_family_preserves_only_executable_regions(self) -> None:
+        missing = (
+            '$client->post("https://api.telnyx.com/v2/messages/number_pool", '
+            '["json" => ["to" => "+1", "text" => "hi"]]);'
+        )
+        valid = missing.replace(
+            '"text" => "hi"',
+            '"text" => "hi", "messaging_profile_id" => "mp"',
+        )
+        for label, opening in (("normal", "<?php "), ("short", "<? ")):
+            for polarity, body in (("missing", missing), ("valid", valid)):
+                with self.subTest(tag=label, polarity=polarity):
+                    files = {"send.phtml": opening + body + " ?>\n"}
+                    if polarity == "missing":
+                        _, payload = self.run_messaging_linter(files)
+                        self.assert_required_profile_detected(payload, "send.phtml")
+                    else:
+                        self.assert_required_profile_passes(files)
+
+        # An XML processing instruction is markup, not a PHP short tag.
+        self.assert_required_profile_passes(
+            {
+                "feed.phtml": (
+                    '<?xml version="1.0" note="client.sendNumberPool({to: 1})"?>\n'
+                    "<feed/>\n"
+                )
+            }
+        )
+
     def test_multiline_template_comments_preserve_speech_model_line(self) -> None:
         source = (
             "<!-- comment\n"
@@ -1362,6 +1391,142 @@ class CorrectnessLinterContracts(unittest.TestCase):
         )
         self.assert_required_profile_detected(payload, "Nested.vue")
 
+    def test_vue_directive_expression_family_is_executable_javascript(self) -> None:
+        missing = "{to: '+1', text: 'hi'}"
+        valid = "{to: '+1', text: 'hi', messaging_profile_id: 'mp'}"
+        directives = {
+            "if": 'v-if="client.sendNumberPool(%s)"',
+            "show": 'v-show="client.sendNumberPool(%s)"',
+            "bind": 'v-bind:data-result="client.sendNumberPool(%s)"',
+            "bind-shorthand": ':data-result="client.sendNumberPool(%s)"',
+            "prop-shorthand": '.dataResult="client.sendNumberPool(%s)"',
+            "unquoted": "v-if=client.sendNumberPool(payload)",
+        }
+        for label, directive in directives.items():
+            for polarity, body in (("missing", missing), ("valid", valid)):
+                with self.subTest(directive=label, polarity=polarity):
+                    if label == "unquoted":
+                        profile = (
+                            ",messaging_profile_id:'mp'"
+                            if polarity == "valid"
+                            else ""
+                        )
+                        prefix = (
+                            "<script>const payload={to:'+1',text:'hi'"
+                            f"{profile}}};</script>\n"
+                        )
+                        attribute = directive
+                    else:
+                        prefix = ""
+                        attribute = directive % body
+                    source = (
+                        prefix
+                        + f"<template><div {attribute}>x</div></template>\n"
+                    )
+                    if polarity == "missing":
+                        _, payload = self.run_messaging_linter(
+                            {"Send.vue": source}
+                        )
+                        self.assert_required_profile_detected(payload, "Send.vue")
+                    else:
+                        self.assert_required_profile_passes({"Send.vue": source})
+
+        # Directive-looking documentation is text, not an opening-tag
+        # attribute, and HTML comments are not executable Vue templates.
+        self.assert_required_profile_passes(
+            {
+                "Docs.vue": (
+                    '<template><pre>v-if="client.sendNumberPool('
+                    "{to: '+1', text: 'hi'})\"</pre>\n"
+                    '<!-- <div v-bind:x="client.sendNumberPool('
+                    "{to: '+1', text: 'hi'})\"></div> -->\n"
+                    '<div title=\'example v-if="client.sendNumberPool('
+                    "{to: 1})\"\'>documentation</div>\n"
+                    '<div data-v-if="client.sendNumberPool({to: 1})">'
+                    "ordinary attribute</div>\n"
+                    "</template>\n"
+                )
+            }
+        )
+
+    def test_razor_implicit_expression_family_is_executable_csharp(self) -> None:
+        declarations = {
+            "missing": (
+                '@{ var payload = new MessageSendNumberPoolParams { To = "+1" }; }\n'
+            ),
+            "valid": (
+                '@{ var payload = new MessageSendNumberPoolParams { To = "+1", '
+                'MessagingProfileId = "mp" }; }\n'
+            ),
+        }
+        expressions = {
+            "member": "@client.Messages.SendNumberPool(payload)",
+            "indexer": "@clients[0].Messages.SendNumberPool(payload)",
+            "conditional": "@client?.Messages.SendNumberPool(payload)",
+            "await": "@await client.Messages.SendNumberPool(payload)",
+        }
+        for suffix in (".cshtml", ".razor"):
+            for label, expression in expressions.items():
+                for polarity in ("missing", "valid"):
+                    with self.subTest(
+                        suffix=suffix, expression=label, polarity=polarity
+                    ):
+                        fixture = f"View{suffix}"
+                        files = {
+                            fixture: (
+                                declarations[polarity]
+                                + f"<div>{expression}</div>\n"
+                            )
+                        }
+                        if polarity == "missing":
+                            _, payload = self.run_messaging_linter(files)
+                            self.assert_required_profile_detected(payload, fixture)
+                        else:
+                            self.assert_required_profile_passes(files)
+
+        continuations = {
+            "else": (
+                "@if (false) { Work(); } else { "
+                "client.Messages.SendNumberPool(payload); }\n"
+            ),
+            "catch": (
+                "@try { Work(); } catch (Exception) { "
+                "client.Messages.SendNumberPool(payload); }\n"
+            ),
+            "finally": (
+                "@try { Work(); } finally { "
+                "client.Messages.SendNumberPool(payload); }\n"
+            ),
+            "do": (
+                "@do { client.Messages.SendNumberPool(payload); } while (false);\n"
+            ),
+        }
+        for suffix in (".cshtml", ".razor"):
+            for label, control in continuations.items():
+                for polarity in ("missing", "valid"):
+                    with self.subTest(
+                        suffix=suffix, control=label, polarity=polarity
+                    ):
+                        fixture = f"Control{suffix}"
+                        files = {fixture: declarations[polarity] + control}
+                        if polarity == "missing":
+                            _, payload = self.run_messaging_linter(files)
+                            self.assert_required_profile_detected(payload, fixture)
+                        else:
+                            self.assert_required_profile_passes(files)
+
+        # Razor comments and escaped transitions render as text and must not
+        # turn SDK examples into live calls.
+        self.assert_required_profile_passes(
+            {
+                "Docs.cshtml": (
+                    "@* @client.Messages.SendNumberPool(payload) *@\n"
+                    "<code>@@client.Messages.SendNumberPool(payload)</code>\n"
+                    "<p>support@client.Messages.SendNumberPool(payload)</p>\n"
+                )
+            }
+        )
+
     def test_typescript_component_scripts_keep_typescript_resolution(self) -> None:
         source = "\n".join(
             (
@@ -1482,6 +1647,30 @@ class CorrectnessLinterContracts(unittest.TestCase):
             if c["status"] in {"warn", "issue"} and "speech_model" in c["name"]
         ]
         self.assertTrue(flagged, json.dumps(payload["checks"]))
+
+    def test_every_generated_directory_is_excluded_by_every_linter_phase(self) -> None:
+        shell = CORRECTNESS_LINTER.read_text(encoding="utf-8")
+        declared = re.search(r'^EXCLUDE_DIRS="([^"]*)"', shell, re.MULTILINE)
+        self.assertIsNotNone(declared)
+        violating = (
+            "#!/usr/bin/env node\n"
+            "client.messages.sendNumberPool({to: '+1', text: 'hi'});\n"
+        )
+        for directory in declared.group(1).split():
+            with self.subTest(directory=directory):
+                result, payload = self.run_messaging_linter(
+                    {f"{directory}/twilio-generated/send": violating}
+                )
+                statuses = {
+                    check["name"]: check["status"] for check in payload["checks"]
+                }
+                self.assertEqual(
+                    "pass", statuses.get("required_messaging_profile_id"), payload
+                )
+                self.assertEqual(
+                    "pass", statuses.get("twilio_directory_names"), payload
+                )
+                self.assertEqual(0, result.returncode, payload)
 
     def test_state_file_does_not_cross_waive_selected_product(self) -> None:
         # A retained TaskRouter product must not waive residual checks while
@@ -7247,14 +7436,25 @@ class AnalyzerConsistencyContracts(unittest.TestCase):
             r'^EXCLUDE_DIRS="([^"]*)"', shell, re.MULTILINE
         )
         self.assertIsNotNone(declared, "shell linter has no EXCLUDE_DIRS")
-        self.assertEqual(set(), canonical - set(declared.group(1).split()))
+        shell_dirs = set(declared.group(1).split())
+        self.assertEqual(set(), canonical - shell_dirs)
+        self.assertGreaterEqual(
+            shell.count('\\( "${FIND_EXCLUDE_EXPR[@]}" \\) -prune'),
+            2,
+            "every shell find traversal must derive pruning from EXCLUDE_DIRS",
+        )
+        self.assertIn(
+            "excluded_dirs = set(sys.argv[3].split())",
+            shell,
+            "the embedded Python traversal must derive the same policy",
+        )
 
         analyzer = MESSAGING_SOURCE_ANALYZER.read_text(encoding="utf-8")
         block = analyzer.split("EXCLUDED_DIRS = {", 1)[1]
         analyzer_dirs = set(
             re.findall(r'"([^"]+)"', block[: block.index("}")])
         )
-        self.assertEqual(set(), canonical - analyzer_dirs)
+        self.assertEqual(shell_dirs, analyzer_dirs)
 
 
 if __name__ == "__main__":

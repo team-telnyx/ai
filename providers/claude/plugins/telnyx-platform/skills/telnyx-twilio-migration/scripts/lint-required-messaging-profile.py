@@ -56,6 +56,7 @@ SUFFIX_LANGUAGE_ALIASES = {
     ".pyw": ".py",
     ".rake": ".rb",
     ".cshtml": ".cs",
+    ".razor": ".cs",
     ".scala": ".java",
     # Kotlin shares Java's grammar for everything this linter models - the
     # OkHttp/java.net.http builder chains, the braced control-flow arms, the
@@ -224,6 +225,200 @@ def _balanced_parenthesis_ranges(
     return ranges
 
 
+def _balanced_delimiter_end(source: str, opening: int) -> int | None:
+    """Return the index after a quote-aware (), [], or {} expression."""
+
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    opening_character = source[opening] if opening < len(source) else ""
+    if opening_character not in pairs:
+        return None
+    stack = [pairs[opening_character]]
+    quote = ""
+    escaped = False
+    for index in range(opening + 1, len(source)):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+        elif character in pairs:
+            stack.append(pairs[character])
+        elif character == stack[-1]:
+            stack.pop()
+            if not stack:
+                return index + 1
+    return None
+
+
+def _razor_implicit_expression_ranges(source: str) -> list[tuple[int, int]]:
+    """Return executable C# spans introduced by Razor's implicit ``@`` form.
+
+    Razor permits member, invocation, indexer, null-conditional, and ``await``
+    expressions without the explicit ``@(...)`` wrapper.  Parse those access
+    chains instead of preserving a handful of examples; markup and email-like
+    text remain excluded by requiring a non-word boundary before ``@``.
+    """
+
+    ranges: list[tuple[int, int]] = []
+    start_pattern = re.compile(
+        r"(?<![\w@])@(?!@)(?P<expression>await\s+|[A-Za-z_][\w]*)",
+        re.IGNORECASE,
+    )
+    for match in start_pattern.finditer(source):
+        start = match.start("expression")
+        cursor = match.end("expression")
+        if source[start:cursor].lower().startswith("await"):
+            identifier = re.match(r"[A-Za-z_][\w]*", source[cursor:])
+            if not identifier:
+                continue
+            cursor += identifier.end()
+
+        # Directives and control blocks are handled by the dedicated ranges
+        # below.  Treating their keyword as an expression adds no coverage and
+        # can retain adjacent markup as though it were C#.
+        first_identifier = re.match(r"[A-Za-z_][\w]*", source[start:])
+        if first_identifier and first_identifier.group(0).lower() in {
+            "addtaghelper", "attribute", "case", "catch", "class", "code",
+            "default", "do", "else", "finally", "for", "foreach", "functions",
+            "helper", "if", "implements", "inherits", "inject", "lock", "model",
+            "namespace", "page", "removetaghelper", "section", "switch",
+            "taghelperprefix", "try", "using", "while",
+        }:
+            continue
+
+        while cursor < len(source):
+            chain = re.match(r"(?:\?\.|\.)[A-Za-z_][\w]*", source[cursor:])
+            if chain:
+                cursor += chain.end()
+                continue
+            if source[cursor] in "([{":
+                end = _balanced_delimiter_end(source, cursor)
+                if end is None:
+                    break
+                cursor = end
+                continue
+            if source[cursor] in "!?":
+                cursor += 1
+                continue
+            break
+        ranges.append((start, cursor))
+    return ranges
+
+
+def _razor_continuation_block_ranges(
+    source: str, initial_ranges: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """Return ``else``/``catch``/``finally`` blocks chained to Razor C#."""
+
+    continuations: list[tuple[int, int]] = []
+    pending = list(initial_ranges)
+    while pending:
+        _, closing = pending.pop()
+        tail = source[closing + 1 :]
+        match = re.match(
+            r"\s*@?(?:else(?:\s+if\b[^{}]*)?|catch\b[^{}]*|finally\b)\s*\{",
+            tail,
+            flags=re.IGNORECASE,
+        )
+        if not match:
+            continue
+        opening = closing + 1 + match.end() - 1
+        balanced = _balanced_brace_ranges(source, [opening])
+        if balanced:
+            continuations.extend(balanced)
+            pending.extend(balanced)
+    return continuations
+
+
+def _vue_directive_expression_ranges(source: str) -> list[tuple[int, int]]:
+    """Return value and dynamic-argument expressions for every Vue directive."""
+
+    directive = (
+        r"(?<!\S)(?:v-[\w-]+(?::(?:[\w:-]+|\[[^\]\r\n]+\]))?"
+        r"|[@:#.](?:[\w:-]+|\[[^\]\r\n]+\]))"
+        r"(?:\.[\w-]+)*"
+    )
+    ranges: list[tuple[int, int]] = []
+
+    # Restrict directive discovery to opening tags.  A documentation snippet
+    # rendered as text (``<pre>v-if="..."</pre>``) is not executable Vue and
+    # must not become a false positive merely because it resembles an
+    # attribute.  Scan tag endings quote-aware so ``>`` inside an expression
+    # does not truncate the attribute list.
+    tag_ranges: list[tuple[int, int]] = []
+    cursor = 0
+    while cursor < len(source):
+        opening = source.find("<", cursor)
+        if opening < 0:
+            break
+        if opening + 1 >= len(source) or not re.match(
+            r"[A-Za-z]", source[opening + 1]
+        ):
+            cursor = opening + 1
+            continue
+        quote = ""
+        for index in range(opening + 1, len(source)):
+            character = source[index]
+            if quote:
+                if character == quote:
+                    quote = ""
+            elif character in {"'", '"'}:
+                quote = character
+            elif character == ">":
+                tag_ranges.append((opening, index + 1))
+                cursor = index + 1
+                break
+        else:
+            break
+
+    for tag_start, tag_end in tag_ranges:
+        tag = source[tag_start:tag_end]
+        outside_attribute_value: list[bool] = []
+        quote = ""
+        for character in tag:
+            outside_attribute_value.append(not quote)
+            if quote:
+                if character == quote:
+                    quote = ""
+            elif character in {"'", '"'}:
+                quote = character
+
+        value_pattern = re.compile(
+            directive
+            + r"\s*=\s*(?:(?P<quote>['\"])(?P<quoted>.*?)(?P=quote)"
+            + r"|(?P<unquoted>[^\s>]+))",
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        for candidate in re.finditer(directive, tag, flags=re.IGNORECASE):
+            if not outside_attribute_value[candidate.start()]:
+                continue
+            match = value_pattern.match(tag, candidate.start())
+            if not match:
+                continue
+            group = "quoted" if match.group("quoted") is not None else "unquoted"
+            start, end = match.span(group)
+            ranges.append((tag_start + start, tag_start + end))
+
+        # A dynamic directive argument is JavaScript independently of its
+        # value: ``:[selectEndpoint()]="payload"`` executes both expressions.
+        for match in re.finditer(
+            r"(?<!\S)(?:v-[\w-]+:|[@:#])\[(?P<argument>[^\]\r\n]+)\]",
+            tag,
+            flags=re.IGNORECASE,
+        ):
+            if not outside_attribute_value[match.start()]:
+                continue
+            start, end = match.span("argument")
+            ranges.append((tag_start + start, tag_start + end))
+    return ranges
+
+
 def _javascript_template_expression_ranges(
     source: str, start: int, end: int
 ) -> list[tuple[int, int]]:
@@ -283,15 +478,7 @@ def executable_source(path: Path, source: str) -> str:
             if frontmatter:
                 ranges.append(frontmatter.span(1))
         if suffix == ".vue":
-            ranges.extend(
-                match.span("expression")
-                for match in re.finditer(
-                    r"(?:v-on:[\w:-]+|@[\w:-]+)(?:\.[\w-]+)*\s*=\s*"
-                    r"(?P<quote>['\"])(?P<expression>.*?)(?P=quote)",
-                    template_source,
-                    re.DOTALL,
-                )
-            )
+            ranges.extend(_vue_directive_expression_ranges(template_source))
             # Vue interpolations may contain nested object literals. A
             # non-greedy regex leaves such calls unterminated; balance the
             # entire double-brace region and retain its inner expression.
@@ -320,37 +507,66 @@ def executable_source(path: Path, source: str) -> str:
                 for match in re.finditer(r"\{", expression_source)
             ]
             ranges.extend(_balanced_brace_ranges(expression_source, openings))
-    elif suffix == ".cshtml":
+    elif suffix in {".cshtml", ".razor"}:
         # Razor is a mixed HTML/C# template. Retain explicit expressions,
         # statement/code blocks, and single-line directives while blanking page
         # markup so text such as `<p>VoiceResponse()</p>` is not treated as C#.
+        razor_source = re.sub(
+            r"@\*.*?\*@",
+            lambda match: "".join(
+                char if char in "\r\n" else " " for char in match.group(0)
+            ),
+            source,
+            flags=re.DOTALL,
+        )
         brace_openings = [
             match.end() - 1
             for match in re.finditer(
                 r"(?<!@)@(?:\s*|(?:code|functions)\s*)\{",
-                source,
+                razor_source,
                 flags=re.IGNORECASE,
             )
         ]
-        brace_openings.extend(
+        control_openings = [
             match.end() - 1
             for match in re.finditer(
-                r"(?<!@)@(?:if|for|foreach|while|switch|try|catch|finally|using|lock)\b[^{}]*\{",
-                source,
+                r"(?<!@)@(?:if|for|foreach|while|do|switch|try|catch|finally|using|lock)\b[^{}]*\{",
+                razor_source,
                 flags=re.IGNORECASE,
             )
+        ]
+        ordinary_brace_ranges = _balanced_brace_ranges(
+            razor_source, brace_openings
         )
-        ranges.extend(_balanced_brace_ranges(source, brace_openings))
+        control_ranges = _balanced_brace_ranges(razor_source, control_openings)
+        ranges.extend(ordinary_brace_ranges)
+        ranges.extend(control_ranges)
+        ranges.extend(_razor_continuation_block_ranges(razor_source, control_ranges))
+
+        # The condition after a Razor do/while body is executable C# too.
+        for opening in control_openings:
+            prefix = razor_source[max(0, opening - 16) : opening]
+            if not re.search(r"@do\s*$", prefix, re.IGNORECASE):
+                continue
+            body = _balanced_brace_ranges(razor_source, [opening])
+            if not body:
+                continue
+            tail = razor_source[body[0][1] + 1 :]
+            while_match = re.match(r"\s*while\s*\(", tail, re.IGNORECASE)
+            if while_match:
+                paren = body[0][1] + 1 + while_match.end() - 1
+                ranges.extend(_balanced_parenthesis_ranges(razor_source, [paren]))
         paren_openings = [
             match.end() - 1
-            for match in re.finditer(r"(?<!@)@\s*\(", source)
+            for match in re.finditer(r"(?<!@)@\s*\(", razor_source)
         ]
-        ranges.extend(_balanced_parenthesis_ranges(source, paren_openings))
+        ranges.extend(_balanced_parenthesis_ranges(razor_source, paren_openings))
+        ranges.extend(_razor_implicit_expression_ranges(razor_source))
         ranges.extend(
             match.span()
             for match in re.finditer(
                 r"(?m)^\s*@(?:using|inject|model|inherits|implements|namespace|addTagHelper|removeTagHelper|tagHelperPrefix)\b[^\r\n]*",
-                source,
+                razor_source,
             )
         )
     elif suffix == ".phtml":
@@ -358,9 +574,13 @@ def executable_source(path: Path, source: str) -> str:
         # Feeding its markup to the PHP lexer lets an apostrophe in page text
         # open a string that masks a later request inside <?php ... ?>.
         ranges.extend(
-            match.span(1)
+            match.span("code")
             for match in re.finditer(
-                r"<\?(?:php\b|=)(.*?)(?:\?>|\Z)",
+                # Plain ``<?`` is executable when short_open_tag is enabled.
+                # Keep XML declarations out: with short tags disabled they are
+                # markup, and with short tags enabled they make the PHP file
+                # invalid rather than forming a customer request.
+                r"<\?(?:php\b|=|(?!(?:xml)\b))(?P<code>.*?)(?:\?>|\Z)",
                 source,
                 flags=re.IGNORECASE | re.DOTALL,
             )

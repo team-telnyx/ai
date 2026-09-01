@@ -76,6 +76,18 @@ build_exclude_args() {
 
 GREP_EXCLUDES=""
 
+# Build every find(1) prune expression from the same policy as grep.  Keeping
+# literal copies in each traversal caused generated directories to re-enter
+# through the directory-name and shebang scans after source scanning excluded
+# them.
+FIND_EXCLUDE_EXPR=()
+for excluded_dir in $EXCLUDE_DIRS; do
+  if [ ${#FIND_EXCLUDE_EXPR[@]} -gt 0 ]; then
+    FIND_EXCLUDE_EXPR+=(-o)
+  fi
+  FIND_EXCLUDE_EXPR+=(-name "$excluded_dir")
+done
+
 
 # grep --include globs are case-sensitive; SEND.JS is the same JavaScript as
 # send.js. Rewrite '*.ext' into a character-class glob matching any casing.
@@ -134,9 +146,7 @@ collect_shebang_files() {
       '#!'*sh*)     SHEBANG_SH_FILES="${SHEBANG_SH_FILES}${_f}"$'\n' ;;
     esac
   done < <(find "$PROJECT_ROOT" \
-    \( -name node_modules -o -name .git -o -name vendor -o -name __pycache__ \
-       -o -name venv -o -name .venv -o -name dist -o -name build \
-       -o -name .next -o -name .nuxt -o -name coverage -o -name .tox \) -prune \
+    \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
     -o -type f ! -name '*.*' -size -1048576c -print0 2>/dev/null)
 }
 
@@ -189,7 +199,7 @@ expand_source_globs() {
       '*.rb') echo '*.rb' '*.rake' 'Rakefile' 'rakefile' '*.erb' ;;
       '*.php') echo '*.php' '*.phtml' ;;
       '*.java') echo '*.java' '*.kt' '*.kts' '*.scala' '*.jsp' ;;
-      '*.cs') echo '*.cs' '*.cshtml' ;;
+      '*.cs') echo '*.cs' '*.cshtml' '*.razor' ;;
       *) echo "$glob" ;;
     esac
   done
@@ -648,7 +658,7 @@ if product_applies "voice"; then
   # a documented attribute on a Language child of ConversationRelay. Inspect
   # tag ancestry instead of rejecting every textual occurrence.
   speech_source_analyzer="$(cd "$(dirname "$0")" && pwd)/lint-required-messaging-profile.py"
-  matches=$(python3 -B - "$PROJECT_ROOT" "$speech_source_analyzer" <<'PYEOF'
+  matches=$(python3 -B - "$PROJECT_ROOT" "$speech_source_analyzer" "$EXCLUDE_DIRS" <<'PYEOF'
 import importlib.util
 import os
 import re
@@ -663,16 +673,13 @@ if spec is None or spec.loader is None:
 analyzer = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = analyzer
 spec.loader.exec_module(analyzer)
-excluded_dirs = {
-    ".git", ".next", ".nuxt", ".tox", ".venv", "__pycache__", "build",
-    "coverage", "dist", "node_modules", "vendor", "venv",
-}
+excluded_dirs = set(sys.argv[3].split())
 excluded_files = {
     "MIGRATION-PLAN.md", "MIGRATION-REPORT.md", "migration-state.json",
     "twilio-deep-scan.json", "twilio-scan.json",
 }
 suffixes = {
-    ".astro", ".bash", ".cjs", ".cs", ".cshtml", ".dart", ".ejs", ".erb",
+    ".astro", ".bash", ".cjs", ".cs", ".cshtml", ".razor", ".dart", ".ejs", ".erb",
     ".ksh", ".zsh", ".go", ".handlebars", ".hbs", ".java", ".jinja",
     ".jinja2", ".cts", ".j2", ".js", ".jsp", ".jsx", ".kt", ".kts",
     ".mjs", ".mts", ".mustache", ".php", ".phtml", ".py", ".pyw",
@@ -1011,8 +1018,7 @@ fi
 
 # Check 12: Directory/path names containing "twilio"
 twilio_dirs=$(find "$PROJECT_ROOT" -mindepth 1 \
-  \( -name node_modules -o -name .git -o -name vendor -o -name __pycache__ \
-     -o -name venv -o -name .venv -o -name dist -o -name build \) -prune \
+  \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
   -o -type d -iname '*twilio*' -print 2>/dev/null || true)
 twilio_dir_count=$(echo "$twilio_dirs" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$twilio_dir_count" -gt 0 ] && [ -n "$(echo "$twilio_dirs" | sed '/^$/d')" ]; then
