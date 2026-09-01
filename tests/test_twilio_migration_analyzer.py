@@ -7436,6 +7436,209 @@ class CorrectnessLinterContracts(unittest.TestCase):
             ),
         )
 
+    def test_csharp_httpclient_json_extension_contract_matrix(self) -> None:
+        """Cover the official mutating System.Net.Http.Json call surface.
+
+        Microsoft exposes Post/Put/PatchAsJsonAsync with string and Uri URLs,
+        inferred or explicit TValue, JsonSerializerOptions or JsonTypeInfo, and
+        cancellation-token overloads.  Extension methods can also be invoked
+        through an instance, the static class (including using-static/type
+        aliases), a null-safe receiver, or an expression receiver.  Every
+        supported shape is checked in missing, compliant, and non-required
+        polarities so adding a call name without selecting its value argument
+        cannot turn the fail-safe into a false block.
+        """
+
+        namespace = runpy.run_path(
+            str(MESSAGING_SOURCE_ANALYZER),
+            run_name="telnyx_csharp_json_extension_contract",
+        )
+        analyze = namespace["analyze_file"]
+        fetch_pattern = namespace["FETCH_CALL_RE"]
+        declared = (
+            namespace["CSHARP_HTTP_CONTENT_METHODS"]
+            + namespace["CSHARP_JSON_MUTATING_METHOD_NAMES"]
+        )
+        for method in declared:
+            with self.subTest(method=method, inventory="direct"):
+                self.assertIsNotNone(fetch_pattern.search(method + "(url, value)"))
+        for method in namespace["CSHARP_JSON_MUTATING_METHOD_NAMES"]:
+            with self.subTest(method=method, inventory="explicit-generic"):
+                self.assertIsNotNone(
+                    fetch_pattern.search(
+                        method + "<Dictionary<string, Payload>>(url, value)"
+                    )
+                )
+
+        def run(source: str) -> tuple[int, int]:
+            with tempfile.TemporaryDirectory(
+                prefix="telnyx-csharp-json-extension-"
+            ) as temp_dir:
+                root = Path(temp_dir)
+                fixture = root / "Send.cs"
+                fixture.write_text(source, encoding="utf-8")
+                total, missing = analyze(fixture, root)
+                return total, len(missing)
+
+        required = "https://api.telnyx.com/v2/messages/number_pool"
+        safe = "https://api.telnyx.com/v2/messages"
+        present = (
+            'new { to = "+1", messaging_profile_id = '
+            '"00000000-0000-4000-8000-000000000001" }'
+        )
+        absent = 'new { to = "+1" }'
+
+        def forms(method: str, url: str, payload: str) -> dict[str, str]:
+            return {
+                "instance-string": (
+                    f'await client.{method}("{url}", {payload});'
+                ),
+                "instance-uri-cancellation": (
+                    f'await client.{method}(new Uri("{url}"), {payload}, ct);'
+                ),
+                "instance-options": (
+                    f'await client.{method}("{url}", {payload}, options, ct);'
+                ),
+                "instance-type-info": (
+                    "JsonTypeInfo<object> typeInfo = GetTypeInfo();\n"
+                    f'await client.{method}(new Uri("{url}"), {payload}, '
+                    "typeInfo, ct);"
+                ),
+                "explicit-generic": (
+                    f'await client.{method}<object>('
+                    f'"{url}", {payload}, options, ct);'
+                ),
+                "qualified-static": (
+                    "await System.Net.Http.Json.HttpClientJsonExtensions."
+                    f'{method}(client, new Uri("{url}"), {payload}, options, ct);'
+                ),
+                "using-static": (
+                    "using static System.Net.Http.Json.HttpClientJsonExtensions;\n"
+                    f'await {method}(client, "{url}", {payload}, ct);'
+                ),
+                "aliased-static": (
+                    "using JsonHttp = System.Net.Http.Json.HttpClientJsonExtensions;\n"
+                    f'await JsonHttp.{method}(client, "{url}", {payload}, '
+                    "options, ct);"
+                ),
+                "global-aliased-static": (
+                    "global using JsonHttp = "
+                    "System.Net.Http.Json.HttpClientJsonExtensions;\n"
+                    f'await JsonHttp.{method}(client, "{url}", {payload}, '
+                    "options, ct);"
+                ),
+                "named-reordered": (
+                    f"await client.{method}(value: {payload}, "
+                    f'requestUri: new Uri("{url}"), cancellationToken: ct);'
+                ),
+                "null-safe-instance": (
+                    f'await client?.{method}("{url}", {payload});'
+                ),
+                "expression-instance": (
+                    f'await GetClient().{method}("{url}", {payload});'
+                ),
+            }
+
+        for verb in ("Post", "Put", "Patch"):
+            method = verb + "AsJsonAsync"
+            for form, source in forms(method, required, absent).items():
+                with self.subTest(verb=verb, form=form, polarity="missing"):
+                    self.assertEqual((1, 1), run(source))
+            for form, source in forms(method, required, present).items():
+                with self.subTest(verb=verb, form=form, polarity="present"):
+                    self.assertEqual((1, 0), run(source))
+            for form, source in forms(method, safe, absent).items():
+                with self.subTest(verb=verb, form=form, polarity="safe"):
+                    self.assertEqual((0, 0), run(source))
+
+            for path, expected in (
+                ("number_pool", (1, 0)),
+                ("messages", (0, 0)),
+            ):
+                source = (
+                    "client.BaseAddress = new Uri("
+                    '"https://api.telnyx.com/v2/messages/");\n'
+                    f'await client.{method}("{path}", {present});'
+                )
+                with self.subTest(verb=verb, form="base-address", path=path):
+                    self.assertEqual(expected, run(source))
+
+        # The same inventory omission also hid HttpClient's ordinary PUT/PATCH
+        # body overloads. They share the URL/body signature with PostAsync.
+        encoded_present = (
+            'new StringContent("{\\"messaging_profile_id\\":'
+            '\\"00000000-0000-4000-8000-000000000001\\",'
+            '\\"to\\":\\"+1\\"}")'
+        )
+        encoded_absent = 'new StringContent("{\\"to\\":\\"+1\\"}")'
+        for method in ("PostAsync", "PutAsync", "PatchAsync"):
+            with self.subTest(method=method, polarity="missing"):
+                self.assertEqual(
+                    (1, 1),
+                    run(f'await client.{method}("{required}", {encoded_absent});'),
+                )
+            with self.subTest(method=method, polarity="present"):
+                self.assertEqual(
+                    (1, 0),
+                    run(f'await client.{method}("{required}", {encoded_present});'),
+                )
+            with self.subTest(method=method, polarity="safe"):
+                self.assertEqual(
+                    (0, 0),
+                    run(f'await client.{method}("{safe}", {encoded_absent});'),
+                )
+
+        # The newly advertised PascalCase methods belong to .NET. An unrelated
+        # method with the same spelling in another advertised language must not
+        # become a transport call merely because it appears in the shared call
+        # inventory.
+        with tempfile.TemporaryDirectory(
+            prefix="telnyx-csharp-json-extension-language-scope-"
+        ) as temp_dir:
+            root = Path(temp_dir)
+            fixture = root / "Unrelated.java"
+            fixture.write_text(
+                f'helper.PutAsJsonAsync("{required}", payload);',
+                encoding="utf-8",
+            )
+            total, findings = analyze(fixture, root)
+            self.assertEqual(1, total)
+            self.assertEqual(1, len(findings))
+            self.assertIn("could not verify this send", findings[0])
+
+        # Pin the real public entry point from the review, not only the Python
+        # analyzer API: compliant JSON sends must unblock the migration, while
+        # the missing-profile polarity remains an actionable issue.
+        result, payload = self.run_messaging_linter(
+            {
+                "Send.cs": (
+                    f'await client.PostAsJsonAsync("{required}", {present});'
+                )
+            }
+        )
+        profile_check = next(
+            check
+            for check in payload["checks"]
+            if check["name"] == "required_messaging_profile_id"
+        )
+        self.assertEqual(0, result.returncode)
+        self.assertEqual("pass", profile_check["status"])
+
+        result, payload = self.run_messaging_linter(
+            {
+                "Send.cs": (
+                    f'await client.PostAsJsonAsync("{required}", {absent});'
+                )
+            }
+        )
+        profile_check = next(
+            check
+            for check in payload["checks"]
+            if check["name"] == "required_messaging_profile_id"
+        )
+        self.assertEqual(1, result.returncode)
+        self.assertEqual("issue", profile_check["status"])
+
     def test_required_send_contract_matrix(self) -> None:
         """Cross-product contract matrix over the SUPPORTED SURFACE.
 

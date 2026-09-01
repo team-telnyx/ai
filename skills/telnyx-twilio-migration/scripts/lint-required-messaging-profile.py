@@ -682,8 +682,27 @@ SDK_CALL_RE = re.compile(
     rf"(?:\?\.|\.|->)\s*(?:{SDK_METHOD_PATTERN})"
     r"\s*(?:\?\.)?\s*\("
 )
+CSHARP_HTTP_CONTENT_METHODS = ("PostAsync", "PutAsync", "PatchAsync")
+CSHARP_JSON_MUTATING_METHOD_NAMES = (
+    "PostAsJsonAsync",
+    "PutAsJsonAsync",
+    "PatchAsJsonAsync",
+)
+CSHARP_HTTP_CONTENT_METHOD_PATTERN = "|".join(CSHARP_HTTP_CONTENT_METHODS)
+CSHARP_JSON_MUTATING_METHOD_PATTERN = "|".join(
+    CSHARP_JSON_MUTATING_METHOD_NAMES
+)
+CSHARP_JSON_MUTATING_METHODS = frozenset(
+    name.lower() for name in CSHARP_JSON_MUTATING_METHOD_NAMES
+)
+CSHARP_ONLY_FETCH_METHODS = frozenset(
+    {"PutAsync", "PatchAsync", *CSHARP_JSON_MUTATING_METHOD_NAMES}
+)
 FETCH_CALL_RE = re.compile(
-    r"(?<![\w$])(?:fetch|request|post_form|postAsync|PostAsync|post|Post|POST|"
+    rf"(?<![\w$])(?:fetch|request|post_form|postAsync|"
+    rf"(?:{CSHARP_HTTP_CONTENT_METHOD_PATTERN})|"
+    rf"(?:{CSHARP_JSON_MUTATING_METHOD_PATTERN})(?:\s*<[^()]{{0,512}}>)?|"
+    r"post|Post|POST|"
     # curl_init($url) is the documented one-liner that sets CURLOPT_URL
     # directly. Listing only the setopt spellings made that whole shape
     # invisible: no endpoint resolved, so the send was never counted and the
@@ -1922,7 +1941,14 @@ def rest_payload_spans(
             if projected is not None:
                 return [projected]
 
-    callee = re.sub(r"\s+", "", lexed.code[call.start:call.open_paren])
+    callee = normalized_call_callee(lexed, call)
+    callee_lower = callee.lower()
+    if suffix == ".cs" and callee_lower in CSHARP_JSON_MUTATING_METHODS:
+        named_value = named_argument_spans(lexed, arguments, "value")
+        if named_value:
+            return named_value[-1:]
+        offset = csharp_json_extension_argument_offset(lexed, call)
+        return arguments[offset + 1 : offset + 2]
     if suffix == ".php" and callee == "file_get_contents":
         region = php_stream_context_region(lexed, call, suffix)
         if region is None:
@@ -3045,6 +3071,44 @@ def call_receiver(lexed: LexedSource, call: Call) -> str | None:
     return match.group(1).lstrip("$") if match is not None else None
 
 
+def normalized_call_callee(lexed: LexedSource, call: Call) -> str:
+    """Return a call name without whitespace or C# generic type arguments."""
+
+    callee = re.sub(r"\s+", "", lexed.code[call.start:call.open_paren])
+    return re.sub(r"<[^()]{0,512}>$", "", callee)
+
+
+def csharp_json_extension_argument_offset(
+    lexed: LexedSource, call: Call
+) -> int:
+    """Return the URL offset for instance versus static extension calls.
+
+    ``client.PostAsJsonAsync(url, value)`` starts at URL argument zero, while
+    ``HttpClientJsonExtensions.PostAsJsonAsync(client, url, value)`` and a
+    ``using static`` call start at argument one.  A type alias for the official
+    extension class is the same static form.  Expression receivers such as
+    ``GetClient().PostAsJsonAsync(...)`` remain instance calls even though they
+    do not have a simple identifier receiver.
+    """
+
+    receiver = call_receiver(lexed, call)
+    explicit_receiver = bool(
+        re.search(r"(?:\?|!)?\s*\.\s*$", lexed.code[:call.start])
+    )
+    if receiver is None:
+        return 0 if explicit_receiver else 1
+    if receiver == "HttpClientJsonExtensions":
+        return 1
+    if re.search(
+        rf"(?m)^\s*(?:global\s+)?using\s+{re.escape(receiver)}\s*=\s*"
+        r"(?:global\s*::\s*)?System\s*\.\s*Net\s*\.\s*Http\s*\.\s*Json"
+        r"\s*\.\s*HttpClientJsonExtensions\s*;",
+        lexed.original,
+    ):
+        return 1
+    return 0
+
+
 # Factory methods that build an HTTP client which then sends. A `.post()` on
 # such a factory (requests.Session().post, httpx.Client().post,
 # axios.create(...).post) is a real send; a `.post()` on a mock/assertion
@@ -4114,7 +4178,10 @@ def request_write_payload_spans(
 
 
 URL_CONSTRUCTOR_RE = re.compile(
-    r"^\s*(?:new\s+)?(?:URI|URL)(?:\s*\.\s*(?:create|parse|join))?\s*\("
+    # Java/Ruby use URI/URL; .NET's official overload uses System.Uri.  The
+    # case-sensitive type spelling matters because strings are already masked
+    # and this runs on arbitrary expressions, not on a C# AST.
+    r"^\s*(?:new\s+)?(?:URI|URL|Uri)(?:\s*\.\s*(?:create|parse|join))?\s*\("
 )
 
 
@@ -4424,9 +4491,7 @@ def _request_url_spans(
     args = split_arguments(lexed.code, call.open_paren + 1, call.end - 1)
     if not args:
         return []
-    callee = re.sub(
-        r"\s+", "", lexed.code[call.start:call.open_paren]
-    )
+    callee = normalized_call_callee(lexed, call)
     callee_lower = callee.lower()
     receiver = call_receiver(lexed, call)
     explicit_receiver = bool(
@@ -4484,6 +4549,11 @@ def _request_url_spans(
         for name in URL_MEMBER_NAMES
         for span in named_argument_spans(lexed, args, name)
     ]
+    if suffix == ".cs" and callee_lower in CSHARP_JSON_MUTATING_METHODS:
+        if named_url:
+            return named_url[-1:]
+        offset = csharp_json_extension_argument_offset(lexed, call)
+        return args[offset : offset + 1]
     if callee_lower in {"post", "postasync"} and named_url:
         return named_url[-1:]
     if suffix == ".php" and callee == "file_get_contents" and args:
@@ -11413,6 +11483,16 @@ def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
     lexed = lex_source(source, suffix)
     sdk_calls = calls_matching(lexed, SDK_CALL_RE) + sdk_alias_calls(lexed)
     fetch_calls = calls_matching(lexed, FETCH_CALL_RE)
+    if suffix != ".cs":
+        # These PascalCase names are official .NET HttpClient methods. Keeping
+        # their discovery C#-only avoids turning an unrelated Java/JavaScript
+        # method with the same name into a recognised transport call.
+        fetch_calls = [
+            call
+            for call in fetch_calls
+            if normalized_call_callee(lexed, call)
+            not in CSHARP_ONLY_FETCH_METHODS
+        ]
     shell_curls = shell_curl_calls(lexed) if suffix == ".sh" else []
     required_calls: list[tuple[Call, bool]] = [(call, True) for call in sdk_calls]
     source_resolver = SourceEndpointResolver(
