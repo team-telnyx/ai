@@ -6747,6 +6747,7 @@ class CorrectnessLinterContracts(unittest.TestCase):
             "client.messages.sendNumberPool(new MessageSendNumberPoolParams()"
             '.setTo("+1"))'
         )
+        alias_call = "client.messages.sendNumberPool(payload)"
         live = {
             "lower.kt": f'val value = "${{{call}}}"\n',
             "script.kts": f'val value = "${{{call}}}"\n',
@@ -6754,6 +6755,8 @@ class CorrectnessLinterContracts(unittest.TestCase):
             "s.scala": f'val value = s"${{{call}}}"\n',
             "f.scala": f'val value = f"${{{call}}}%s"\n',
             "raw.scala": f'val value = raw"""${{{call}}}"""\n',
+            "even-backslash.kt": f'val value = "\\\\${{{alias_call}}}"\n',
+            "raw-backslash.kt": f'val value = """\\${{{alias_call}}}"""\n',
         }
         for fixture, source in live.items():
             with self.subTest(live=fixture):
@@ -6762,7 +6765,10 @@ class CorrectnessLinterContracts(unittest.TestCase):
                 self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
 
         inert = {
-            "escaped.kt": f'val value = "\\${{{call}}}"\n',
+            # Keep the reviewed payload-variable form: a nested quote in the
+            # expression once ended the outer string early and made this test
+            # pass without exercising marker restoration at all.
+            "escaped.kt": f'val value = "\\${{{alias_call}}}"\n',
             "ordinary.scala": f'val value = "${{{call}}}"\n',
             "escaped.scala": f'val value = s"$${{{call}}}"\n',
             "ordinary.java": f'String value = "${{{call}}}";\n',

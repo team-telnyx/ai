@@ -738,6 +738,7 @@ def _interpolation_ranges(
     language: str,
     brace_count: int = 1,
     dollar_marker: bool = False,
+    backslash_escapes_marker: bool = False,
 ) -> list[tuple[int, int]]:
     """Return executable expression spans within interpolated strings."""
 
@@ -748,6 +749,17 @@ def _interpolation_ranges(
         marker = source.find(opener, cursor, end)
         if marker < 0:
             break
+        if dollar_marker and backslash_escapes_marker:
+            backslashes = 0
+            before = marker - 1
+            while before >= start and source[before] == "\\":
+                backslashes += 1
+                before -= 1
+            if backslashes % 2:
+                # Kotlin normal strings spell a literal dollar as `\$`.
+                # An even run escapes only itself, leaving `$` executable.
+                cursor = marker + 2
+                continue
         if (
             dollar_marker
             and language == "scala"
@@ -1960,6 +1972,9 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
                 language=language,
                 brace_count=brace_count,
                 dollar_marker=jvm_interpolates,
+                backslash_escapes_marker=(
+                    dialect == "kotlin" and not jvm_raw
+                ),
             ):
                 nested = lex_source(
                     source[expression_start:expression_end], suffix, dialect
