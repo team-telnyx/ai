@@ -1522,7 +1522,8 @@ _HEREDOC_OPENER_RE = re.compile(
 _NOT_A_HEREDOC_PREFIX_RE = re.compile(r"(?:^|[^\w.])class[ \t]*$")
 _SHELL_HEREDOC_REDIRECTION_RE = re.compile(
     r"[ \t]*(?:(?:&>>|&>)|(?:\d*)?(?:>>|>\||>&|<&|<>|>|<))[ \t]*"
-    r"(?:&?\d+|-|'[^']*'|\"(?:\\.|[^\"])*\"|(?:\\.|[^ \t\r\n;<>&|])+)",
+    r"(?:&?\d+|-|'[^']*'|\"(?:\\.|[^\"\\])*\"|"
+    r"(?:\\.|[^\\ \t\r\n;<>&|])+)",
 )
 
 

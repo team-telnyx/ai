@@ -3074,6 +3074,7 @@ class CorrectnessLinterContracts(unittest.TestCase):
             "&>sample.txt",
             "&>> sample.txt # generated fixture",
             ">sample.txt # generated fixture",
+            r">sample\ file.txt",
         )
         for redirection in redirections:
             with self.subTest(redirection=redirection):
