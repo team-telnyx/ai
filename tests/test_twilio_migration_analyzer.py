@@ -3066,7 +3066,7 @@ class CorrectnessLinterContracts(unittest.TestCase):
 
     def test_shell_heredocs_accept_trailing_redirections(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
-        redirections = (
+        command_tails = (
             ">sample.txt",
             ">> sample.txt 2>&1",
             "2>/dev/null >'sample file.txt'",
@@ -3075,11 +3075,15 @@ class CorrectnessLinterContracts(unittest.TestCase):
             "&>> sample.txt # generated fixture",
             ">sample.txt # generated fixture",
             r">sample\ file.txt",
+            "| sed 's/x/y/'",
+            "|& tee sample.txt",
+            "&& echo done",
+            "; echo done",
         )
-        for redirection in redirections:
-            with self.subTest(redirection=redirection):
+        for command_tail in command_tails:
+            with self.subTest(command_tail=command_tail):
                 inert = (
-                    f"cat <<'DOC' {redirection}\n"
+                    f"cat <<'DOC' {command_tail}\n"
                     "client.messages.sendNumberPool({to:'+1'})\n"
                     "DOC\n"
                 )
@@ -3091,6 +3095,115 @@ class CorrectnessLinterContracts(unittest.TestCase):
                 rows = result.stdout.splitlines()
                 self.assertEqual("1", rows[0], result.stdout)
                 self.assertTrue(any("send.sh" in row for row in rows[1:]), result.stdout)
+
+        # Compact shell bit shifts look exactly like unquoted heredoc openers
+        # to a regex. They must not mask the real send that follows.
+        arithmetic = (
+            "mask=$((1<<SHIFT))",
+            "((mask=1<<SHIFT))",
+            "mask=$[1<<SHIFT]",
+            "mask=$((nested(1)<<SHIFT))",
+            "mask=$((\n  1<<SHIFT\n))",
+            "((\n  mask=1<<SHIFT\n))",
+            "mask=$[\n  1<<SHIFT\n]",
+        )
+        for expression in arithmetic:
+            with self.subTest(expression=expression):
+                source = (
+                    expression
+                    + "\n"
+                    + f"curl -X POST '{url}' -d '{{\"to\":\"+1\"}}'\n"
+                )
+                result = self.run_required_profile_analyzer(
+                    {"arithmetic.sh": source}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(
+                    any("arithmetic.sh" in row for row in rows[1:]),
+                    result.stdout,
+                )
+
+        for here_string in ("cat <<<WORD", "cat <<<'WORD'"):
+            with self.subTest(here_string=here_string):
+                source = (
+                    here_string
+                    + "\n"
+                    + f"curl -X POST '{url}' -d '{{\"to\":\"+1\"}}'\n"
+                )
+                result = self.run_required_profile_analyzer(
+                    {"here-string.sh": source}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(
+                    any("here-string.sh" in row for row in rows[1:]),
+                    result.stdout,
+                )
+
+        multiple = (
+            "cat <<'FIRST' <<SECOND\n"
+            "client.messages.sendNumberPool({to:'+1'})\n"
+            "FIRST\n"
+            "client.messages.sendNumberPool({to:'+1'})\n"
+            "SECOND\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"multiple-inert.sh": multiple}
+            ).stdout.strip(),
+        )
+        result = self.run_required_profile_analyzer(
+            {
+                "multiple-live.sh": multiple
+                + f"curl -X POST '{url}' -d '{{\"to\":\"+1\"}}'\n"
+            }
+        )
+        rows = result.stdout.splitlines()
+        self.assertEqual("1", rows[0], result.stdout)
+        self.assertTrue(
+            any("multiple-live.sh" in row for row in rows[1:]), result.stdout
+        )
+
+        continued_live = (
+            "cat <<'DOC' \\\n"
+            f"| curl -X POST '{url}' -d '{{\"to\":\"+1\"}}'\n"
+            "inert\nDOC\n"
+        )
+        result = self.run_required_profile_analyzer(
+            {"continued-live.sh": continued_live}
+        )
+        rows = result.stdout.splitlines()
+        self.assertEqual("1", rows[0], result.stdout)
+        self.assertTrue(
+            any("continued-live.sh" in row for row in rows[1:]), result.stdout
+        )
+
+        continued_multiple = (
+            "cat <<'FIRST' \\\n  <<'SECOND'\n"
+            "plain\nFIRST\n"
+            "client.messages.sendNumberPool({to:'+1'})\nSECOND\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"continued-multiple.sh": continued_multiple}
+            ).stdout.strip(),
+        )
+
+        # Only `<<-` strips leading tabs from delimiter lines. An indented word
+        # in an ordinary heredoc body is data, not an early terminator.
+        indented_non_terminator = (
+            "cat <<DOC\n  DOC\n"
+            "client.messages.sendNumberPool({to:'+1'})\nDOC\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"indented-delimiter.sh": indented_non_terminator}
+            ).stdout.strip(),
+        )
 
     def test_ruby_request_constructors_require_an_execution_link(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
@@ -3162,6 +3275,75 @@ class CorrectnessLinterContracts(unittest.TestCase):
             self.run_required_profile_analyzer(
                 {"cross-scope.rb": cross_scope}
             ).stdout.strip(),
+        )
+
+        # An out-of-scope execution must not hide a later execution in the
+        # constructor's real scope. Rebinding likewise follows exact local
+        # identity, not a same-spelled member or an unrelated method local.
+        later_in_scope = (
+            f"uri = URI('{url}')\nreq = Net::HTTP::Post.new(uri)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "def helper\n  http.request(req)\nend\n"
+            "http.request(req)\n"
+        )
+        member_rebind = (
+            f"uri = URI('{url}')\nreq = Net::HTTP::Post.new(uri)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "self.req = cached_request\nhttp.request(req)\n"
+        )
+        nested_rebind = (
+            f"uri = URI('{url}')\nreq = Net::HTTP::Post.new(uri)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "def helper\n  req = cached_request\nend\n"
+            "http.request(req)\n"
+        )
+        compact_hash_rebind = (
+            f"uri = URI('{url}')\nreq = Net::HTTP::Post.new(uri)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "x = {foo:req = cached_request}\nhttp.request(req)\n"
+        )
+        for name, source in (
+            ("later-in-scope", later_in_scope),
+            ("member-rebind", member_rebind),
+            ("nested-rebind", nested_rebind),
+        ):
+            with self.subTest(name=name):
+                result = self.run_required_profile_analyzer(
+                    {f"{name}.rb": source}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(
+                    any(f"{name}.rb" in row for row in rows[1:]),
+                    result.stdout,
+                )
+
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"compact-hash-rebind.rb": compact_hash_rebind}
+            ).stdout.strip(),
+        )
+
+        # Ruby's sigiled bindings retain identity across method boundaries.
+        sigiled_cross_scope = (
+            "class Sender\n"
+            "  def prepare\n"
+            f"    uri = URI('{url}')\n"
+            "    @req = Net::HTTP::Post.new(uri)\n"
+            "    @req.body = {to:'+1'}.to_json\n"
+            "  end\n"
+            "  def deliver\n    http.request(@req)\n  end\n"
+            "end\n"
+        )
+        result = self.run_required_profile_analyzer(
+            {"sigiled-cross-scope.rb": sigiled_cross_scope}
+        )
+        rows = result.stdout.splitlines()
+        self.assertEqual("1", rows[0], result.stdout)
+        self.assertTrue(
+            any("sigiled-cross-scope.rb" in row for row in rows[1:]),
+            result.stdout,
         )
 
     def test_review_regressions_hold_through_public_wrapper(self) -> None:

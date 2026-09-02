@@ -1520,33 +1520,6 @@ _HEREDOC_OPENER_RE = re.compile(
 # it. That is the same defect the end-of-line anchor was added to fix, one
 # spelling sideways, so the opener needs its LEFT context checked too.
 _NOT_A_HEREDOC_PREFIX_RE = re.compile(r"(?:^|[^\w.])class[ \t]*$")
-_SHELL_HEREDOC_REDIRECTION_RE = re.compile(
-    r"[ \t]*(?:(?:&>>|&>)|(?:\d*)?(?:>>|>\||>&|<&|<>|>|<))[ \t]*"
-    r"(?:&?\d+|-|'[^']*'|\"(?:\\.|[^\"\\])*\"|"
-    r"(?:\\.|[^\\ \t\r\n;<>&|])+)",
-)
-
-
-def _shell_heredoc_redirection_tail(tail: str) -> bool:
-    """Accept only shell redirections after a heredoc delimiter.
-
-    A delimiter need not end the physical command: `cat <<EOF >out 2>&1` is
-    valid shell.  The lexer must mask that body, while still rejecting an
-    arbitrary expression containing `<< WORD`.  Consuming a sequence of
-    concrete redirections keeps that boundary explicit.
-    """
-
-    position = 0
-    while position < len(tail):
-        if tail[position:].strip() == "":
-            return True
-        if tail[position:].lstrip().startswith("#"):
-            return True
-        match = _SHELL_HEREDOC_REDIRECTION_RE.match(tail, position)
-        if match is None or match.end() == position:
-            return False
-        position = match.end()
-    return True
 
 
 def _heredoc_opener_at(
@@ -1561,15 +1534,19 @@ def _heredoc_opener_at(
     match = _HEREDOC_OPENER_RE.match(source, index)
     if match is None:
         return None
+    # In shell, three opening angle brackets introduce an inline here-string,
+    # not a multiline heredoc body. Treating `<<<WORD` as an opener can mask
+    # every request below it when no line contains the pseudo terminator.
+    if suffix == ".sh" and (
+        source.startswith("<<<", index)
+        or (index > 0 and source[index - 1] == "<")
+    ):
+        return None
     line_start = source.rfind("\n", 0, index) + 1
     line_end = source.find("\n", match.end())
     if line_end < 0:
         line_end = len(source)
-    tail = source[match.end():line_end]
-    if suffix == ".sh":
-        if not _shell_heredoc_redirection_tail(tail):
-            return None
-    elif tail.strip():
+    if suffix != ".sh" and source[match.end():line_end].strip():
         return None
     if suffix == ".rb":
         if _NOT_A_HEREDOC_PREFIX_RE.search(source[line_start:index]):
@@ -1578,7 +1555,139 @@ def _heredoc_opener_at(
 
 
 def _heredoc_langs(suffix: str) -> bool:
-    return suffix in {".sh", ".php", ".rb"}
+    return suffix in {".php", ".rb"}
+
+
+def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
+    """Return shell heredoc body ranges in one command-aware linear pass.
+
+    The scan follows quotes, arithmetic contexts and backslash continuations,
+    collects every delimiter in one logical command, then consumes their
+    bodies in declaration order. It intentionally does not parse shell
+    expressions beyond the boundaries needed to distinguish heredocs from
+    arithmetic shifts and here-strings.
+    """
+
+    ranges: list[tuple[int, int]] = []
+    pending: list[tuple[str, bool]] = []
+    quote = ""
+    escaped = False
+    parenthesis_depth = 0
+    bracket_depth = 0
+    comment_start: int | None = None
+    command_start = 0
+    index = 0
+    while index < len(source):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif quote == '"' and character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            index += 1
+            continue
+        if parenthesis_depth:
+            if character == "(":
+                parenthesis_depth += 1
+            elif character == ")":
+                parenthesis_depth -= 1
+            index += 1
+            continue
+        if bracket_depth:
+            if character == "[":
+                bracket_depth += 1
+            elif character == "]":
+                bracket_depth -= 1
+            index += 1
+            continue
+        if source.startswith("$((", index):
+            parenthesis_depth = 2
+            index += 3
+            continue
+        if source.startswith("((", index):
+            parenthesis_depth = 2
+            index += 2
+            continue
+        if source.startswith("$[", index):
+            bracket_depth = 1
+            index += 2
+            continue
+        if character == "\\":
+            if index + 1 < len(source) and source[index + 1] == "\n":
+                index += 2
+            else:
+                index += 2
+            continue
+        if character in {"'", '"'}:
+            quote = character
+            index += 1
+            continue
+        if character == "#" and (
+            index == command_start or source[index - 1].isspace()
+        ):
+            comment_start = index
+            newline = source.find("\n", index + 1)
+            index = len(source) if newline < 0 else newline
+            continue
+        if source.startswith("<<<", index):
+            index += 3
+            continue
+        opener = _HEREDOC_OPENER_RE.match(source, index)
+        if opener is not None and (
+            index == 0 or source[index - 1] != "<"
+        ):
+            pending.append((opener.group("tag"), "<<-" in opener.group(0)))
+            index = opener.end()
+            continue
+        if character != "\n":
+            index += 1
+            continue
+
+        command_end = index if comment_start is None else comment_start
+        command = source[command_start:command_end].rstrip()
+        comment_start = None
+        if command.endswith(("|", "&&")):
+            index += 1
+            continue
+        if not pending:
+            index += 1
+            command_start = index
+            continue
+
+        body_start = index + 1
+        for tag, strips_tabs in pending:
+            cursor = body_start
+            terminator_start: int | None = None
+            terminator_end: int | None = None
+            while cursor <= len(source):
+                line_end = source.find("\n", cursor)
+                line_end = len(source) if line_end < 0 else line_end
+                line = source[cursor:line_end].removesuffix("\r")
+                delimiter = line.lstrip("\t") if strips_tabs else line
+                if delimiter == tag:
+                    terminator_start = cursor
+                    terminator_end = line_end
+                    break
+                if line_end == len(source):
+                    break
+                cursor = line_end + 1
+            body_end = len(source) if terminator_start is None else terminator_start
+            if body_start < body_end:
+                ranges.append((body_start, body_end))
+            if terminator_end is None:
+                body_start = len(source)
+                break
+            body_start = (
+                len(source)
+                if terminator_end == len(source)
+                else terminator_end + 1
+            )
+        pending.clear()
+        index = body_start
+        command_start = index
+    return ranges
 
 
 _JS_REGEX_PREFIX_WORDS = {
@@ -1762,10 +1871,29 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
     c_line_comments = suffix in JS_TS_SUFFIXES | {".cs", ".go", ".java", ".php"}
     c_block_comments = c_line_comments
     hash_comments = suffix in {".php", ".py", ".rb", ".sh"}
+    shell_heredoc_ranges = _shell_heredoc_ranges(source) if suffix == ".sh" else []
+    shell_heredoc_index = 0
     index = 0
     last_js_opaque_end = 0
 
     while index < len(source):
+        while (
+            shell_heredoc_index < len(shell_heredoc_ranges)
+            and shell_heredoc_ranges[shell_heredoc_index][1] <= index
+        ):
+            shell_heredoc_index += 1
+        if shell_heredoc_index < len(shell_heredoc_ranges):
+            body_start, body_end = shell_heredoc_ranges[shell_heredoc_index]
+            if body_start <= index < body_end:
+                _blank(code, body_start, body_end)
+                strings.append(
+                    StringToken(
+                        body_start, body_end, source[body_start:body_end]
+                    )
+                )
+                index = body_end
+                shell_heredoc_index += 1
+                continue
         if (
             suffix in JS_TS_SUFFIXES
             and source[index] == "/"
@@ -1879,21 +2007,35 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
         # and masked the send that followed.
         heredoc = _heredoc_opener_at(source, index, suffix) if _heredoc_langs(suffix) else None
         if heredoc is not None:
-            tag = heredoc.group("tag")
             body_start = source.find("\n", heredoc.end())
             if body_start < 0:
                 index = heredoc.end()
                 continue
             body_start += 1
-            terminator = re.compile(rf"^[ \t]*{re.escape(tag)}\b", re.M).search(
-                source, body_start
-            )
-            body_end = len(source) if terminator is None else terminator.start()
-            _blank(code, body_start, body_end)
-            strings.append(
-                StringToken(body_start, body_end, source[body_start:body_end])
-            )
-            index = body_end
+            openers = [heredoc]
+            for opener in openers:
+                tag = opener.group("tag")
+                terminator_pattern = rf"^[ \t]*{re.escape(tag)}\b"
+                terminator = re.compile(terminator_pattern, re.M).search(
+                    source, body_start
+                )
+                body_end = (
+                    len(source) if terminator is None else terminator.start()
+                )
+                _blank(code, body_start, body_end)
+                strings.append(
+                    StringToken(
+                        body_start, body_end, source[body_start:body_end]
+                    )
+                )
+                if terminator is None:
+                    body_start = len(source)
+                    break
+                terminator_end = source.find("\n", terminator.end())
+                body_start = (
+                    len(source) if terminator_end < 0 else terminator_end + 1
+                )
+            index = body_start
             continue
 
         quote = source[index]
@@ -4220,22 +4362,41 @@ def request_object_is_executed(
     tail = lexed.code[call.end:]
     ruby_spans = _ruby_function_spans(lexed.code) if suffix == ".rb" else []
     for name in names:
-        execution = re.search(pattern.format(name=re.escape(name)), tail)
-        if execution is None:
-            continue
-        execution_offset = call.end + execution.start()
-        if suffix == ".rb" and not _same_ruby_function_scope(
-            lexed.code, call.start, execution_offset, ruby_spans
-        ):
-            continue
-        # A new reaching definition supersedes this request object. A later
-        # execution of the same variable must not retroactively execute the
-        # discarded constructor.
-        rebound = re.search(
-            rf"(?<![\w@$]){re.escape(name)}\s*=(?!=)", tail[:execution.start()]
+        execution_pattern = pattern.format(name=re.escape(name))
+        # Ruby member assignments such as `self.req = ...` do not rebind the
+        # local `req`. Include member/namespace separators in the boundary so
+        # a suffix match cannot discard the local request object.
+        binding_boundary = (
+            r"(?<![\w@$.])(?<!::)" if suffix == ".rb" else r"(?<![\w@$])"
         )
-        if rebound is None:
-            return True
+        rebound_pattern = re.compile(
+            rf"{binding_boundary}{re.escape(name)}\s*=(?!=)"
+        )
+        for execution in re.finditer(execution_pattern, tail):
+            execution_offset = call.end + execution.start()
+            # Ruby locals belong to one method/top-level scope. Instance,
+            # class and global variables retain their identity across methods.
+            local_ruby_binding = suffix == ".rb" and not name.startswith(
+                ("@", "$")
+            )
+            if local_ruby_binding and not _same_ruby_function_scope(
+                lexed.code, call.start, execution_offset, ruby_spans
+            ):
+                continue
+            # A new reaching definition supersedes this request object. Check
+            # every exact-binding assignment before THIS execution; for Ruby
+            # locals, assignments in unrelated methods do not rebind it.
+            rebound = False
+            for candidate in rebound_pattern.finditer(tail, 0, execution.start()):
+                candidate_offset = call.end + candidate.start()
+                if local_ruby_binding and not _same_ruby_function_scope(
+                    lexed.code, call.start, candidate_offset, ruby_spans
+                ):
+                    continue
+                rebound = True
+                break
+            if not rebound:
+                return True
     return False
 
 
