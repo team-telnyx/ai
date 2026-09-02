@@ -3346,6 +3346,246 @@ class CorrectnessLinterContracts(unittest.TestCase):
             result.stdout,
         )
 
+        compact_scope_decoys = (
+            "def helper; http.request(req); end",
+            "class Helper; def run; http.request(req); end; end",
+            "def helper = http.request(req)",
+            "def helper() = http.request(req)",
+            "def req=(value); http.request(req); end",
+            "def ==(other); http.request(req); end",
+            "def []=(key, value); http.request(req); end",
+            "private def helper = http.request(req)",
+            "class Helper; http.request(req); end",
+            "module Helper; http.request(req); end",
+        )
+        for decoy in compact_scope_decoys:
+            with self.subTest(decoy=decoy):
+                source = (
+                    f"uri = URI('{url}')\n"
+                    "req = Net::HTTP::Post.new(uri)\n"
+                    "req.body = {to:'+1'}.to_json\n"
+                    f"{decoy}\n"
+                )
+                self.assertEqual(
+                    "0",
+                    self.run_required_profile_analyzer(
+                        {"compact-scope.rb": source}
+                    ).stdout.strip(),
+                )
+
+        for polarity, profile in (
+            ("missing", ""),
+            ("valid", ",messaging_profile_id:mp"),
+        ):
+            with self.subTest(compact_method=polarity):
+                source = (
+                    f"def deliver; uri = URI('{url}'); "
+                    "req = Net::HTTP::Post.new(uri); "
+                    f"req.body = {{to:'+1'{profile}}}.to_json; "
+                    "http.request(req); end\n"
+                )
+                result = self.run_required_profile_analyzer(
+                    {"compact-method.rb": source}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                findings = [
+                    row for row in rows[1:] if "compact-method.rb" in row
+                ]
+                self.assertEqual(
+                    polarity == "missing", bool(findings), result.stdout
+                )
+
+        scoped_body_cases = {
+            "foreign-present-does-not-satisfy": (
+                f"uri = URI('{url}')\n"
+                "req = Net::HTTP::Post.new(uri)\n"
+                "def helper; req.body = {messaging_profile_id:mp}.to_json; end\n"
+                "http.request(req)\n",
+                True,
+            ),
+            "body-after-send-does-not-satisfy": (
+                f"uri = URI('{url}')\n"
+                "req = Net::HTTP::Post.new(uri)\n"
+                "http.request(req)\n"
+                "req.body = {messaging_profile_id:mp}.to_json\n",
+                True,
+            ),
+            "foreign-missing-does-not-override-present": (
+                f"uri = URI('{url}')\n"
+                "req = Net::HTTP::Post.new(uri)\n"
+                "def helper; req.body = {to:'+1'}.to_json; end\n"
+                "req.body = {messaging_profile_id:mp,to:'+1'}.to_json\n"
+                "http.request(req)\n",
+                False,
+            ),
+        }
+        for name, (source, should_find) in scoped_body_cases.items():
+            with self.subTest(scoped_body=name):
+                result = self.run_required_profile_analyzer(
+                    {f"{name}.rb": source}
+                )
+                findings = [
+                    row for row in result.stdout.splitlines()[1:]
+                    if f"{name}.rb" in row
+                ]
+                self.assertEqual(should_find, bool(findings), result.stdout)
+
+        for sigil in ("@", "@@", "$"):
+            with self.subTest(sigil=sigil):
+                source = (
+                    f"uri = URI('{url}')\n"
+                    f"{sigil}req = Net::HTTP::Post.new(uri)\n"
+                    f"{sigil}req.body = "
+                    "{messaging_profile_id:mp,to:'+1'}.to_json\n"
+                    f"http.request({sigil}req)\n"
+                )
+                result = self.run_required_profile_analyzer(
+                    {"sigiled-request.rb": source}
+                )
+                self.assertEqual("1", result.stdout.splitlines()[0])
+                self.assertFalse(
+                    any(
+                        "sigiled-request.rb" in row
+                        for row in result.stdout.splitlines()[1:]
+                    ),
+                    result.stdout,
+                )
+
+        cross_method_sigil = (
+            "class Sender\n"
+            f"  def prepare; uri=URI('{url}'); "
+            "@req=Net::HTTP::Post.new(uri); "
+            "@req.body={messaging_profile_id:mp}.to_json; end\n"
+            "  def deliver; http.request(@req); end\n"
+            "end\n"
+        )
+        result = self.run_required_profile_analyzer(
+            {"cross-method-sigil.rb": cross_method_sigil}
+        )
+        self.assertEqual("1", result.stdout.splitlines()[0])
+        self.assertFalse(
+            any(
+                "cross-method-sigil.rb" in row
+                for row in result.stdout.splitlines()[1:]
+            ),
+            result.stdout,
+        )
+
+    def test_okhttp_request_lifecycle_requires_network_execution(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        body = 'RequestBody.create("{\\"to\\":\\"+1\\"}", JSON)'
+        request = f'new Request.Builder().url("{url}").post({body}).build()'
+        inert = {
+            "builder-only": request + ";",
+            "new-call-only": f"client.newCall({request});",
+            "stored-call-only": f"Call pending = client.newCall({request});",
+            "bound-request-new-call-only": (
+                f"Request req = {request};\nclient.newCall(req);"
+            ),
+            "rebound-call": (
+                f"Request req = {request};\n"
+                "Call pending = client.newCall(req);\n"
+                "pending = client.newCall(healthRequest);\n"
+                "pending.execute();"
+            ),
+            "stored-inline-call-only": (
+                f"Call pending = client.newCall({request});"
+            ),
+        }
+        for name, source in inert.items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    "0",
+                    self.run_required_profile_analyzer(
+                        {f"{name}.java": source}
+                    ).stdout.strip(),
+                )
+
+        live = {
+            "inline-execute": f"client.newCall({request}).execute();",
+            "inline-enqueue": f"client.newCall({request}).enqueue(callback);",
+            "bound-direct": (
+                f"Request req = {request};\nclient.newCall(req).execute();"
+            ),
+            "stored-execute": (
+                f"Request req = {request};\n"
+                "Call pending = client.newCall(req);\npending.execute();"
+            ),
+            "stored-enqueue": (
+                f"Request req = {request};\n"
+                "var pending = client.newCall(req);\npending.enqueue(callback);"
+            ),
+            "stored-final-execute": (
+                f"Request req = {request};\n"
+                "final Call pending = client.newCall(req);\npending.execute();"
+            ),
+            "stored-inline-execute": (
+                f"Call pending = client.newCall({request});\npending.execute();"
+            ),
+            "request-rebound-after-capture": (
+                f"Request req = {request};\n"
+                "Call pending = client.newCall(req);\n"
+                "req = healthRequest;\n"
+                "pending.execute();"
+            ),
+        }
+        for name, source in live.items():
+            with self.subTest(name=name):
+                result = self.run_required_profile_analyzer(
+                    {f"{name}.java": source}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(
+                    any(f"{name}.java" in row for row in rows[1:]),
+                    result.stdout,
+                )
+
+        compliant_body = body.replace(
+            '\\"to\\":\\"+1\\"',
+            '\\"messaging_profile_id\\":\\"MP_OK\\",\\"to\\":\\"+1\\"',
+        )
+        for name, source in live.items():
+            with self.subTest(name=name, polarity="compliant"):
+                compliant_source = source.replace(body, compliant_body)
+                result = self.run_required_profile_analyzer(
+                    {f"{name}-compliant.java": compliant_source}
+                )
+                self.assertEqual(
+                    "1",
+                    result.stdout.splitlines()[0],
+                )
+                self.assertFalse(
+                    any(
+                        f"{name}-compliant.java" in row
+                        for row in result.stdout.splitlines()[1:]
+                    )
+                )
+
+        kotlin_missing = (
+            f"val req = {request}\n"
+            "client?.newCall(req)?.execute()"
+        )
+        kotlin_inert = f"client!!.newCall({request})"
+        kotlin_result = self.run_required_profile_analyzer(
+            {"kotlin-live.kt": kotlin_missing}
+        )
+        self.assertEqual("1", kotlin_result.stdout.splitlines()[0])
+        self.assertTrue(
+            any(
+                "kotlin-live.kt" in row
+                for row in kotlin_result.stdout.splitlines()[1:]
+            ),
+            kotlin_result.stdout,
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"kotlin-inert.kt": kotlin_inert}
+            ).stdout.strip(),
+        )
+
     def test_review_regressions_hold_through_public_wrapper(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
         missing = {

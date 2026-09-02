@@ -2872,21 +2872,59 @@ def ruby_request_body_spans(
     arrives in a later statement as `req.body = ...`, so the constructor's own
     arguments never reveal it.
     """
-    line_start = lexed.code.rfind("\n", 0, call.start) + 1
+    # Ruby permits several statements on one line.  Starting at the physical
+    # line boundary makes `uri = ...; req = Post.new(uri)` bind the request to
+    # `uri`, and reading the body through the next newline absorbs every later
+    # compact statement.  Use logical statement boundaries in both directions.
+    line_start = max(
+        lexed.code.rfind("\n", 0, call.start),
+        lexed.code.rfind(";", 0, call.start),
+    ) + 1
     binding = re.search(
-        r"([A-Za-z_]\w*)\s*=", lexed.code[line_start:call.start]
+        r"(?<![\w@$.])((?:@@|@|\$)?[A-Za-z_]\w*)\s*=",
+        lexed.code[line_start:call.start],
     )
     if binding is None:
         return []
     name = re.escape(binding.group(1))
-    match = re.search(
-        rf"(?<![\w.]){name}\s*\.\s*body\s*=\s*", lexed.code[call.end:]
+    local_binding = not binding.group(1).startswith(("@", "$"))
+    ruby_spans = _ruby_function_spans(lexed.code)
+
+    # A later body assignment is relevant only if it reaches the execution of
+    # THIS request in the SAME Ruby method.  Without both bounds, a helper's
+    # body assignment could satisfy a top-level send, or an assignment after
+    # `http.request(req)` could retroactively make the already-issued request
+    # look compliant.
+    execution_pattern = re.compile(
+        rf"\.\s*request\s*(?:\(\s*{name}\b|[ \t]+{name}\b)"
     )
-    if match is None:
+    execution_offset = None
+    for execution in execution_pattern.finditer(lexed.code, call.end):
+        if not local_binding or _same_ruby_function_scope(
+            lexed.code, call.start, execution.start(), ruby_spans
+        ):
+            execution_offset = execution.start()
+            break
+    if execution_offset is None:
         return []
-    start = call.end + match.end()
-    end = lexed.code.find("\n", start)
-    span = (start, end if end > 0 else len(lexed.code))
+
+    body_pattern = re.compile(
+        rf"(?<![\w.]){name}\s*\.\s*body\s*=\s*"
+    )
+    assignments = [
+        match
+        for match in body_pattern.finditer(
+            lexed.code, call.end, execution_offset
+        )
+        if not local_binding
+        or _same_ruby_function_scope(
+            lexed.code, call.start, match.start(), ruby_spans
+        )
+    ]
+    if not assignments:
+        return []
+    start = assignments[-1].end()
+    span = (start, assignment_end(lexed, start, suffix))
     return [resolve_wrapped_payload(lexed, span, span[0], suffix)]
 
 
@@ -4270,35 +4308,166 @@ _EXECUTION_LINK_RE = {
 _INLINE_EXECUTION_RE = re.compile(
     # The constructor may be namespaced inside the execution call, as in
     # urlopen(urllib.request.Request(...)), so allow a dotted qualifier.
-    r"(?:urlopen|newCall|SendAsync|Send|Execute\w*|Do|request)\s*\(\s*"
+    r"(?:urlopen|SendAsync|Send|Execute\w*|Do|request)\s*\(\s*"
     r"(?:[A-Za-z_][\w.]*\s*\.\s*)?$"
 )
 
 
 def _ruby_function_spans(code: str) -> list[tuple[int, int]]:
-    """Return conservative Ruby `def ... end` spans from masked source."""
+    """Return Ruby local-scope spans for methods, classes, and modules."""
 
     stack: list[tuple[str, int | None]] = []
     spans: list[tuple[int, int]] = []
-    cursor = 0
-    for line in code.splitlines(keepends=True):
-        stripped = line.strip()
+    # Newlines and semicolons are equivalent Ruby statement separators.  The
+    # old line-only stack leaked executions from `def f; ...; end` into top
+    # level and ignored endless methods (`def f = expr`) altogether.
+    boundaries = list(re.finditer(r"[;\r\n]", code))
+    pieces: list[tuple[int, int, int]] = []
+    start = 0
+    for boundary in boundaries:
+        pieces.append((start, boundary.start(), boundary.end()))
+        start = boundary.end()
+    pieces.append((start, len(code), len(code)))
+
+    for statement_start, statement_end, terminated_end in pieces:
+        statement = code[statement_start:statement_end]
+        stripped = statement.strip()
+        if not stripped:
+            continue
+        content_start = statement_start + len(statement) - len(statement.lstrip())
         if re.match(r"end\b", stripped) and stack:
-            kind, start = stack.pop()
-            if kind == "def" and start is not None:
-                spans.append((start, cursor + len(line)))
+            kind, opener_start = stack.pop()
+            if kind in {"def", "class", "module"} and opener_start is not None:
+                spans.append((opener_start, terminated_end))
         else:
-            opener = re.match(r"(def|class|module)\b", stripped)
+            opener = re.match(
+                r"(?:(?:private|protected|public)\s+)?(?P<def>def)\b"
+                r"|(?P<container>class|module)\b",
+                stripped,
+            )
             if opener is not None:
-                stack.append((opener.group(1), cursor))
+                kind = "def" if opener.group("def") else opener.group("container")
+                if kind == "def":
+                    separator = top_level_assignment_separator(
+                        stripped, opener.end(), len(stripped)
+                    )
+                    # A setter's name owns its adjacent `=` (`writer=`, `[]=`).
+                    # It is an ordinary `def ... end` unless a SECOND top-level
+                    # `=` follows its parameter list, as in an endless setter.
+                    setter = False
+                    if separator is not None:
+                        left, right = separator
+                        setter = left > 0 and not stripped[left - 1].isspace()
+                        if setter:
+                            later = top_level_assignment_separator(
+                                stripped, right, len(stripped)
+                            )
+                            if later is not None:
+                                separator = later
+                                setter = False
+                    if separator is not None and not setter:
+                        spans.append((content_start, statement_end))
+                        continue
+                stack.append((kind, content_start))
             elif re.search(r"\bdo(?:\s*\|[^|]*\|)?\s*$", stripped):
                 stack.append(("block", None))
             elif re.match(
                 r"(?:if|unless|case|begin|for|while|until)\b", stripped
             ):
                 stack.append(("control", None))
-        cursor += len(line)
     return spans
+
+
+def _enclosing_named_call(
+    code: str, position: int, name: str
+) -> tuple[int, int] | None:
+    """Return `(open, close)` for the innermost named call around position."""
+
+    candidate: tuple[int, int] | None = None
+    pattern = re.compile(rf"\b{re.escape(name)}\s*\(")
+    for match in pattern.finditer(code, 0, position):
+        opening = code.rfind("(", match.start(), match.end())
+        closing = matching_delimiter(code, opening, "(", ")")
+        if closing is not None and opening < position < closing:
+            candidate = (opening, closing)
+    return candidate
+
+
+def _inline_okhttp_is_executed(lexed: LexedSource, call: Call) -> bool:
+    """An inline OkHttp request is live only after execute()/enqueue()."""
+
+    enclosing = _enclosing_named_call(lexed.code, call.start, "newCall")
+    if enclosing is None:
+        return False
+    tail = lexed.code[enclosing[1] + 1 : enclosing[1] + 80]
+    if re.match(
+        r"\s*(?:\?|!!)?\s*\.\s*(?:execute|enqueue)\s*\(", tail
+    ) is not None:
+        return True
+
+    # The Call itself may be stored before execution:
+    #   Call pending = client.newCall(new Request.Builder()...build());
+    #   pending.execute();
+    statement_start = max(
+        lexed.code.rfind(";", 0, enclosing[0]),
+        lexed.code.rfind("\n", 0, enclosing[0]),
+        lexed.code.rfind("{", 0, enclosing[0]),
+    ) + 1
+    prefix = lexed.code[statement_start:enclosing[0]]
+    assignment = re.search(
+        r"(?:(?:final|public|private|protected|static)\s+)*"
+        r"(?:[\w.<>,?\[\]]+\s+)?(?P<alias>[A-Za-z_]\w*)\s*=\s*"
+        r"[^;\n]*\bnewCall\s*$",
+        prefix,
+    )
+    if assignment is None:
+        return False
+    alias = assignment.group("alias")
+    after = enclosing[1] + 1
+    execution = re.search(
+        rf"(?<![\w$]){re.escape(alias)}\s*(?:\?|!!)?\s*\.\s*"
+        rf"(?:execute|enqueue)\s*\(",
+        lexed.code[after:],
+    )
+    if execution is None:
+        return False
+    execution_offset = after + execution.start()
+    return re.search(
+        rf"(?<![\w$]){re.escape(alias)}\s*=(?!=)",
+        lexed.code[after:execution_offset],
+    ) is None
+
+
+def _stored_okhttp_execution_offsets(
+    tail: str, request_name: str
+) -> list[tuple[int, int]]:
+    """`(execution, capture)` offsets for stored OkHttp Call aliases."""
+
+    offsets: list[tuple[int, int]] = []
+    assignment_re = re.compile(
+        rf"(?:^|[;\n{{}}])\s*(?:(?:final|public|private|protected|static)\s+)*"
+        rf"(?:[\w.<>,?\[\]]+\s+)?"
+        rf"(?P<alias>[A-Za-z_]\w*)\s*=\s*[^;\n]*?"
+        rf"\bnewCall\s*\(\s*{re.escape(request_name)}\s*\)"
+    )
+    for assignment in assignment_re.finditer(tail):
+        alias = assignment.group("alias")
+        after = assignment.end()
+        execution = re.search(
+            rf"(?<![\w$]){re.escape(alias)}\s*(?:\?|!!)?\s*\.\s*"
+            rf"(?:execute|enqueue)\s*\(",
+            tail[after:],
+        )
+        if execution is None:
+            continue
+        execution_offset = after + execution.start()
+        rebound = re.search(
+            rf"(?<![\w$]){re.escape(alias)}\s*=(?!=)",
+            tail[after:execution_offset],
+        )
+        if rebound is None:
+            offsets.append((execution_offset, assignment.start()))
+    return offsets
 
 
 def _same_ruby_function_scope(
@@ -4328,7 +4497,13 @@ def request_object_is_executed(
     if pattern is None:
         return True
 
-    # Inline: urlopen(Request(...)) / client.Do(http.NewRequest(...)).
+    # Inline: urlopen(Request(...)) / client.Do(http.NewRequest(...)). OkHttp's
+    # newCall(...) only creates a Call; network I/O begins at execute/enqueue.
+    if canonical == ".java" and _BUILDER_LINK_KIND.get(
+        (id(lexed), call.start)
+    ) == "url":
+        if _inline_okhttp_is_executed(lexed, call):
+            return True
     prefix = lexed.code[max(0, call.start - 160):call.start]
     if _INLINE_EXECUTION_RE.search(prefix):
         return True
@@ -4347,7 +4522,7 @@ def request_object_is_executed(
         # An UNBOUND chain can still be executed inline:
         #   client.send(HttpRequest.newBuilder()...build(), handler)
         return re.search(
-            r"(?:send|sendAsync|newCall|execute|enqueue|urlopen|Do)\s*\(", head
+            r"(?:send|sendAsync|execute|enqueue|urlopen|Do)\s*\(", head
         ) is not None
     # `req, err := http.NewRequest(...)` binds several names; the blank `_` is
     # never the one executed, so every candidate must be tried.
@@ -4372,8 +4547,18 @@ def request_object_is_executed(
         rebound_pattern = re.compile(
             rf"{binding_boundary}{re.escape(name)}\s*=(?!=)"
         )
-        for execution in re.finditer(execution_pattern, tail):
-            execution_offset = call.end + execution.start()
+        execution_events = [
+            (execution.start(), execution.start())
+            for execution in re.finditer(execution_pattern, tail)
+        ]
+        if canonical == ".java":
+            execution_events.extend(
+                _stored_okhttp_execution_offsets(tail, name)
+            )
+        for relative_execution_offset, capture_offset in sorted(
+            set(execution_events)
+        ):
+            execution_offset = call.end + relative_execution_offset
             # Ruby locals belong to one method/top-level scope. Instance,
             # class and global variables retain their identity across methods.
             local_ruby_binding = suffix == ".rb" and not name.startswith(
@@ -4387,7 +4572,9 @@ def request_object_is_executed(
             # every exact-binding assignment before THIS execution; for Ruby
             # locals, assignments in unrelated methods do not rebind it.
             rebound = False
-            for candidate in rebound_pattern.finditer(tail, 0, execution.start()):
+            for candidate in rebound_pattern.finditer(
+                tail, 0, capture_offset
+            ):
                 candidate_offset = call.end + candidate.start()
                 if local_ruby_binding and not _same_ruby_function_scope(
                     lexed.code, call.start, candidate_offset, ruby_spans
