@@ -2373,6 +2373,380 @@ class CorrectnessLinterContracts(unittest.TestCase):
             }
         )
 
+    def test_python_logical_from_imports_preserve_endpoint_provenance(self) -> None:
+        """Parentheses and continuations cannot erase imported endpoints."""
+
+        pool = "https://api.telnyx.com/v2/messages/number_pool"
+        safe = "https://api.telnyx.com/v2/messages"
+        support = {
+            "pkg/__init__.py": "",
+            "pkg/endpoints.py": (
+                f"pool_url = '{pool}'\n"
+                f"safe_url = '{safe}'\n"
+                "other = 'unused'\n"
+            ),
+        }
+        forms = {
+            "relative-parenthesized": (
+                "from .endpoints import (\n"
+                "    pool_url,\n"
+                ")\n",
+                "pool_url",
+            ),
+            "relative-parenthesized-alias": (
+                "from .endpoints import (\n"
+                "    safe_url,\n"
+                "    pool_url as endpoint,\n"
+                ")\n",
+                "endpoint",
+            ),
+            "absolute-parenthesized": (
+                "from pkg.endpoints import (\n"
+                "    pool_url,\n"
+                ")\n",
+                "pool_url",
+            ),
+            "explicit-continuation": (
+                "from pkg.endpoints import safe_url, \\\n"
+                "    pool_url as endpoint\n",
+                "endpoint",
+            ),
+            "semicolon-small-statement": (
+                "import os; from pkg.endpoints import pool_url as endpoint\n",
+                "endpoint",
+            ),
+            "trailing-semicolon-small-statement": (
+                "from pkg.endpoints import pool_url as endpoint; import os\n",
+                "endpoint",
+            ),
+        }
+        for form, (declaration, endpoint) in forms.items():
+            template = (
+                declaration
+                + "import requests\n"
+                + f"requests.post({endpoint}, json={{'to': '+1'%s}})\n"
+            )
+            with self.subTest(form=form, polarity="missing"):
+                result = self.run_required_profile_analyzer(
+                    {**support, "pkg/send.py": template % ""}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(any("pkg/send.py" in row for row in rows[1:]))
+            with self.subTest(form=form, polarity="present"):
+                result = self.run_required_profile_analyzer(
+                    {
+                        **support,
+                        "pkg/send.py": template
+                        % ", 'messaging_profile_id': 'mp'",
+                    }
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertFalse(any(row.strip() for row in rows[1:]), result.stdout)
+
+        self.assert_required_profile_passes(
+            {
+                **support,
+                "pkg/send.py": (
+                    "from .endpoints import (safe_url,)\n"
+                    "import requests\n"
+                    "requests.post(safe_url, json={'to': '+1'})\n"
+                ),
+            }
+        )
+
+    def test_csharp_project_static_endpoint_members_resolve_by_namespace(self) -> None:
+        """Same-namespace and fully-qualified C# constants cross files."""
+
+        pool = "https://api.telnyx.com/v2/messages/number_pool"
+        safe = "https://api.telnyx.com/v2/messages"
+        forms = {
+            "file-scoped-const": (
+                "namespace Demo;\ninternal static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }}\n',
+                "namespace Demo;\n",
+                "Endpoints.PoolUrl",
+            ),
+            "block-static-readonly": (
+                "namespace Demo { internal static class Endpoints { "
+                f'public static readonly string PoolUrl = "{pool}"; }} }}\n',
+                "namespace Demo { class Send { async Task Go() { BODY } } }\n",
+                "Endpoints.PoolUrl",
+            ),
+            "nested-type": (
+                "namespace Demo;\ninternal static class Routes { "
+                "internal static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }} }}\n',
+                "namespace Demo;\n",
+                "Routes.Endpoints.PoolUrl",
+            ),
+            "static-readonly-uri": (
+                "namespace Demo;\ninternal static class Endpoints { "
+                "public static readonly Uri PoolUrl = new Uri("
+                f'"{pool}"); }}\n',
+                "namespace Demo;\n",
+                "Endpoints.PoolUrl",
+            ),
+            "fully-qualified-other-namespace": (
+                "namespace Other;\ninternal static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }}\n',
+                "namespace Demo;\n",
+                "Other.Endpoints.PoolUrl",
+            ),
+            "nested-block-namespace": (
+                "namespace Outer { namespace Inner { "
+                "internal static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }} }} }}\n',
+                "namespace Demo;\n",
+                "Outer.Inner.Endpoints.PoolUrl",
+            ),
+            "verbatim-const": (
+                "namespace Demo; internal static class Endpoints { "
+                f'public const string PoolUrl = @"{pool}"; }}\n',
+                "namespace Demo;\n",
+                "Endpoints.PoolUrl",
+            ),
+            "target-typed-uri": (
+                "namespace Demo; internal static class Endpoints { "
+                f'public static readonly Uri PoolUrl = new("{pool}"); }}\n',
+                "namespace Demo;\n",
+                "Endpoints.PoolUrl",
+            ),
+            "global-qualified": (
+                "namespace Other; internal static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }}\n',
+                "namespace Demo;\n",
+                "global::Other.Endpoints.PoolUrl",
+            ),
+            "containing-parent-namespace": (
+                "namespace A { static class Endpoints { "
+                f'public const string PoolUrl = "{pool}"; }} }}\n',
+                "namespace A.B { class Send { async Task Go() { BODY } } }\n",
+                "Endpoints.PoolUrl",
+            ),
+        }
+        for form, (support, send_prefix, endpoint) in forms.items():
+            body = (
+                "await client.PostAsync("
+                + endpoint
+                + ", new StringContent(\"{\\\"to\\\":\\\"+1\\\"%s}\"));"
+            )
+            template = (
+                send_prefix.replace("BODY", body)
+                if "BODY" in send_prefix
+                else send_prefix + "class Send { async Task Go() { " + body + " } }\n"
+            )
+            with self.subTest(form=form, polarity="missing"):
+                result = self.run_required_profile_analyzer(
+                    {"Endpoints.cs": support, "Send.cs": template % ""}
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(any("Send.cs" in row for row in rows[1:]))
+            with self.subTest(form=form, polarity="present"):
+                result = self.run_required_profile_analyzer(
+                    {
+                        "Endpoints.cs": support,
+                        "Send.cs": template
+                        % ',\\\"messaging_profile_id\\\":\\\"mp\\\"',
+                    }
+                )
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertFalse(any(row.strip() for row in rows[1:]), result.stdout)
+
+        self.assert_required_profile_passes(
+            {
+                "Endpoints.cs": (
+                    "namespace Demo; internal static class Endpoints { "
+                    f'public const string SafeUrl = "{safe}"; }}'
+                ),
+                "Send.cs": (
+                    "namespace Demo; await client.PostAsync(Endpoints.SafeUrl, "
+                    'new StringContent("{\\"to\\":\\"+1\\"}"));'
+                ),
+            }
+        )
+
+        # Do not cross-product members between namespaces in one source file.
+        # Both declaration orders matter because a dict overwrite once made
+        # one order false-positive and the reverse order false-negative.
+        for reverse in (False, True):
+            safe_decl = (
+                "namespace SafeNs { static class Endpoints { "
+                f'public const string Url = "{safe}"; }} }}\n'
+            )
+            pool_decl = (
+                "namespace PoolNs { static class Endpoints { "
+                f'public const string Url = "{pool}"; }} }}\n'
+            )
+            declarations = (
+                pool_decl + safe_decl if reverse else safe_decl + pool_decl
+            )
+            with self.subTest(namespace_collision_order=reverse):
+                self.assert_required_profile_passes(
+                    {
+                        "Endpoints.cs": declarations,
+                        "Send.cs": (
+                            "namespace SafeNs { class Send { async Task Go() { "
+                            "await client.PostAsync(Endpoints.Url, "
+                            'new StringContent("{\\"to\\":\\"+1\\"}")); } }}\n'
+                        ),
+                    }
+                )
+
+        # Each call site in a multi-namespace source resolves against its own
+        # lexical namespace, not a file-wide unqualified alias map.
+        multi_namespace = self.run_required_profile_analyzer(
+            {
+                "Endpoints.cs": safe_decl + pool_decl,
+                "Send.cs": (
+                    "namespace SafeNs { class SafeSend { async Task Go() { "
+                    "await client.PostAsync(Endpoints.Url, "
+                    'new StringContent("{\\"to\\":\\"+1\\"}")); } }}\n'
+                    "namespace PoolNs { class PoolSend { async Task Go() { "
+                    "await client.PostAsync(Endpoints.Url, "
+                    'new StringContent("{\\"to\\":\\"+1\\"}")); } }}\n'
+                ),
+            }
+        )
+        self.assertEqual("1", multi_namespace.stdout.splitlines()[0])
+        self.assertEqual(1, multi_namespace.stdout.count("Send.cs:"))
+
+        # A nested type shadows a same-named namespace member. Exercise both
+        # URL polarities so external lookup cannot override lexical binding.
+        for local_url, expect_missing in ((pool, True), (safe, False)):
+            outer_url = safe if expect_missing else pool
+            shadow = self.run_required_profile_analyzer(
+                {
+                    "Global.cs": (
+                        "namespace Demo; static class Endpoints { "
+                        f'public const string PoolUrl = "{outer_url}"; }}\n'
+                    ),
+                    "Send.cs": (
+                        "namespace Demo; class Send { static class Endpoints { "
+                        f'public const string PoolUrl = "{local_url}"; }} '
+                        "async Task Go() { await client.PostAsync("
+                        "Endpoints.PoolUrl, "
+                        'new StringContent("{\\"to\\":\\"+1\\"}")); }}\n'
+                    ),
+                }
+            )
+            rows = shadow.stdout.splitlines()
+            with self.subTest(nested_shadow_required=expect_missing):
+                self.assertEqual("1" if expect_missing else "0", rows[0])
+                self.assertEqual(
+                    expect_missing,
+                    any("Send.cs:" in row for row in rows[1:]),
+                    shadow.stdout,
+                )
+
+        global_only = self.run_required_profile_analyzer(
+            {
+                "Endpoints.cs": (
+                    "namespace Other { static class Endpoints { "
+                    f'public const string Url = "{pool}"; }} }}\n'
+                    "namespace Demo.Other { static class Endpoints { "
+                    f'public const string Url = "{safe}"; }} }}\n'
+                ),
+                "Send.cs": (
+                    "namespace Demo { class Send { async Task Go() { "
+                    "await client.PostAsync(global::Other.Endpoints.Url, "
+                    'new StringContent("{\\"to\\":\\"+1\\"}")); } }}\n'
+                ),
+            }
+        )
+        self.assertEqual("1", global_only.stdout.splitlines()[0])
+        self.assertIn("Send.cs:", global_only.stdout)
+
+        # Method locals shadow same-named members on a partial class.
+        for local_url, expect_missing in ((safe, False), (pool, True)):
+            field_url = pool if not expect_missing else safe
+            local_shadow = self.run_required_profile_analyzer(
+                {
+                    "Endpoints.cs": (
+                        "namespace Demo; partial class Worker { "
+                        f'public const string Url = "{field_url}"; }}\n'
+                    ),
+                    "Send.cs": (
+                        "namespace Demo; partial class Worker { async Task Go() { "
+                        f'var Url = "{local_url}"; '
+                        "await client.PostAsync(Url, "
+                        'new StringContent("{\\"to\\":\\"+1\\"}")); }}\n'
+                    ),
+                }
+            )
+            with self.subTest(local_binding_required=expect_missing):
+                rows = local_shadow.stdout.splitlines()
+                self.assertEqual("1" if expect_missing else "0", rows[0])
+                self.assertEqual(expect_missing, "Send.cs:" in local_shadow.stdout)
+
+    def test_csharp_project_static_index_is_built_once_per_cli_scan(self) -> None:
+        """Cross-file member resolution reads each C# source only linearly."""
+
+        safe = "https://api.telnyx.com/v2/messages"
+        namespace = runpy.run_path(
+            str(MESSAGING_SOURCE_ANALYZER),
+            run_name="telnyx_csharp_project_index_contract",
+        )
+        with tempfile.TemporaryDirectory(prefix="telnyx-csharp-index-") as directory:
+            root = Path(directory)
+            paths = []
+            for index in range(24):
+                path = root / f"Source{index}.cs"
+                path.write_text(
+                    "namespace Demo; static class Endpoints"
+                    f'{index} {{ public const string Safe = "{safe}"; }}\n',
+                    encoding="utf-8",
+                )
+                paths.append(path)
+
+            reads = 0
+            original_read = namespace["_read_source_text"]
+
+            def tracked_read(path: Path) -> str:
+                nonlocal reads
+                reads += 1
+                return original_read(path)
+
+            namespace["_csharp_project_static_index"].__globals__[
+                "_read_source_text"
+            ] = tracked_read
+            project_values = namespace["_csharp_project_static_index"](root)
+            for path in paths:
+                namespace["analyze_file"](path, root, project_values)
+            self.assertEqual(2 * len(paths), reads)
+
+            many_calls = root / "ManyCalls.cs"
+            many_calls.write_text(
+                "namespace Demo; class Send { async Task Go() {\n"
+                + "\n".join(
+                    "await client.PostAsync(Endpoints0.Safe, "
+                    'new StringContent("{}"));'
+                    for _ in range(100)
+                )
+                + "\n} }\n",
+                encoding="utf-8",
+            )
+            globals_map = namespace["analyze_file"].__globals__
+            original_namespaces = globals_map["_csharp_namespace_spans"]
+            original_types = globals_map["_csharp_type_spans"]
+            span_calls = {"namespace": 0, "type": 0}
+
+            def tracked_namespaces(source: str):
+                span_calls["namespace"] += 1
+                return original_namespaces(source)
+
+            def tracked_types(source: str):
+                span_calls["type"] += 1
+                return original_types(source)
+
+            globals_map["_csharp_namespace_spans"] = tracked_namespaces
+            globals_map["_csharp_type_spans"] = tracked_types
+            namespace["analyze_file"](many_calls, root, project_values)
+            self.assertEqual({"namespace": 1, "type": 1}, span_calls)
+
     def test_javascript_nonrelative_import_endpoints_fail_closed(self) -> None:
         """Configured aliases and package imports retain URL provenance."""
 

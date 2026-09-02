@@ -6473,6 +6473,12 @@ class SourceEndpointResolver:
         self.suffix = suffix
         self.external_values = external_values or {}
         self.external_names = external_names or set()
+        self.csharp_namespace_spans = (
+            _csharp_namespace_spans(lexed.original) if suffix == ".cs" else []
+        )
+        self.csharp_type_spans = (
+            _csharp_type_spans(lexed.original) if suffix == ".cs" else []
+        )
         self.unverified_external_calls: set[int] = set()
         self.graph = EndpointGraph(len(lexed.code))
         self.c_headers = c_function_headers(lexed, suffix)
@@ -8107,7 +8113,14 @@ class SourceEndpointResolver:
         if access is not None:
             return access
 
-        reference = static_reference_expression(self.lexed, start, end)
+        reference_start = start
+        if self.suffix == ".cs":
+            global_prefix = re.match(
+                r"\s*global\s*::\s*", self.lexed.original[start:end]
+            )
+            if global_prefix is not None:
+                reference_start += global_prefix.end()
+        reference = static_reference_expression(self.lexed, reference_start, end)
         if reference is not None:
             name = reference[0].lstrip("$")
             binding_id = self.graph.visible_binding(
@@ -8432,11 +8445,45 @@ class SourceEndpointResolver:
         # per-file binding graph. Keeping module provenance explicit avoids
         # conflating same-named locals and makes the cross-file boundary the
         # only special case; all endpoint classification remains shared.
-        expression_text = self.lexed.code[start:end].strip()
-        if not projection and re.fullmatch(r"[A-Za-z_$]\w*", expression_text):
-            external = self.external_values.get(expression_text.lstrip("$"))
-            if external is not None:
-                return endpoint_literal_value(external)
+        reference_start = start
+        if self.suffix == ".cs":
+            global_prefix = re.match(
+                r"\s*global\s*::\s*", self.lexed.original[start:end]
+            )
+            if global_prefix is not None:
+                reference_start += global_prefix.end()
+        reference = static_reference_expression(self.lexed, reference_start, end)
+        if not projection and reference is not None:
+            reference_key = ".".join(
+                part.lstrip("$") for part in reference
+            )
+            scope_id = self.scope_at(before)
+            if self.suffix == ".cs" and self.graph.visible_binding(
+                reference[0].lstrip("$"), scope_id, before
+            ) is not None:
+                expression = self._parse_expression(
+                    start, end, scope_id, before
+                )
+                return self.graph.evaluate(
+                    EndpointExpressionState(
+                        expression, projection, before, scope_id
+                    )
+                )
+            candidates = (
+                _csharp_reference_candidates(
+                    before,
+                    reference_key,
+                    self.csharp_namespace_spans,
+                    self.csharp_type_spans,
+                    global_only=global_prefix is not None,
+                )
+                if self.suffix == ".cs"
+                else (reference_key,)
+            )
+            for candidate in candidates:
+                external = self.external_values.get(candidate)
+                if external is not None:
+                    return endpoint_literal_value(external)
         scope_id = self.scope_at(before)
         expression = self._parse_expression(
             start, end, scope_id, before
@@ -11804,7 +11851,9 @@ def _looks_like_a_send_target(
         r"|\b(?:public|private|protected|internal)[ \t]+const"
         r"|\b(?:public|private|protected|internal)?[ \t]*static[ \t]+readonly)"
         r"[ \t]+[A-Za-z_$][\w$<>,.?\[\]]*[ \t]+"
-        r"[A-Za-z_$][\w$]*[ \t]*=[ \t]*$",
+        r"[A-Za-z_$][\w$]*[ \t]*=[ \t]*"
+        r"(?:new[ \t]*(?:(?:System[ \t]*\.[ \t]*)?Uri[ \t]*)?"
+        r"\([ \t]*)?@?[ \t]*$",
         declaration,
         re.I,
     ) and _SEND_SITE_RE.search(declaration) is None:
@@ -12072,8 +12121,233 @@ def _exported_scalar(source: str, suffix: str, name: str) -> str | None:
     return assignment.group("value") if assignment is not None else None
 
 
+def _python_from_imports(visible: str) -> list[tuple[str, str, str]]:
+    """Return ``(module, exported, local)`` for logical Python imports.
+
+    Python permits a parenthesized member list to span physical lines, and a
+    backslash can continue the unparenthesized form. Parse the bounded logical
+    statement once and share it between exact local-module resolution and the
+    fail-closed external-provenance index so those two contracts cannot drift.
+    """
+
+    imports: list[tuple[str, str, str]] = []
+    header = re.compile(
+        r"(?m)(?:^|;)[ \t]*from[ \t]+"
+        r"(?P<module>\.*(?:[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)?)"
+        r"[ \t]+import[ \t]*"
+    )
+    for match in header.finditer(visible):
+        module = match.group("module")
+        if not module:
+            continue
+        start = match.end()
+        while start < len(visible) and visible[start] in " \t":
+            start += 1
+        if start < len(visible) and visible[start] == "(":
+            closing = matching_delimiter(visible, start, "(", ")")
+            if closing is None:
+                continue
+            members = visible[start + 1 : closing]
+        else:
+            end = start
+            while end < len(visible):
+                line_break = re.search(r"\r\n|\r|\n", visible[end:])
+                if line_break is None:
+                    end = len(visible)
+                    break
+                line_end = end + line_break.start()
+                semicolon = visible.find(";", end, line_end)
+                if semicolon >= 0:
+                    end = semicolon
+                    break
+                if visible[start:line_end].rstrip().endswith("\\"):
+                    end += line_break.end()
+                    continue
+                end = line_end
+                break
+            members = re.sub(r"\\(?:\r\n|\r|\n)", " ", visible[start:end])
+        for member in members.split(","):
+            parsed = re.fullmatch(
+                r"\s*(?P<export>[A-Za-z_]\w*)"
+                r"(?:\s+as\s+(?P<local>[A-Za-z_]\w*))?\s*",
+                member,
+            )
+            if parsed is not None:
+                imports.append(
+                    (
+                        module,
+                        parsed.group("export"),
+                        parsed.group("local") or parsed.group("export"),
+                    )
+                )
+    return imports
+
+
+def _csharp_namespace_spans(source: str) -> list[tuple[int, int, str]]:
+    """Return namespace scopes with their fully qualified names."""
+
+    code = lex_source(source, ".cs").code
+    raw: list[tuple[int, int, str]] = []
+    for match in re.finditer(
+        r"\bnamespace\s+(?P<name>[A-Za-z_]\w*"
+        r"(?:\s*\.\s*[A-Za-z_]\w*)*)\s*(?P<kind>;|\{)",
+        code,
+    ):
+        name = re.sub(r"\s+", "", match.group("name"))
+        if match.group("kind") == ";":
+            raw.append((match.end(), len(code), name))
+            continue
+        opening = code.rfind("{", match.start(), match.end())
+        closing = matching_delimiter(code, opening, "{", "}")
+        if closing is not None:
+            raw.append((opening, closing, name))
+
+    qualified: list[tuple[int, int, str]] = []
+    for start, end, name in sorted(raw, key=lambda item: (item[0], -item[1])):
+        parents = [
+            span for span in qualified if span[0] < start and end < span[1]
+        ]
+        parent = max(parents, key=lambda span: span[0], default=None)
+        full_name = f"{parent[2]}.{name}" if parent is not None else name
+        qualified.append((start, end, full_name))
+    return qualified
+
+
+def _csharp_static_scalars(source: str) -> dict[str, str]:
+    """Return fully qualified, statically addressable C# scalar members."""
+
+    lexed = lex_source(source, ".cs")
+    code = lexed.code
+    type_spans = _csharp_type_spans(source)
+
+    values: dict[str, str] = {}
+    namespace_spans = _csharp_namespace_spans(source)
+    for token in lexed.strings:
+        enclosing = sorted(
+            (span for span in type_spans if span[0] < token.start < span[1]),
+            key=lambda span: span[0],
+        )
+        if not enclosing:
+            continue
+        innermost = enclosing[-1]
+        # Type fields are at curly depth zero. A static readonly Uri keeps the
+        # string inside its constructor parentheses, so round depth is allowed.
+        if structural_depth(code, innermost[0] + 1, token.start)[2] != 0:
+            continue
+        declaration_start = max(
+            code.rfind(";", innermost[0] + 1, token.start),
+            code.rfind("{", innermost[0] + 1, token.start),
+            code.rfind("}", innermost[0] + 1, token.start),
+        ) + 1
+        prefix = code[declaration_start:token.start]
+        field = re.search(
+            r"(?P<head>.*?)\b(?P<name>[A-Za-z_]\w*)\s*=\s*"
+            r"(?:new\s*(?:(?:System\s*\.\s*)?Uri\s*)?\(\s*)?@?$",
+            prefix,
+            re.DOTALL,
+        )
+        if field is None:
+            continue
+        modifiers = field.group("head")
+        if not (
+            re.search(r"\bconst\b", modifiers)
+            or (
+                re.search(r"\bstatic\b", modifiers)
+                and re.search(r"\breadonly\b", modifiers)
+            )
+        ):
+            continue
+        type_path = ".".join(span[2] for span in enclosing)
+        namespaces = [
+            span for span in namespace_spans if span[0] < token.start < span[1]
+        ]
+        namespace = max(namespaces, key=lambda span: span[0], default=None)
+        prefix = f"{namespace[2]}." if namespace is not None else ""
+        values[f"{prefix}{type_path}.{field.group('name')}"] = token.contents
+    return values
+
+
+def _csharp_type_spans(source: str) -> list[tuple[int, int, str]]:
+    """Return nested C# type scopes as ``(open, close, local_name)``."""
+
+    code = lex_source(source, ".cs").code
+    type_spans: list[tuple[int, int, str]] = []
+    for match in re.finditer(
+        r"\b(?:class|struct|record(?:\s+class|\s+struct)?)\s+"
+        r"(?P<name>[A-Za-z_]\w*)[^;{}]*\{",
+        code,
+    ):
+        opening = code.rfind("{", match.start(), match.end())
+        closing = matching_delimiter(code, opening, "{", "}")
+        if closing is not None:
+            type_spans.append((opening, closing, match.group("name")))
+    return type_spans
+
+
+def _csharp_project_static_index(project_root: Path) -> dict[str, str]:
+    """Build one exact C# static-member index for an analyzer invocation."""
+
+    resolved: dict[str, str] = {}
+    for candidate in project_root.rglob("*.cs"):
+        try:
+            relative = candidate.relative_to(project_root)
+        except ValueError:
+            continue
+        if any(part in EXCLUDED_DIRS for part in relative.parts[:-1]):
+            continue
+        candidate_source = _read_source_text(candidate)
+        resolved.update(_csharp_static_scalars(candidate_source))
+    return resolved
+
+
+def _csharp_reference_candidates(
+    position: int,
+    reference: str,
+    namespace_spans: list[tuple[int, int, str]],
+    type_spans: list[tuple[int, int, str]],
+    *,
+    global_only: bool = False,
+) -> tuple[str, ...]:
+    """Return C# member spellings from nearest lexical scope to global."""
+
+    if global_only:
+        return (reference,)
+    candidates: list[str] = []
+    namespaces = [
+        span
+        for span in namespace_spans
+        if span[0] < position < span[1]
+    ]
+    namespace = max(namespaces, key=lambda span: span[0], default=None)
+    namespace_name = namespace[2] if namespace is not None else ""
+    enclosing_types = sorted(
+        (
+            span
+            for span in type_spans
+            if span[0] < position < span[1]
+        ),
+        key=lambda span: span[0],
+    )
+    for count in range(len(enclosing_types), 0, -1):
+        prefix = ".".join(span[2] for span in enclosing_types[:count])
+        candidates.append(
+            ".".join(part for part in (namespace_name, prefix, reference) if part)
+        )
+    namespace_parts = namespace_name.split(".") if namespace_name else []
+    for count in range(len(namespace_parts), 0, -1):
+        candidates.append(
+            f"{'.'.join(namespace_parts[:count])}.{reference}"
+        )
+    candidates.append(reference)
+    return tuple(dict.fromkeys(candidates))
+
+
 def external_static_values(
-    path: Path, project_root: Path, source: str, suffix: str
+    path: Path,
+    project_root: Path,
+    source: str,
+    suffix: str,
+    csharp_project_values: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Resolve relative named imports to statically exported scalar strings.
 
@@ -12147,28 +12421,26 @@ def external_static_values(
                         )
                     )
     elif suffix == ".py":
-        for match in re.finditer(
-            r"(?m)^\s*from\s+(?P<module>\.*[A-Za-z_][\w.]*)\s+import\s+"
-            r"(?P<members>[^\r\n]+)",
-            visible,
+        for module, exported, local in _python_from_imports(
+            lex_source(source, ".py").code
         ):
-            for member in match.group("members").split(","):
-                parsed = re.fullmatch(
-                    r"\s*(?P<export>[A-Za-z_]\w*)"
-                    r"(?:\s+as\s+(?P<local>[A-Za-z_]\w*))?\s*",
-                    member,
+            dots = len(module) - len(module.lstrip("."))
+            module_tail = module[dots:].replace(".", "/")
+            relative = "../" * max(0, dots - 1) + module_tail
+            imports.append(
+                (
+                    "./" + relative if dots else module,
+                    exported,
+                    local,
                 )
-                if parsed is not None:
-                    dots = len(match.group("module")) - len(match.group("module").lstrip("."))
-                    module_tail = match.group("module")[dots:].replace(".", "/")
-                    relative = "../" * max(0, dots - 1) + module_tail
-                    imports.append(
-                        (
-                            "./" + relative if dots else match.group("module"),
-                            parsed.group("export"),
-                            parsed.group("local") or parsed.group("export"),
-                        )
-                    )
+            )
+    elif suffix == ".cs":
+        project_values = (
+            csharp_project_values
+            if csharp_project_values is not None
+            else _csharp_project_static_index(project_root)
+        )
+        return project_values
 
     resolved: dict[str, str] = {}
     for module, exported, local in imports:
@@ -12310,14 +12582,12 @@ def external_reference_names(
                 if parsed is not None:
                     names.add((parsed.group(2) or parsed.group(1)).lstrip("$"))
     elif suffix == ".py":
-        for match in re.finditer(r"(?m)^\s*from\s+[\w.]+\s+import\s+([^\r\n]+)", visible):
-            for member in match.group(1).split(","):
-                parsed = re.fullmatch(
-                    r"\s*([A-Za-z_]\w*)(?:\s+as\s+([A-Za-z_]\w*))?\s*",
-                    member,
-                )
-                if parsed is not None:
-                    names.add(parsed.group(2) or parsed.group(1))
+        names.update(
+            local
+            for _, _, local in _python_from_imports(
+                lex_source(source, ".py").code
+            )
+        )
         for match in re.finditer(
             r"(?m)^\s*import\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)"
             r"(?:\s+as\s+([A-Za-z_]\w*))?",
@@ -12353,7 +12623,11 @@ def external_reference_names(
     return names
 
 
-def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
+def analyze_file(
+    path: Path,
+    project_root: Path,
+    csharp_project_values: dict[str, str] | None = None,
+) -> tuple[int, list[str]]:
     # newline="" is required: Path.read_text() performs universal-newline
     # translation, destroying bare-CR and CRLF source boundaries before the
     # lexer and grep-line protocol can agree on them.
@@ -12382,7 +12656,13 @@ def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
     source_resolver = SourceEndpointResolver(
         lexed,
         suffix,
-        external_static_values(path, project_root, source, suffix),
+        external_static_values(
+            path,
+            project_root,
+            source,
+            suffix,
+            csharp_project_values,
+        ),
         external_reference_names(source, suffix, project_root),
     )
     profile_resolver = PayloadStateResolver(
@@ -12651,9 +12931,12 @@ def main(argv: list[str]) -> int:
 
     total = 0
     missing: list[str] = []
+    csharp_project_values = _csharp_project_static_index(project_root)
     for path in iter_source_files(project_root):
         try:
-            file_total, file_missing = analyze_file(path, project_root)
+            file_total, file_missing = analyze_file(
+                path, project_root, csharp_project_values
+            )
         except Exception as error:  # noqa: BLE001 - one file must not abort the scan
             # A pathological file previously took the WHOLE run down, so every
             # other file went unanalysed and the project was reported clean.
