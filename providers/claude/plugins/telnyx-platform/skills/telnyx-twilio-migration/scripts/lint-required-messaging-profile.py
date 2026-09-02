@@ -336,6 +336,112 @@ def _razor_continuation_block_ranges(
     return continuations
 
 
+def _html_element_ranges(source: str) -> list[tuple[int, int]]:
+    """Return quote-aware complete HTML element and standalone-tag spans."""
+
+    tokens: list[tuple[int, int, str, bool, bool]] = []
+    cursor = 0
+    while cursor < len(source):
+        opening = source.find("<", cursor)
+        if opening < 0:
+            break
+        match = re.match(r"<\s*(?P<closing>/)?\s*(?P<name>[A-Za-z][\w:.-]*)", source[opening:])
+        if match is None:
+            cursor = opening + 1
+            continue
+        quote = ""
+        escaped = False
+        end = None
+        for index in range(opening + match.end(), len(source)):
+            character = source[index]
+            if quote:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == quote:
+                    quote = ""
+            elif character in {"'", '"'}:
+                quote = character
+            elif character == ">":
+                end = index + 1
+                break
+        if end is None:
+            break
+        tag_text = source[opening:end]
+        tokens.append(
+            (
+                opening,
+                end,
+                match.group("name").lower(),
+                bool(match.group("closing")),
+                bool(re.search(r"/\s*>$", tag_text)),
+            )
+        )
+        cursor = end
+
+    void_elements = {
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    }
+    stack: list[tuple[str, int, int]] = []
+    ranges: list[tuple[int, int]] = []
+    for start, end, name, closing, self_closing in tokens:
+        if closing:
+            for stack_index in range(len(stack) - 1, -1, -1):
+                if stack[stack_index][0] != name:
+                    continue
+                _, element_start, _ = stack[stack_index]
+                del stack[stack_index:]
+                ranges.append((element_start, end))
+                break
+        elif self_closing or name in void_elements:
+            ranges.append((start, end))
+        else:
+            stack.append((name, start, end))
+    return ranges
+
+
+def _mask_razor_markup(
+    source: str, executable_ranges: list[tuple[int, int]]
+) -> str:
+    """Mask nested Razor markup with the innermost syntax region winning.
+
+    Razor control bodies mix raw C# with complete HTML elements. A union of
+    executable ranges retains the markup too, so quotes in prose can become
+    fake C# literals and hide a request. HTML and C# transition spans nest;
+    applying larger spans first and smaller spans last preserves the deepest
+    language boundary (markup -> @code -> nested markup -> @expression).
+    """
+
+    rendered = list(source)
+    markup_ranges = _html_element_ranges(source)
+    markup_ranges.extend(
+        match.span()
+        for match in re.finditer(r"<!--.*?-->", source, flags=re.DOTALL)
+    )
+    markup_ranges.extend(
+        match.span("text")
+        for match in re.finditer(
+            r"(?m)(?:^|(?<=[;{}]))[ \t]*@:(?P<text>[^\r\n]*)", source
+        )
+    )
+    operations = [
+        (end - start, 0, start, end) for start, end in markup_ranges
+    ]
+    operations.extend(
+        (end - start, 1, start, end) for start, end in executable_ranges
+    )
+    for _, keep, start, end in sorted(
+        operations, key=lambda item: (-item[0], item[1])
+    ):
+        if keep:
+            rendered[start:end] = source[start:end]
+        else:
+            _blank(rendered, start, end)
+    return "".join(rendered)
+
+
 def _vue_directive_expression_ranges(source: str) -> list[tuple[int, int]]:
     """Return value and dynamic-argument expressions for every Vue directive."""
 
@@ -444,6 +550,90 @@ def _javascript_template_expression_ranges(
         ranges.append(balanced[0])
         cursor = balanced[0][1] + 1
     return ranges
+
+
+def _ruby_interpolation_ranges(
+    source: str, start: int, end: int
+) -> list[tuple[int, int]]:
+    """Return executable ``#{...}`` spans within an interpolating literal."""
+
+    ranges: list[tuple[int, int]] = []
+    cursor = start
+    while cursor < end:
+        marker = source.find("#{", cursor, end)
+        if marker < 0:
+            break
+        backslashes = 0
+        probe = marker - 1
+        while probe >= start and source[probe] == "\\":
+            backslashes += 1
+            probe -= 1
+        if backslashes % 2:
+            cursor = marker + 2
+            continue
+        balanced = _balanced_brace_ranges(source, [marker + 1])
+        if not balanced or balanced[0][1] > end:
+            break
+        ranges.append(balanced[0])
+        cursor = balanced[0][1] + 1
+    return ranges
+
+
+def _ruby_percent_literal(
+    source: str, start: int
+) -> tuple[int, int, int, bool] | None:
+    """Return percent-literal bounds and interpolation behavior at ``start``."""
+
+    if start >= len(source) or source[start] != "%":
+        return None
+    cursor = start + 1
+    kind = "Q"
+    if cursor < len(source) and source[cursor] in "qQwWiIxrs":
+        kind = source[cursor]
+        cursor += 1
+    elif cursor >= len(source) or source[cursor] not in "([{<":
+        # Bare `%` is also modulo/assignment syntax. Its untyped literal form
+        # is unambiguous for paired delimiters; typed forms support every Ruby
+        # delimiter below.
+        return None
+    else:
+        previous = start - 1
+        while previous >= 0 and source[previous].isspace():
+            previous -= 1
+        if previous >= 0 and (
+            source[previous].isalnum() or source[previous] in "_$)]}'\""
+        ):
+            return None
+    if cursor >= len(source):
+        return None
+    opening = source[cursor]
+    if opening.isalnum() or opening.isspace():
+        return None
+    closing = {"(": ")", "[": "]", "{": "}", "<": ">"}.get(
+        opening, opening
+    )
+    paired = closing != opening
+    depth = 1
+    contents_start = cursor + 1
+    cursor = contents_start
+    while cursor < len(source):
+        character = source[cursor]
+        if character == "\\":
+            cursor = min(len(source), cursor + 2)
+            continue
+        if paired and character == opening:
+            depth += 1
+        elif character == closing:
+            depth -= 1
+            if depth == 0:
+                return (
+                    cursor + 1,
+                    contents_start,
+                    cursor,
+                    kind in {"Q", "W", "I", "x", "r"},
+                )
+        cursor += 1
+    return None
 
 
 def executable_source(path: Path, source: str) -> str:
@@ -569,6 +759,7 @@ def executable_source(path: Path, source: str) -> str:
                 razor_source,
             )
         )
+        source = _mask_razor_markup(razor_source, ranges)
     elif suffix in {".php", ".phtml"}:
         # Both extensions may be mixed HTML/PHP templates. Feeding surrounding
         # markup to the PHP lexer lets an apostrophe in page text open a string
@@ -1265,6 +1456,44 @@ def lex_source(source: str, suffix: str) -> LexedSource:
             index = end
             continue
 
+        if suffix == ".rb" and source[index] == "%":
+            percent_literal = _ruby_percent_literal(source, index)
+            if percent_literal is not None:
+                literal_end, contents_start, contents_end, interpolates = (
+                    percent_literal
+                )
+                string_start = index
+                _blank(code, string_start, literal_end)
+                _blank(without_comments, string_start, literal_end)
+                if interpolates:
+                    for expression_start, expression_end in _ruby_interpolation_ranges(
+                        source, contents_start, contents_end
+                    ):
+                        nested = lex_source(
+                            source[expression_start:expression_end], suffix
+                        )
+                        code[expression_start:expression_end] = list(nested.code)
+                        without_comments[expression_start:expression_end] = list(
+                            nested.without_comments
+                        )
+                        strings.extend(
+                            StringToken(
+                                expression_start + token.start,
+                                expression_start + token.end,
+                                token.contents,
+                            )
+                            for token in nested.strings
+                        )
+                strings.append(
+                    StringToken(
+                        string_start,
+                        literal_end,
+                        source[contents_start:contents_end],
+                    )
+                )
+                index = literal_end
+                continue
+
         # Heredoc bodies are DATA, not code. They were lexed as code, so an
         # apostrophe inside one ("Don't edit by hand") paired with a later quote
         # and masked the send that followed.
@@ -1350,6 +1579,29 @@ def lex_source(source: str, suffix: str) -> LexedSource:
             # Nested string tokens are recorded before the enclosing template
             # token so lookups inside an interpolation select the narrow token.
             for expression_start, expression_end in _javascript_template_expression_ranges(
+                source, contents_start, contents_end
+            ):
+                nested = lex_source(
+                    source[expression_start:expression_end], suffix
+                )
+                code[expression_start:expression_end] = list(nested.code)
+                without_comments[expression_start:expression_end] = list(
+                    nested.without_comments
+                )
+                strings.extend(
+                    StringToken(
+                        expression_start + token.start,
+                        expression_start + token.end,
+                        token.contents,
+                    )
+                    for token in nested.strings
+                )
+        elif delimiter in {'"', "`"} and suffix == ".rb":
+            # Ruby double-quoted strings and command literals execute
+            # interpolation expressions.
+            # Preserve the code within each `#{...}` while keeping surrounding
+            # string data masked, just as JavaScript template literals do.
+            for expression_start, expression_end in _ruby_interpolation_ranges(
                 source, contents_start, contents_end
             ):
                 nested = lex_source(

@@ -1642,6 +1642,77 @@ class CorrectnessLinterContracts(unittest.TestCase):
             }
         )
 
+    def test_razor_nested_markup_does_not_mask_or_invent_csharp(self) -> None:
+        declarations = (
+            '@{ var payload = new MessageSendNumberPoolParams { To = "+1"%s }; }\n'
+        )
+        controls = {
+            "siblings": (
+                "@if (true) {\n"
+                "<p>It's ready</p>\n"
+                "client.Messages.SendNumberPool(payload);\n"
+                "<p>User's result</p>\n}\n"
+            ),
+            "nested": (
+                "@if (true) {\n"
+                '<section title="before"><p>Don\'t run prose</p></section>\n'
+                "client.Messages.SendNumberPool(payload);\n"
+                '<section title="after"><p>Customer\'s result</p></section>\n}\n'
+            ),
+            "transition-in-markup": (
+                "@if (true) {\n"
+                "<div>@client.Messages.SendNumberPool(payload)</div>\n}\n"
+            ),
+            "explicit-transition-in-markup": (
+                "@if (true) {\n"
+                "<div>@(client.Messages.SendNumberPool(payload))</div>\n}\n"
+            ),
+            "nested-control-in-markup": (
+                "<div>@if (true) { "
+                "client.Messages.SendNumberPool(payload); }</div>\n"
+            ),
+            "line-markup": (
+                "@if (true) {\n"
+                "@:It's ready\n"
+                "client.Messages.SendNumberPool(payload);\n"
+                "@:User's result\n}\n"
+            ),
+            "html-comment": (
+                "@if (true) {\n"
+                "<!-- It's an old example -->\n"
+                "client.Messages.SendNumberPool(payload);\n"
+                "<!-- User's result -->\n}\n"
+            ),
+        }
+        for suffix in (".cshtml", ".razor"):
+            for label, control in controls.items():
+                fixture = f"View{suffix}"
+                with self.subTest(suffix=suffix, shape=label, polarity="missing"):
+                    _, payload = self.run_messaging_linter(
+                        {fixture: declarations % "" + control}
+                    )
+                    self.assert_required_profile_detected(payload, fixture)
+                with self.subTest(suffix=suffix, shape=label, polarity="compliant"):
+                    self.assert_required_profile_passes(
+                        {
+                            fixture: declarations
+                            % ', MessagingProfileId = "mp"'
+                            + control
+                        }
+                    )
+
+        # Complete HTML elements containing call-like prose are inert even
+        # inside a Razor control body.
+        self.assert_required_profile_passes(
+            {
+                "Docs.cshtml": (
+                    "@if (true) {\n"
+                    "<p>It's client.Messages.SendNumberPool(payload)</p>\n"
+                    "<p>User's example</p>\n}\n"
+                )
+            }
+        )
+
     def test_typescript_component_scripts_keep_typescript_resolution(self) -> None:
         source = "\n".join(
             (
@@ -6530,6 +6601,68 @@ class CorrectnessLinterContracts(unittest.TestCase):
         for fixture_name, source in cases.items():
             with self.subTest(fixture=fixture_name):
                 self.assert_required_profile_passes({fixture_name: source})
+
+    def test_ruby_percent_literals_mask_data_and_preserve_interpolation(
+        self,
+    ) -> None:
+        call = "client.messages.send_number_pool({to: '+1'})"
+        inert_literals = {
+            "q-brace": f"%q{{{call}}}",
+            "q-paren": f"%q({call})",
+            "q-bracket": f"%q[{call}]",
+            "q-angle": f"%q<{call}>",
+            "q-unpaired": f"%q!{call}!",
+            "Q-template": f"%Q{{{call}}}",
+            "default": f"%{{{call}}}",
+            "words": f"%w[{call}]",
+            "symbols": f"%i[{call}]",
+            "symbol": f"%s!{call}!",
+            "regex": f"%r!{call}!",
+            "command": f"%x{{echo {call}}}",
+            "escaped-delimiter": rf"%q!example \! {call}!",
+        }
+        for label, literal in inert_literals.items():
+            with self.subTest(literal=label):
+                result = self.run_required_profile_analyzer(
+                    {"example.rb": f"template = {literal}\n"}
+                )
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+        interpolating_literals = {
+            "Q": f"%Q{{#{{{call}}}}}",
+            "default": f"%{{#{{{call}}}}}",
+            "W": f"%W[#{{{call}}}]",
+            "I": f"%I[#{{{call}}}]",
+            "regex": f"%r!#{{{call}}}!",
+            "command": f"%x{{#{{{call}}}}}",
+            "double-quoted": f'"#{{{call}}}"',
+            "backtick": f"`#{{{call}}}`",
+        }
+        for label, literal in interpolating_literals.items():
+            with self.subTest(interpolation=label):
+                result = self.run_required_profile_analyzer(
+                    {"live.rb": f"value = {literal}\n"}
+                )
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+
+        # Non-interpolating and escaped forms remain data, and scanning resumes
+        # after a percent literal so a later real call is still visible.
+        result = self.run_required_profile_analyzer(
+            {
+                "mixed.rb": (
+                    f"a = %q{{#{{{call}}}}}\n"
+                    f'b = "\\#{{{call}}}"\n'
+                    f"{call}\n"
+                )
+            }
+        )
+        self.assertEqual("1", result.stdout.splitlines()[0], result.stdout)
+
+        # Public-entry polarity for the originally reported false blocker.
+        self.assert_required_profile_passes(
+            {"example.rb": f"template = %q{{{call}}}\n"}
+        )
 
     def test_profile_field_name_inside_message_text_does_not_satisfy_request(
         self,
