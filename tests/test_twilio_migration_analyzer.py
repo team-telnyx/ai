@@ -3034,6 +3034,160 @@ class CorrectnessLinterContracts(unittest.TestCase):
                     else:
                         self.assertEqual([], findings, result.stdout)
 
+    def test_export_default_regex_literals_preserve_following_sends(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        send = (
+            f"fetch('{url}',{{method:'POST',body:JSON.stringify("
+            "{to:'+1'PROFILE})});"
+        )
+        for declaration in (
+            "export default /[/*]/;",
+            "export /* comment */ default /[//]/gu;",
+            "export default\n/[/*]/;",
+        ):
+            for polarity, profile in (
+                ("missing", ""),
+                ("valid", ",messaging_profile_id:'mp'"),
+            ):
+                with self.subTest(declaration=declaration, polarity=polarity):
+                    result = self.run_required_profile_analyzer(
+                        {"send.js": declaration + "\n" + send.replace("PROFILE", profile)}
+                    )
+                    rows = result.stdout.splitlines()
+                    self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+                    findings = [row for row in rows[1:] if "send.js" in row]
+                    self.assertEqual(polarity == "missing", bool(findings), result.stdout)
+
+        # A member named `default` is an operand, not the export keyword.
+        result = self.run_required_profile_analyzer(
+            {"division.js": "const ratio = config.default / divisor;\n" + send.replace("PROFILE", "")}
+        )
+        self.assertTrue(any("division.js" in row for row in result.stdout.splitlines()[1:]))
+
+    def test_shell_heredocs_accept_trailing_redirections(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        redirections = (
+            ">sample.txt",
+            ">> sample.txt 2>&1",
+            "2>/dev/null >'sample file.txt'",
+            "3>&1 1>sample.txt",
+            "&>sample.txt",
+            "&>> sample.txt # generated fixture",
+            ">sample.txt # generated fixture",
+        )
+        for redirection in redirections:
+            with self.subTest(redirection=redirection):
+                inert = (
+                    f"cat <<'DOC' {redirection}\n"
+                    "client.messages.sendNumberPool({to:'+1'})\n"
+                    "DOC\n"
+                )
+                result = self.run_required_profile_analyzer({"example.sh": inert})
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+                live = inert + f"curl -X POST '{url}' -d '{{\"to\":\"+1\"}}'\n"
+                result = self.run_required_profile_analyzer({"send.sh": live})
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(any("send.sh" in row for row in rows[1:]), result.stdout)
+
+    def test_ruby_request_constructors_require_an_execution_link(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        for verb in ("Post", "Put", "Patch"):
+            prefix = (
+                f"uri = URI('{url}')\n"
+                f"req = Net::HTTP::{verb}.new(uri)\n"
+                "req.body = {to:'+1'PROFILE}.to_json\n"
+            )
+            with self.subTest(verb=verb, execution="absent"):
+                result = self.run_required_profile_analyzer(
+                    {"request.rb": prefix.replace("PROFILE", "")}
+                )
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+            for execution in ("http.request(req)", "http.request req"):
+                for polarity, profile in (
+                    ("missing", ""),
+                    ("valid", ",messaging_profile_id:mp"),
+                ):
+                    with self.subTest(
+                        verb=verb, execution=execution, polarity=polarity
+                    ):
+                        result = self.run_required_profile_analyzer(
+                            {
+                                "request.rb": prefix.replace("PROFILE", profile)
+                                + execution
+                                + "\n"
+                            }
+                        )
+                        rows = result.stdout.splitlines()
+                        self.assertEqual("1", rows[0], result.stdout)
+                        findings = [row for row in rows[1:] if "request.rb" in row]
+                        self.assertEqual(
+                            polarity == "missing", bool(findings), result.stdout
+                        )
+
+        for binding in ("@req", "@@req", "$req"):
+            with self.subTest(binding=binding):
+                source = (
+                    f"uri = URI('{url}')\n"
+                    f"{binding} = Net::HTTP::Post.new(uri)\n"
+                    f"{binding}.body = {{to:'+1'}}.to_json\n"
+                    f"http.request({binding})\n"
+                )
+                result = self.run_required_profile_analyzer({"request.rb": source})
+                rows = result.stdout.splitlines()
+                self.assertEqual("1", rows[0], result.stdout)
+                self.assertTrue(any("request.rb" in row for row in rows[1:]), result.stdout)
+
+        # A later reaching definition or an execution in another method cannot
+        # execute the discarded POST constructor.
+        rebound = (
+            f"pool = URI('{url}')\nother = URI('/health')\n"
+            "req = Net::HTTP::Post.new(pool)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "req = Net::HTTP::Get.new(other)\nhttp.request(req)\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer({"rebound.rb": rebound}).stdout.strip(),
+        )
+        cross_scope = (
+            f"uri = URI('{url}')\nreq = Net::HTTP::Post.new(uri)\n"
+            "req.body = {to:'+1'}.to_json\n"
+            "def later\n  http.request(req)\nend\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {"cross-scope.rb": cross_scope}
+            ).stdout.strip(),
+        )
+
+    def test_review_regressions_hold_through_public_wrapper(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        missing = {
+            "send.js": (
+                "export default /[/*]/;\n"
+                f"fetch('{url}',{{method:'POST',body:JSON.stringify({{to:'+1'}})}});"
+            )
+        }
+        result, payload = self.run_messaging_linter(missing)
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, "send.js")
+
+        self.assert_required_profile_passes(
+            {
+                "example.sh": (
+                    "cat <<DOC &>sample.txt # generated\n"
+                    "client.messages.sendNumberPool({to:'+1'})\nDOC\n"
+                ),
+                "request.rb": (
+                    f"uri=URI('{url}')\nreq=Net::HTTP::Post.new(uri)\n"
+                    "req.body={to:'+1'}.to_json\n"
+                ),
+            }
+        )
+
     def test_javascript_division_and_comments_remain_distinct_from_regex(
         self,
     ) -> None:

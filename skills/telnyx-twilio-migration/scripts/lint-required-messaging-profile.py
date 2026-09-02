@@ -1511,7 +1511,7 @@ def _line_comment_end(source: str, start: int, suffix: str) -> int:
 # as heredoc openers, and since no later line matched the pseudo-tag the "body"
 # ran to EOF and blanked every send below it - a silent pass.
 _HEREDOC_OPENER_RE = re.compile(
-    r"<<[<]?[-~]?(?P<q>['\"]?)(?P<tag>[A-Za-z_]\w*)(?P=q)[ \t]*(?=\r?\n|$)"
+    r"<<[<]?[-~]?(?P<q>['\"]?)(?P<tag>[A-Za-z_]\w*)(?P=q)(?!\w)"
 )
 # Requiring end-of-line after the tag is necessary but NOT sufficient. Ruby's
 # singleton-class syntax `class <<self` also puts a bare word straight after
@@ -1520,6 +1520,32 @@ _HEREDOC_OPENER_RE = re.compile(
 # it. That is the same defect the end-of-line anchor was added to fix, one
 # spelling sideways, so the opener needs its LEFT context checked too.
 _NOT_A_HEREDOC_PREFIX_RE = re.compile(r"(?:^|[^\w.])class[ \t]*$")
+_SHELL_HEREDOC_REDIRECTION_RE = re.compile(
+    r"[ \t]*(?:(?:&>>|&>)|(?:\d*)?(?:>>|>\||>&|<&|<>|>|<))[ \t]*"
+    r"(?:&?\d+|-|'[^']*'|\"(?:\\.|[^\"])*\"|(?:\\.|[^ \t\r\n;<>&|])+)",
+)
+
+
+def _shell_heredoc_redirection_tail(tail: str) -> bool:
+    """Accept only shell redirections after a heredoc delimiter.
+
+    A delimiter need not end the physical command: `cat <<EOF >out 2>&1` is
+    valid shell.  The lexer must mask that body, while still rejecting an
+    arbitrary expression containing `<< WORD`.  Consuming a sequence of
+    concrete redirections keeps that boundary explicit.
+    """
+
+    position = 0
+    while position < len(tail):
+        if tail[position:].strip() == "":
+            return True
+        if tail[position:].lstrip().startswith("#"):
+            return True
+        match = _SHELL_HEREDOC_REDIRECTION_RE.match(tail, position)
+        if match is None or match.end() == position:
+            return False
+        position = match.end()
+    return True
 
 
 def _heredoc_opener_at(
@@ -1534,8 +1560,17 @@ def _heredoc_opener_at(
     match = _HEREDOC_OPENER_RE.match(source, index)
     if match is None:
         return None
+    line_start = source.rfind("\n", 0, index) + 1
+    line_end = source.find("\n", match.end())
+    if line_end < 0:
+        line_end = len(source)
+    tail = source[match.end():line_end]
+    if suffix == ".sh":
+        if not _shell_heredoc_redirection_tail(tail):
+            return None
+    elif tail.strip():
+        return None
     if suffix == ".rb":
-        line_start = source.rfind("\n", 0, index) + 1
         if _NOT_A_HEREDOC_PREFIX_RE.search(source[line_start:index]):
             return None
     return match
@@ -1668,7 +1703,23 @@ def _javascript_regex_can_start(
     if character == "}":
         return _javascript_block_brace(code, previous)
     if character.isalnum() or character in "_$":
-        return _word_before(code, previous + 1).lower() in _JS_REGEX_PREFIX_WORDS
+        word = _word_before(code, previous + 1).lower()
+        if word == "default":
+            # `export default /pattern/` expects an expression, but treating
+            # every property named `default` as that keyword would mislex
+            # `config.default / divisor` (ordinary division).  Require the
+            # complete contextual keyword pair.
+            word_start = previous + 1 - len(word)
+            before_word = _previous_code_index(code, word_start)
+            if before_word is None:
+                return False
+            export_word = _word_before(code, before_word + 1).lower()
+            export_start = before_word + 1 - len(export_word)
+            before_export = _previous_code_index(code, export_start)
+            return export_word == "export" and (
+                before_export is None or code[before_export] != "."
+            )
+        return word in _JS_REGEX_PREFIX_WORDS
     return False
 
 
@@ -4067,13 +4118,56 @@ _EXECUTION_LINK_RE = {
     ),
     ".py": r"urlopen\s*\(\s*{name}\b",
     ".go": r"\.\s*Do\s*\(\s*{name}\b",
+    # Net::HTTP::{Post,Put,Patch}.new only constructs a request. Ruby sends it
+    # later through Net::HTTP#request, with either parenthesized or command-call
+    # syntax. Requiring that link prevents fixtures/builders from being
+    # reported as live customer sends.
+    ".rb": r"\.\s*request\s*(?:\(\s*{name}\b|[ \t]+{name}\b)",
 }
 _INLINE_EXECUTION_RE = re.compile(
     # The constructor may be namespaced inside the execution call, as in
     # urlopen(urllib.request.Request(...)), so allow a dotted qualifier.
-    r"(?:urlopen|newCall|SendAsync|Send|Execute\w*|Do)\s*\(\s*"
+    r"(?:urlopen|newCall|SendAsync|Send|Execute\w*|Do|request)\s*\(\s*"
     r"(?:[A-Za-z_][\w.]*\s*\.\s*)?$"
 )
+
+
+def _ruby_function_spans(code: str) -> list[tuple[int, int]]:
+    """Return conservative Ruby `def ... end` spans from masked source."""
+
+    stack: list[tuple[str, int | None]] = []
+    spans: list[tuple[int, int]] = []
+    cursor = 0
+    for line in code.splitlines(keepends=True):
+        stripped = line.strip()
+        if re.match(r"end\b", stripped) and stack:
+            kind, start = stack.pop()
+            if kind == "def" and start is not None:
+                spans.append((start, cursor + len(line)))
+        else:
+            opener = re.match(r"(def|class|module)\b", stripped)
+            if opener is not None:
+                stack.append((opener.group(1), cursor))
+            elif re.search(r"\bdo(?:\s*\|[^|]*\|)?\s*$", stripped):
+                stack.append(("block", None))
+            elif re.match(
+                r"(?:if|unless|case|begin|for|while|until)\b", stripped
+            ):
+                stack.append(("control", None))
+        cursor += len(line)
+    return spans
+
+
+def _same_ruby_function_scope(
+    code: str, left: int, right: int, spans: list[tuple[int, int]]
+) -> bool:
+    """Whether two offsets belong to the same Ruby method (or top level)."""
+
+    def owner(offset: int) -> tuple[int, int] | None:
+        containing = [span for span in spans if span[0] <= offset < span[1]]
+        return min(containing, key=lambda span: span[1] - span[0]) if containing else None
+
+    return owner(left) == owner(right)
 
 
 def request_object_is_executed(
@@ -4114,15 +4208,34 @@ def request_object_is_executed(
         ) is not None
     # `req, err := http.NewRequest(...)` binds several names; the blank `_` is
     # never the one executed, so every candidate must be tried.
+    name_pattern = (
+        r"(?:@@|@|\$)?[A-Za-z_]\w*" if suffix == ".rb" else r"[A-Za-z_]\w*"
+    )
     names = [
         name
-        for name in re.findall(r"[A-Za-z_]\w*", assignment.group(1))
+        for name in re.findall(name_pattern, assignment.group(1))
         if name != "_"
     ]
-    return any(
-        re.search(pattern.format(name=re.escape(name)), lexed.code[statement_start:])
-        for name in names
-    )
+    tail = lexed.code[call.end:]
+    ruby_spans = _ruby_function_spans(lexed.code) if suffix == ".rb" else []
+    for name in names:
+        execution = re.search(pattern.format(name=re.escape(name)), tail)
+        if execution is None:
+            continue
+        execution_offset = call.end + execution.start()
+        if suffix == ".rb" and not _same_ruby_function_scope(
+            lexed.code, call.start, execution_offset, ruby_spans
+        ):
+            continue
+        # A new reaching definition supersedes this request object. A later
+        # execution of the same variable must not retroactively execute the
+        # discarded constructor.
+        rebound = re.search(
+            rf"(?<![\w@$]){re.escape(name)}\s*=(?!=)", tail[:execution.start()]
+        )
+        if rebound is None:
+            return True
+    return False
 
 
 def php_stream_context_region(
@@ -5425,7 +5538,7 @@ def _request_url_spans(
         # in this change (OkHttp, HttpRequestMessage, RestSharp, urllib).
         return args[1:2]
     if callee.endswith("new") and "Net::HTTP::" in callee and len(args) >= 1:
-        return args[0:1]
+        return args[0:1] if request_object_is_executed(lexed, call, suffix) else []
     if callee == "curl_init" and len(args) >= 1:
         # `curl_init($url)` sets CURLOPT_URL directly - it is the documented
         # one-liner form and is at least as common as the setopt spelling.
@@ -11588,7 +11701,30 @@ def consumed_endpoint_tokens(
             break
     consumed |= _tokens_in_span(lexed, (statement_start, statement_end))
 
-    for span in request_url_spans(lexed, call, suffix):
+    resolved_spans = request_url_spans(lexed, call, suffix)
+    if not resolved_spans:
+        # Recognised request-object constructors can be deliberately rejected
+        # because they are never executed (or use a read-only verb). Their URL
+        # is still accounted for by this analysed call; otherwise an alias such
+        # as `uri = URI(URL); req = Net::HTTP::Post.new(uri)` is re-reported by
+        # the fail-safe as an unknown send. Keep this list to constructors whose
+        # URL position is part of an explicit client signature.
+        args = split_arguments(lexed.code, call.open_paren + 1, call.end - 1)
+        callee = normalized_call_callee(lexed, call)
+        if args and callee.endswith("new") and "Net::HTTP::" in callee:
+            resolved_spans = args[0:1]
+        elif args and suffix == ".py" and callee.split(".")[-1] == "Request":
+            resolved_spans = args[0:1]
+        elif args and callee == "HttpRequestMessage":
+            resolved_spans = args[1:2]
+        elif args and callee == "RestRequest":
+            resolved_spans = args[0:1]
+        elif suffix in {".java", ".kt", ".kts", ".scala"}:
+            builder_span = builder_uri_span(lexed, call)
+            if builder_span is not None:
+                resolved_spans = [builder_span]
+
+    for span in resolved_spans:
         consumed |= _tokens_in_span(lexed, span)
         # Follow the alias chain the resolver itself walked. The endpoint is
         # often held one or more hops away - `url = routes.get("pool")` where
