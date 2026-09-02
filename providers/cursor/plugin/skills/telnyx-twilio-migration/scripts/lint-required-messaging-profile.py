@@ -906,6 +906,68 @@ def _shell_command_substitution_ranges(
     return ranges
 
 
+def _php_closing_tag(source: str, start: int) -> int | None:
+    """Return the next PHP closing tag outside strings/comments/heredocs."""
+
+    index = start
+    quote = ""
+    escaped = False
+    while index < len(source):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            index += 1
+            continue
+        if source.startswith("/*", index):
+            closing = source.find("*/", index + 2)
+            index = len(source) if closing < 0 else closing + 2
+            continue
+        heredoc = _heredoc_opener_at(source, index, ".php")
+        if heredoc is not None and source.startswith("<<<", index):
+            body_start = source.find("\n", heredoc.end())
+            if body_start < 0:
+                return None
+            terminator = re.compile(
+                rf"^[ \t]*{re.escape(heredoc.group('tag'))}\b[^\r\n]*",
+                re.MULTILINE,
+            ).search(source, body_start + 1)
+            index = len(source) if terminator is None else terminator.end()
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+            index += 1
+            continue
+        if source.startswith("?>", index):
+            return index
+        index += 1
+    return None
+
+
+def _php_executable_ranges(source: str) -> list[tuple[int, int]]:
+    """Return PHP code regions with lexical, rather than textual, closers."""
+
+    opener = re.compile(
+        r"<\?(?:php\b|=|(?!(?:xml)\b))",
+        re.IGNORECASE,
+    )
+    ranges: list[tuple[int, int]] = []
+    cursor = 0
+    while match := opener.search(source, cursor):
+        start = match.end()
+        closing = _php_closing_tag(source, start)
+        end = len(source) if closing is None else closing
+        ranges.append((start, end))
+        if closing is None:
+            break
+        cursor = closing + 2
+    return ranges
+
+
 def executable_source(path: Path, source: str) -> str:
     """Extract executable host-language regions from mixed template files."""
     suffix = path.suffix.lower()
@@ -1037,18 +1099,10 @@ def executable_source(path: Path, source: str) -> str:
         # regions whenever tags are present. Tagless `.php` remains supported
         # because many analyzer fixtures and generated snippets contain raw PHP
         # statements without an opening tag; tagless `.phtml` remains markup.
-        php_ranges = [
-            match.span("code")
-            for match in re.finditer(
-                # Plain ``<?`` is executable when short_open_tag is enabled.
-                # Keep XML declarations out: with short tags disabled they are
-                # markup, and with short tags enabled they make the PHP file
-                # invalid rather than forming a customer request.
-                r"<\?(?:php\b|=|(?!(?:xml)\b))(?P<code>.*?)(?:\?>|\Z)",
-                source,
-                flags=re.IGNORECASE | re.DOTALL,
-            )
-        ]
+        # Plain ``<?`` is executable when short_open_tag is enabled. Keep XML
+        # declarations out, and find closing tags lexically: a textual `?>`
+        # inside a PHP string, block comment, heredoc, or nowdoc is data.
+        php_ranges = _php_executable_ranges(source)
         if (
             suffix == ".php"
             and not php_ranges
@@ -1134,11 +1188,15 @@ PROFILE_IDENTIFIER_RE = re.compile(
     rf"(?<![\w$])(?:{PROFILE_NAME_PATTERN})(?!\w)"
 )
 PROFILE_CLI_RE = re.compile(r"--messaging-profile-id(?:\s|=|$)")
-SDK_METHOD_PATTERN = (
-    r"sendNumberPool|send_number_pool|SendNumberPool|"
-    r"sendWithAlphanumericSender|send_with_alphanumeric_sender|"
-    r"SendWithAlphanumericSender"
+SDK_METHOD_NAMES = (
+    "sendNumberPool",
+    "send_number_pool",
+    "SendNumberPool",
+    "sendWithAlphanumericSender",
+    "send_with_alphanumeric_sender",
+    "SendWithAlphanumericSender",
 )
+SDK_METHOD_PATTERN = "|".join(map(re.escape, SDK_METHOD_NAMES))
 SDK_CALL_RE = re.compile(
     rf"(?:\?\.|\.|->)\s*(?:{SDK_METHOD_PATTERN})"
     r"\s*(?:\?\.)?\s*\("
@@ -1601,7 +1659,7 @@ def _javascript_regex_can_start(
         # JSX closing tags (`</Panel>` and `</>`) are markup delimiters, not a
         # regexp in the expression position that `<` would otherwise permit.
         return False
-    if character in "([,;:=!?&|^~<>*%":
+    if character in "([{,;:=!?&|^~<>*%":
         return True
     if character in "+-":
         return previous == 0 or code[previous - 1] != character
@@ -2158,6 +2216,70 @@ def sdk_alias_calls(lexed: LexedSource) -> list[Call]:
             if callable_arg == alias and key not in seen:
                 seen.add(key)
                 calls.append(call)
+    return calls
+
+
+def sdk_computed_calls(lexed: LexedSource, suffix: str) -> list[Call]:
+    """Find JS/TS SDK calls with a statically named bracket member.
+
+    The lexer deliberately blanks string literals, so the direct SDK regex
+    cannot see ``messages['sendNumberPool'](...)``. Recover only exact static
+    method-name tokens that are bracket members on a real receiver. Dynamic
+    lookups and object/array literals remain unresolved rather than being
+    misclassified as SDK sends.
+    """
+
+    if suffix not in JS_TS_SUFFIXES:
+        return []
+
+    code = lexed.code
+    calls: list[Call] = []
+    for token in lexed.strings:
+        if token.contents not in SDK_METHOD_NAMES:
+            continue
+
+        opening_bracket = token.start - 1
+        while opening_bracket >= 0 and code[opening_bracket].isspace():
+            opening_bracket -= 1
+        if opening_bracket < 0 or code[opening_bracket] != "[":
+            continue
+
+        receiver_end = opening_bracket - 1
+        while receiver_end >= 0 and code[receiver_end].isspace():
+            receiver_end -= 1
+        if (
+            receiver_end >= 1
+            and code[receiver_end] == "."
+            and code[receiver_end - 1] == "?"
+        ):
+            receiver_end -= 2
+            while receiver_end >= 0 and code[receiver_end].isspace():
+                receiver_end -= 1
+        if receiver_end < 0 or not (
+            code[receiver_end].isalnum()
+            or code[receiver_end] in {"_", "$", "]", ")"}
+        ):
+            continue
+
+        closing_bracket = token.end
+        while closing_bracket < len(code) and code[closing_bracket].isspace():
+            closing_bracket += 1
+        if closing_bracket >= len(code) or code[closing_bracket] != "]":
+            continue
+
+        opening = closing_bracket + 1
+        while opening < len(code) and code[opening].isspace():
+            opening += 1
+        if code.startswith("?.", opening):
+            opening += 2
+            while opening < len(code) and code[opening].isspace():
+                opening += 1
+        if opening >= len(code) or code[opening] != "(":
+            continue
+
+        closing = matching_delimiter(code, opening, "(", ")")
+        if closing is not None:
+            calls.append(Call(opening_bracket, opening, closing + 1))
     return calls
 
 
@@ -12239,7 +12361,11 @@ def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
     source = executable_source(path, source)
     suffix = canonical_suffix(path)
     lexed = lex_source(source, suffix, source_dialect(path))
-    sdk_calls = calls_matching(lexed, SDK_CALL_RE) + sdk_alias_calls(lexed)
+    sdk_calls = (
+        calls_matching(lexed, SDK_CALL_RE)
+        + sdk_alias_calls(lexed)
+        + sdk_computed_calls(lexed, suffix)
+    )
     fetch_calls = calls_matching(lexed, FETCH_CALL_RE)
     if suffix != ".cs":
         # These PascalCase names are official .NET HttpClient methods. Keeping

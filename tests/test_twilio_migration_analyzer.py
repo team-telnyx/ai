@@ -1288,6 +1288,51 @@ class CorrectnessLinterContracts(unittest.TestCase):
         _, payload = self.run_messaging_linter({"raw.php": missing + "\n"})
         self.assert_required_profile_detected(payload, "raw.php")
 
+    def test_php_closing_tags_inside_data_do_not_end_executable_regions(self) -> None:
+        """Only a lexical PHP closing tag can return to template markup."""
+
+        send = (
+            "$client->post('https://api.telnyx.com/v2/messages/number_pool', "
+            "['json' => ['to' => '+1'%s]]);"
+        )
+        prefixes = {
+            "single-quoted": "$value = '?>';\n",
+            "double-quoted": '$value = "?>";\n',
+            "backtick": "$value = `printf '?>'`;\n",
+            "block-comment": "/* ?> is documentation */\n",
+            "heredoc": "$value = <<<TEXT\n?>\nTEXT;\n",
+            "nowdoc": "$value = <<<'TEXT'\n?>\nTEXT;\n",
+        }
+        for suffix in (".php", ".phtml"):
+            for label, prefix in prefixes.items():
+                for polarity, profile in (
+                    ("missing", ""),
+                    ("present", ", 'messaging_profile_id' => 'mp'"),
+                ):
+                    with self.subTest(
+                        suffix=suffix, data=label, polarity=polarity
+                    ):
+                        files = {
+                            "send" + suffix: "<?php\n" + prefix + send % profile + "\n?>"
+                        }
+                        if polarity == "missing":
+                            _, payload = self.run_messaging_linter(files)
+                            self.assert_required_profile_detected(
+                                payload, "send" + suffix
+                            )
+                        else:
+                            self.assert_required_profile_passes(files)
+
+        # A real closing tag still excludes call-shaped markup that follows.
+        self.assert_required_profile_passes(
+            {
+                "template.phtml": (
+                    "<?php $value = 'safe'; ?>\n"
+                    "<pre>client.messages['sendNumberPool']({to: '+1'})</pre>\n"
+                )
+            }
+        )
+
     def test_multiline_template_comments_preserve_speech_model_line(self) -> None:
         source = (
             "<!-- comment\n"
@@ -2143,6 +2188,63 @@ class CorrectnessLinterContracts(unittest.TestCase):
                 self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
                 self.assertFalse(any(row.strip() for row in rows[1:]), result.stdout)
 
+    def test_static_computed_sdk_methods_are_analyzed(self) -> None:
+        """JS/TS bracket members retain the required-profile SDK contract."""
+
+        shapes = {
+            "single": "client.messages['%s']({to: '+1'%s});",
+            "double": 'client.messages["%s"]({to: "+1"%s});',
+            "template": "client.messages[`%s`]({to: '+1'%s});",
+            "optional-member": "client.messages?.['%s']?.({to: '+1'%s});",
+            "nested-computed": "client['messages']['%s']({to: '+1'%s});",
+        }
+        methods = (
+            "sendNumberPool",
+            "send_number_pool",
+            "SendNumberPool",
+            "sendWithAlphanumericSender",
+            "send_with_alphanumeric_sender",
+            "SendWithAlphanumericSender",
+        )
+        for suffix in (".js", ".ts"):
+            for shape, template in shapes.items():
+                for method in methods:
+                    with self.subTest(
+                        suffix=suffix, shape=shape, method=method, polarity="missing"
+                    ):
+                        result = self.run_required_profile_analyzer(
+                            {"send" + suffix: template % (method, "")}
+                        )
+                        rows = result.stdout.splitlines()
+                        self.assertEqual(1, int(rows[0]), result.stdout)
+                        self.assertTrue(any(row.strip() for row in rows[1:]))
+                    with self.subTest(
+                        suffix=suffix, shape=shape, method=method, polarity="present"
+                    ):
+                        result = self.run_required_profile_analyzer(
+                            {
+                                "send" + suffix: template
+                                % (method, ", messaging_profile_id: 'mp'")
+                            }
+                        )
+                        rows = result.stdout.splitlines()
+                        self.assertEqual(1, int(rows[0]), result.stdout)
+                        self.assertFalse(
+                            any(row.strip() for row in rows[1:]), result.stdout
+                        )
+
+        inert = {
+            "object-key.js": "const handlers = {'sendNumberPool': fn};",
+            "array-item.js": "const handlers = ['sendNumberPool'];",
+            "dynamic.js": "client.messages[method]({to: '+1'});",
+            "unrelated.js": "client.messages['send']({to: '+1'});",
+            "prose.js": "const example = \"client.messages['sendNumberPool']({})\";",
+        }
+        for name, source in inert.items():
+            with self.subTest(inert=name):
+                result = self.run_required_profile_analyzer({name: source})
+                self.assertEqual("0", result.stdout.splitlines()[0], result.stdout)
+
         # Nearest reassignment invalidates an earlier SDK method alias.
         result = self.run_required_profile_analyzer(
             {
@@ -2532,6 +2634,10 @@ class CorrectnessLinterContracts(unittest.TestCase):
             "unary-operand": "const x = !/[/*]/.test(v);",
             "case-body": "switch(x){case 1: /[/*]/.test(x); break;}",
             "object-value": "const o = {r: /[/*]/};",
+            "function-block-start": "function f(){ /[/*]/.test(v); }",
+            "arrow-block-start": "const f = () => { /[/*]/.test(v); };",
+            "control-block-start": "if (ok) { /[/*]/.test(v); }",
+            "try-block-start": "try { /[/*]/.test(v); } finally {}",
         }
         send = (
             f"fetch('{url}',{{method:'POST',body:JSON.stringify("
