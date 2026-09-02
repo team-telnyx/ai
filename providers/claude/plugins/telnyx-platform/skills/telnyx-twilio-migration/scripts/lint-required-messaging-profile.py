@@ -152,6 +152,17 @@ def canonical_suffix(path: Path) -> str:
     return SUFFIX_LANGUAGE_ALIASES.get(suffix, suffix)
 
 
+def source_dialect(path: Path) -> str:
+    """Return a dialect that shares a canonical grammar suffix."""
+
+    suffix = path.suffix.lower()
+    if suffix in {".kt", ".kts"}:
+        return "kotlin"
+    if suffix == ".scala":
+        return "scala"
+    return ""
+
+
 def _blank_outside_ranges(source: str, ranges: list[tuple[int, int]]) -> str:
     """Preserve offsets/newlines while retaining only executable ranges."""
     keep = bytearray(len(source))
@@ -634,6 +645,253 @@ def _ruby_percent_literal(
                 )
         cursor += 1
     return None
+
+
+def _python_f_string_prefix(source: str, quote_start: int) -> str:
+    """Return a valid Python f-string prefix immediately before a quote."""
+
+    start = quote_start
+    while start > 0 and source[start - 1].isalpha():
+        start -= 1
+    prefix = source[start:quote_start].lower()
+    if prefix not in {"f", "fr", "rf"}:
+        return ""
+    if start > 0 and (source[start - 1].isalnum() or source[start - 1] == "_"):
+        return ""
+    return prefix
+
+
+def _csharp_string_info(
+    source: str, quote_start: int, quote_run: int
+) -> tuple[bool, bool, int]:
+    """Return ``(verbatim_or_raw, interpolates, brace_count)`` for C#."""
+
+    if quote_run >= 3:
+        cursor = quote_start
+        while cursor > 0 and source[cursor - 1] == "$":
+            cursor -= 1
+        dollars = quote_start - cursor
+        return True, dollars > 0, max(1, dollars)
+    prefix_start = max(0, quote_start - 2)
+    prefix = source[prefix_start:quote_start]
+    if prefix in {"$@", "@$"}:
+        return True, True, 1
+    if quote_start > 0 and source[quote_start - 1] == "@":
+        return True, False, 1
+    if quote_start > 0 and source[quote_start - 1] == "$":
+        return False, True, 1
+    return False, False, 1
+
+
+def _scala_interpolated_string_prefix(source: str, quote_start: int) -> str:
+    """Return a Scala interpolator prefix immediately before a quote."""
+
+    start = quote_start
+    while start > 0 and source[start - 1].isalpha():
+        start -= 1
+    prefix = source[start:quote_start]
+    if prefix not in {"s", "f", "raw"}:
+        return ""
+    if start > 0 and (source[start - 1].isalnum() or source[start - 1] == "_"):
+        return ""
+    return prefix
+
+
+def _interpolation_expression_end(
+    source: str, start: int, end: int, language: str
+) -> int:
+    """Trim alignment/conversion/format syntax from an interpolation hole."""
+
+    stack: list[str] = []
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    quote = ""
+    escaped = False
+    for index in range(start, end):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+        elif character in pairs:
+            stack.append(pairs[character])
+        elif stack and character == stack[-1]:
+            stack.pop()
+        elif not stack and (
+            (language == "python" and character in "!:")
+            or (language == "csharp" and character in ",:")
+        ):
+            return index
+    return end
+
+
+def _interpolation_ranges(
+    source: str,
+    start: int,
+    end: int,
+    *,
+    language: str,
+    brace_count: int = 1,
+    dollar_marker: bool = False,
+) -> list[tuple[int, int]]:
+    """Return executable expression spans within interpolated strings."""
+
+    ranges: list[tuple[int, int]] = []
+    cursor = start
+    opener = "${" if dollar_marker else "{" * brace_count
+    while cursor < end:
+        marker = source.find(opener, cursor, end)
+        if marker < 0:
+            break
+        if (
+            dollar_marker
+            and language == "scala"
+            and marker > start
+            and source[marker - 1] == "$"
+        ):
+            # Scala's s/f/raw interpolators spell a literal dollar as `$$`.
+            cursor = marker + 2
+            continue
+        if brace_count == 1 and source.startswith("{{", marker):
+            cursor = marker + 2
+            continue
+        expression_start = marker + len(opener)
+        closing = _interpolation_hole_closing(
+            source, expression_start, end, brace_count
+        )
+        if closing is None:
+            break
+        expression_end = _interpolation_expression_end(
+            source, expression_start, closing, language
+        )
+        if expression_start < expression_end:
+            ranges.append((expression_start, expression_end))
+        if language == "python" and expression_end < closing:
+            # Python format specs can themselves contain replacement fields.
+            ranges.extend(
+                _interpolation_ranges(
+                    source,
+                    expression_end + 1,
+                    closing,
+                    language=language,
+                )
+            )
+        cursor = closing + brace_count
+    return ranges
+
+
+def _interpolation_hole_closing(
+    source: str, start: int, end: int, brace_count: int
+) -> int | None:
+    """Return the closing-brace index for one interpolation expression."""
+
+    closer = "}" * brace_count
+    index = start
+    nested_braces = 0
+    quote = ""
+    escaped = False
+    while index < end:
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            index += 1
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+            index += 1
+            continue
+        if character == "{":
+            nested_braces += 1
+            index += 1
+            continue
+        if character == "}":
+            if nested_braces:
+                nested_braces -= 1
+                index += 1
+                continue
+            if source.startswith(closer, index):
+                return index
+        index += 1
+    return None
+
+
+def _shell_command_substitution_end(
+    source: str, start: int, end: int
+) -> int | None:
+    """Return the closing parenthesis for a shell ``$(...)`` expression."""
+
+    depth = 1
+    index = start
+    quote = ""
+    escaped = False
+    while index < end:
+        character = source[index]
+        if escaped:
+            escaped = False
+            index += 1
+            continue
+        if character == "\\":
+            escaped = True
+            index += 1
+            continue
+        if quote:
+            if character == quote:
+                quote = ""
+            index += 1
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+        elif source.startswith("$(", index):
+            depth += 1
+            index += 1
+        elif character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return None
+
+
+def _shell_command_substitution_ranges(
+    source: str, start: int, end: int
+) -> list[tuple[int, int]]:
+    """Return executable command spans inside a shell double-quoted string."""
+
+    ranges: list[tuple[int, int]] = []
+    cursor = start
+    while cursor < end:
+        marker = source.find("$(", cursor, end)
+        if marker < 0:
+            break
+        backslashes = 0
+        before = marker - 1
+        while before >= start and source[before] == "\\":
+            backslashes += 1
+            before -= 1
+        if backslashes % 2:
+            cursor = marker + 2
+            continue
+        closing = _shell_command_substitution_end(source, marker + 2, end)
+        if closing is None:
+            break
+        ranges.append((marker + 2, closing))
+        ranges.extend(
+            _shell_command_substitution_ranges(source, marker + 2, closing)
+        )
+        cursor = closing + 1
+    return ranges
 
 
 def executable_source(path: Path, source: str) -> str:
@@ -1373,7 +1631,7 @@ def _javascript_regex_end(source: str, start: int) -> int | None:
     return None
 
 
-def lex_source(source: str, suffix: str) -> LexedSource:
+def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
     """Mask comments and strings while preserving offsets and newlines."""
 
     code = list(source)
@@ -1522,7 +1780,32 @@ def lex_source(source: str, suffix: str) -> LexedSource:
             continue
 
         delimiter = quote
-        if quote in {"'", '"'} and source.startswith(quote * 3, index):
+        quote_run = 1
+        while index + quote_run < len(source) and source[index + quote_run] == quote:
+            quote_run += 1
+        python_f_string = suffix == ".py" and bool(
+            _python_f_string_prefix(source, index)
+        )
+        jvm_interpolates = quote == '"' and (
+            dialect == "kotlin"
+            or (
+                dialect == "scala"
+                and bool(_scala_interpolated_string_prefix(source, index))
+            )
+        )
+        jvm_raw = jvm_interpolates and quote_run >= 3
+        csharp_verbatim = False
+        csharp_interpolates = False
+        csharp_brace_count = 1
+        if suffix == ".cs" and quote == '"':
+            (
+                csharp_verbatim,
+                csharp_interpolates,
+                csharp_brace_count,
+            ) = _csharp_string_info(source, index, quote_run)
+            if quote_run >= 3:
+                delimiter = quote * quote_run
+        elif quote in {"'", '"'} and quote_run >= 3:
             delimiter = quote * 3
         string_start = index
         index += len(delimiter)
@@ -1530,12 +1813,54 @@ def lex_source(source: str, suffix: str) -> LexedSource:
         # A backtick delimits a Go RAW string, which has no escape sequences, so
         # a literal `\` inside one previously consumed the closing backtick and
         # ran the "string" to end of file.
-        honours_escapes = not (suffix == ".go" and delimiter == "`")
-        line_bounded = len(delimiter) == 1 and delimiter in {"'", '"'} and suffix in (
-            JS_TS_SUFFIXES | {".py"}
+        honours_escapes = not (
+            (suffix == ".go" and delimiter == "`")
+            or csharp_verbatim
+            or jvm_raw
         )
+        line_bounded = len(delimiter) == 1 and delimiter in {"'", '"'} and suffix in (
+            JS_TS_SUFFIXES | {".py", ".cs", ".java"}
+        ) and not (csharp_verbatim or jvm_raw)
         terminated = False
         while index < len(source):
+            if python_f_string or csharp_interpolates or jvm_interpolates:
+                brace_count = csharp_brace_count if csharp_interpolates else 1
+                opener = "${" if jvm_interpolates else "{" * brace_count
+                if source.startswith(opener, index):
+                    if (
+                        dialect == "scala"
+                        and jvm_interpolates
+                        and index > contents_start
+                        and source[index - 1] == "$"
+                    ):
+                        index += 2
+                        continue
+                    if brace_count == 1 and source.startswith("{{", index):
+                        index += 2
+                        continue
+                    hole_end = _interpolation_hole_closing(
+                        source,
+                        index + len(opener),
+                        len(source),
+                        brace_count,
+                    )
+                    if hole_end is not None:
+                        index = hole_end + brace_count
+                        continue
+            if suffix == ".sh" and delimiter == '"' and source.startswith("$(", index):
+                hole_end = _shell_command_substitution_end(
+                    source, index + 2, len(source)
+                )
+                if hole_end is not None:
+                    index = hole_end + 1
+                    continue
+            if (
+                csharp_verbatim
+                and len(delimiter) == 1
+                and source.startswith('""', index)
+            ):
+                index += 2
+                continue
             if source.startswith(delimiter, index):
                 contents_end = index
                 index += len(delimiter)
@@ -1582,7 +1907,7 @@ def lex_source(source: str, suffix: str) -> LexedSource:
                 source, contents_start, contents_end
             ):
                 nested = lex_source(
-                    source[expression_start:expression_end], suffix
+                    source[expression_start:expression_end], suffix, dialect
                 )
                 code[expression_start:expression_end] = list(nested.code)
                 without_comments[expression_start:expression_end] = list(
@@ -1605,7 +1930,63 @@ def lex_source(source: str, suffix: str) -> LexedSource:
                 source, contents_start, contents_end
             ):
                 nested = lex_source(
-                    source[expression_start:expression_end], suffix
+                    source[expression_start:expression_end], suffix, dialect
+                )
+                code[expression_start:expression_end] = list(nested.code)
+                without_comments[expression_start:expression_end] = list(
+                    nested.without_comments
+                )
+                strings.extend(
+                    StringToken(
+                        expression_start + token.start,
+                        expression_start + token.end,
+                        token.contents,
+                    )
+                    for token in nested.strings
+                )
+        elif python_f_string or csharp_interpolates or jvm_interpolates:
+            language = (
+                "python"
+                if python_f_string
+                else "csharp"
+                if csharp_interpolates
+                else dialect
+            )
+            brace_count = csharp_brace_count if csharp_interpolates else 1
+            for expression_start, expression_end in _interpolation_ranges(
+                source,
+                contents_start,
+                contents_end,
+                language=language,
+                brace_count=brace_count,
+                dollar_marker=jvm_interpolates,
+            ):
+                nested = lex_source(
+                    source[expression_start:expression_end], suffix, dialect
+                )
+                code[expression_start:expression_end] = list(nested.code)
+                without_comments[expression_start:expression_end] = list(
+                    nested.without_comments
+                )
+                strings.extend(
+                    StringToken(
+                        expression_start + token.start,
+                        expression_start + token.end,
+                        token.contents,
+                    )
+                    for token in nested.strings
+                )
+        elif suffix == ".sh" and delimiter in {'"', "`"}:
+            ranges = (
+                [(contents_start, contents_end)]
+                if delimiter == "`"
+                else _shell_command_substitution_ranges(
+                    source, contents_start, contents_end
+                )
+            )
+            for expression_start, expression_end in ranges:
+                nested = lex_source(
+                    source[expression_start:expression_end], suffix, dialect
                 )
                 code[expression_start:expression_end] = list(nested.code)
                 without_comments[expression_start:expression_end] = list(
@@ -9938,6 +10319,41 @@ def shell_command_span(lexed: LexedSource, offset: int) -> tuple[int, int]:
     return start, end
 
 
+def shell_embedded_command_span(
+    lexed: LexedSource, offset: int
+) -> tuple[int, int] | None:
+    """Bound the narrowest quoted shell command containing ``offset``."""
+
+    candidates: list[tuple[int, int]] = []
+    for token in lexed.strings:
+        if not (token.start < offset < token.end):
+            continue
+        delimiter = lexed.original[token.start]
+        if delimiter == "`":
+            candidates.append((token.start + 1, token.end - 1))
+        elif delimiter == '"':
+            candidates.extend(
+                span
+                for span in _shell_command_substitution_ranges(
+                    lexed.original, token.start + 1, token.end - 1
+                )
+                if span[0] <= offset < span[1]
+            )
+    if not candidates:
+        return None
+    lower, upper = min(candidates, key=lambda span: span[1] - span[0])
+    start, end = lower, upper
+    for index in range(offset - 1, lower - 1, -1):
+        if shell_separator(lexed, index):
+            start = index + 1
+            break
+    for index in range(offset, upper):
+        if shell_separator(lexed, index):
+            end = index
+            break
+    return start, end
+
+
 def shell_curl_is_command(
     lexed: LexedSource, command_start: int, curl_start: int
 ) -> bool:
@@ -9963,7 +10379,9 @@ def shell_curl_calls(lexed: LexedSource) -> list[Call]:
     calls: list[Call] = []
     seen: set[tuple[int, int]] = set()
     for match in SHELL_CURL_RE.finditer(lexed.code):
-        start, end = shell_command_span(lexed, match.start(1))
+        start, end = shell_embedded_command_span(
+            lexed, match.start(1)
+        ) or shell_command_span(lexed, match.start(1))
         if not shell_curl_is_command(lexed, start, match.start(1)):
             continue
         if (start, end) not in seen:
@@ -11526,7 +11944,7 @@ def external_static_values(
     exports. Dynamic/package imports stay unknown instead of being guessed.
     """
 
-    lexed = lex_source(source, suffix)
+    lexed = lex_source(source, suffix, source_dialect(path))
     visible = lexed.without_comments
     imports: list[tuple[str, str, str]] = []
     if suffix in JS_TS_SUFFIXES:
@@ -11805,7 +12223,7 @@ def analyze_file(path: Path, project_root: Path) -> tuple[int, list[str]]:
     source = _read_source_text(path)
     source = executable_source(path, source)
     suffix = canonical_suffix(path)
-    lexed = lex_source(source, suffix)
+    lexed = lex_source(source, suffix, source_dialect(path))
     sdk_calls = calls_matching(lexed, SDK_CALL_RE) + sdk_alias_calls(lexed)
     fetch_calls = calls_matching(lexed, FETCH_CALL_RE)
     if suffix != ".cs":
@@ -12010,7 +12428,7 @@ def message_body_fields(
     source = _read_source_text(path)
     source = executable_source(path, source)
     suffix = canonical_suffix(path)
-    lexed = lex_source(source, suffix)
+    lexed = lex_source(source, suffix, source_dialect(path))
     source_resolver = SourceEndpointResolver(lexed, suffix)
     resolver = PayloadStateResolver(
         lexed,

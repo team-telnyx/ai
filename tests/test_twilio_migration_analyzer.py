@@ -6664,6 +6664,141 @@ class CorrectnessLinterContracts(unittest.TestCase):
             {"example.rb": f"template = %q{{{call}}}\n"}
         )
 
+    def test_python_and_csharp_interpolation_preserve_only_expressions(
+        self,
+    ) -> None:
+        python_call = "client.messages.send_number_pool({'to': '+1'})"
+        python_live = {
+            "lower": f'f"{{{python_call}}}"',
+            "upper": f'F"{{{python_call}}}"',
+            "raw-first": f'rf"{{{python_call}}}"',
+            "format-first": f'fr"{{{python_call}}}"',
+            "triple": f'f"""{{{python_call}}}"""',
+            "nested-format": f'f"{{value:{{{python_call}}}}}"',
+        }
+        csharp_call = (
+            "client.Messages.SendNumberPool(new MessageSendNumberPoolParams "
+            '{ To = "+1" })'
+        )
+        csharp_live = {
+            "regular": f'$"{{{csharp_call}}}"',
+            "verbatim-dollar-first": f'$@"{{{csharp_call}}}"',
+            "verbatim-at-first": f'@$"{{{csharp_call}}}"',
+            "raw": f'$"""{{{csharp_call}}}"""',
+            "raw-two-dollar": f'$$"""{{{{{csharp_call}}}}}"""',
+            "alignment": f'$"{{{csharp_call},10}}"',
+        }
+        for language, suffix, forms in (
+            ("python", ".py", python_live),
+            ("csharp", ".cs", csharp_live),
+        ):
+            for label, literal in forms.items():
+                with self.subTest(language=language, shape=label):
+                    result = self.run_required_profile_analyzer(
+                        {f"live{suffix}": f"value = {literal}\n"}
+                    )
+                    rows = result.stdout.splitlines()
+                    self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+
+        inert = {
+            "python-escaped.py": f'f"{{{{{python_call}}}}}"',
+            "python-ordinary.py": f'"{{{python_call}}}"',
+            "python-format.py": (
+                f'f"{{value:{python_call}}}"'
+            ),
+            "csharp-escaped.cs": f'$"{{{{{csharp_call}}}}}"',
+            "csharp-ordinary.cs": f'"{{{csharp_call}}}"',
+            "csharp-format.cs": f'$"{{value:{csharp_call}}}"',
+            "csharp-raw.cs": f'"""{{{csharp_call}}}"""',
+        }
+        for fixture, source in inert.items():
+            with self.subTest(inert=fixture):
+                result = self.run_required_profile_analyzer(
+                    {fixture: f"value = {source};\n"}
+                )
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+        # The public wrapper must block the reported missing-profile forms and
+        # accept their compliant twins in both languages.
+        for fixture, source, compliant in (
+            (
+                "live.py",
+                f'value = f"{{{python_call}}}"\n',
+                python_call.replace("'to': '+1'", "'to': '+1', 'messaging_profile_id': 'mp'"),
+            ),
+            (
+                "Live.cs",
+                f'value = $"{{{csharp_call}}}";\n',
+                csharp_call.replace('To = "+1"', 'To = "+1", MessagingProfileId = "mp"'),
+            ),
+        ):
+            with self.subTest(public=fixture, polarity="missing"):
+                _, payload = self.run_messaging_linter({fixture: source})
+                self.assert_required_profile_detected(payload, fixture)
+            with self.subTest(public=fixture, polarity="compliant"):
+                self.assert_required_profile_passes(
+                    {fixture: source.replace(python_call if fixture.endswith('.py') else csharp_call, compliant)}
+                )
+
+    def test_kotlin_and_scala_interpolation_preserve_only_expressions(
+        self,
+    ) -> None:
+        call = (
+            "client.messages.sendNumberPool(new MessageSendNumberPoolParams()"
+            '.setTo("+1"))'
+        )
+        live = {
+            "lower.kt": f'val value = "${{{call}}}"\n',
+            "script.kts": f'val value = "${{{call}}}"\n',
+            "raw.kt": f'val value = """${{{call}}}"""\n',
+            "s.scala": f'val value = s"${{{call}}}"\n',
+            "f.scala": f'val value = f"${{{call}}}%s"\n',
+            "raw.scala": f'val value = raw"""${{{call}}}"""\n',
+        }
+        for fixture, source in live.items():
+            with self.subTest(live=fixture):
+                result = self.run_required_profile_analyzer({fixture: source})
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+
+        inert = {
+            "escaped.kt": f'val value = "\\${{{call}}}"\n',
+            "ordinary.scala": f'val value = "${{{call}}}"\n',
+            "escaped.scala": f'val value = s"$${{{call}}}"\n',
+            "ordinary.java": f'String value = "${{{call}}}";\n',
+        }
+        for fixture, source in inert.items():
+            with self.subTest(inert=fixture):
+                result = self.run_required_profile_analyzer({fixture: source})
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
+    def test_shell_quoted_command_substitutions_remain_executable(
+        self,
+    ) -> None:
+        command = (
+            "curl -X POST https://api.telnyx.com/v2/messages/number_pool "
+            "-d '{\"to\":\"+1\"}'"
+        )
+        live = {
+            "dollar.sh": f'result="$({command})"\n',
+            "backtick.sh": f"result=`{command}`\n",
+            "nested.sh": f'result="$(printf %s "$({command})")"\n',
+        }
+        for fixture, source in live.items():
+            with self.subTest(live=fixture):
+                result = self.run_required_profile_analyzer({fixture: source})
+                rows = result.stdout.splitlines()
+                self.assertGreaterEqual(int(rows[0]), 1, result.stdout)
+
+        inert = {
+            "single.sh": f"result='$({command})'\n",
+            "escaped.sh": f'result="\\$({command})"\n',
+        }
+        for fixture, source in inert.items():
+            with self.subTest(inert=fixture):
+                result = self.run_required_profile_analyzer({fixture: source})
+                self.assertEqual("0", result.stdout.strip(), result.stdout)
+
     def test_profile_field_name_inside_message_text_does_not_satisfy_request(
         self,
     ) -> None:
