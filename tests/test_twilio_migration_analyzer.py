@@ -3034,6 +3034,195 @@ class CorrectnessLinterContracts(unittest.TestCase):
                     else:
                         self.assertEqual([], findings, result.stdout)
 
+    def test_jsx_markup_is_inert_but_expression_containers_execute(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        decoy = "client.messages.sendNumberPool({to: '+1'})"
+        inert = {
+            "text.jsx": f"export default () => <code>{decoy}</code>;",
+            "nested.tsx": (
+                f"export default () => <Panel><span>{decoy}</span></Panel>;"
+            ),
+            "attribute.jsx": f"export default () => <Panel title=\"{decoy}\" />;",
+            "braced-attribute.tsx": f"export default () => <Panel title=\"{{{decoy}}}\" />;",
+            "comment.tsx": (
+                f"export default () => <Panel>{{/* {decoy} */}}</Panel>;"
+            ),
+            "fragment.jsx": f"export default () => <><code>{decoy}</code></>;",
+            "nested-expression.tsx": (
+                f"export default () => <Panel>{{ok ? <code>{decoy}</code> : null}}</Panel>;"
+            ),
+            "control-body.jsx": f"if (ok) <Panel>{decoy}</Panel>;",
+            "await-operand.tsx": (
+                f"async function render() {{ await <Panel>{decoy}</Panel>; }}"
+            ),
+            "typeof-operand.jsx": f"const kind = typeof <Panel>{decoy}</Panel>;",
+            "underscore-component.jsx": (
+                f"export default () => <_Panel>{decoy}</_Panel>;"
+            ),
+            "dollar-component.tsx": (
+                f"export default () => <$Panel>{decoy}</$Panel>;"
+            ),
+            "unicode-component.tsx": (
+                f"export default () => <Élément>{decoy}</Élément>;"
+            ),
+            "attribute-comment.jsx": (
+                f"export default () => <Panel value={{/* }}>"  # nosec B703
+                f" */ 1}}>{decoy}</Panel>;"
+            ),
+            "many-expressions.tsx": (
+                "export default () => <Panel>"
+                + "{value}" * 400
+                + decoy
+                + "</Panel>;"
+            ),
+        }
+        for name, source in inert.items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    "0",
+                    self.run_required_profile_analyzer({name: source}).stdout.strip(),
+                )
+
+        executable = {
+            "child.jsx": f"export default () => <Panel>{{{decoy}}}</Panel>;",
+            "handler.tsx": (
+                f"export default () => <Button onClick={{() => {decoy}}} />;"
+            ),
+            "spread.tsx": (
+                f"export default () => <Panel value={{{{run: () => {decoy}}}}} />;"
+            ),
+            "regex-brace.jsx": (
+                f"export default () => <Panel>{{/[}}]/.test(value) && {decoy}}}</Panel>;"
+            ),
+            "comment-brace.tsx": (
+                f"export default () => <Panel>{{/* }} is inert */ {decoy}}}</Panel>;"
+            ),
+            "after.jsx": (
+                "const view = <Panel>ordinary text</Panel>;\n"
+                f"fetch('{url}',{{method:'POST',body:JSON.stringify({{to:'+1'}})}});"
+            ),
+        }
+        for name, source in executable.items():
+            with self.subTest(name=name):
+                result = self.run_required_profile_analyzer({name: source})
+                self.assertTrue(
+                    any(name in row for row in result.stdout.splitlines()[1:]),
+                    result.stdout,
+                )
+
+    def test_ruby_slash_regex_literals_do_not_mask_following_sends(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        send = f"Net::HTTP.post(URI('{url}'), {{to: '+1'}}.to_json)"
+        prefixes = {
+            "apostrophe": "pattern = /don't/",
+            "escaped-slash": r"pattern = /a\/b's/",
+            "character-class": r"pattern = /[\/'a-z]+/i",
+            "argument": "value.match(/don't/)",
+            "command-argument": "warn /don't/",
+            "receiver-command-argument": "value.match /don't/",
+            "indexed-command-argument": "receivers[0].match /don't/",
+            "called-command-argument": "factory().match /don't/",
+            "constant-command-argument": "Foo::Bar.warn /don't/",
+            "block-command-argument": "consume /don't/ do |match|\nend",
+            "and-command-argument": "warn /don't/ and puts :ok",
+            "or-command-argument": "warn /don't/ or puts :ok",
+            "multiline": "pattern = /don't\nstop/",
+            "multiline-x": "pattern = /don't # prose\n stop/x",
+            "multiline-command": "warn /don't\nstop/",
+            "condition": "return unless /don't/.match?(value)",
+            "interpolation": r"pattern = /prefix#{helper('x')}don't/",
+            "division": "ratio = total / count",
+            "division-assignment": "total /= count",
+            "chained-division": (
+                "total / client.messages.sendNumberPool({to: '+1'}) / divisor"
+            ),
+            "division-before-url": (
+                "total / count\n"
+                f"Net::HTTP.post(URI('{url}'), {{to: '+1'}}.to_json)"
+            ),
+        }
+        for name, prefix in prefixes.items():
+            with self.subTest(name=name):
+                result = self.run_required_profile_analyzer(
+                    {f"{name}.rb": prefix + "\n" + send}
+                )
+                self.assertTrue(
+                    any(
+                        f"{name}.rb" in row
+                        for row in result.stdout.splitlines()[1:]
+                    ),
+                    result.stdout,
+                )
+
+        decoy = (
+            r"pattern = /client\.messages\.sendNumberPool\(\{to: 1\}\)/"
+            "\n"
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer({"decoy.rb": decoy}).stdout.strip(),
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {
+                    "command-decoy.rb": (
+                        r"warn /client\.messages\.sendNumberPool\(\{to: 1\}\)/"
+                        "\n"
+                    )
+                }
+            ).stdout.strip(),
+        )
+        self.assertEqual(
+            "0",
+            self.run_required_profile_analyzer(
+                {
+                    "multiline-decoy.rb": (
+                        "pattern = /client.messages.\n"
+                        "sendNumberPool({to: 1})/x\n"
+                    )
+                }
+            ).stdout.strip(),
+        )
+
+        interpolated_send = (
+            f"pattern = /prefix#{{Net::HTTP.post(URI('{url}'), "
+            "{to: '+1'}.to_json)}}suffix/"
+        )
+        result = self.run_required_profile_analyzer(
+            {"interpolated-send.rb": interpolated_send}
+        )
+        self.assertTrue(
+            any(
+                "interpolated-send.rb" in row
+                for row in result.stdout.splitlines()[1:]
+            ),
+            result.stdout,
+        )
+
+    def test_jsx_and_ruby_regexp_reviews_hold_through_public_wrapper(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        self.assert_required_profile_passes(
+            {
+                "docs.tsx": (
+                    "export default () => <code>"
+                    "client.messages.sendNumberPool({to: '+1'})"
+                    "</code>;"
+                )
+            }
+        )
+
+        result, payload = self.run_messaging_linter(
+            {
+                "send.rb": (
+                    "pattern = /don't/\n"
+                    f"Net::HTTP.post(URI('{url}'), {{to: '+1'}}.to_json)"
+                )
+            }
+        )
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, "send.rb")
+
     def test_export_default_regex_literals_preserve_following_sends(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
         send = (

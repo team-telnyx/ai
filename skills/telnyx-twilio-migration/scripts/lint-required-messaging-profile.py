@@ -968,10 +968,203 @@ def _php_executable_ranges(source: str) -> list[tuple[int, int]]:
     return ranges
 
 
+def _jsx_tag_end(
+    source: str, lexical: str, start: int, suffix: str
+) -> int | None:
+    """Return the first JSX tag-closing ``>`` outside quotes/expressions."""
+
+    index = start + 1
+    quote = ""
+    escaped = False
+    while index < len(source):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+        elif character in {"'", '"', "`"}:
+            quote = character
+        elif character == "{":
+            expression = _jsx_brace_range(
+                source, lexical, index, suffix
+            )
+            if expression is None:
+                return None
+            index = expression[1] + 1
+            continue
+        elif character == ">":
+            return index + 1
+        index += 1
+    return None
+
+
+def _jsx_brace_range(
+    source: str, lexical: str, opening: int, suffix: str
+) -> tuple[int, int] | None:
+    """Return one JSX expression range after masking JS lexical data."""
+
+    balanced = _balanced_brace_ranges(lexical, [opening])
+    if balanced:
+        return balanced[0]
+    # JSX text may contain quote characters which the host lexer paired across
+    # an expression. Retry only this exceptional span locally; normal files use
+    # the single cached lexical projection above and remain linear.
+    local = lex_source(source[opening:], suffix).code
+    balanced = _balanced_brace_ranges(local, [0])
+    if balanced:
+        start, end = balanced[0]
+        return opening + start, opening + end
+    return None
+
+
+def _jsx_element(
+    source: str,
+    lexical: str,
+    start: int,
+    suffix: str,
+    depth: int = 0,
+) -> tuple[int, list[tuple[int, int]]] | None:
+    """Parse one balanced JSX element and return its executable expressions."""
+
+    if depth > 128:
+        return None
+    fragment = source.startswith("<>", start)
+    identifier_start = r"(?:[^\W\d]|[$_])"
+    name_match = re.match(
+        rf"<({identifier_start}[\w$:.-]*)(?=[\s/>])", source[start:]
+    )
+    if not fragment and name_match is None:
+        return None
+    name = "" if fragment else name_match.group(1)
+    opening_end = _jsx_tag_end(source, lexical, start, suffix)
+    if opening_end is None:
+        return None
+
+    expressions: list[tuple[int, int]] = []
+    opening = source[start:opening_end]
+    # Attribute expressions execute even though tag names and quoted values do
+    # not. Keep only outermost balanced braces found outside quoted values.
+    cursor = start + 1
+    quote = ""
+    escaped = False
+    while cursor < opening_end:
+        character = source[cursor]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            cursor += 1
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+            cursor += 1
+            continue
+        if character == "{":
+            balanced = _jsx_brace_range(source, lexical, cursor, suffix)
+            if balanced is None or balanced[1] >= opening_end:
+                return None
+            expressions.append(balanced)
+            cursor = balanced[1] + 1
+            continue
+        cursor += 1
+
+    if opening.rstrip().endswith("/>"):
+        return opening_end, expressions
+
+    cursor = opening_end
+    while cursor < len(source):
+        if source[cursor] == "{":
+            balanced = _jsx_brace_range(source, lexical, cursor, suffix)
+            if balanced is None:
+                return None
+            expressions.append(balanced)
+            cursor = balanced[1] + 1
+            continue
+        if source[cursor] == "<":
+            if fragment and source.startswith("</>", cursor):
+                return cursor + 3, expressions
+            closing = re.match(
+                rf"</\s*({identifier_start}[\w$:.-]*)\s*>",
+                source[cursor:],
+            )
+            if closing and closing.group(1) == name:
+                return cursor + closing.end(), expressions
+            child = _jsx_element(
+                source, lexical, cursor, suffix, depth + 1
+            )
+            if child is not None:
+                child_end, child_expressions = child
+                expressions.extend(child_expressions)
+                cursor = child_end
+                continue
+            if re.match(rf"<{identifier_start}", source[cursor:]):
+                return None
+        cursor += 1
+    return None
+
+
+def _mask_jsx_markup(source: str, suffix: str) -> str:
+    """Blank definite JSX markup/text while retaining expression containers."""
+
+    # Locate roots in lexed code so `<Panel>` inside an ordinary string or
+    # comment cannot cause subsequent JavaScript to be hidden. The JSX parser
+    # itself uses the raw source after a root is established because inert text
+    # may legally contain quote characters that are not JavaScript strings.
+    lexical = lex_source(source, suffix).code
+    output = list(source)
+    cursor = 0
+    while cursor < len(source):
+        start = lexical.find("<", cursor)
+        if start < 0:
+            break
+        previous = start - 1
+        while previous >= 0 and lexical[previous].isspace():
+            previous -= 1
+        previous_word = _word_before(list(lexical), previous + 1).lower()
+        expression_context = (
+            previous < 0
+            or lexical[previous] in "=>([{,:;!?&|^~<>*%+-/"
+            or (
+                lexical[previous] == ")"
+                and _javascript_control_paren(list(lexical), previous)
+            )
+            or (
+                lexical[previous] == "}"
+                and _javascript_block_brace(list(lexical), previous)
+            )
+            or previous_word
+            in (_JS_REGEX_PREFIX_WORDS - {"break", "continue", "debugger"})
+        )
+        if not expression_context:
+            cursor = start + 1
+            continue
+        element = _jsx_element(source, lexical, start, suffix)
+        if element is None:
+            cursor = start + 1
+            continue
+        end, expressions = element
+        _blank(output, start, end)
+        for expression_start, expression_end in expressions:
+            nested = _mask_jsx_markup(
+                source[expression_start:expression_end], suffix
+            )
+            output[expression_start:expression_end] = list(nested)
+        cursor = end
+    return "".join(output)
+
+
 def executable_source(path: Path, source: str) -> str:
     """Extract executable host-language regions from mixed template files."""
     suffix = path.suffix.lower()
     ranges: list[tuple[int, int]] = []
+    if suffix in {".jsx", ".tsx"}:
+        return _mask_jsx_markup(source, suffix)
     if suffix in {".vue", ".svelte", ".astro"}:
         # Comments may contain complete, syntactically valid examples. Preserve
         # their offsets/newlines but remove their contents before discovering
@@ -1790,7 +1983,7 @@ def _javascript_regex_can_start(
     previous = _previous_code_index(code, index)
     if last_opaque_end and (previous is None or previous < last_opaque_end):
         if all(character.isspace() for character in code[last_opaque_end:index]):
-            return False
+            return ""
     if previous is None:
         return True
 
@@ -1862,6 +2055,125 @@ def _javascript_regex_end(source: str, start: int) -> int | None:
     return None
 
 
+_RUBY_REGEXP_PREFIX_WORDS = {
+    "and",
+    "begin",
+    "case",
+    "do",
+    "else",
+    "elsif",
+    "if",
+    "in",
+    "not",
+    "or",
+    "rescue",
+    "return",
+    "then",
+    "unless",
+    "until",
+    "when",
+    "while",
+    "yield",
+}
+
+
+def _ruby_regex_can_start(
+    source: str, code: list[str], index: int, last_opaque_end: int
+) -> str:
+    """Distinguish a Ruby regexp opener from division and ``/=``."""
+
+    if index + 1 < len(code) and code[index + 1] == "=":
+        return ""
+    previous = _previous_code_index(code, index)
+    if last_opaque_end and (previous is None or previous < last_opaque_end):
+        if all(character.isspace() for character in code[last_opaque_end:index]):
+            return False
+    if previous is None:
+        return "exact"
+    character = code[previous]
+    if character in "([{,;:=!?&|^~<>*%":
+        return "exact"
+    if character in "+-":
+        return "exact" if previous == 0 or code[previous - 1] != character else ""
+    if character.isalnum() or character in "_$@":
+        word = _word_before(code, previous + 1).lower()
+        if word in _RUBY_REGEXP_PREFIX_WORDS:
+            return "exact"
+        # Ruby permits a regexp as the unparenthesized argument of a command
+        # call (`warn /pattern/`). Mark the command-shaped form separately so
+        # its closing context can still distinguish chained division.
+        word_start = previous + 1 - len(word)
+        line_start = source.rfind("\n", 0, word_start) + 1
+        prefix = source[line_start:word_start].strip()
+        if not prefix or prefix.endswith((".", "&.")):
+            return "command"
+    return ""
+
+
+def _ruby_slash_regex(
+    source: str, start: int, allow_newlines: bool
+) -> tuple[int, int, int] | None:
+    """Return slash-regexp bounds, respecting escapes, classes and holes."""
+
+    index = start + 1
+    in_class = False
+    while index < len(source):
+        character = source[index]
+        if character in {"\r", "\n"} and not allow_newlines:
+            return None
+        if character == "\\":
+            index += 2
+            continue
+        if source.startswith("#{", index):
+            balanced = _balanced_brace_ranges(source, [index + 1])
+            if not balanced:
+                return None
+            index = balanced[0][1] + 1
+            continue
+        if character == "[":
+            in_class = True
+        elif character == "]" and in_class:
+            in_class = False
+        elif character == "/" and not in_class:
+            contents_end = index
+            index += 1
+            while index < len(source) and source[index].isalpha():
+                index += 1
+            return index, start + 1, contents_end
+        index += 1
+    return None
+
+
+def _ruby_command_regex_has_valid_tail(source: str, regexp_end: int) -> bool:
+    """Reject command-regexp guesses that are actually chained division."""
+
+    line_end = source.find("\n", regexp_end)
+    if line_end < 0:
+        line_end = len(source)
+    tail = source[regexp_end:line_end].strip()
+    if not tail or tail.startswith(("#", ",", ")", "]", "}", ";")):
+        return True
+    if tail.startswith("/"):
+        # Most importantly, do not pair a division slash with the first slash
+        # of a later `https://...` literal when command regexes span lines.
+        return False
+    word = re.match(r"([A-Za-z_]\w*)", tail)
+    if word and word.group(1) in {
+        "and",
+        "do",
+        "if",
+        "or",
+        "rescue",
+        "unless",
+        "until",
+        "while",
+    }:
+        return True
+    # An operand immediately following the second slash identifies `a / b / c`,
+    # not `command /regexp/`.
+    return re.match(r"(?:[+-]\s*)?(?:[$@A-Za-z_\d]|[('\"\[{])", tail) is None
+
+
 def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
     """Mask comments and strings while preserving offsets and newlines."""
 
@@ -1875,6 +2187,7 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
     shell_heredoc_index = 0
     index = 0
     last_js_opaque_end = 0
+    last_ruby_opaque_end = 0
 
     while index < len(source):
         while (
@@ -1907,6 +2220,51 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
                 _blank(without_comments, index, regex_end)
                 last_js_opaque_end = regex_end
                 index = regex_end
+                continue
+
+        ruby_regex_context = (
+            _ruby_regex_can_start(source, code, index, last_ruby_opaque_end)
+            if suffix == ".rb" and source[index] == "/"
+            else ""
+        )
+        if ruby_regex_context:
+            regexp = _ruby_slash_regex(
+                source,
+                index,
+                allow_newlines=True,
+            )
+            if regexp is not None:
+                regexp_end, contents_start, contents_end = regexp
+                if (
+                    ruby_regex_context == "command"
+                    and not _ruby_command_regex_has_valid_tail(
+                        source, regexp_end
+                    )
+                ):
+                    index += 1
+                    continue
+                _blank(code, index, regexp_end)
+                _blank(without_comments, index, regexp_end)
+                for expression_start, expression_end in _ruby_interpolation_ranges(
+                    source, contents_start, contents_end
+                ):
+                    nested = lex_source(
+                        source[expression_start:expression_end], suffix, dialect
+                    )
+                    code[expression_start:expression_end] = list(nested.code)
+                    without_comments[expression_start:expression_end] = list(
+                        nested.without_comments
+                    )
+                    strings.extend(
+                        StringToken(
+                            expression_start + token.start,
+                            expression_start + token.end,
+                            token.contents,
+                        )
+                        for token in nested.strings
+                    )
+                last_ruby_opaque_end = regexp_end
+                index = regexp_end
                 continue
 
         if c_block_comments and source.startswith("/*", index):
@@ -2270,6 +2628,8 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
         strings.append(
             StringToken(string_start, index, source[contents_start:contents_end])
         )
+        if suffix == ".rb":
+            last_ruby_opaque_end = index
         if suffix in JS_TS_SUFFIXES:
             last_js_opaque_end = index
 
