@@ -14,6 +14,7 @@ const __dirname = typeof import.meta.dirname === "string"
   : dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const GUIDES_DIR = join(ROOT, "guides");
+const SKILLS_DIR = join(ROOT, "skills");
 // agent.json lives alongside guides in the repo root (site is a separate repo)
 const AGENT_JSON_PATH = join(ROOT, "agent.json");
 
@@ -54,6 +55,49 @@ describe("agent.json validity", () => {
     assert.match(guide, /telnyx-agent rcs-send/);
     assert.match(guide, /telnyx-agent rcs-capabilities/);
     assert.match(guide, /skills\/telnyx-messaging-hosted-curl\/SKILL\.md/);
+  });
+});
+
+describe("Meeting Bot discovery and durable alert contract", () => {
+  const capability = agentJson.capabilities.find(
+    (candidate: any) => candidate.id === "meeting_bot"
+  );
+  const guide = readFileSync(join(GUIDES_DIR, "meeting-bot.md"), "utf-8");
+  const skill = readFileSync(
+    join(SKILLS_DIR, "telnyx-meeting-bot", "SKILL.md"),
+    "utf-8"
+  );
+
+  it("registers the canonical capability and guide", () => {
+    assert.ok(capability, 'agent.json missing the "meeting_bot" capability');
+    assert.equal(capability.guide, "/guides/meeting-bot.md");
+    assert.equal(capability.api, "POST /v2/meeting_sessions");
+    assert.equal(capability.docs, "https://developers.telnyx.com/docs/meeting");
+    assert.match(guide, /https:\/\/api\.telnyx\.com\/v2\/meeting_bot\/mcp/);
+    assert.match(guide, /skills\/telnyx-meeting-bot\/SKILL\.md/);
+    assert.match(guide, /meeting-bot-service\/tree\/a9f6326bcaf7428364861290b787d5db1772e9f6/);
+    assert.match(guide, /wait_seconds=2/);
+    assert.match(guide, /actions\/speak/);
+    assert.match(
+      guide,
+      /headers\.set\("Authorization", \["Bearer", apiKey\]\.join\(" "\)\);/
+    );
+    for (const type of ["summary", "action_items", "decisions", "topics", "open_questions", "custom"]) {
+      assert.ok(
+        guide.includes("| `" + type + "` |"),
+        `meeting-bot guide missing artifact type: ${type}`
+      );
+    }
+  });
+
+  it("keeps mention delivery crash-safe", () => {
+    assert.match(skill, /"status": "pending"/);
+    assert.match(skill, /stable `delivery_id`/);
+    assert.match(skill, /Mark the outbox item\s+`sent` only after confirmed delivery/);
+    assert.match(skill, /retry pending alerts/i);
+    assert.match(skill, /wait_seconds: 2/);
+    assert.match(skill, /### Reactive lunch answer/);
+    assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
   });
 });
 

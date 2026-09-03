@@ -1,11 +1,11 @@
 ---
 name: telnyx-meeting-bot
 description: >-
-  Use when an agent must safely join, observe, monitor, transcribe, summarize,
-  or follow up on a Zoom, Google Meet, Microsoft Teams, or Webex meeting with
-  Telnyx Meeting Bot. Handles vague requests, scheduled joins, admission,
-  durable transcript polling, name/phrase alerts, recovery, and final meeting
-  artifacts without speaking or sending chat by default.
+  Use when an agent must join, observe, react in, transcribe, summarize, or
+  follow up on a Zoom, Google Meet, Microsoft Teams, or Webex meeting with
+  Telnyx Meeting Bot. Handles vague requests, request-specific live polling,
+  name/phrase and semantic triggers, explicitly authorized speak/chat actions,
+  recovery, and all implemented transcript artifact types.
 metadata:
   author: telnyx
   product: meeting-bot
@@ -16,28 +16,32 @@ metadata:
 
 # Telnyx Meeting Bot
 
-Use this skill to attend a meeting visibly as an **observe-only** bot, monitor
-its finalized transcript, alert the requester about selected mentions, and
-produce an evidence-based meeting report. The bot must not speak, send chat, or
-make other in-meeting changes unless the requester explicitly asks for that.
+Use this skill to attend a meeting visibly, monitor its finalized transcript,
+alert the requester, execute explicitly authorized live rules such as speaking
+one response, and produce evidence-based meeting results. The bot is
+**observe-only by default**: it must not speak, send chat, or make other
+in-meeting changes unless the requester explicitly asks for that.
 
 ## Quick Workflow
 
 1. Resolve only missing essentials: meeting URL, join now versus a scheduled
-   time, and mention terms. Reuse terms already stated in the request or known
-   from the current conversation/profile; do not ask again or guess a person's
-   name.
+   time, desired live/final outputs, and any trigger/action rules. Reuse details
+   already stated in the request or authorized context; do not ask again.
 2. Persist an operation record **before** creating the session. Generate and
    retain one stable `idempotency_key`; call `join_meeting` with
-   `summarize_on_end: true`, no `speak_on_enter`, and no `chat_on_enter`.
+   `summarize_on_end: true`, no `speak_on_enter`, and no `chat_on_enter`. If an
+   explicit later speech rule exists, set `barge_in: true` so new human speech
+   can stop the bot's output.
 3. Poll `get_session`, `get_transcript`, and (when available) `get_events`.
-   Persist cursors, seen segment sequences, sent mention-alert keys, and IDs so
-   a restart resumes safely.
-4. On each new final transcript segment, detect whole-name/phrase mentions and
-   alert the requester in the current conversation once per segment/match.
+   Choose transcript `wait_seconds` from the request—use about `2` seconds for
+   “as soon as,” reactive speech, or urgent mention alerts—and persist cursors,
+   seen segments, outboxes, action claims, and IDs for safe recovery.
+4. On each new final segment, evaluate requested literal or semantic rules.
+   Deliver mention notifications through the durable outbox; atomically claim
+   and execute each authorized `speak`/`send_chat` action at most once.
 5. On a terminal session, drain transcript pages, wait a bounded time for
-   `transcript.completed`, obtain an existing summary artifact or create only
-   one fallback summary artifact, then deliver a Markdown report.
+   `transcript.completed`, obtain the requested implemented artifact types
+   without duplicate creation, then deliver a Markdown report.
 
 ## Preconditions and Safe Defaults
 
@@ -54,6 +58,13 @@ make other in-meeting changes unless the requester explicitly asks for that.
 - Default behavior: immediate join if no future time was requested,
   `summarize_on_end: true`, observe-only, and no recording-media deletion.
   `speak`, `send_chat`, `speak_on_enter`, and `chat_on_enter` are opt-in actions.
+- An explicit conditional request such as “when someone asks about lunch, say
+  ‘I want pizza’” is advance authorization for that exact action. Persist the
+  trigger, exact payload, one-shot/repeat policy, and latency target before join;
+  do not interrupt the live workflow to ask for approval again.
+- Choose monitoring cadence from the request. Default immediate reactions and
+  urgent mentions to `wait_seconds: 2`; do not silently substitute a 15-second
+  cadence for an “as soon as” instruction.
 - If a meeting link is not present, ask for it. If time is ambiguous, ask only
   whether to join now or at a specified time. If “my name” is not resolvable
   from the request, current conversation, or authorized profile context, ask
@@ -85,8 +96,10 @@ If MCP is unavailable, use the equivalent production REST base:
 https://api.telnyx.com/v2/meeting_sessions
 ```
 
-REST equivalents are `POST /`, `GET /{id}`, `GET /{id}/transcript`,
-`GET /{id}/events`, `DELETE /{id}`, `GET /{id}/artifacts`,
+REST equivalents include `POST /`, `GET /{id}`,
+`POST /{id}/actions/speak`, `POST /{id}/actions/stop_speaking`,
+`POST /{id}/actions/send_chat`, `GET /{id}/transcript`, `GET /{id}/events`,
+`DELETE /{id}`, `GET /{id}/recordings`, `GET /{id}/artifacts`,
 `POST /{id}/artifacts`, and `GET /{id}/artifacts/{artifact_id}`. Send
 `Authorization: Bearer <TELNYX_API_KEY>`. REST responses use `{ "data": ... }`.
 Use REST only as a transport fallback—the lifecycle and durability rules below
@@ -104,11 +117,15 @@ workflow state. Store at least:
   "meeting_url": "redacted-or-secret-reference",
   "idempotency_key": "meeting-bot:<host-stable-id>",
   "session_id": null,
+  "poll_wait_seconds": 2,
+  "live_rules": [],
   "transcript_after_seq": 0,
   "event_after_seq": 0,
   "seen_transcript_seqs": [],
-  "mention_alert_keys": [],
+  "mention_alerts": [],
   "mentions": [],
+  "action_claims": [],
+  "artifact_requests": {},
   "summary_artifact_id": null,
   "summary_creation_attempted": false,
   "summary_poll_deadline_at": null,
@@ -130,7 +147,10 @@ call `join_meeting` with the smallest safe argument set:
 ```
 
 Omit `join_at` for an immediate join. Do not add greeting/chat/action arguments.
-Persist the returned `id` as `session_id` immediately. If the create request has an
+If the request contains an authorized later `speak` rule, include
+`"barge_in": true`; this lets human speech stop bot output and does not itself
+make the bot speak. Persist the returned `id` as `session_id` immediately.
+If the create request has an
 uncertain transport outcome, retry **only** with the same persisted
 `idempotency_key`; never issue a second key, which could place a second bot in
 the meeting. If the host cannot persist state, state that duplicate-prevention
@@ -141,18 +161,22 @@ across a restart cannot be guaranteed and avoid an unbounded retry.
 Interleave session checks with transcript reads; a successful transcript read
 alone is not proof the bot attended.
 
-1. Call `get_session(id)` at startup, after errors, and on a bounded cadence
-   (for example every 15–30 seconds while joining/active, with backoff after
-   transient failures).
+1. Call `get_session(id)` at startup, after errors, and on a bounded cadence.
+   Use roughly every 5–10 seconds for a reactive workflow and 15–30 seconds for
+   passive monitoring, with backoff after transient failures.
 2. Treat `waiting_for_admission` as a request for a meeting host to admit the
    visible bot. Tell the requester promptly; keep monitoring rather than
    claiming attendance. A non-null `joined_at` is the positive evidence that
    the bot actually attended.
 3. Treat `ended`, `failed`, and `admission_denied` as terminal. Record status,
-   `failure_reason`/status detail when present, and `joined_at`.
+   `status_detail` when present, and `joined_at`.
 4. Long-poll finalized segments with
    `get_transcript(id, after_seq, limit, wait_seconds)`. Use `limit: 1000` and
-   `wait_seconds: 15` to `20` (never above the service maximum of 25 seconds).
+   select/persist the wait from the request: `2` seconds for “as soon as,”
+   reactive `speak`, or urgent mentions; `2`–`5` for ordinary live updates;
+   `10`–`20` for summary-only passive attendance. The implemented integer range
+   is `0`–`25`. The call returns as soon as new finalized speech exists, so the
+   wait is a maximum held-request duration, not an added post-transcript delay.
 5. Deduplicate by durable `seq`. For each new segment, persist it or its needed
    fields, process mentions, set `after_seq` to the **maximum processed seq**,
    and checkpoint before the next call.
@@ -160,7 +184,8 @@ alone is not proof the bot attended.
    updated cursor and `wait_seconds: 0` until the page is short. Then resume
    the short long-poll. Do not rely on a server `next_after` value in place of
    the maximum sequence you successfully processed, and never reset the cursor
-   when a poll returns an empty page or a null continuation value.
+   when a poll returns an empty page or a null continuation value. Return to the
+   selected request cadence after the immediate drain.
 7. Use `get_events(id, after_seq, limit)` on a bounded cadence as well; advance
    and persist its independent event cursor only after deduping event sequences.
    It is useful for lifecycle and `transcript.completed` evidence, but is not a
@@ -172,7 +197,9 @@ cursors. For authentication errors, malformed requests, `not_found`, or an MCP
 `result.isError` that is not plausibly transient, stop automatic retries and
 surface the actionable error without exposing credentials or meeting secrets.
 
-## Mention Detection and Prompt Alerts
+## Live Trigger Detection, Alerts, and Actions
+
+### Name/phrase alerts
 
 Match **only finalized transcript segments** returned by `get_transcript`.
 Normalize with Unicode case-folding and whitespace normalization. For each known
@@ -182,9 +209,25 @@ match “ann lee,” but not “ann leeds,” and avoids false positives such as
 inside `annual`. Keep variants only when known from the requester or authorized
 profile/context; do not invent aliases.
 
-For every new `(session_id, segment.seq, normalized_variant)` match, persist an
-alert key before/with delivery and send one prompt notice to the current
-conversation:
+For every new `(session_id, segment.seq, normalized_variant)` match, derive one
+stable alert key and delivery ID such as
+`mention:<session_id>:<segment.seq>:<normalized_variant>`. Persist the mention
+and an outbox item **before** delivery:
+
+```json
+{
+  "key": "mention:<session_id>:<seq>:<normalized_variant>",
+  "delivery_id": "same-stable-value",
+  "status": "pending",
+  "attempts": 0,
+  "last_error": null,
+  "sent_at": null
+}
+```
+
+If that key already has `status: "sent"`, skip it. If it is `pending`, reuse the
+same outbox item rather than creating a second one. Send the notice to the
+current conversation:
 
 ```text
 Mention detected — <speaker_label or "Unknown speaker"> at +<relative_ts>:
@@ -192,10 +235,65 @@ Mention detected — <speaker_label or "Unknown speaker"> at +<relative_ts>:
 ```
 
 Use the segment's `relative_ts` (format it as a relative timestamp if available)
-and retain the exact quote without paraphrasing. A segment can produce alerts
-for distinct requested terms, but never repeat the same segment/term after a
-retry or resume. Append every alert record (term/variant, speaker, timestamp,
-seq, exact quote) to the durable mention log for the final report.
+and retain the exact quote without paraphrasing. Pass the stable `delivery_id`
+to the host notification API when it supports idempotency. Mark the outbox item
+`sent` only after confirmed delivery; otherwise leave it `pending`, increment
+its attempt metadata, and retry it with bounded backoff without blocking later
+transcript collection. On recovery, retry pending alerts before/alongside new
+segments. If the host cannot deduplicate an ambiguous send, prefer at-least-once
+delivery and note that a retry may duplicate the alert—never convert an unknown
+outcome into `sent` and silently lose the requested notification.
+
+A segment can produce alerts for distinct requested terms. Append every match
+(term/variant, speaker, timestamp, seq, exact quote) to the durable mention log
+for the final report, independent of its alert-delivery status.
+
+### Explicit reactive `speak` or `send_chat`
+
+Translate each authorized live rule into durable fields before joining:
+
+- a stable `rule_id`;
+- literal terms or a precise semantic condition;
+- action type and exact text;
+- one-shot versus explicitly requested repeat behavior;
+- selected `poll_wait_seconds` (default `2` for immediate reactions).
+
+For a literal rule, use the same boundary-safe matching as mention detection.
+For a semantic condition such as “someone asks what we should have for lunch,”
+evaluate each newest final segment with only a short trailing context window.
+Require clear transcript evidence; do not trigger from an unrelated occurrence
+of one keyword. Persist the evidence seq(s) and exact quote.
+
+Before executing the first match, atomically create an action claim such as:
+
+```json
+{
+  "key": "action:<session_id>:<rule_id>:<first_trigger_seq>",
+  "rule_id": "lunch-question",
+  "type": "speak",
+  "text": "I want pizza",
+  "status": "dispatching",
+  "attempts": 1,
+  "trigger_seqs": [42]
+}
+```
+
+Only the process that wins that claim may dispatch. For MCP, call
+`speak(id, text, voice?, interrupt?)`; for REST, call
+`POST /{id}/actions/speak`. `text` is 1–4000 characters. Omit `interrupt`
+unless replacing the bot's own current audio—it does not mean “interrupt the
+human speaker.” The session must be `active`, support audio output, and have TTS
+configured. `send_chat` is similarly opt-in and may be unsupported by the
+meeting platform.
+
+After MCP returns non-error `{ "accepted": true }` or REST returns 202, mark the
+claim `accepted`; `bot.speak_requested` in `get_events` is additional durable
+evidence. Accepted means TTS and the provider/page handoff succeeded, not proof
+that every attendee heard the complete utterance. Because `speak` and
+`send_chat` expose no caller idempotency key, do **not** automatically repeat an
+accepted action or one whose transport outcome became ambiguous after dispatch.
+Mark the latter `outcome_unknown`, tell the requester, and keep monitoring.
+Retry only a failure proved to occur before the action request was sent.
 
 ## Terminal Drain and Completeness
 
@@ -217,7 +315,37 @@ transcript is complete.
 A failed or denied session with `joined_at: null` means no verified attendance;
 report that honestly and do not invent a discussion summary.
 
-## Obtain a Summary Without Duplicating Work
+## Choose and Obtain Artifacts Without Duplicating Work
+
+The implementation defines exactly six artifact types:
+
+| Type | Use for |
+|---|---|
+| `summary` | Concise factual TL;DR |
+| `action_items` | Explicit tasks, or a statement that none were found |
+| `decisions` | Decisions and named owners when present |
+| `topics` | Discussed themes with short notes |
+| `open_questions` | Unanswered questions and unresolved items |
+| `custom` | A caller-supplied question answered only from transcript |
+
+Only `custom` accepts `prompt` (required, 1–4000 trimmed characters); named types
+reject `prompt`. Each create is asynchronous with `pending`, `completed`, or
+`failed` status. Read `content.text` only after completion and retain
+`model_provenance`/failure information. `summarize_on_end: true` attempts only a
+`summary`; create other requested types separately.
+
+For every manual artifact, keep one durable record keyed by type plus a stable
+hash of the custom prompt. Persist `creation_attempted`, the fixed poll deadline,
+and then the returned artifact ID. Since creation is non-idempotent, never repeat
+an ambiguous create. Apply the detailed summary discipline below to every
+manually requested artifact.
+
+At implementation commit `a9f6326`, generation reads at most the first 10,000
+finalized transcript segments without exposing a truncation warning. For an
+exceptionally long meeting, disclose that limit and prefer an agent-generated
+result from the full transcript the agent actually collected.
+
+### Summary flow
 
 First use `get_artifacts(id)` to find existing `type: "summary"` artifacts,
 especially the one expected from `summarize_on_end: true`. Poll the selected
@@ -258,24 +386,23 @@ in durable host storage when supported. Include:
 
 ```markdown
 # Meeting report
-
 ## Executive summary
 - <service `content.text`, or an explicitly labeled transcript-grounded fallback>
-
 ## Topics, decisions, and action items
-- Include only items supported by the transcript; otherwise say “None identified in the collected transcript.”
-
+- Use requested service artifacts when completed; include only items supported by the transcript.
+- Otherwise say “None identified in the collected transcript.”
 ## Mention log
-- +00:00 — Speaker — matched term: “exact transcript quote”
-
+- +00:00 — Speaker — matched term — alert sent|pending: “exact transcript quote”
+## Live actions
+- +00:00 — Rule — `speak|send_chat` — accepted|failed|outcome unknown — trigger quote
 ## Attendance and completeness
 - Session: `mtgsess_...`
 - Status: `ended|failed|admission_denied`
 - Joined evidence: `joined_at` value, or “not verified”
 - Transcript: confirmed by `transcript.completed` | not confirmed (reason)
-
 ## Provenance
 - Transcript segment sequence range/count and collection caveats
+- Service artifacts: `<type>: <id>, status, model_provenance>`
 - Summary: service artifact `<id>` (`content.text`) | agent-generated fallback (reason)
 ```
 
@@ -287,18 +414,26 @@ that are absent from the session, events, or collected finalized transcript.
 
 On restart, load the durable operation record before doing anything. If it has a
 `session_id`, resume `get_session`, event/transcript drains, and summary polling
-from persisted cursors and dedupe keys—never call `join_meeting` again. If it has
-an idempotency key but no saved session ID because creation was interrupted,
-retry the original `join_meeting` arguments with that same key only after
-checking any available response/log receipt. Persist every state transition,
-alert key, cursor, terminal observation, and artifact ID before relying on it.
+from persisted cursors and outbox state—never call `join_meeting` again. Retry
+pending mention alerts with their original delivery IDs and leave confirmed
+`sent` items alone. Never repeat live actions marked `accepted` or
+`outcome_unknown`; reconcile event history where useful, but do not treat a
+missing event as proof that an audible side effect did not happen. Resume each
+artifact request from its persisted ID/deadline and never repeat an ambiguous
+create. If the record has an idempotency key but no saved session ID because
+creation was interrupted, retry the original `join_meeting` arguments with that
+same key only after checking any available response/log receipt. Persist every
+state transition, alert/action state, cursor, terminal observation, and artifact
+ID before relying on it.
 
 If the requester asks to stop a non-terminal session, confirm the scope when
 needed and use `leave_meeting(id)` (REST: `DELETE /{id}`); it leaves/cancels but
 does not erase the durable session history. Do not use destructive recording
 media deletion as a cleanup shortcut.
 
-## Worked Interpretation of a Vague Request
+## Worked Interpretations
+
+### Mention alert and final summary
 
 For: “Join this meeting and tell me what they discussed when it ends; if they
 mention my name, let me know.”
@@ -313,22 +448,49 @@ mention my name, let me know.”
 - Tell the requester if host admission is required; send mention alerts in this
   conversation; after completion, send the bounded, evidence-based report.
 
-## References
+### Reactive lunch answer
 
-Use the public Meeting Bot documentation as the consumer-facing contract:
+For: “Join the meeting and as soon as someone asks what we should have for
+lunch, please use the speak request and say I want pizza.”
 
-- [Meeting Bot overview](https://developers.telnyx.com/docs/meeting)
-- [Meeting Bot quick start](https://developers.telnyx.com/docs/meeting/quick-start)
-- [Meeting Bot MCP reference](https://developers.telnyx.com/docs/meeting/mcp)
-- [Collect results](https://developers.telnyx.com/docs/meeting/collect-results)
+- Treat this as explicit authorization for one in-meeting `speak`; do not ask
+  again when the condition occurs.
+- Join immediately with `summarize_on_end: true`, stable idempotency, no entrance
+  speech/chat, and `barge_in: true`.
+- Persist a one-shot semantic rule and use `wait_seconds: 2`. Evaluate each new
+  final segment plus a short trailing context window; require a clear lunch-choice
+  question rather than the isolated word “lunch.”
+- Atomically claim the first match and call
+  `speak(id, text: "I want pizza")` with `interrupt` omitted. Mark accepted only
+  from a non-error MCP result or REST 202; do not repeat an ambiguous dispatch.
 
-This workflow was also checked against the service implementation at commit
-[`a9f6326`](https://github.com/team-telnyx/meeting-bot-service/tree/a9f6326):
+### Demo: delegated attendance and TL;DR
 
-- [Service README](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326/README.md)
-- [Production REST demo](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326/docs/basic-rest-demo.md)
-- [Meeting-session REST routes](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326/src/routes/meetingSessions.ts)
-- [MCP tool definitions](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326/src/mcp/server.ts)
+For the on-screen request: “I can't join this meeting: `<meeting URL>`. Join as
+Anusha's bot, tell me when you're in, and send me a TL;DR when it ends.”
+
+Join now as `Anusha's bot` with stable idempotency, `summarize_on_end: true`, and
+no unrequested speech/chat. Post joining/admission updates to Anusha's current
+conversation, then “Anusha's bot joined” only when `joined_at` is non-null. A
+summary-only demo may use a `10`–`20` second wait; use `2` seconds if it promises
+live reactions. At terminal status, drain final transcript and send the automatic
+`summary` with attendance, completeness, and provenance. The visible story is:
+Anusha cannot attend → texts her agent → colleagues see her bot join → her agent
+confirms attendance → she receives the TL;DR.
+
+## Source Authority and References
+
+Behavior in this skill is grounded in the current `meeting-bot-service`
+`origin/main`, verified at commit
+[`a9f6326bcaf7428364861290b787d5db1772e9f6`](https://github.com/team-telnyx/meeting-bot-service/tree/a9f6326bcaf7428364861290b787d5db1772e9f6).
+Treat implementation and tests as authoritative when public documentation lags:
+
+- [Artifact types](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/src/domain/artifact.ts) and [generation](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/src/services/artifactService.ts)
+- [REST routes](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/src/routes/meetingSessions.ts), [MCP tools](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/src/mcp/server.ts), and [speech](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/src/services/sessionService.ts#L1021-L1142)
+- [Session action tests](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/tests/sessionService.test.ts#L642-L708) and [artifact tests](https://github.com/team-telnyx/meeting-bot-service/blob/a9f6326bcaf7428364861290b787d5db1772e9f6/tests/artifactService.test.ts)
+
+Public [Meeting Bot documentation](https://developers.telnyx.com/docs/meeting) is a
+secondary navigation surface, not the source used to derive this workflow.
 
 Recheck tool schemas with MCP `tools/list` when a deployed service changes, and
 never copy credentials, private meeting URLs, webhook secrets, or transient

@@ -3,7 +3,7 @@
   "name": "Telnyx",
   "description": "Programmable telecom platform — voice, messaging, email, IoT, AI, networking, storage.",
   "version": "1.0.0",
-  "updated": "2026-07-29T00:00:00Z",
+  "updated": "2026-09-03T00:00:00Z",
 
   "auth": {
     "type": "api_key",
@@ -62,6 +62,15 @@
       "cli": "telnyx ai chat 'Hello'",
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
+      "requires": []
+    },
+    {
+      "id": "meeting_bot",
+      "name": "Meeting Bot",
+      "description": "Send a visible bot to Zoom, Google Meet, Microsoft Teams, or Webex to follow finalized transcripts, perform explicitly authorized live actions, and create transcript artifacts.",
+      "guide": "/guides/meeting-bot.md",
+      "api": "POST /v2/meeting_sessions",
+      "docs": "https://developers.telnyx.com/docs/meeting",
       "requires": []
     },
     {
