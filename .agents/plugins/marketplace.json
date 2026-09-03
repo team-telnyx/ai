@@ -1,0 +1,20 @@
+{
+  "name": "telnyx",
+  "interface": {
+    "displayName": "Telnyx"
+  },
+  "plugins": [
+    {
+      "name": "telnyx-developer-kit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/telnyx-developer-kit"
+      },
+      "policy": {
+        "installation": "NOT_AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
