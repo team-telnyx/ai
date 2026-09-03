@@ -285,7 +285,8 @@ Permit a new repeat key only after its stale-safe ordered clear commits; never k
 }
 ```
 
-Only the process that wins that claim may dispatch. For MCP, call
+Only the process that wins that claim may dispatch. Atomically set `dispatching`
+immediately before invoking the transport. For MCP, call
 `speak(id, text, voice?, interrupt?)`; for REST, call
 `POST /{id}/actions/speak`. `text` is 1–4000 characters. Omit `interrupt`
 unless replacing the bot's own current audio—it does not mean “interrupt the
@@ -300,7 +301,9 @@ that every attendee heard the complete utterance. Because `speak` and
 `send_chat` expose no caller idempotency key, do **not** automatically repeat an
 accepted action or one whose transport outcome became ambiguous after dispatch.
 Mark the latter `outcome_unknown`, tell the requester, and keep monitoring.
-Retry only a failure proved to occur before the action request was sent.
+Within the same live attempt, only durable transport evidence that no request
+bytes were sent may mark `pre_send_failed` and allow a bounded transition of that
+same claim back to `dispatching`.
 
 ## Terminal Drain and Completeness
 
@@ -414,9 +417,11 @@ On restart, load the durable operation record before doing anything. If it has a
 `session_id`, resume `get_session`, event/transcript drains, and summary polling
 from persisted cursors and outbox state—never call `join_meeting` again. Retry
 pending mention alerts with their original delivery IDs and leave confirmed
-`sent` items alone. Never repeat live actions marked `accepted` or
-`outcome_unknown`; reconcile event history where useful, but do not treat a
-missing event as proof that an audible side effect did not happen. Resume each
+`sent` items alone. Before evaluating triggers, atomically convert every recovered
+live-action claim still marked `dispatching` to `outcome_unknown` unless durable
+transport evidence proves no request bytes were sent; never redispatch it. Never
+repeat actions marked `accepted` or `outcome_unknown`. Reconcile event history
+where useful, but a missing event is not proof the side effect did not happen. Resume each
 artifact request from its persisted ID/deadline and never repeat an ambiguous
 create. If the record has an idempotency key but no saved session ID because
 creation was interrupted, retry the original `join_meeting` arguments with that

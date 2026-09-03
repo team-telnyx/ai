@@ -129,6 +129,11 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(repeatProtocol, /persisted semantic condition evaluates false/);
     assert.match(repeatProtocol, /clear commits and a\s+still-later ordered evaluation produces a new false-to-true transition/);
     assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
+    assert.match(skill, /Atomically set `dispatching`\s+immediately before invoking the transport/);
+    assert.match(skill, /no request\s+bytes were sent may mark `pre_send_failed`/);
+    assert.match(skill, /Before evaluating triggers, atomically convert every recovered\s+live-action claim still marked `dispatching` to `outcome_unknown`/);
+    assert.match(skill, /never redispatch it/);
+    assert.match(guide, /convert any recovered\s+`dispatching` speech\/chat claim to `outcome_unknown` before evaluating triggers/);
   });
 
   it("selects the final summary and retries only proven non-dispatches", () => {

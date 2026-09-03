@@ -110,7 +110,9 @@ The service synthesizes and hands off audio before returning `{ "accepted": true
 every participant audibly heard the whole utterance. Because `speak` has no
 caller-supplied idempotency key, persist and atomically claim each reactive rule
 before dispatch. After an ambiguous transport timeout, mark the action outcome
-unknown and do not automatically speak again.
+unknown and do not automatically speak again. On restart, convert any recovered
+`dispatching` speech/chat claim to `outcome_unknown` before evaluating triggers
+unless durable transport evidence proves that no request bytes were sent.
 
 ## API Reference
 
