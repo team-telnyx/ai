@@ -264,9 +264,11 @@ evaluate each newest final segment with only a short trailing context window.
 Require clear transcript evidence; do not trigger from an unrelated occurrence
 of one keyword. Persist the evidence seq(s) and exact quote.
 
-Before executing the first match, atomically create an action claim. For a
-one-shot rule, key it only by session and rule; retain trigger seq(s) as evidence.
-Only an explicitly repeating rule may add the trigger seq to its claim key:
+Before executing the first match, atomically create an action claim. A one-shot key uses only session and rule; trigger seq(s) are evidence.
+For an explicitly repeating literal rule, atomically claim `action:<session_id>:<rule_id>:repeat:<segment.seq>` once per matching finalized segment.
+For an explicitly repeating semantic rule, follow the [repeating-action protocol](references/repeating-semantic-actions.md); persist `occurrence_first_seq` and `evidence_seqs`.
+Under its ordered lease/CAS, all workers use `action:<session_id>:<rule_id>:repeat:<occurrence_first_seq>` and reuse the active occurrence across windows.
+Permit a new repeat key only after its stale-safe ordered clear commits; never key from the newest evaluation segment.
 
 ```json
 {
@@ -275,7 +277,6 @@ Only an explicitly repeating rule may add the trigger seq to its claim key:
   "type": "speak",
   "text": "I want pizza",
   "status": "dispatching",
-  "attempts": 1,
   "trigger_seqs": [42]
 }
 ```

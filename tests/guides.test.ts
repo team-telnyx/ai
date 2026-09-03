@@ -67,6 +67,10 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     join(SKILLS_DIR, "telnyx-meeting-bot", "SKILL.md"),
     "utf-8"
   );
+  const repeatProtocol = readFileSync(
+    join(SKILLS_DIR, "telnyx-meeting-bot", "references", "repeating-semantic-actions.md"),
+    "utf-8"
+  );
 
   it("registers the canonical capability and guide", () => {
     assert.ok(capability, 'agent.json missing the "meeting_bot" capability');
@@ -97,9 +101,29 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(skill, /retry pending alerts/i);
     assert.match(skill, /wait_seconds: 2/);
     assert.match(skill, /### Reactive lunch answer/);
-    assert.match(skill, /For a\s+one-shot rule, key it only by session and rule/);
+    assert.match(skill, /A one-shot\s+key uses only session and rule/);
     assert.match(skill, /"key": "action:<session_id>:<rule_id>"/);
     assert.doesNotMatch(skill, /"key": "action:<session_id>:<rule_id>:<first_trigger_seq>"/);
+    assert.match(skill, /repeating-semantic-actions\.md/);
+    assert.match(skill, /persist `occurrence_first_seq` and `evidence_seqs`/);
+    assert.match(skill, /action:<session_id>:<rule_id>:repeat:<occurrence_first_seq>/);
+    assert.match(skill, /repeating literal rule, atomically claim `action:<session_id>:<rule_id>:repeat:<segment\.seq>`/);
+    assert.match(skill, /never key from the newest evaluation segment/);
+    assert.match(repeatProtocol, /shortest contiguous suffix ending at the current sequence/);
+    assert.match(repeatProtocol, /durable exclusive lease/);
+    assert.match(repeatProtocol, /active_occurrence/);
+    assert.match(repeatProtocol, /compares the prior `generation`, lease owner\/validity, and prior\s+`last_evaluated_seq`/);
+    assert.match(repeatProtocol, /must fail that CAS/);
+    assert.match(repeatProtocol, /one per-sequence CAS transaction/);
+    assert.match(repeatProtocol, /That same transaction must advance `last_evaluated_seq`/);
+    assert.match(repeatProtocol, /create `active_occurrence` plus the durable\s+action claim/);
+    assert.match(repeatProtocol, /Dispatch only after that combined transaction commits/);
+    assert.match(repeatProtocol, /CAS loser reloads state without dispatching/);
+    assert.match(repeatProtocol, /never advance the cursor and clear in separate\s+writes/);
+    assert.match(repeatProtocol, /every positive overlapping window reuses its\s+persisted claim key/);
+    assert.match(repeatProtocol, /context window contains none of the persisted `evidence_seqs`/);
+    assert.match(repeatProtocol, /persisted semantic condition evaluates false/);
+    assert.match(repeatProtocol, /clear commits and a\s+still-later ordered evaluation produces a new false-to-true transition/);
     assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
   });
 });
