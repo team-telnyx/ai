@@ -71,6 +71,10 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     join(SKILLS_DIR, "telnyx-meeting-bot", "references", "repeating-semantic-actions.md"),
     "utf-8"
   );
+  const artifactRecovery = readFileSync(
+    join(SKILLS_DIR, "telnyx-meeting-bot", "references", "artifact-selection-and-recovery.md"),
+    "utf-8"
+  );
 
   it("registers the canonical capability and guide", () => {
     assert.ok(capability, 'agent.json missing the "meeting_bot" capability');
@@ -125,6 +129,28 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(repeatProtocol, /persisted semantic condition evaluates false/);
     assert.match(repeatProtocol, /clear commits and a\s+still-later ordered evaluation produces a new false-to-true transition/);
     assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
+  });
+
+  it("selects the final summary and retries only proven non-dispatches", () => {
+    assert.match(skill, /artifact-selection-and-recovery\.md/);
+    assert.match(skill, /`transcript\.completed\.occurred_at`/);
+    assert.doesNotMatch(skill, /summary_creation_attempted/);
+    assert.match(guide, /no automatic-origin marker/);
+    assert.match(guide, /`pre_send_failed`/);
+    assert.match(guide, /`outcome_unknown`/);
+    assert.match(artifactRecovery, /no `automatic`, `origin`, or final-summary marker/);
+    assert.match(artifactRecovery, /known_manual_artifact_ids/);
+    assert.match(artifactRecovery, /unreconciled_unknown_manual_creates/);
+    assert.match(artifactRecovery, /`created_at >= transcript_completed_at`/);
+    assert.match(artifactRecovery, /Poll all current candidates/);
+    assert.match(artifactRecovery, /Never use\s+artifact ID, list order, completion order, or client-clock windows as an\s+origin tie-breaker/);
+    assert.match(artifactRecovery, /two candidates share\s+the minimum timestamp/);
+    assert.match(artifactRecovery, /same-type unknown create remains unreconciled/);
+    assert.match(artifactRecovery, /every otherwise-unrecognized\s+same-type artifact is possible manual output/);
+    assert.match(artifactRecovery, /Immediately before fallback, re-list once more/);
+    assert.match(artifactRecovery, /proves that no request bytes were sent/);
+    assert.match(artifactRecovery, /Recovery from either `dispatching` or `outcome_unknown`\s+must persist an unreconciled same-type unknown-create marker and\s+re-list\/reconcile only/);
+    assert.match(artifactRecovery, /Never collapse `pre_send_failed` and `outcome_unknown`/);
   });
 });
 

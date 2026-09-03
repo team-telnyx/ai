@@ -126,8 +126,12 @@ workflow state. Store at least:
   "mentions": [],
   "action_claims": [],
   "artifact_requests": {},
+  "known_manual_artifact_ids": [],
+  "unreconciled_unknown_manual_creates": [],
+  "transcript_completed_at": null,
+  "summary_candidate_ids": [],
   "summary_artifact_id": null,
-  "summary_creation_attempted": false,
+  "summary_creation": {"state": "not_started", "attempt_count": 0, "max_pre_send_retries": 2, "artifact_id": null},
   "summary_poll_deadline_at": null,
   "terminal_observed_at": null,
   "transcript_completed": false
@@ -337,11 +341,11 @@ reject `prompt`. Each create is asynchronous with `pending`, `completed`, or
 `model_provenance`/failure information. `summarize_on_end: true` attempts only a
 `summary`; create other requested types separately.
 
-For every manual artifact, keep one durable record keyed by type plus a stable
-hash of the custom prompt. Persist `creation_attempted`, the fixed poll deadline,
-and then the returned artifact ID. Since creation is non-idempotent, never repeat
-an ambiguous create. Apply the detailed summary discipline below to every
-manually requested artifact.
+For every manual artifact, follow the [artifact selection and creation recovery
+protocol](references/artifact-selection-and-recovery.md). Keep its durable state
+machine, fixed deadline, manual artifact IDs, and returned ID. Retry only a
+proven `pre_send_failed` or confirmed pre-creation rejection; an ambiguous create
+is `outcome_unknown` and may only be reconciled by listing.
 
 At implementation commit `a9f6326`, generation reads at most the first 10,000
 finalized transcript segments without exposing a truncation warning. For an
@@ -350,31 +354,22 @@ result from the full transcript the agent actually collected.
 
 ### Summary flow
 
-First use `get_artifacts(id)` to find existing `type: "summary"` artifacts,
-especially the one expected from `summarize_on_end: true`. Poll the selected
-artifact via `get_artifact(id, artifact_id)` until `status` is `completed` or
-`failed` or a persisted deadline expires; use `content.text` only when
-completed. When selecting any pending summary, persist its ID and one fixed
-`summary_poll_deadline_at` (for example five minutes from the first selection).
-Recovery must reuse, never extend, that deadline. During the normal automatic
-summary delay, poll the list on a bounded cadence (for example 2, 5, then 10
-seconds, for up to two minutes after transcript completion/settle).
+Follow the linked recovery protocol. Persist `transcript.completed.occurred_at`,
+exclude `known_manual_artifact_ids`, and repeatedly re-list all post-completion
+summary candidates. The API has no automatic-origin marker, so select only a
+unique completed candidate whose `created_at` is closest after the completion
+event, but only when no same-type manual create has an unreconciled unknown
+outcome. Equal-time candidates are also ambiguous. Because no ID was returned
+and clocks may differ, never use artifact ID, list order, completion order, or
+client-clock windows as an origin tie-breaker. Do not lock onto the first pending
+artifact or silently use a pre-completion partial summary. Immediately before
+fallback, re-list and poll every current candidate within the fixed deadline.
 
-If no summary exists after that bounded wait:
-
-1. Check the durable record. If `summary_artifact_id` exists, poll it using the
-   original persisted deadline. If `summary_creation_attempted` is true but no
-   ID was returned, do **not** create another artifact—re-list only until that
-   same deadline, then report the ambiguous outcome and use the fallback.
-2. Otherwise persist `summary_creation_attempted: true`, call
-   `create_artifact(id, type: "summary")` **exactly once**, and immediately
-   persist the returned artifact ID. Set the fixed summary-poll deadline before
-   the call so an interrupted or ambiguous create cannot restart the clock.
-3. Poll that ID with `get_artifact` using bounded backoff until `completed`,
-   `failed`, or the persisted deadline expires. Artifact creation is
-   non-idempotent, so never retry an uncertain create call by creating another
-   summary. If the deadline expires while the artifact is still pending, keep
-   its ID/status for provenance and move to the transcript-grounded fallback.
+If no trustworthy automatic candidate appears, use the protocol's manual-create
+state machine. A proven pre-send failure may retry within the original bound;
+`dispatching` after a crash or any possibly sent/ambiguous call becomes
+`outcome_unknown` and must never create again. Poll accepted IDs to terminal state
+and retain pending/failed provenance before using the transcript fallback.
 
 If service inference is unavailable, fails, or times out, still deliver an
 **Agent-generated summary (service summary unavailable)** based solely on the

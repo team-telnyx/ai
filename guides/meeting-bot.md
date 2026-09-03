@@ -165,11 +165,23 @@ named types reject `prompt`. Creation returns an asynchronous artifact with
 `pending`, `completed`, or `failed` status. On completion, read `content.text`;
 responses also expose `model_provenance` and a failure reason when applicable.
 
-`summarize_on_end: true` attempts only a `summary`. List artifacts before any
-manual create because creation is non-idempotent. At this source revision,
-artifact generation reads at most the first 10,000 transcript segments and does
-not expose a truncation warning; caveat exceptionally long meetings or build the
-final report from the agent's fully collected transcript.
+`summarize_on_end: true` attempts only a `summary`. The public artifact shape has
+no automatic-origin marker: persist `transcript.completed.occurred_at`, exclude
+known manual IDs, re-list all post-completion summary candidates, and prefer the
+unique completed candidate created closest after that event only when it does not
+coexist with an unreconciled outcome-unknown manual summary create. Equal-time
+candidates and all unrecognized candidates during same-type uncertainty are
+ambiguous; never use artifact ID, list order, completion order, or client-clock
+windows to break an origin tie. Re-list and poll every candidate before fallback
+rather than locking onto the first pending summary.
+
+Manual creation is non-idempotent. Persist a create state that distinguishes
+`pre_send_failed` (the client proved no request bytes were sent, so a bounded
+retry is safe) from `outcome_unknown` (bytes may have been sent, so recovery may
+only re-list). At this source revision, artifact generation reads at most the
+first 10,000 transcript segments and does not expose a truncation warning; caveat
+exceptionally long meetings or build the final report from the agent's fully
+collected transcript.
 
 ### Python
 
