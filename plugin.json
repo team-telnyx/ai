@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "telnyx",
   "version": "0.4.0",
-  "description": "Telnyx Agent Plugin — Agent Skills for voice, messaging, email, numbers, verify, TTS/STT, AI inference and platform services, plus the hosted Telnyx MCP server.",
+  "description": "Telnyx Agent Plugin — Agent Skills for voice, messaging, email, numbers, verify, TTS/STT, AI inference, Meeting Bot, and platform services, plus the hosted Telnyx MCP server.",
   "author": {
     "name": "Telnyx",
     "url": "https://telnyx.com"

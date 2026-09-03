@@ -149,6 +149,7 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 |-------|-------------|
 | `telnyx-ai-assistants-*` | AI voice assistants with knowledge bases |
 | `telnyx-ai-inference-*` | LLM inference, embeddings, AI analytics |
+| `telnyx-meeting-bot` | Join, observe, react in, transcribe, and summarize Zoom, Google Meet, Microsoft Teams, and Webex meetings |
 | `telnyx-missions-*` | Automated AI-driven workflows and tasks |
 
 #### IoT & Networking
@@ -273,7 +274,7 @@ Telnyx ships one plugin per product area, so you install only the skills your pr
 /plugin install telnyx-verify@telnyx     # Phone verification / 2FA
 /plugin install telnyx-numbers@telnyx    # Number management, 10DLC, porting
 /plugin install telnyx-webrtc@telnyx     # WebRTC and client SDKs
-/plugin install telnyx-ai@telnyx         # AI inference and assistants
+/plugin install telnyx-ai@telnyx         # AI inference, assistants, and Meeting Bot
 /plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 

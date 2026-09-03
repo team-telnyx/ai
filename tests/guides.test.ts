@@ -58,6 +58,44 @@ describe("agent.json validity", () => {
   });
 });
 
+describe("Meeting Bot plugin catalogs", () => {
+  const rootReadme = readFileSync(join(ROOT, "README.md"), "utf-8");
+  const pluginsReadme = readFileSync(join(ROOT, "plugins", "README.md"), "utf-8");
+  const skillsReadme = readFileSync(join(SKILLS_DIR, "README.md"), "utf-8");
+  const rootPlugin = JSON.parse(readFileSync(join(ROOT, "plugin.json"), "utf-8"));
+  const marketplace = JSON.parse(
+    readFileSync(join(ROOT, ".claude-plugin", "marketplace.json"), "utf-8")
+  );
+  const aiPluginDir = join(ROOT, "providers", "claude", "plugins", "telnyx-ai");
+  const aiManifest = JSON.parse(
+    readFileSync(join(aiPluginDir, ".claude-plugin", "plugin.json"), "utf-8")
+  );
+  const aiSkillCount = readdirSync(join(aiPluginDir, "skills"), {
+    withFileTypes: true,
+  }).filter((entry: { isDirectory(): boolean }) => entry.isDirectory()).length;
+  const catalogRow = pluginsReadme
+    .split("\n")
+    .find((line: string) => line.startsWith("| `telnyx-ai` |"));
+  const aiMarketplace = marketplace.plugins.find(
+    (plugin: any) => plugin.name === "telnyx-ai"
+  );
+
+  it("advertises Meeting Bot with the actual telnyx-ai skill count", () => {
+    assert.equal(aiSkillCount, 13);
+    assert.ok(catalogRow, "plugins/README.md missing telnyx-ai row");
+    assert.match(catalogRow, /Meeting Bot/);
+    assert.ok(catalogRow.endsWith(`| ${aiSkillCount} |`));
+    assert.match(rootReadme, /telnyx-ai@telnyx[^\n]*Meeting Bot/);
+    assert.match(rootPlugin.description, /Meeting Bot/);
+    assert.match(skillsReadme, /`telnyx-meeting-bot`[^\n]*Zoom[^\n]*Webex/);
+    assert.match(skillsReadme, /telnyx-ai@telnyx[^\n]*Meeting Bot/);
+    assert.ok(aiMarketplace, "marketplace missing telnyx-ai plugin");
+    assert.match(aiMarketplace.description, /Meeting Bot/);
+    assert.equal(aiManifest.description, aiMarketplace.description);
+    assert.ok(aiManifest.keywords.includes("meeting-bot"));
+  });
+});
+
 describe("Meeting Bot discovery and durable alert contract", () => {
   const capability = agentJson.capabilities.find(
     (candidate: any) => candidate.id === "meeting_bot"

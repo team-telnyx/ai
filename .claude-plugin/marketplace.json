@@ -54,7 +54,7 @@
     {
       "name": "telnyx-ai",
       "source": "./providers/claude/plugins/telnyx-ai",
-      "description": "Telnyx AI — LLM inference, chat completions, embeddings, AI assistants, conversation insights",
+      "description": "Telnyx AI — LLM inference, chat completions, embeddings, AI assistants, Meeting Bot, conversation insights",
       "version": "0.4.0"
     },
     {

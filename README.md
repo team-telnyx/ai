@@ -49,7 +49,7 @@ Empowers agents to generate correct, production-ready code — and to manage the
 /plugin install telnyx-verify@telnyx     # Phone verification / 2FA
 /plugin install telnyx-numbers@telnyx    # Number management, 10DLC, porting
 /plugin install telnyx-webrtc@telnyx     # WebRTC and client SDKs
-/plugin install telnyx-ai@telnyx         # AI inference and assistants
+/plugin install telnyx-ai@telnyx         # AI inference, assistants, and Meeting Bot
 /plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
 

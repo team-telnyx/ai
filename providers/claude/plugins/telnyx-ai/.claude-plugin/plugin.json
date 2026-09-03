@@ -1,6 +1,6 @@
 {
   "name": "telnyx-ai",
-  "description": "Telnyx AI \u2014 LLM inference, chat completions, embeddings, AI assistants, conversation insights",
+  "description": "Telnyx AI \u2014 LLM inference, chat completions, embeddings, AI assistants, Meeting Bot, conversation insights",
   "version": "0.4.0",
   "author": {
     "name": "Telnyx",
@@ -10,6 +10,7 @@
   "repository": "https://github.com/team-telnyx/ai",
   "license": "MIT",
   "keywords": [
-    "ai"
+    "ai",
+    "meeting-bot"
   ]
 }
