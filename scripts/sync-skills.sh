@@ -16,6 +16,7 @@ SKILLS_SRC="$REPO_ROOT/skills"
 # Format: "plugin_name|prefix1,prefix2,...|catch_all_flag"
 # catch_all_flag=1 means this plugin gets all skills not matched by other plugins
 PLUGIN_PATTERNS=(
+  "telnyx-developer-kit|telnyx-kit-|0"
   "telnyx-whatsapp|telnyx-whatsapp-|0"
   "telnyx-voice|telnyx-voice-,telnyx-ai-outbound-voice|0"
   "telnyx-messaging|telnyx-messaging-|0"
