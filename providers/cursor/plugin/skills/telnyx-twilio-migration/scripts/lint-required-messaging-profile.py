@@ -38,6 +38,10 @@ JS_TS_SUFFIXES = {
     ".tsx",
 }
 TYPESCRIPT_SUFFIXES = {".ts", ".tsx", ".mts", ".cts"}
+# Babel, SWC, esbuild, and React Native commonly accept JSX in ordinary
+# JavaScript module files. TypeScript reserves JSX for `.tsx`, so applying JSX
+# masking to `.ts`/`.mts`/`.cts` would risk hiding valid type assertions.
+JSX_CAPABLE_SUFFIXES = {".cjs", ".js", ".jsx", ".mjs", ".tsx"}
 # Keys a request-style config object may carry its URL under. Shared so the
 # named-argument path and the config-object path cannot recognise different
 # spellings, which is how `uri` came to work as a named argument but not as
@@ -582,12 +586,98 @@ def _ruby_interpolation_ranges(
         if backslashes % 2:
             cursor = marker + 2
             continue
-        balanced = _balanced_brace_ranges(source, [marker + 1])
-        if not balanced or balanced[0][1] > end:
+        closing = _ruby_interpolation_closing(source, marker + 1, end)
+        if closing is None:
             break
-        ranges.append(balanced[0])
-        cursor = balanced[0][1] + 1
+        ranges.append((marker + 2, closing))
+        cursor = closing + 1
     return ranges
+
+
+def _ruby_interpolation_closing(
+    source: str, opening: int, end: int
+) -> int | None:
+    """Return a Ruby-aware closing brace for one interpolation expression.
+
+    Generic brace matching is insufficient here: Ruby regexp and percent
+    literals may legally contain ``}``, and comments may contain arbitrary
+    braces. Treat those regions as opaque while balancing executable braces so
+    a data character cannot truncate the restored expression.
+    """
+
+    depth = 0
+    index = opening
+    code = list(source)
+    last_opaque_end = 0
+    while index < end:
+        character = source[index]
+        if character == "#":
+            line_end = source.find("\n", index + 1, end)
+            index = end if line_end < 0 else line_end + 1
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+            literal_start = index
+            index += 1
+            while index < end:
+                if source[index] == "\\":
+                    index = min(end, index + 2)
+                    continue
+                if quote in {'"', "`"} and source.startswith("#{", index):
+                    nested_closing = _ruby_interpolation_closing(
+                        source, index + 1, end
+                    )
+                    if nested_closing is None:
+                        return None
+                    index = nested_closing + 1
+                    continue
+                if source[index] == quote:
+                    index += 1
+                    _blank(code, literal_start, index)
+                    last_opaque_end = index
+                    break
+                index += 1
+            else:
+                return None
+            continue
+        if character == "%":
+            percent_literal = _ruby_percent_literal(source, index)
+            if percent_literal is not None and percent_literal[0] <= end:
+                literal_end = percent_literal[0]
+                _blank(code, index, literal_end)
+                last_opaque_end = literal_end
+                index = literal_end
+                continue
+        if character == "/":
+            regexp_context = _ruby_regex_can_start(
+                source, code, index, last_opaque_end
+            )
+            regexp = (
+                _ruby_slash_regex(
+                    source,
+                    index,
+                    allow_newlines=regexp_context == "command",
+                )
+                if regexp_context
+                else None
+            )
+            if regexp is not None and regexp[0] <= end and (
+                regexp_context != "command"
+                or _ruby_command_regex_has_valid_tail(source, regexp[0])
+            ):
+                regexp_end = regexp[0]
+                _blank(code, index, regexp_end)
+                last_opaque_end = regexp_end
+                index = regexp_end
+                continue
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return None
 
 
 def _ruby_percent_literal(
@@ -1112,50 +1202,69 @@ def _jsx_element(
 def _mask_jsx_markup(source: str, suffix: str) -> str:
     """Blank definite JSX markup/text while retaining expression containers."""
 
-    # Locate roots in lexed code so `<Panel>` inside an ordinary string or
-    # comment cannot cause subsequent JavaScript to be hidden. The JSX parser
-    # itself uses the raw source after a root is established because inert text
-    # may legally contain quote characters that are not JavaScript strings.
-    lexical = lex_source(source, suffix).code
     output = list(source)
-    cursor = 0
-    while cursor < len(source):
-        start = lexical.find("<", cursor)
-        if start < 0:
-            break
-        previous = start - 1
-        while previous >= 0 and lexical[previous].isspace():
-            previous -= 1
-        previous_word = _word_before(list(lexical), previous + 1).lower()
-        expression_context = (
-            previous < 0
-            or lexical[previous] in "=>([{,:;!?&|^~<>*%+-/"
-            or (
-                lexical[previous] == ")"
-                and _javascript_control_paren(list(lexical), previous)
+    # Process expression containers with an explicit worklist. The former
+    # recursive call overflowed Python's stack on valid deeply nested JSX.
+    # Each queued span is strictly contained by the JSX element that exposed
+    # it, so the traversal always makes progress without a recursion limit.
+    pending = [(0, len(source))]
+    while pending:
+        span_start, span_end = pending.pop()
+        segment = source[span_start:span_end]
+        # Locate roots in lexed code so `<Panel>` inside an ordinary string or
+        # comment cannot hide subsequent JavaScript. The JSX parser itself uses
+        # raw source after a root is established because inert JSX text may
+        # legally contain quote characters that are not JavaScript strings.
+        lexical = lex_source(segment, suffix).code
+        lexical_chars = list(lexical)
+        cursor = 0
+        while cursor < len(segment):
+            start = lexical.find("<", cursor)
+            if start < 0:
+                break
+            previous = start - 1
+            while previous >= 0 and lexical[previous].isspace():
+                previous -= 1
+            previous_word = _word_before(lexical_chars, previous + 1).lower()
+            expression_context = (
+                previous < 0
+                or lexical[previous] in "=>([{,:;!?&|^~<>*%+-/"
+                or (
+                    lexical[previous] == ")"
+                    and _javascript_control_paren(lexical_chars, previous)
+                )
+                or (
+                    lexical[previous] == "}"
+                    and _javascript_block_brace(lexical_chars, previous)
+                )
+                or previous_word
+                in (_JS_REGEX_PREFIX_WORDS - {"break", "continue", "debugger"})
             )
-            or (
-                lexical[previous] == "}"
-                and _javascript_block_brace(list(lexical), previous)
-            )
-            or previous_word
-            in (_JS_REGEX_PREFIX_WORDS - {"break", "continue", "debugger"})
-        )
-        if not expression_context:
-            cursor = start + 1
-            continue
-        element = _jsx_element(source, lexical, start, suffix)
-        if element is None:
-            cursor = start + 1
-            continue
-        end, expressions = element
-        _blank(output, start, end)
-        for expression_start, expression_end in expressions:
-            nested = _mask_jsx_markup(
-                source[expression_start:expression_end], suffix
-            )
-            output[expression_start:expression_end] = list(nested)
-        cursor = end
+            if not expression_context:
+                cursor = start + 1
+                continue
+            element = _jsx_element(segment, lexical, start, suffix)
+            if element is None:
+                cursor = start + 1
+                continue
+            element_end, expressions = element
+            absolute_start = span_start + start
+            absolute_end = span_start + element_end
+            _blank(output, absolute_start, absolute_end)
+            for expression_start, expression_end in expressions:
+                absolute_expression_start = span_start + expression_start
+                absolute_expression_end = span_start + expression_end
+                output[
+                    absolute_expression_start:absolute_expression_end
+                ] = list(
+                    source[
+                        absolute_expression_start:absolute_expression_end
+                    ]
+                )
+                pending.append(
+                    (absolute_expression_start, absolute_expression_end)
+                )
+            cursor = element_end
     return "".join(output)
 
 
@@ -1163,7 +1272,7 @@ def executable_source(path: Path, source: str) -> str:
     """Extract executable host-language regions from mixed template files."""
     suffix = path.suffix.lower()
     ranges: list[tuple[int, int]] = []
-    if suffix in {".jsx", ".tsx"}:
+    if suffix in JSX_CAPABLE_SUFFIXES:
         return _mask_jsx_markup(source, suffix)
     if suffix in {".vue", ".svelte", ".astro"}:
         # Comments may contain complete, syntactically valid examples. Preserve
@@ -2381,6 +2490,26 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
                     len(source) if terminator is None else terminator.start()
                 )
                 _blank(code, body_start, body_end)
+                _blank(without_comments, body_start, body_end)
+                if suffix == ".rb" and opener.group("q") != "'":
+                    for expression_start, expression_end in _ruby_interpolation_ranges(
+                        source, body_start, body_end
+                    ):
+                        nested = lex_source(
+                            source[expression_start:expression_end], suffix, dialect
+                        )
+                        code[expression_start:expression_end] = list(nested.code)
+                        without_comments[expression_start:expression_end] = list(
+                            nested.without_comments
+                        )
+                        strings.extend(
+                            StringToken(
+                                expression_start + token.start,
+                                expression_start + token.end,
+                                token.contents,
+                            )
+                            for token in nested.strings
+                        )
                 strings.append(
                     StringToken(
                         body_start, body_end, source[body_start:body_end]
@@ -2445,6 +2574,18 @@ def lex_source(source: str, suffix: str, dialect: str = "") -> LexedSource:
         ) and not (csharp_verbatim or jvm_raw)
         terminated = False
         while index < len(source):
+            if (
+                suffix == ".rb"
+                and delimiter in {'"', "`"}
+                and source.startswith("#{", index)
+            ):
+                interpolation_end = _ruby_interpolation_closing(
+                    source, index + 1, len(source)
+                )
+                if interpolation_end is None:
+                    break
+                index = interpolation_end + 1
+                continue
             if python_f_string or csharp_interpolates or jvm_interpolates:
                 brace_count = csharp_brace_count if csharp_interpolates else 1
                 opener = "${" if jvm_interpolates else "{" * brace_count

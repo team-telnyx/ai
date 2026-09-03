@@ -3038,6 +3038,9 @@ class CorrectnessLinterContracts(unittest.TestCase):
         url = "https://api.telnyx.com/v2/messages/number_pool"
         decoy = "client.messages.sendNumberPool({to: '+1'})"
         inert = {
+            "text.js": f"export default () => <code>{decoy}</code>;",
+            "text.mjs": f"export default () => <code>{decoy}</code>;",
+            "text.cjs": f"module.exports = () => <code>{decoy}</code>;",
             "text.jsx": f"export default () => <code>{decoy}</code>;",
             "nested.tsx": (
                 f"export default () => <Panel><span>{decoy}</span></Panel>;"
@@ -3084,6 +3087,14 @@ class CorrectnessLinterContracts(unittest.TestCase):
                 )
 
         executable = {
+            "child.js": f"export default () => <Panel>{{{decoy}}}</Panel>;",
+            "handler.mjs": (
+                f"export default () => <Button onClick={{() => {decoy}}} />;"
+            ),
+            "after.cjs": (
+                "const view = <Panel>ordinary text</Panel>;\n"
+                f"fetch('{url}',{{method:'POST',body:JSON.stringify({{to:'+1'}})}});"
+            ),
             "child.jsx": f"export default () => <Panel>{{{decoy}}}</Panel>;",
             "handler.tsx": (
                 f"export default () => <Button onClick={{() => {decoy}}} />;"
@@ -3109,6 +3120,97 @@ class CorrectnessLinterContracts(unittest.TestCase):
                     any(name in row for row in result.stdout.splitlines()[1:]),
                     result.stdout,
                 )
+
+    def test_ruby_heredoc_literal_text_is_inert_but_interpolation_executes(
+        self,
+    ) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        send = f"Net::HTTP.post(URI('{url}'), {{to: '+1'}}.to_json)"
+        inert = {
+            "plain.rb": f"doc = <<DOC\n{send}\nDOC\n",
+            "indented.rb": f"doc = <<~DOC\n  {send}\nDOC\n",
+            "double-quoted.rb": f'doc = <<"DOC"\n{send}\nDOC\n',
+            "single-quoted.rb": f"doc = <<'DOC'\n#{{{send}}}\nDOC\n",
+            "escaped.rb": f"doc = <<DOC\n\\#{{{send}}}\nDOC\n",
+        }
+        for name, source in inert.items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    "0",
+                    self.run_required_profile_analyzer({name: source}).stdout.strip(),
+                )
+
+        for opener in ("<<DOC", "<<-DOC", "<<~DOC", '<<"DOC"'):
+            with self.subTest(opener=opener):
+                source = f"doc = {opener}\n#{{{send}}}\nDOC\n"
+                result = self.run_required_profile_analyzer(
+                    {"interpolated-heredoc.rb": source}
+                )
+                self.assertTrue(
+                    any(
+                        "interpolated-heredoc.rb" in row
+                        for row in result.stdout.splitlines()[1:]
+                    ),
+                    result.stdout,
+                )
+
+        after = f"doc = <<~DOC\nordinary text\nDOC\n{send}\n"
+        result = self.run_required_profile_analyzer({"after-heredoc.rb": after})
+        self.assertTrue(
+            any("after-heredoc.rb" in row for row in result.stdout.splitlines()[1:]),
+            result.stdout,
+        )
+
+    def test_ruby_interpolation_balancing_ignores_literal_braces(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        literals = {
+            "percent-q": "%q[hello}]",
+            "percent-Q": "%Q(hello})",
+            "regexp": "/hello}/",
+            "regexp-class": "/[}]/",
+            "quoted": '"hello}"',
+        }
+        for container in ("heredoc", "string"):
+            for literal_name, literal in literals.items():
+                for polarity, profile in (
+                    ("missing", ""),
+                    ("valid", ", messaging_profile_id: 'mp'"),
+                ):
+                    with self.subTest(
+                        container=container,
+                        literal=literal_name,
+                        polarity=polarity,
+                    ):
+                        send = (
+                            f"Net::HTTP.post(URI('{url}'), "
+                            f"{{to: '+1'{profile}}}.to_json)"
+                        )
+                        expression = f"#{{ {literal} + ({send}).to_s }}"
+                        source = (
+                            f"doc = <<DOC\n{expression}\nDOC\n"
+                            if container == "heredoc"
+                            else f'doc = "{expression}"\n'
+                        )
+                        result = self.run_required_profile_analyzer(
+                            {f"{container}-{literal_name}.rb": source}
+                        )
+                        findings = [
+                            row for row in result.stdout.splitlines()[1:] if row
+                        ]
+                        if polarity == "missing":
+                            self.assertTrue(findings, result.stdout)
+                        else:
+                            self.assertEqual([], findings, result.stdout)
+
+    def test_deep_jsx_expression_nesting_is_stack_safe(self) -> None:
+        decoy = "client.messages.sendNumberPool({to: '+1'})"
+        source = f"<code>{decoy}</code>"
+        for _ in range(1100):
+            source = f"<Panel>{{{source}}}</Panel>"
+        result = self.run_required_profile_analyzer(
+            {"deep-expression.js": f"export default () => {source};"}
+        )
+        self.assertEqual("0", result.stdout.strip(), result.stdout)
 
     def test_ruby_slash_regex_literals_do_not_mask_following_sends(self) -> None:
         url = "https://api.telnyx.com/v2/messages/number_pool"
