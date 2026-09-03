@@ -97,6 +97,9 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(skill, /retry pending alerts/i);
     assert.match(skill, /wait_seconds: 2/);
     assert.match(skill, /### Reactive lunch answer/);
+    assert.match(skill, /For a\s+one-shot rule, key it only by session and rule/);
+    assert.match(skill, /"key": "action:<session_id>:<rule_id>"/);
+    assert.doesNotMatch(skill, /"key": "action:<session_id>:<rule_id>:<first_trigger_seq>"/);
     assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
   });
 });

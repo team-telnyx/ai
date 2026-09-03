@@ -264,11 +264,13 @@ evaluate each newest final segment with only a short trailing context window.
 Require clear transcript evidence; do not trigger from an unrelated occurrence
 of one keyword. Persist the evidence seq(s) and exact quote.
 
-Before executing the first match, atomically create an action claim such as:
+Before executing the first match, atomically create an action claim. For a
+one-shot rule, key it only by session and rule; retain trigger seq(s) as evidence.
+Only an explicitly repeating rule may add the trigger seq to its claim key:
 
 ```json
 {
-  "key": "action:<session_id>:<rule_id>:<first_trigger_seq>",
+  "key": "action:<session_id>:<rule_id>",
   "rule_id": "lunch-question",
   "type": "speak",
   "text": "I want pizza",
