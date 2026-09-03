@@ -108,9 +108,10 @@ the replacement; it does not mean “interrupt a human.” The session must be
 The service synthesizes and hands off audio before returning `{ "accepted": true
 }` and appending `bot.speak_requested`. That is accepted handoff, not proof that
 every participant audibly heard the whole utterance. Because `speak` has no
-caller-supplied idempotency key, persist and atomically claim each reactive rule
-before dispatch. After an ambiguous transport timeout, mark the action outcome
-unknown and do not automatically speak again. On restart, convert any recovered
+caller-supplied idempotency key, first persist a `claimed` rule, then require a
+successful `claimed` → `dispatching` CAS immediately before transport. After an
+ambiguous transport timeout, mark the action outcome unknown and do not
+automatically speak again. On restart, convert any recovered
 `dispatching` speech/chat claim to `outcome_unknown` before evaluating triggers
 unless durable transport evidence proves that no request bytes were sent.
 
@@ -170,8 +171,9 @@ responses also expose `model_provenance` and a failure reason when applicable.
 `summarize_on_end: true` attempts only a `summary`. The public artifact shape has
 no automatic-origin marker: persist `transcript.completed.occurred_at`, exclude
 known manual IDs, re-list all post-completion summary candidates, and prefer the
-unique completed candidate created closest after that event only when it does not
-coexist with an unreconciled outcome-unknown manual summary create. Equal-time
+unique closest candidate across all statuses. Select it only when completed and
+no outcome-unknown manual summary create remains unreconciled; wait if it is
+pending and fall back if it fails rather than choosing a later artifact. Equal-time
 candidates and all unrecognized candidates during same-type uncertainty are
 ambiguous; never use artifact ID, list order, completion order, or client-clock
 windows to break an origin tie. Re-list and poll every candidate before fallback

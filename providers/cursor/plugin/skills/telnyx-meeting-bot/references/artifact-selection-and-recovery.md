@@ -63,17 +63,19 @@ service clocks need not be comparable, and the unknown create returned no ID.
    `known_manual_artifact_ids`, and `created_at >= transcript_completed_at`.
 3. Persist every candidate ID. Poll all current candidates; do not lock onto the
    first pending artifact and ignore summaries that appear or complete later.
-4. A selectable likely-automatic result must be the **unique** completed
-   candidate with the smallest non-negative
+4. First identify the candidate with the smallest non-negative
    `created_at - transcript_completed_at` delta because the implementation calls
-   automatic creation immediately after appending `transcript.completed`. It
-   is eligible only when there is no unreconciled outcome-unknown manual
-   `summary` create. If two candidates share the minimum timestamp, or any
-   same-type unknown create remains unreconciled, origin is ambiguous. Never use
+   automatic creation immediately after appending `transcript.completed`. Rank
+   **all statuses** before filtering by status. It must be the unique minimum and
+   is eligible only when no same-type unknown create remains unreconciled. If two
+   candidates share the minimum timestamp, origin is ambiguous. Never use
    artifact ID, list order, completion order, or client-clock windows as an
    origin tie-breaker; use the labeled transcript-grounded fallback instead.
-5. A pending or failed early candidate does not end the search. Continue
-   re-listing and polling all post-completion candidates until the fixed deadline.
+5. Select that unique closest candidate only if it is `completed`. If it is
+   `pending`, keep re-listing and polling it and every candidate through the fixed
+   deadline; never skip to a later completed candidate. If the unique closest is
+   `failed` at the final reconciliation, use the fallback rather than a later
+   artifact.
 6. Immediately before fallback, re-list once more and poll every current
    candidate to terminal status within the remaining deadline.
 

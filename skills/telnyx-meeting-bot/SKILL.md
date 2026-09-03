@@ -126,13 +126,10 @@ workflow state. Store at least:
   "mentions": [],
   "action_claims": [],
   "artifact_requests": {},
-  "known_manual_artifact_ids": [],
-  "unreconciled_unknown_manual_creates": [],
-  "transcript_completed_at": null,
-  "summary_candidate_ids": [],
-  "summary_artifact_id": null,
+  "known_manual_artifact_ids": [], "unreconciled_unknown_manual_creates": [],
+  "transcript_completed_at": null, "summary_candidate_ids": [],
+  "summary_artifact_id": null, "summary_poll_deadline_at": null,
   "summary_creation": {"state": "not_started", "attempt_count": 0, "max_pre_send_retries": 2, "artifact_id": null},
-  "summary_poll_deadline_at": null,
   "terminal_observed_at": null,
   "transcript_completed": false
 }
@@ -280,13 +277,14 @@ Permit a new repeat key only after its stale-safe ordered clear commits; never k
   "rule_id": "lunch-question",
   "type": "speak",
   "text": "I want pizza",
-  "status": "dispatching",
+  "status": "claimed",
   "trigger_seqs": [42]
 }
 ```
 
-Only the process that wins that claim may dispatch. Atomically set `dispatching`
-immediately before invoking the transport. For MCP, call
+Creating the claim only reserves its key. Dispatch only if a CAS changes `claimed`
+(or proven `pre_send_failed`) to `dispatching` immediately before the transport
+call; a CAS loser skips. For MCP, call
 `speak(id, text, voice?, interrupt?)`; for REST, call
 `POST /{id}/actions/speak`. `text` is 1–4000 characters. Omit `interrupt`
 unless replacing the bot's own current audio—it does not mean “interrupt the
@@ -359,10 +357,11 @@ result from the full transcript the agent actually collected.
 
 Follow the linked recovery protocol. Persist `transcript.completed.occurred_at`,
 exclude `known_manual_artifact_ids`, and repeatedly re-list all post-completion
-summary candidates. The API has no automatic-origin marker, so select only a
-unique completed candidate whose `created_at` is closest after the completion
-event, but only when no same-type manual create has an unreconciled unknown
-outcome. Equal-time candidates are also ambiguous. Because no ID was returned
+summary candidates. The API has no automatic-origin marker, so first identify the
+unique closest candidate across **all statuses**. Use it only if completed and no
+same-type manual create has an unreconciled unknown outcome; if pending, wait, and
+if failed, fall back rather than choosing a later artifact. Equal-time candidates
+are ambiguous. Because no ID was returned
 and clocks may differ, never use artifact ID, list order, completion order, or
 client-clock windows as an origin tie-breaker. Do not lock onto the first pending
 artifact or silently use a pre-completion partial summary. Immediately before
@@ -417,7 +416,8 @@ On restart, load the durable operation record before doing anything. If it has a
 `session_id`, resume `get_session`, event/transcript drains, and summary polling
 from persisted cursors and outbox state—never call `join_meeting` again. Retry
 pending mention alerts with their original delivery IDs and leave confirmed
-`sent` items alone. Before evaluating triggers, atomically convert every recovered
+`sent` items alone. A recovered `claimed` action may attempt the dispatch CAS. Before
+evaluating triggers, atomically convert every recovered
 live-action claim still marked `dispatching` to `outcome_unknown` unless durable
 transport evidence proves no request bytes were sent; never redispatch it. Never
 repeat actions marked `accepted` or `outcome_unknown`. Reconcile event history

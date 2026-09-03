@@ -55,10 +55,11 @@ active.
    `last_evaluated_seq`. That same transaction must advance `last_evaluated_seq`,
    persist the evaluation result and canonical `evidence_seqs`, and perform the
    applicable occurrence transition: create `active_occurrence` plus the durable
-   action claim `action:<session_id>:<rule_id>:repeat:<occurrence_first_seq>`,
+   `claimed` action `action:<session_id>:<rule_id>:repeat:<occurrence_first_seq>`,
    retain the active occurrence, atomically clear it, or retain no occurrence.
-5. Dispatch only after that combined transaction commits and only when it returns
-   a newly created claim. A CAS loser reloads state without dispatching.
+5. After that transaction commits, dispatch only if a second CAS changes that
+   claim from `claimed` to `dispatching` immediately before transport invocation.
+   A CAS loser reloads state without dispatching.
 6. While an occurrence is active, every positive overlapping window reuses its
    persisted claim key. It cannot create another claim, even if the newest
    evaluation sequence differs or a shorter evidence suffix later appears.
@@ -83,6 +84,9 @@ still-later ordered evaluation produces a new false-to-true transition.
   transition committed in the same transaction, so never reclassify it.
 - If the lease expired, acquire a newer generation before evaluating.
 - If `active_occurrence` exists, reuse its claim key and action state.
+- A recovered `claimed` action may compete once for the `claimed` → `dispatching`
+  CAS. A recovered `dispatching` action becomes `outcome_unknown` before any
+  trigger evaluation unless durable transport evidence proves no bytes were sent.
 - Preserve the parent skill's side-effect rule: never automatically repeat an
   accepted or outcome-unknown `speak`/`send_chat` dispatch.
 

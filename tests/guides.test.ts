@@ -120,8 +120,8 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(repeatProtocol, /must fail that CAS/);
     assert.match(repeatProtocol, /one per-sequence CAS transaction/);
     assert.match(repeatProtocol, /That same transaction must advance `last_evaluated_seq`/);
-    assert.match(repeatProtocol, /create `active_occurrence` plus the durable\s+action claim/);
-    assert.match(repeatProtocol, /Dispatch only after that combined transaction commits/);
+    assert.match(repeatProtocol, /create `active_occurrence` plus the durable\s+`claimed` action/);
+    assert.match(repeatProtocol, /second CAS changes that\s+claim from `claimed` to `dispatching`/);
     assert.match(repeatProtocol, /CAS loser reloads state without dispatching/);
     assert.match(repeatProtocol, /never advance the cursor and clear in separate\s+writes/);
     assert.match(repeatProtocol, /every positive overlapping window reuses its\s+persisted claim key/);
@@ -129,10 +129,12 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(repeatProtocol, /persisted semantic condition evaluates false/);
     assert.match(repeatProtocol, /clear commits and a\s+still-later ordered evaluation produces a new false-to-true transition/);
     assert.match(skill, /do \*\*not\*\* automatically repeat an\s+accepted action/);
-    assert.match(skill, /Atomically set `dispatching`\s+immediately before invoking the transport/);
+    assert.match(skill, /Creating the claim only reserves its key/);
+    assert.match(skill, /a CAS changes `claimed`\s+\(or proven `pre_send_failed`\) to `dispatching` immediately before the transport\s+call/);
     assert.match(skill, /no request\s+bytes were sent may mark `pre_send_failed`/);
-    assert.match(skill, /Before evaluating triggers, atomically convert every recovered\s+live-action claim still marked `dispatching` to `outcome_unknown`/);
+    assert.match(skill, /Before\s+evaluating triggers, atomically convert every recovered\s+live-action claim still marked `dispatching` to `outcome_unknown`/);
     assert.match(skill, /never redispatch it/);
+    assert.match(guide, /successful `claimed` → `dispatching` CAS immediately before transport/);
     assert.match(guide, /convert any recovered\s+`dispatching` speech\/chat claim to `outcome_unknown` before evaluating triggers/);
   });
 
@@ -149,7 +151,10 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(artifactRecovery, /`created_at >= transcript_completed_at`/);
     assert.match(artifactRecovery, /Poll all current candidates/);
     assert.match(artifactRecovery, /Never use\s+artifact ID, list order, completion order, or client-clock windows as an\s+origin tie-breaker/);
-    assert.match(artifactRecovery, /two candidates share\s+the minimum timestamp/);
+    assert.match(artifactRecovery, /two\s+candidates share the minimum timestamp/);
+    assert.match(artifactRecovery, /Rank\s+\*\*all statuses\*\* before filtering by status/);
+    assert.match(artifactRecovery, /never skip to a later completed candidate/);
+    assert.match(artifactRecovery, /unique closest is\s+`failed`.*use the fallback rather than a later\s+artifact/s);
     assert.match(artifactRecovery, /same-type unknown create remains unreconciled/);
     assert.match(artifactRecovery, /every otherwise-unrecognized\s+same-type artifact is possible manual output/);
     assert.match(artifactRecovery, /Immediately before fallback, re-list once more/);
