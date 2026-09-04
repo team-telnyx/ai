@@ -237,8 +237,11 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(skill, /## Anam Avatar \(REST-only\)/);
     assert.match(guide, /write-only[\s\S]*must not be persisted, logged, or reported/i);
     assert.doesNotMatch(guide, /@anam-avatar-session\.json/);
-    assert.match(guide, /-d "[\s\S]*\$\{ANAM_API_KEY\}[\s\S]*"/);
-    assert.match(guide, /ANAM_API_KEY.*already exported from a backend secret store/i);
+    assert.match(guide, /jq -n[\s\S]*api_key: env\.ANAM_API_KEY[\s\S]*\| curl/);
+    assert.match(guide, /--data-binary @-/);
+    assert.doesNotMatch(guide, /\$\{ANAM_API_KEY\}|--arg api_key/);
+    assert.match(guide, /ANAM_API_KEY[\s\S]*already exported from[\s\S]*a backend secret store/i);
+    assert.match(skill, /Send `Authorization: Bearer \*\*\*`\. REST responses use/);
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);
     assert.match(guide, /speak_on_enter[\s\S]*active[\s\S]*avatar[\s\S]*connected/i);

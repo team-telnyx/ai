@@ -219,13 +219,22 @@ An Anam avatar requires `provider: "anam"`, `avatar_id`, and `api_key`:
 }
 ```
 
-The Anam API key is write-only and must not be persisted, logged, or reported. Assume `ANAM_API_KEY` is already exported from a backend secret store; pass it directly at request time, never through a JSON file:
+The Anam API key is write-only and must not be persisted, logged, or reported;
+it also must not be expanded into process arguments. Assume `ANAM_API_KEY` is
+already exported from a backend secret store. Let `jq` read it from the
+environment, safely encode the JSON, and stream the request body to `curl`; never
+write a secret-bearing JSON file:
 
 ```bash
-curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
+jq -n \
+  --arg meeting_url "https://meet.google.com/abc-defg-hij" \
+  --arg avatar_id "avatar_REPLACE_ME" \
+  --arg idempotency_key "meeting-bot:anam-operation-id" \
+  '{meeting_url: $meeting_url, avatar: {provider: "anam", avatar_id: $avatar_id, api_key: env.ANAM_API_KEY}, idempotency_key: $idempotency_key}' \
+| curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
   -H "Authorization: Bearer ***" \
   -H "Content-Type: application/json" \
-  -d "{\"meeting_url\":\"https://meet.google.com/abc-defg-hij\",\"avatar\":{\"provider\":\"anam\",\"avatar_id\":\"avatar_REPLACE_ME\",\"api_key\":\"${ANAM_API_KEY}\"},\"idempotency_key\":\"meeting-bot:anam-operation-id\"}"
+  --data-binary @-
 ```
 
 Responses echo only `avatar.provider` and `avatar.avatar_id`, plus `avatar_state`

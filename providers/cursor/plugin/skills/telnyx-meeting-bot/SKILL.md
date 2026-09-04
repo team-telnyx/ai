@@ -60,7 +60,7 @@ If MCP is unavailable, use the equivalent production REST base:
 https://api.telnyx.com/v2/meeting_sessions
 ```
 
-REST equivalents include `POST /`, `GET /{id}`, `POST /{id}/actions/speak`, `POST /{id}/actions/stop_speaking`, `POST /{id}/actions/send_chat`, `GET /{id}/transcript`, `GET /{id}/events`, `DELETE /{id}`, `GET /{id}/recordings`, `GET /{id}/artifacts`, `POST /{id}/artifacts`, and `GET /{id}/artifacts/{artifact_id}`. Send `Authorization: Bearer <TELNY...Y>`; REST responses use `{ "data": ... }`. REST is only a transport fallback—the lifecycle and durability rules remain the same.
+REST equivalents include `POST /`, `GET /{id}`, `POST /{id}/actions/speak`, `POST /{id}/actions/stop_speaking`, `POST /{id}/actions/send_chat`, `GET /{id}/transcript`, `GET /{id}/events`, `DELETE /{id}`, `GET /{id}/recordings`, `GET /{id}/artifacts`, `POST /{id}/artifacts`, and `GET /{id}/artifacts/{artifact_id}`. Send `Authorization: Bearer ***`. REST responses use `{ "data": ... }`. REST is only a transport fallback—the lifecycle and durability rules remain the same.
 
 ## Create or Schedule Exactly Once
 
