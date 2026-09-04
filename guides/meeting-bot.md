@@ -183,7 +183,16 @@ IDs, from numbers, SIP URIs, or authorization fields inside `assistant`.
 curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
   -H "Authorization: Bearer ***" \
   -H "Content-Type: application/json" \
-  -d @assistant-session.json
+  --data-binary '{
+    "meeting_url": "https://meet.google.com/abc-defg-hij",
+    "assistant": {
+      "id": "assistant_REPLACE_ME",
+      "audio_gate": "half_duplex",
+      "dynamic_variables": {"customer_name": "Example User"},
+      "leave_on_end": false
+    },
+    "idempotency_key": "meeting-bot:assistant-operation-id"
+  }'
 ```
 
 `id` is required. `audio_gate` is `half_duplex` (default) or `full_duplex`;

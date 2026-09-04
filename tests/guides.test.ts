@@ -6,6 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,6 +107,24 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     join(SKILLS_DIR, "telnyx-meeting-bot", "SKILL.md"),
     "utf-8"
   );
+  const publicMeetingBotArtifacts = new Map([
+    ["guide", guide],
+    ["canonical skill", skill],
+    [
+      "Claude skill",
+      readFileSync(
+        join(ROOT, "providers", "claude", "plugins", "telnyx-ai", "skills", "telnyx-meeting-bot", "SKILL.md"),
+        "utf-8"
+      ),
+    ],
+    [
+      "Cursor skill",
+      readFileSync(
+        join(ROOT, "providers", "cursor", "plugin", "skills", "telnyx-meeting-bot", "SKILL.md"),
+        "utf-8"
+      ),
+    ],
+  ]);
   const repeatProtocol = readFileSync(
     join(SKILLS_DIR, "telnyx-meeting-bot", "references", "repeating-semantic-actions.md"),
     "utf-8"
@@ -114,6 +133,19 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     join(SKILLS_DIR, "telnyx-meeting-bot", "references", "artifact-selection-and-recovery.md"),
     "utf-8"
   );
+
+  it("keeps public Meeting Bot artifacts free of internal provider names", () => {
+    const forbiddenProviderHash = "2ed6b4c1ae9f8249477df9193d20e75474c152748e0f2a2cc224ead2e1c8769d";
+    for (const [name, content] of publicMeetingBotArtifacts) {
+      const wordHashes = (content.toLowerCase().match(/[a-z]+/g) ?? []).map((word) =>
+        createHash("sha256").update(word).digest("hex")
+      );
+      assert.ok(
+        !wordHashes.includes(forbiddenProviderHash),
+        `${name} contains a forbidden internal provider name`
+      );
+    }
+  });
 
   it("registers the canonical capability and guide", () => {
     assert.ok(capability, 'agent.json missing the "meeting_bot" capability');
@@ -233,6 +265,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(skill, /"create_request_without_write_only_secrets": \{\}/);
     assert.match(skill, /"avatar_api_key_secret_ref": null/);
     assert.match(skill, /retry the original create through its recorded[\s\S]*transport[\s\S]*never substitute MCP for a REST-only create/i);
+    assert.match(skill, /REST is a fallback transport for ordinary sessions when MCP is unavailable[\s\S]*required for Portal Assistant and Anam avatar creates/i);
     assert.doesNotMatch(skill, /\]\(\.\.\/\.\.\/guides\/meeting-bot\.md\)/);
     assert.match(skill, /https:\/\/github\.com\/team-telnyx\/ai\/blob\/main\/guides\/meeting-bot\.md/);
     assert.match(guide, /REST-only[\s\S]*absent from MCP `join_meeting`/);
@@ -241,6 +274,13 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(guide, /`starting`, `connected`, `failed`, `ended`/);
     assert.match(guide, /`joined_at` is attendance evidence/);
     assert.match(guide, /Gateway Rev2[\s\S]*normal Telnyx bearer key/);
+    assert.doesNotMatch(guide, /@assistant-session\.json/);
+    const assistantSection = guide.slice(guide.indexOf("### Portal Assistant REST create"));
+    const assistantBash = /```bash\n([\s\S]*?)\n```/.exec(assistantSection)?.[1];
+    assert.ok(assistantBash, "Portal Assistant section needs a Bash request");
+    const assistantSyntax = spawnSync("bash", ["-n"], { input: assistantBash, encoding: "utf8" });
+    assert.equal(assistantSyntax.status, 0, assistantSyntax.stderr);
+    assert.match(assistantBash, /--data-binary[\s\S]*"assistant"/);
     assert.doesNotMatch(JSON.stringify(assistant), /join_at|barge_in/);
 
     const avatar = jsonAfter("### Anam avatar REST create");
