@@ -230,8 +230,7 @@ jq -n \
   --arg meeting_url "https://meet.google.com/abc-defg-hij" \
   --arg avatar_id "avatar_REPLACE_ME" \
   --arg idempotency_key "meeting-bot:anam-operation-id" \
-  '{meeting_url: $meeting_url, avatar: {provider: "anam", avatar_id: $avatar_id, api_key: env.ANAM_API_KEY}, idempotency_key: $idempotency_key}' \
-| curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
+  '{meeting_url: $meeting_url, avatar: {provider: "anam", avatar_id: $avatar_id, api_key: env.ANAM_API_KEY}, idempotency_key: $idempotency_key}' | curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
   -H "Authorization: Bearer ***" \
   -H "Content-Type: application/json" \
   --data-binary @-

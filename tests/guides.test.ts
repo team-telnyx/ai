@@ -5,6 +5,7 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -241,6 +242,11 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(guide, /--data-binary @-/);
     assert.doesNotMatch(guide, /\$\{ANAM_API_KEY\}|--arg api_key/);
     assert.match(guide, /ANAM_API_KEY[\s\S]*already exported from[\s\S]*a backend secret store/i);
+    const avatarSection = guide.slice(guide.indexOf("### Anam avatar REST create"));
+    const avatarBash = /```bash\n([\s\S]*?)\n```/.exec(avatarSection)?.[1];
+    assert.ok(avatarBash, "Anam avatar section needs a Bash request");
+    const syntax = spawnSync("bash", ["-n"], { input: avatarBash, encoding: "utf8" });
+    assert.equal(syntax.status, 0, syntax.stderr);
     assert.match(skill, /Send the standard bearer-token `Authorization` header\. REST responses use/);
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);
