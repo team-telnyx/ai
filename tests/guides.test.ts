@@ -281,6 +281,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     const assistantSyntax = spawnSync("bash", ["-n"], { input: assistantBash, encoding: "utf8" });
     assert.equal(assistantSyntax.status, 0, assistantSyntax.stderr);
     assert.match(assistantBash, /--data-binary[\s\S]*"assistant"/);
+    assert.match(assistantBash, /Authorization: Bearer \$TELNYX_API_KEY/);
     assert.doesNotMatch(JSON.stringify(assistant), /join_at|barge_in/);
 
     const avatar = jsonAfter("### Anam avatar REST create");
@@ -299,6 +300,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.ok(avatarBash, "Anam avatar section needs a Bash request");
     const syntax = spawnSync("bash", ["-n"], { input: avatarBash, encoding: "utf8" });
     assert.equal(syntax.status, 0, syntax.stderr);
+    assert.match(avatarBash, /Authorization: Bearer \$TELNYX_API_KEY/);
     assert.match(skill, /Send the standard bearer-token `Authorization` header\. REST responses use/);
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);

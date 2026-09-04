@@ -181,7 +181,7 @@ IDs, from numbers, SIP URIs, or authorization fields inside `assistant`.
 
 ```bash
 curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   --data-binary '{
     "meeting_url": "https://meet.google.com/abc-defg-hij",
@@ -241,7 +241,7 @@ jq -n \
   --arg avatar_id "avatar_REPLACE_ME" \
   --arg idempotency_key "meeting-bot:anam-operation-id" \
   '{meeting_url: $meeting_url, avatar: {provider: "anam", avatar_id: $avatar_id, api_key: env.ANAM_API_KEY}, idempotency_key: $idempotency_key}' | curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
-  -H "Authorization: Bearer ***" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   --data-binary @-
 ```
