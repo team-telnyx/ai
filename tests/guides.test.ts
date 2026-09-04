@@ -241,7 +241,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(guide, /--data-binary @-/);
     assert.doesNotMatch(guide, /\$\{ANAM_API_KEY\}|--arg api_key/);
     assert.match(guide, /ANAM_API_KEY[\s\S]*already exported from[\s\S]*a backend secret store/i);
-    assert.match(skill, /Send `Authorization: Bearer \*\*\*`\. REST responses use/);
+    assert.match(skill, /Send the standard bearer-token `Authorization` header\. REST responses use/);
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);
     assert.match(guide, /speak_on_enter[\s\S]*active[\s\S]*avatar[\s\S]*connected/i);
