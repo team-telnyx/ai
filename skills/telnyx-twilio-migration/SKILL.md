@@ -10,7 +10,7 @@ user_invocable: true
 metadata:
   author: telnyx
   product: migration
-  compatibility: "Requires bash 4+, jq, curl, python3. macOS ships bash 3.2 — scripts auto-upgrade via Homebrew bash if available (brew install bash). python3 is mandatory: the scanners and the correctness linter exit 2 without it."
+  compatibility: "Requires bash 4+, Python 3.10+, jq, curl. macOS ships bash 3.2 — scripts auto-upgrade via Homebrew bash if available (brew install bash)."
 ---
 
 # Twilio to Telnyx Migration
