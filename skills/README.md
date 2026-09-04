@@ -19,6 +19,7 @@ Telnyx Agent Skills follow the [Agent Skills specification](https://agentskills.
 - [Telnyx API and SDKs](#available-skills)
 - [Payments](#payments)
 - [WebRTC client SDKs](#webrtc-client-sdks)
+- [SMS Marketing Pipeline](#sms-marketing-pipeline)
 - [Twilio Migration](#twilio-migration)
 
 ## Installation Quickstart
@@ -213,6 +214,20 @@ These are platform-specific native libraries — separate from the server-side l
 Each skill covers authentication, making/receiving calls, call controls (hold, mute, transfer), push notifications, call quality metrics, and AI Agent integration.
 
 > **Note:** Building a calling app typically requires multiple skills — a server-side plugin (e.g. `telnyx-voice-python`) to create WebRTC credentials and generate login tokens, and `telnyx-webrtc-client-X` for the client-side calling UI.
+
+## SMS Marketing Pipeline
+
+A specialist agent (`sms-marketing-pipeline-developer`) that builds a production-ready SMS marketing campaign pipeline end-to-end — infrastructure setup (number purchase, messaging profile, 10DLC marketing compliance) and runtime campaign execution (list hygiene via Number Lookup, batch sending with rate limiting, delivery tracking via webhooks, automatic opt-out handling).
+
+The agent guides users through 12 interactive steps (Step 0–11) with validation gates at each step. Includes 9 documented friction points, 6-language SDK reference, compliance checklists, and an infrastructure validation script.
+
+**Agent:** Invoke with `/agent sms-marketing-pipeline-developer` in Claude Code.
+
+**Reference skill:** `telnyx-sms-marketing-pipeline` (architecture diagrams, code examples, friction log, troubleshooting, validation script)
+
+**Telnyx Services:** Messaging API · Number Lookup · Global Numbers · Messaging Profiles · 10DLC Registration · Webhooks
+
+**Estimated cost for 10,000-message campaign:** ~$107 (first campaign, ~$95 subsequent)
 
 ## Twilio Migration
 
