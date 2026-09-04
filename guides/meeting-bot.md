@@ -219,14 +219,15 @@ An Anam avatar requires `provider: "anam"`, `avatar_id`, and `api_key`:
 }
 ```
 
+The Anam API key is write-only and must not be persisted, logged, or reported. Assume `ANAM_API_KEY` is already exported from a backend secret store; pass it directly at request time, never through a JSON file:
+
 ```bash
 curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
   -H "Authorization: Bearer ***" \
   -H "Content-Type: application/json" \
-  -d @anam-avatar-session.json
+  -d "{\"meeting_url\":\"https://meet.google.com/abc-defg-hij\",\"avatar\":{\"provider\":\"anam\",\"avatar_id\":\"avatar_REPLACE_ME\",\"api_key\":\"${ANAM_API_KEY}\"},\"idempotency_key\":\"meeting-bot:anam-operation-id\"}"
 ```
 
-The Anam API key is write-only and must not be persisted, logged, or reported.
 Responses echo only `avatar.provider` and `avatar.avatar_id`, plus `avatar_state`
 (`starting`, `connected`, `degraded`, `disconnected`) and
 `avatar_state_changed_at`. A connected avatar is media readiness, not proof the

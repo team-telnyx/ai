@@ -142,7 +142,11 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(skill, /Mark the outbox item\s+`sent` only after confirmed delivery/);
     assert.match(skill, /retry pending alerts/i);
     assert.match(skill, /wait_seconds: 2/);
+    assert.match(skill, /## Worked Interpretations/);
+    assert.match(skill, /### Mention alert and final summary/);
     assert.match(skill, /### Reactive lunch answer/);
+    assert.match(skill, /### Demo: delegated attendance and TL;DR/);
+    assert.match(skill, /Anusha cannot attend → texts her agent → colleagues see her bot join/);
     assert.match(skill, /A one-shot\s+key uses only session and rule/);
     assert.match(skill, /"key": "action:<session_id>:<rule_id>"/);
     assert.doesNotMatch(skill, /"key": "action:<session_id>:<rule_id>:<first_trigger_seq>"/);
@@ -232,6 +236,9 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.deepEqual(Object.keys(avatar.avatar).sort(), ["api_key", "avatar_id", "provider"]);
     assert.match(skill, /## Anam Avatar \(REST-only\)/);
     assert.match(guide, /write-only[\s\S]*must not be persisted, logged, or reported/i);
+    assert.doesNotMatch(guide, /@anam-avatar-session\.json/);
+    assert.match(guide, /-d "[\s\S]*\$\{ANAM_API_KEY\}[\s\S]*"/);
+    assert.match(guide, /ANAM_API_KEY.*already exported from a backend secret store/i);
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);
     assert.match(guide, /speak_on_enter[\s\S]*active[\s\S]*avatar[\s\S]*connected/i);
