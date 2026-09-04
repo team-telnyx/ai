@@ -242,8 +242,7 @@ Responses echo only `avatar.provider` and `avatar.avatar_id`, plus `avatar_state
 bot entered the meeting; use `joined_at` too.
 
 Avatar creation is immediate-only: do not send `join_at`; it has no MCP,
-calendar/scheduled flow, or mid-meeting toggle. Supported Output Media platforms
-are Zoom, Google Meet, Microsoft Teams, and Webex. The avatar webpage output wins
+calendar/scheduled flow, or mid-meeting toggle. The avatar webpage output wins
 over `camera_image`; `speak` routes through the avatar page. `speak_on_enter`
 waits until the session is active and the avatar is connected. There is no prewarm
 before Recall creates the Output Media page, because that page is the Anam runtime.

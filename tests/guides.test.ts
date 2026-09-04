@@ -243,6 +243,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.doesNotMatch(guide, /\$\{ANAM_API_KEY\}|--arg api_key/);
     assert.match(guide, /ANAM_API_KEY[\s\S]*already exported from[\s\S]*a backend secret store/i);
     const avatarSection = guide.slice(guide.indexOf("### Anam avatar REST create"));
+    assert.doesNotMatch(avatarSection, /Supported Output Media platforms/);
     const avatarBash = /```bash\n([\s\S]*?)\n```/.exec(avatarSection)?.[1];
     assert.ok(avatarBash, "Anam avatar section needs a Bash request");
     const syntax = spawnSync("bash", ["-n"], { input: avatarBash, encoding: "utf8" });

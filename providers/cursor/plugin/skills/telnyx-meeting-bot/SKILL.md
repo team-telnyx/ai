@@ -401,7 +401,7 @@ Assistant sessions are immediate-only: omit `join_at` and `barge_in`; the assist
 
 Create an Anam avatar only through `POST /v2/meeting_sessions`, with `avatar.provider: "anam"`, `avatar_id`, and `api_key`; it is absent from MCP `join_meeting`. The key is write-only: never persist, log, or report it. Responses echo only provider/avatar ID and `avatar_state` (`starting|connected|degraded|disconnected`) with its change timestamp.
 
-Avatar sessions are immediate-only: no `join_at`, calendar/scheduled flow, MCP, or mid-meeting toggle. `connected` means avatar media readiness, not attendance, so also require `joined_at`. Avatar webpage output wins over `camera_image`; `speak` routes through that page, and `speak_on_enter` waits for active plus avatar connected. Do not prewarm: Recall creates the Output Media page first. See REST examples, supported platforms, and recovery guidance in [the guide](../../guides/meeting-bot.md).
+Avatar sessions are immediate-only: no `join_at`, calendar/scheduled flow, MCP, or mid-meeting toggle. `connected` means avatar media readiness, not attendance, so also require `joined_at`. Avatar webpage output wins over `camera_image`; `speak` routes through that page, and `speak_on_enter` waits for active plus avatar connected. Do not prewarm: Recall creates the Output Media page first. See REST examples and recovery guidance in [the guide](../../guides/meeting-bot.md).
 
 ## Combined Assistant + Avatar
 
