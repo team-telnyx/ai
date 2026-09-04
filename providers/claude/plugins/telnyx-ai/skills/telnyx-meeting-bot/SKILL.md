@@ -434,52 +434,52 @@ needed and use `leave_meeting(id)` (REST: `DELETE /{id}`); it leaves/cancels but
 does not erase the durable session history. Do not use destructive recording
 media deletion as a cleanup shortcut.
 
-## Worked Interpretations
+## Portal-configured Assistant (REST-only)
 
-### Mention alert and final summary
+Use `POST /v2/meeting_sessions` (not MCP `join_meeting`) with an existing,
+portal-configured Assistant `id` in the authenticated organization. Create it
+through the production endpoint with the caller's normal Telnyx bearer key; the
+service requires Gateway Rev2 authentication. Never put assistant/API secrets,
+Call Control connection IDs, from numbers, SIP URIs, or authorization fields in
+`assistant`. The allowed fields are `id`, optional `audio_gate`
+(`half_duplex` default or `full_duplex`), optional string-map `dynamic_variables`,
+and optional `leave_on_end` (default `false`).
 
-For: “Join this meeting and tell me what they discussed when it ends; if they
-mention my name, let me know.”
+Assistant sessions are immediate-only: omit `join_at` and `barge_in`; the
+assistant handles interruption natively. A map has at most 63 customer entries;
+keys are 1–128 characters, values are strings up to 2048 characters, and reserved
+infrastructure keys are rejected. Poll ordinary status and `joined_at`, plus
+`assistant_state` (`starting|connected|failed|ended`) and its change timestamp.
+`connected` is readiness, while non-null `joined_at` proves attendance.
+`full_duplex` continuously listens through per-participant audio and costs more
+Recall media; use safe-default `half_duplex` unless native continuous barge-in is
+required. See the REST body and polling flow in [the guide](../../guides/meeting-bot.md).
 
-- If the message already includes a meeting URL and the requester identity/name
-  is known from authorized conversation/profile context, join immediately with
-  `summarize_on_end: true`, the stable idempotency key, no voice/chat actions,
-  and that name plus known variants as terms.
-- If the link is missing, ask only for the link. If it is unclear whether the
-  meeting is now or later, ask only for join timing. If “my name” is not known,
-  ask for the name/phrases and optional variants.
-- Tell the requester if host admission is required; send mention alerts in this
-  conversation; after completion, send the bounded, evidence-based report.
+## Anam Avatar (REST-only)
+
+Create an Anam avatar only through `POST /v2/meeting_sessions`, with
+`avatar.provider: "anam"`, `avatar_id`, and `api_key`; it is absent from MCP
+`join_meeting`. The key is write-only: never persist, log, or report it. Responses
+echo only provider/avatar ID and expose `avatar_state`
+(`starting|connected|degraded|disconnected`) with its change timestamp.
+
+Avatar sessions are immediate-only: no `join_at`, calendar/scheduled flow, MCP,
+or mid-meeting toggle. `connected` means avatar media readiness, not attendance,
+so also require `joined_at`. Avatar webpage output wins over `camera_image`;
+`speak` routes through that page, and `speak_on_enter` waits for active plus avatar
+connected. Do not prewarm: Recall creates the Output Media page first. See the
+REST examples, supported platforms, and recovery guidance in [the guide](../../guides/meeting-bot.md).
+
+## Combined Assistant + Avatar
+
+One immediate REST create can include both objects: the Assistant supplies the
+conversation and voice while the avatar lip-syncs it. Monitor assistant readiness,
+avatar readiness, and `joined_at` separately; do not add `barge_in` or `join_at`.
 
 ### Reactive lunch answer
 
-For: “Join the meeting and as soon as someone asks what we should have for
-lunch, please use the speak request and say I want pizza.”
-
-- Treat this as explicit authorization for one in-meeting `speak`; do not ask
-  again when the condition occurs.
-- Join immediately with `summarize_on_end: true`, stable idempotency, no entrance
-  speech/chat, and `barge_in: true`.
-- Persist a one-shot semantic rule and use `wait_seconds: 2`. Evaluate each new
-  final segment plus a short trailing context window; require a clear lunch-choice
-  question rather than the isolated word “lunch.”
-- Atomically claim the first match and call
-  `speak(id, text: "I want pizza")` with `interrupt` omitted. Mark accepted only
-  from a non-error MCP result or REST 202; do not repeat an ambiguous dispatch.
-
-### Demo: delegated attendance and TL;DR
-
-For the on-screen request: “I can't join this meeting: `<meeting URL>`. Join as
-Anusha's bot, tell me when you're in, and send me a TL;DR when it ends.”
-
-Join now as `Anusha's bot` with stable idempotency, `summarize_on_end: true`, and
-no unrequested speech/chat. Post joining/admission updates to Anusha's current
-conversation, then “Anusha's bot joined” only when `joined_at` is non-null. A
-summary-only demo may use a `10`–`20` second wait; use `2` seconds if it promises
-live reactions. At terminal status, drain final transcript and send the automatic
-`summary` with attendance, completeness, and provenance. The visible story is:
-Anusha cannot attend → texts her agent → colleagues see her bot join → her agent
-confirms attendance → she receives the TL;DR.
+For an explicitly authorized lunch-answer trigger, persist one semantic `speak` rule, use `wait_seconds: 2`, claim its first clear finalized match and dispatch once; ordinary bots
+use `barge_in: true`, but an Assistant flow never does.
 
 ## Source Authority and References
 

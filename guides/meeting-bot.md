@@ -150,6 +150,122 @@ error statuses.
 | List artifacts | `GET /v2/meeting_sessions/{id}/artifacts` |
 | Retrieve an artifact | `GET /v2/meeting_sessions/{id}/artifacts/{artifact_id}` |
 
+## REST-only Portal Assistants and Anam Avatars
+
+Both capabilities are REST-only and absent from MCP `join_meeting`. Use the same
+persisted `idempotency_key` for an uncertain create retry; retrieve the resulting
+session with `GET /v2/meeting_sessions/{id}` rather than attempting a second join.
+They are creation-time choices, not scheduled/calendar features or mid-meeting
+toggles.
+
+### Portal Assistant REST create
+
+Use an existing Assistant ID already configured in the authenticated Telnyx
+organization. Production Assistant creation requires Gateway Rev2 authentication:
+call this production REST endpoint with the caller's normal Telnyx bearer key. Do
+not create an Assistant here or put assistant/API secrets, Call Control connection
+IDs, from numbers, SIP URIs, or authorization fields inside `assistant`.
+
+```json
+{
+  "meeting_url": "https://meet.google.com/abc-defg-hij",
+  "assistant": {
+    "id": "assistant_REPLACE_ME",
+    "audio_gate": "half_duplex",
+    "dynamic_variables": {"customer_name": "Example User"},
+    "leave_on_end": false
+  },
+  "idempotency_key": "meeting-bot:assistant-operation-id"
+}
+```
+
+```bash
+curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
+  -H "Authorization: Bearer ***" \
+  -H "Content-Type: application/json" \
+  -d @assistant-session.json
+```
+
+`id` is required. `audio_gate` is `half_duplex` (default) or `full_duplex`;
+`leave_on_end` is optional and defaults to `false`. `dynamic_variables` is an
+optional string map: the current service cap is 63 customer entries, keys are
+1–128 characters, values are at most 2048 characters, and reserved infrastructure
+keys are rejected. The body is strict, so do not add unrelated connection,
+telephone, SIP, secret, or authorization data.
+
+Assistant sessions are immediate-only: do not send `join_at` or `barge_in`.
+The Assistant handles interruption itself. Poll ordinary `status` and `joined_at`
+alongside `assistant_state` (`starting`, `connected`, `failed`, `ended`) and
+`assistant_state_changed_at`. `connected` means its conversation transport is
+ready; `joined_at` is attendance evidence after the meeting host admits the bot.
+
+Use default `half_duplex` unless continuous native barge-in is required.
+`full_duplex` continuously listens using per-participant audio (excluding the
+bot's own stream) and has higher Recall media cost; it is not a free improvement.
+
+### Anam avatar REST create
+
+An Anam avatar requires `provider: "anam"`, `avatar_id`, and `api_key`:
+
+```json
+{
+  "meeting_url": "https://meet.google.com/abc-defg-hij",
+  "avatar": {
+    "provider": "anam",
+    "avatar_id": "avatar_REPLACE_ME",
+    "api_key": "***"
+  },
+  "idempotency_key": "meeting-bot:anam-operation-id"
+}
+```
+
+```bash
+curl -X POST "https://api.telnyx.com/v2/meeting_sessions" \
+  -H "Authorization: Bearer ***" \
+  -H "Content-Type: application/json" \
+  -d @anam-avatar-session.json
+```
+
+The Anam API key is write-only and must not be persisted, logged, or reported.
+Responses echo only `avatar.provider` and `avatar.avatar_id`, plus `avatar_state`
+(`starting`, `connected`, `degraded`, `disconnected`) and
+`avatar_state_changed_at`. A connected avatar is media readiness, not proof the
+bot entered the meeting; use `joined_at` too.
+
+Avatar creation is immediate-only: do not send `join_at`; it has no MCP,
+calendar/scheduled flow, or mid-meeting toggle. Supported Output Media platforms
+are Zoom, Google Meet, Microsoft Teams, and Webex. The avatar webpage output wins
+over `camera_image`; `speak` routes through the avatar page. `speak_on_enter`
+waits until the session is active and the avatar is connected. There is no prewarm
+before Recall creates the Output Media page, because that page is the Anam runtime.
+
+### Combined REST create
+
+Put both objects in one immediate REST create: the Assistant provides the
+conversation and voice; the avatar lip-syncs its speech.
+
+```json
+{
+  "meeting_url": "https://meet.google.com/abc-defg-hij",
+  "assistant": {
+    "id": "assistant_REPLACE_ME",
+    "audio_gate": "half_duplex",
+    "dynamic_variables": {"customer_name": "Example User"},
+    "leave_on_end": false
+  },
+  "avatar": {
+    "provider": "anam",
+    "avatar_id": "avatar_REPLACE_ME",
+    "api_key": "***"
+  },
+  "idempotency_key": "meeting-bot:assistant-avatar-operation-id"
+}
+```
+
+Monitor both readiness axes (`assistant_state` and `avatar_state`) and `joined_at`.
+Do not add `barge_in` or `join_at`: this combined flow is immediate-only and the
+Assistant owns interruption.
+
 ### Implemented artifact types
 
 The source defines exactly these artifact types:

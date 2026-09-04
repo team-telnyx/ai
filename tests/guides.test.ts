@@ -200,6 +200,50 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(artifactRecovery, /Recovery from either `dispatching` or `outcome_unknown`\s+must persist an unreconciled same-type unknown-create marker and\s+re-list\/reconcile only/);
     assert.match(artifactRecovery, /Never collapse `pre_send_failed` and `outcome_unknown`/);
   });
+
+  it("documents REST-only assistant and Anam avatar contracts", () => {
+    const jsonAfter = (heading: string) => {
+      const start = guide.indexOf(heading);
+      assert.notEqual(start, -1, `guide missing ${heading}`);
+      const match = /```json\n([\s\S]*?)\n```/.exec(guide.slice(start));
+      assert.ok(match, `${heading} needs a JSON body`);
+      return JSON.parse(match[1]!);
+    };
+
+    const assistant = jsonAfter("### Portal Assistant REST create");
+    assert.deepEqual(Object.keys(assistant).sort(), ["assistant", "idempotency_key", "meeting_url"]);
+    assert.deepEqual(Object.keys(assistant.assistant).sort(), [
+      "audio_gate",
+      "dynamic_variables",
+      "id",
+      "leave_on_end",
+    ]);
+    assert.match(skill, /## Portal-configured Assistant \(REST-only\)/);
+    assert.match(guide, /REST-only[\s\S]*absent from MCP `join_meeting`/);
+    assert.match(guide, /immediate-only[\s\S]*`join_at`[\s\S]*`barge_in`/);
+    assert.match(guide, /63 customer entries[\s\S]*1–128[\s\S]*2048[\s\S]*reserved/i);
+    assert.match(guide, /`starting`, `connected`, `failed`, `ended`/);
+    assert.match(guide, /`joined_at` is attendance evidence/);
+    assert.match(guide, /Gateway Rev2[\s\S]*normal Telnyx bearer key/);
+    assert.doesNotMatch(JSON.stringify(assistant), /join_at|barge_in/);
+
+    const avatar = jsonAfter("### Anam avatar REST create");
+    assert.deepEqual(Object.keys(avatar).sort(), ["avatar", "idempotency_key", "meeting_url"]);
+    assert.deepEqual(Object.keys(avatar.avatar).sort(), ["api_key", "avatar_id", "provider"]);
+    assert.match(skill, /## Anam Avatar \(REST-only\)/);
+    assert.match(guide, /write-only[\s\S]*must not be persisted, logged, or reported/i);
+    assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
+    assert.match(guide, /camera_image/);
+    assert.match(guide, /speak_on_enter[\s\S]*active[\s\S]*avatar[\s\S]*connected/i);
+    assert.match(guide, /no prewarm[\s\S]*Output Media page/i);
+    assert.doesNotMatch(JSON.stringify(avatar), /join_at/);
+
+    const combined = jsonAfter("### Combined REST create");
+    assert.deepEqual(Object.keys(combined).sort(), ["assistant", "avatar", "idempotency_key", "meeting_url"]);
+    assert.match(guide, /Assistant provides the\s+conversation and voice;\s+the avatar lip-syncs its speech/i);
+    assert.match(guide, /both readiness axes[\s\S]*`joined_at`/i);
+    assert.doesNotMatch(JSON.stringify(combined), /join_at|barge_in/);
+  });
 });
 
 describe("guide ↔ agent.json parity", () => {
