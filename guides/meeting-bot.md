@@ -201,7 +201,8 @@ ready; `joined_at` is attendance evidence after the meeting host admits the bot.
 
 Use default `half_duplex` unless continuous native barge-in is required.
 `full_duplex` continuously listens using per-participant audio (excluding the
-bot's own stream) and has higher Recall media cost; it is not a free improvement.
+bot's own stream) and has higher meeting-media usage and cost; it is not a free
+improvement.
 
 ### Anam avatar REST create
 
@@ -244,8 +245,9 @@ bot entered the meeting; use `joined_at` too.
 Avatar creation is immediate-only: do not send `join_at`; it has no MCP,
 calendar/scheduled flow, or mid-meeting toggle. The avatar webpage output wins
 over `camera_image`; `speak` routes through the avatar page. `speak_on_enter`
-waits until the session is active and the avatar is connected. There is no prewarm
-before Recall creates the Output Media page, because that page is the Anam runtime.
+waits until the session is active and the avatar is connected. There is no
+supported prewarm before the meeting media layer creates the Output Media page;
+that page hosts the avatar runtime.
 
 ### Combined REST create
 

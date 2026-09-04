@@ -224,6 +224,17 @@ describe("Meeting Bot discovery and durable alert contract", () => {
       "leave_on_end",
     ]);
     assert.match(skill, /## Portal-configured Assistant \(REST-only\)/);
+    assert.match(skill, /higher meeting-media usage and cost/);
+    assert.match(guide, /higher meeting-media usage and cost/);
+    assert.match(skill, /meeting media layer creates the Output Media page/);
+    assert.match(guide, /meeting media layer creates the Output Media page/);
+    assert.match(skill, /choose its transport[\s\S]*Ordinary sessions use MCP `join_meeting`[\s\S]*Portal Assistant or Anam avatar session uses REST/i);
+    assert.match(skill, /"create_transport": "mcp-or-rest"/);
+    assert.match(skill, /"create_request_without_write_only_secrets": \{\}/);
+    assert.match(skill, /"avatar_api_key_secret_ref": null/);
+    assert.match(skill, /retry the original create through its recorded[\s\S]*transport[\s\S]*never substitute MCP for a REST-only create/i);
+    assert.doesNotMatch(skill, /\]\(\.\.\/\.\.\/guides\/meeting-bot\.md\)/);
+    assert.match(skill, /https:\/\/github\.com\/team-telnyx\/ai\/blob\/main\/guides\/meeting-bot\.md/);
     assert.match(guide, /REST-only[\s\S]*absent from MCP `join_meeting`/);
     assert.match(guide, /immediate-only[\s\S]*`join_at`[\s\S]*`barge_in`/);
     assert.match(guide, /63 customer entries[\s\S]*1–128[\s\S]*2048[\s\S]*reserved/i);
@@ -252,7 +263,7 @@ describe("Meeting Bot discovery and durable alert contract", () => {
     assert.match(guide, /`starting`, `connected`, `degraded`, `disconnected`/);
     assert.match(guide, /camera_image/);
     assert.match(guide, /speak_on_enter[\s\S]*active[\s\S]*avatar[\s\S]*connected/i);
-    assert.match(guide, /no prewarm[\s\S]*Output Media page/i);
+    assert.match(guide, /no\s+(?:supported\s+)?prewarm[\s\S]*Output Media page/i);
     assert.doesNotMatch(JSON.stringify(avatar), /join_at/);
 
     const combined = jsonAfter("### Combined REST create");

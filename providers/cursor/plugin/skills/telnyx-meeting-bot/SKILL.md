@@ -25,7 +25,7 @@ in-meeting changes unless the requester explicitly asks for that.
 ## Quick Workflow
 
 1. Resolve only missing essentials: meeting URL, join now versus a scheduled time, desired live/final outputs, and trigger/action rules. Reuse authorized details; do not ask again.
-2. Persist an operation record **before** creating the session. Generate and retain one stable `idempotency_key`; call `join_meeting` with `summarize_on_end: true`, no `speak_on_enter` or `chat_on_enter`. For an explicit later speech rule, set `barge_in: true` so human speech can stop bot output.
+2. Persist an operation record **before** creating the session and choose its transport. Ordinary sessions use MCP `join_meeting`. Any Portal Assistant or Anam avatar session uses REST `POST /v2/meeting_sessions` with the requested object(s). Persist one stable `idempotency_key`, the transport, and the exact logical create request; store only a secret reference for a write-only Anam key. REST-only sessions are immediate, so omit `join_at`; Assistant sessions also omit `barge_in`. For an ordinary session with an authorized later speech rule, set `barge_in: true` so human speech can stop bot output.
 3. Poll `get_session`, `get_transcript`, and, when available, `get_events`. Select `wait_seconds` from the request—about `2` for “as soon as,” reactive speech, or urgent mentions—and persist cursors, seen segments, outboxes, claims, and IDs for recovery.
 4. On each new final segment, evaluate requested literal or semantic rules; deliver mention notifications through the durable outbox, and atomically claim and execute each authorized `speak`/`send_chat` action at most once.
 5. On a terminal session, drain transcript pages, wait a bounded time for `transcript.completed`, obtain requested implemented artifact types without duplicate creation, then deliver a Markdown report.
@@ -64,7 +64,7 @@ REST equivalents include `POST /`, `GET /{id}`, `POST /{id}/actions/speak`, `POS
 
 ## Create or Schedule Exactly Once
 
-Before the first `join_meeting`, checkpoint a durable operation record outside
+Before the first session create, checkpoint a durable operation record outside
 transient chat memory whenever the host supports files, a task store, or durable
 workflow state. Store at least:
 
@@ -73,6 +73,9 @@ workflow state. Store at least:
   "operation_id": "host-stable-id",
   "meeting_url": "redacted-or-secret-reference",
   "idempotency_key": "meeting-bot:<host-stable-id>",
+  "create_transport": "mcp-or-rest",
+  "create_request_without_write_only_secrets": {},
+  "avatar_api_key_secret_ref": null,
   "session_id": null,
   "poll_wait_seconds": 2,
   "live_rules": [],
@@ -92,8 +95,8 @@ workflow state. Store at least:
 }
 ```
 
-Use a UUID or a host-durable operation ID, not a new timestamp on retry. Then
-call `join_meeting` with the smallest safe argument set:
+Use a UUID or host-durable operation ID, not a new timestamp on retry. For an
+ordinary session, call MCP `join_meeting` with the smallest safe argument set:
 
 ```json
 {
@@ -107,12 +110,17 @@ call `join_meeting` with the smallest safe argument set:
 Omit `join_at` for an immediate join. Do not add greeting/chat/action arguments.
 If the request contains an authorized later `speak` rule, include
 `"barge_in": true`; this lets human speech stop bot output and does not itself
-make the bot speak. Persist the returned `id` as `session_id` immediately.
-If the create request has an
-uncertain transport outcome, retry **only** with the same persisted
-`idempotency_key`; never issue a second key, which could place a second bot in
-the meeting. If the host cannot persist state, state that duplicate-prevention
-across a restart cannot be guaranteed and avoid an unbounded retry.
+make the bot speak.
+
+For a Portal Assistant, Anam avatar, or combined session, use REST instead and
+persist the complete sanitized body from the sections below. Omit `join_at`; when
+an Assistant is present, omit `barge_in`. Persist the returned `id` as
+`session_id` immediately. After an uncertain create outcome, retry **only**
+through the original transport with the same logical request and
+`idempotency_key`; re-resolve an Anam key from its secret reference at dispatch
+instead of persisting the value. Never issue a second key, which could place a
+second bot in the meeting. If durable state is unavailable, disclose that
+duplicate prevention across restart is not guaranteed and avoid unbounded retry.
 
 ## Live Session and Transcript Loop
 
@@ -371,7 +379,7 @@ that are absent from the session, events, or collected finalized transcript.
 
 On restart, load the durable operation record before doing anything. If it has a
 `session_id`, resume `get_session`, event/transcript drains, and summary polling
-from persisted cursors and outbox state—never call `join_meeting` again. Retry
+from persisted cursors and outbox state—never create another session. Retry
 pending mention alerts with their original delivery IDs and leave confirmed
 `sent` items alone. A recovered `claimed` action may attempt the dispatch CAS. Before
 evaluating triggers, atomically convert every recovered
@@ -381,8 +389,10 @@ repeat actions marked `accepted` or `outcome_unknown`. Reconcile event history
 where useful, but a missing event is not proof the side effect did not happen. Resume each
 artifact request from its persisted ID/deadline and never repeat an ambiguous
 create. If the record has an idempotency key but no saved session ID because
-creation was interrupted, retry the original `join_meeting` arguments with that
-same key only after checking any available response/log receipt. Persist every
+creation was interrupted, retry the original create through its recorded
+transport with the same logical request and key only after checking any available
+response/log receipt. Re-resolve a write-only Anam key from its secret reference;
+never substitute MCP for a REST-only create. Persist every
 state transition, alert/action state, cursor, terminal observation, and artifact
 ID before relying on it.
 
@@ -395,17 +405,17 @@ media deletion as a cleanup shortcut.
 
 Use `POST /v2/meeting_sessions` (not MCP `join_meeting`) with an existing portal-configured Assistant `id` in the authenticated organization. Create it with the caller's normal Telnyx bearer key; production requires Gateway Rev2 authentication. Never put Assistant/API secrets, Call Control connection IDs, from numbers, SIP URIs, or authorization fields in `assistant`. Allowed fields are `id`, optional `audio_gate` (`half_duplex` default or `full_duplex`), optional string-map `dynamic_variables`, and optional `leave_on_end` (default `false`).
 
-Assistant sessions are immediate-only: omit `join_at` and `barge_in`; the assistant handles interruption natively. A map has at most 63 customer entries; keys are 1–128 characters, values are strings up to 2048 characters, and reserved infrastructure keys are rejected. Poll ordinary status and `joined_at`, plus `assistant_state` (`starting|connected|failed|ended`) and its change timestamp. `connected` is readiness; non-null `joined_at` proves attendance. `full_duplex` continuously listens through per-participant audio and costs more Recall media, so use safe-default `half_duplex` unless native continuous barge-in is required. See the REST body and polling flow in [the guide](../../guides/meeting-bot.md).
+Assistant sessions are immediate-only: omit `join_at` and `barge_in`; the assistant handles interruption natively. A map has at most 63 customer entries; keys are 1–128 characters, values are strings up to 2048 characters, and reserved infrastructure keys are rejected. Poll ordinary status and `joined_at`, plus `assistant_state` (`starting|connected|failed|ended`) and its change timestamp. `connected` is readiness; non-null `joined_at` proves attendance. `full_duplex` continuously listens through per-participant audio and has higher meeting-media usage and cost, so use safe-default `half_duplex` unless native continuous barge-in is required. See the REST body and polling flow in [the guide](https://github.com/team-telnyx/ai/blob/main/guides/meeting-bot.md).
 
 ## Anam Avatar (REST-only)
 
 Create an Anam avatar only through `POST /v2/meeting_sessions`, with `avatar.provider: "anam"`, `avatar_id`, and `api_key`; it is absent from MCP `join_meeting`. The key is write-only: never persist, log, or report it. Responses echo only provider/avatar ID and `avatar_state` (`starting|connected|degraded|disconnected`) with its change timestamp.
 
-Avatar sessions are immediate-only: no `join_at`, calendar/scheduled flow, MCP, or mid-meeting toggle. `connected` means avatar media readiness, not attendance, so also require `joined_at`. Avatar webpage output wins over `camera_image`; `speak` routes through that page, and `speak_on_enter` waits for active plus avatar connected. Do not prewarm: Recall creates the Output Media page first. See REST examples and recovery guidance in [the guide](../../guides/meeting-bot.md).
+Avatar sessions are immediate-only: no `join_at`, calendar/scheduled flow, MCP, or mid-meeting toggle. `connected` means avatar media readiness, not attendance, so also require `joined_at`. Avatar webpage output wins over `camera_image`; `speak` routes through that page, and `speak_on_enter` waits for active plus avatar connected. Do not prewarm: the meeting media layer creates the Output Media page as part of session startup. See REST examples and recovery guidance in [the guide](https://github.com/team-telnyx/ai/blob/main/guides/meeting-bot.md).
 
 ## Combined Assistant + Avatar
 
-One immediate REST create can include both objects: the Assistant supplies conversation and voice while the avatar lip-syncs it. Monitor assistant readiness, avatar readiness, and `joined_at` separately; do not add `barge_in` or `join_at`. See the complete create body in [the guide](../../guides/meeting-bot.md).
+One immediate REST create can include both objects: the Assistant supplies conversation and voice while the avatar lip-syncs it. Monitor assistant readiness, avatar readiness, and `joined_at` separately; do not add `barge_in` or `join_at`. See the complete create body in [the guide](https://github.com/team-telnyx/ai/blob/main/guides/meeting-bot.md).
 
 ## Worked Interpretations
 
