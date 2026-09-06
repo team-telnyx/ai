@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.91.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.91.0")
 ```
 
 ## Setup
