@@ -240,32 +240,48 @@ echo -e "${BOLD}Twilio SDKs Detected (to be replaced)${NC}"
 
 TWILIO_FOUND=false
 
-# Python
-if python3 -c "import twilio" 2>/dev/null; then
+# Python. With a project root, report project manifests only; a globally
+# installed package belongs to the host and says nothing about this migration.
+if [ -n "$PROJECT_ROOT" ] && find "$PROJECT_ROOT" -maxdepth 3 \
+  \( -name requirements.txt -o -name pyproject.toml -o -name setup.py -o -name Pipfile \) \
+  -exec grep -liE '(^|[^A-Za-z0-9_-])twilio([^A-Za-z0-9_-]|$)' {} + \
+  2>/dev/null | head -1 | grep -q .; then
+  check_info "Python: twilio (declared in project)"
+  TWILIO_FOUND=true
+elif [ -z "$PROJECT_ROOT" ] && python3 -c "import twilio" 2>/dev/null; then
   TWILIO_VER=$(python3 -c "import twilio; print(twilio.__version__)" 2>/dev/null || echo "unknown")
   check_info "Python: twilio $TWILIO_VER"
   TWILIO_FOUND=true
-elif python -c "import twilio" 2>/dev/null; then
+elif [ -z "$PROJECT_ROOT" ] && python -c "import twilio" 2>/dev/null; then
   check_info "Python: twilio (version unknown)"
   TWILIO_FOUND=true
 fi
 
 # Node.js
-if [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/node_modules/twilio" ]; then
+if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/package.json" ] && \
+  grep -qE '"twilio"[[:space:]]*:' "$PROJECT_ROOT/package.json" 2>/dev/null; then
+  TWILIO_NODE_VER=$(sed -nE 's/.*"twilio"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$PROJECT_ROOT/package.json" | head -1)
+  check_info "Node.js: twilio ${TWILIO_NODE_VER:-version unknown} (declared in project)"
+  TWILIO_FOUND=true
+elif [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/node_modules/twilio" ]; then
   TWILIO_NODE_VER=$(node -e "console.log(require('$PROJECT_ROOT/node_modules/twilio/package.json').version)" 2>/dev/null || echo "unknown")
   check_info "Node.js: twilio $TWILIO_NODE_VER"
   TWILIO_FOUND=true
-elif [ -d "node_modules/twilio" ] 2>/dev/null; then
+elif [ -z "$PROJECT_ROOT" ] && [ -d "node_modules/twilio" ] 2>/dev/null; then
   TWILIO_NODE_VER=$(node -e "console.log(require('twilio/package.json').version)" 2>/dev/null || echo "unknown")
   check_info "Node.js: twilio $TWILIO_NODE_VER"
   TWILIO_FOUND=true
-elif npm list twilio 2>/dev/null | grep -q twilio; then
+elif [ -z "$PROJECT_ROOT" ] && npm list twilio 2>/dev/null | grep -q twilio; then
   check_info "Node.js: twilio (installed globally or in project)"
   TWILIO_FOUND=true
 fi
 
 # Ruby
-if gem list twilio-ruby 2>/dev/null | grep -q twilio-ruby; then
+if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/Gemfile" ] && \
+  grep -qE "gem[[:space:]]+['\"]twilio(-ruby)?['\"]" "$PROJECT_ROOT/Gemfile" 2>/dev/null; then
+  check_info "Ruby: twilio-ruby (declared in project Gemfile)"
+  TWILIO_FOUND=true
+elif [ -z "$PROJECT_ROOT" ] && gem list twilio-ruby 2>/dev/null | grep -q twilio-ruby; then
   TWILIO_RUBY_VER=$(gem list twilio-ruby 2>/dev/null | grep -o '([^)]*)')
   check_info "Ruby: twilio-ruby $TWILIO_RUBY_VER"
   TWILIO_FOUND=true
@@ -277,13 +293,17 @@ if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/go.mod" ]; then
     check_info "Go: twilio-go (found in project go.mod)"
     TWILIO_FOUND=true
   fi
-elif go list -m github.com/twilio/twilio-go 2>/dev/null; then
+elif [ -z "$PROJECT_ROOT" ] && go list -m github.com/twilio/twilio-go 2>/dev/null; then
   check_info "Go: twilio-go (found in go.mod)"
   TWILIO_FOUND=true
 fi
 
-# Java (check for jar in common locations)
+# Java/Kotlin manifests and local jars.
 SEARCH_DIR="${PROJECT_ROOT:-.}"
+if [ -n "$PROJECT_ROOT" ] && python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/inspect-sdk-dependencies.py" twilio-jvm-declared "$PROJECT_ROOT"; then
+  check_info "Java/Kotlin: Twilio SDK (declared in project)"
+  TWILIO_FOUND=true
+fi
 if find "$SEARCH_DIR" -name "twilio-*.jar" -maxdepth 3 2>/dev/null | grep -q twilio; then
   check_info "Java: twilio jar found in project"
   TWILIO_FOUND=true
@@ -291,7 +311,7 @@ fi
 
 # PHP
 if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/composer.json" ]; then
-  if grep -q "twilio" "$PROJECT_ROOT/composer.json" 2>/dev/null; then
+  if grep -qE '"twilio/sdk"[[:space:]]*:' "$PROJECT_ROOT/composer.json" 2>/dev/null; then
     check_info "PHP: twilio/sdk found in composer.json"
     TWILIO_FOUND=true
   fi
@@ -315,29 +335,50 @@ echo -e "${BOLD}Telnyx SDKs Installed${NC}"
 
 TELNYX_FOUND=false
 
+# Composer declarations belong in require/require-dev, not metadata or scripts.
+if [ -n "$PROJECT_ROOT" ] && python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/inspect-sdk-dependencies.py" composer "$PROJECT_ROOT"; then
+  check_pass "PHP: telnyx/telnyx-php (declared in project)"
+  TELNYX_FOUND=true
+fi
+
 # Python
-if python3 -c "import telnyx" 2>/dev/null; then
+if [ -n "$PROJECT_ROOT" ] && find "$PROJECT_ROOT" -maxdepth 3 \
+  \( -name requirements.txt -o -name pyproject.toml -o -name setup.py -o -name Pipfile \) \
+  -exec grep -liE '(^|[^A-Za-z0-9_-])telnyx([^A-Za-z0-9_-]|$)' {} + \
+  2>/dev/null | head -1 | grep -q .; then
+  check_pass "Python: telnyx (declared in project)"
+  TELNYX_FOUND=true
+elif [ -z "$PROJECT_ROOT" ] && python3 -c "import telnyx" 2>/dev/null; then
   TELNYX_PY_VER=$(python3 -c "import telnyx; print(telnyx.VERSION)" 2>/dev/null || echo "unknown")
   check_pass "Python: telnyx $TELNYX_PY_VER"
   TELNYX_FOUND=true
 fi
 
 # Node.js
-if [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/node_modules/telnyx" ]; then
+if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/package.json" ] && \
+  grep -qE '"telnyx"[[:space:]]*:' "$PROJECT_ROOT/package.json" 2>/dev/null; then
+  TELNYX_NODE_VER=$(sed -nE 's/.*"telnyx"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$PROJECT_ROOT/package.json" | head -1)
+  check_pass "Node.js: telnyx ${TELNYX_NODE_VER:-version unknown} (declared in project)"
+  TELNYX_FOUND=true
+elif [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/node_modules/telnyx" ]; then
   TELNYX_NODE_VER=$(node -e "console.log(require('$PROJECT_ROOT/node_modules/telnyx/package.json').version)" 2>/dev/null || echo "unknown")
   check_pass "Node.js: telnyx $TELNYX_NODE_VER"
   TELNYX_FOUND=true
-elif [ -d "node_modules/telnyx" ] 2>/dev/null; then
+elif [ -z "$PROJECT_ROOT" ] && [ -d "node_modules/telnyx" ] 2>/dev/null; then
   TELNYX_NODE_VER=$(node -e "console.log(require('telnyx/package.json').version)" 2>/dev/null || echo "unknown")
   check_pass "Node.js: telnyx $TELNYX_NODE_VER"
   TELNYX_FOUND=true
-elif npm list telnyx 2>/dev/null | grep -q telnyx; then
+elif [ -z "$PROJECT_ROOT" ] && npm list telnyx 2>/dev/null | grep -q telnyx; then
   check_pass "Node.js: telnyx (installed)"
   TELNYX_FOUND=true
 fi
 
 # Ruby
-if gem list telnyx 2>/dev/null | grep -q "^telnyx "; then
+if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/Gemfile" ] && \
+  grep -qE "gem[[:space:]]+['\"]telnyx['\"]" "$PROJECT_ROOT/Gemfile" 2>/dev/null; then
+  check_pass "Ruby: telnyx (declared in project Gemfile)"
+  TELNYX_FOUND=true
+elif [ -z "$PROJECT_ROOT" ] && gem list telnyx 2>/dev/null | grep -q "^telnyx "; then
   TELNYX_RUBY_VER=$(gem list telnyx 2>/dev/null | grep "^telnyx " | grep -o '([^)]*)')
   check_pass "Ruby: telnyx $TELNYX_RUBY_VER"
   TELNYX_FOUND=true
@@ -349,8 +390,14 @@ if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/go.mod" ]; then
     check_pass "Go: telnyx-go (found in project go.mod)"
     TELNYX_FOUND=true
   fi
-elif go list -m github.com/telnyx/telnyx-go 2>/dev/null; then
+elif [ -z "$PROJECT_ROOT" ] && go list -m all 2>/dev/null | \
+  grep -E '^github\.com/team-telnyx/telnyx-go(/v[0-9]+)?[[:space:]]' >/dev/null; then
   check_pass "Go: telnyx-go (found in go.mod)"
+  TELNYX_FOUND=true
+fi
+
+if [ -n "$PROJECT_ROOT" ] && python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/inspect-sdk-dependencies.py" jvm-declared "$PROJECT_ROOT"; then
+  check_pass "Java/Kotlin: Telnyx SDK (declared in project)"
   TELNYX_FOUND=true
 fi
 

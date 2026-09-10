@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import json
 import os
 import re
@@ -26,6 +27,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 SCAN_VERSION = "1.0.0"
 SCANNER_NAME = "deep"
+
+_ownership_spec = importlib.util.spec_from_file_location(
+    "sdk_source_ownership", Path(__file__).with_name("sdk-source-ownership.py"))
+_ownership = importlib.util.module_from_spec(_ownership_spec)
+_ownership_spec.loader.exec_module(_ownership)
 
 # ---------------------------------------------------------------------------
 # Product mapping -- Twilio module path fragment -> product name
@@ -105,6 +111,14 @@ METHOD_PRODUCT_MAP: Dict[str, str] = {
     "CreateVerification": "verify",
     "FetchMessage": "messaging",
     "FetchCall": "voice",
+    "/Messages.json": "messaging",
+    "messaging.twilio.com": "messaging",
+    "/Calls.json": "voice",
+    "verify.twilio.com": "verify",
+    "lookups.twilio.com": "lookup",
+    "video.twilio.com": "video",
+    "fax.twilio.com": "fax",
+    "/IncomingPhoneNumbers.json": "phone-numbers",
 }
 
 # Twilio env var patterns
@@ -161,13 +175,13 @@ DEPENDENCY_FILE_NAMES = {
 }
 
 # File extensions to scan
-PY_EXTENSIONS = {".py"}
-JS_EXTENSIONS = {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}
+PY_EXTENSIONS = {".py", ".pyw"}
+JS_EXTENSIONS = {".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".mts", ".cts"}
 GO_EXTENSIONS = {".go"}
-RUBY_EXTENSIONS = {".rb"}
-JAVA_EXTENSIONS = {".java", ".kt", ".scala"}
-PHP_EXTENSIONS = {".php"}
-CSHARP_EXTENSIONS = {".cs"}
+RUBY_EXTENSIONS = {".rb", ".rake"}
+JAVA_EXTENSIONS = {".java", ".kt", ".kts", ".scala"}
+PHP_EXTENSIONS = {".php", ".phtml"}
+CSHARP_EXTENSIONS = {".cs", ".cshtml", ".razor"}
 OTHER_TEXT_EXTENSIONS = {".xml", ".yaml", ".yml"}
 
 # Directories to skip
@@ -276,8 +290,9 @@ def resolve_product(module_path: str) -> str:
 
 def infer_product_from_text(text: str) -> str:
     """Best-effort product inference from arbitrary text."""
+    lowered = text.lower()
     for pattern, product in METHOD_PRODUCT_MAP.items():
-        if pattern in text:
+        if pattern.lower() in lowered:
             return product
     return "general"
 
@@ -758,10 +773,6 @@ _RUBY_TWILIO_RE = re.compile(r"\btwilio\b", re.IGNORECASE)
 # Java / Kotlin / Scala patterns
 _JAVA_IMPORT_RE = re.compile(r"import\s+(com\.twilio\.[^\s;]+)", re.IGNORECASE)
 _JAVA_INIT_RE = re.compile(r"Twilio\.init\s*\(", re.IGNORECASE)
-_JAVA_CREATOR_RE = re.compile(
-    r"com\.twilio\.rest\.api\.v2010\.account\.(Call|Message|IncomingPhoneNumber)\.creator",
-    re.IGNORECASE,
-)
 _JAVA_TWIML_RE = re.compile(r"com\.twilio\.twiml\.(VoiceResponse|MessagingResponse)", re.IGNORECASE)
 _JAVA_ENV_RE = re.compile(r'System\.getenv\s*\(\s*"(TWILIO_\w+)"', re.IGNORECASE)
 _JAVA_WEBHOOK_RE = re.compile(r"X-Twilio-Signature|RequestValidator", re.IGNORECASE)
@@ -770,7 +781,6 @@ _JAVA_TWILIO_RE = re.compile(r"\btwilio\b", re.IGNORECASE)
 # PHP patterns
 _PHP_USE_RE = re.compile(r"use\s+Twilio\\([^\s;]+)", re.IGNORECASE)
 _PHP_CLIENT_RE = re.compile(r"new\s+Client\s*\(\s*\$\w+\s*,\s*\$\w+", re.IGNORECASE)
-_PHP_METHOD_RE = re.compile(r"\$twilio->\s*(\w+)", re.IGNORECASE)
 _PHP_ENV_RE = re.compile(r"""(?:getenv\s*\(\s*['"]|\$_ENV\[['"])(TWILIO_\w+)""", re.IGNORECASE)
 _PHP_WEBHOOK_RE = re.compile(r"RequestValidator", re.IGNORECASE)
 _PHP_TWILIO_RE = re.compile(r"\btwilio\b", re.IGNORECASE)
@@ -778,22 +788,28 @@ _PHP_TWILIO_RE = re.compile(r"\btwilio\b", re.IGNORECASE)
 # C# patterns
 _CSHARP_USING_RE = re.compile(r"using\s+(Twilio[^\s;]*)", re.IGNORECASE)
 _CSHARP_INIT_RE = re.compile(r"TwilioClient\.Init\s*\(", re.IGNORECASE)
-_CSHARP_RESOURCE_RE = re.compile(
-    r"(MessageResource|CallResource|IncomingPhoneNumberResource|AccountResource)\.(Create|Read|Update|Fetch)",
-    re.IGNORECASE,
-)
 _CSHARP_ENV_RE = re.compile(
     r'Environment\.GetEnvironmentVariable\s*\(\s*"(TWILIO_\w+)"', re.IGNORECASE
 )
 _CSHARP_TWILIO_RE = re.compile(r"\btwilio\b", re.IGNORECASE)
 
 
-def scan_go_file(filepath: Path, lines: List[str]) -> List[Detection]:
+def scan_go_file(filepath: Path, lines: List[str], go_clients: frozenset[str] = frozenset()) -> List[Detection]:
     """Regex-based scanning for Go files."""
     detections: List[Detection] = []
     detected_lines: Set[int] = set()
+    source = "\n".join(lines)
+    lexed = _ownership.lexed_source(source, ".go")
+    lines = lexed.without_comments.split("\n")
+    for line, product in _ownership.contextual_calls(source, ".go", go_clients=go_clients):
+        detections.append(Detection(
+            pattern=lines[line - 1].strip(), line=line, detection_method="regex",
+            context=get_context_lines(lines, line), confidence="high", product=product))
+        detected_lines.add(line)
 
     for i, line in enumerate(lines, start=1):
+        if i in detected_lines:
+            continue
         stripped = line.strip()
 
         # Import statements
@@ -836,9 +852,10 @@ def scan_go_file(filepath: Path, lines: List[str]) -> List[Detection]:
         stripped = line.strip()
         if stripped.startswith("//"):
             continue
-        # Check for API method calls (e.g. CreateMessage, messages.create)
+        # SDK calls were attributed above. A generic application method name
+        # alone is not ownership evidence; retain explicit Twilio hints only.
         inferred = infer_product_from_text(stripped)
-        if inferred != "general":
+        if inferred != "general" and _GO_TWILIO_RE.search(stripped):
             detections.append(
                 Detection(
                     pattern=stripped, line=i, detection_method="regex",
@@ -924,12 +941,41 @@ def scan_java_file(filepath: Path, lines: List[str]) -> List[Detection]:
     detections: List[Detection] = []
     detected_lines: Set[int] = set()
 
+    source = "\n".join(lines)
+    lexed = _ownership.lexed_source(source, filepath.suffix)
+    syntax_lines = lexed.code.split("\n")
+    lines = lexed.without_comments.split("\n")
+    scala_selectors = (_ownership.scala_import_bindings(lexed.code, {
+        "Message": "messaging", "Call": "voice",
+        "IncomingPhoneNumber": "phone-numbers"}) if filepath.suffix == ".scala" else [])
+    for line, product in _ownership.contextual_calls(source, filepath.suffix):
+        detections.append(Detection(
+            pattern=lines[line - 1].strip(), line=line, detection_method="regex",
+            context=get_context_lines(lines, line), confidence="high", product=product))
+        detected_lines.add(line)
     for i, line in enumerate(lines, start=1):
+        if i in detected_lines:
+            continue
         stripped = line.strip()
 
         # import com.twilio.*
-        m = _JAVA_IMPORT_RE.search(stripped)
+        m = _JAVA_IMPORT_RE.search(syntax_lines[i - 1])
         if m:
+            if filepath.suffix == ".scala" and re.search(
+                r"\bimport\s+(?:_root_\.)?com\.twilio\.rest\.api\.v2010\.account\.\s*\{",
+                syntax_lines[i - 1],
+            ):
+                # Selector text is not a package name: Message => _ excludes
+                # Message, while Message => Sms imports it under another name.
+                products = {product for offset, selected, _ in scala_selectors
+                            if source.count("\n", 0, offset) + 1 == i
+                            for product in selected.values() if product}
+                for product in sorted(products or {"general"}):
+                    detections.append(Detection(
+                        pattern=stripped, line=i, detection_method="regex",
+                        context=get_context_lines(lines, i), confidence="high", product=product))
+                detected_lines.add(i)
+                continue
             pkg = m.group(1).lower()
             product = "general"
             if "messaging" in pkg or "message" in pkg:
@@ -963,26 +1009,6 @@ def scan_java_file(filepath: Path, lines: List[str]) -> List[Detection]:
                 Detection(
                     pattern=stripped, line=i, detection_method="regex",
                     context=get_context_lines(lines, i), confidence="high", product="general",
-                )
-            )
-            detected_lines.add(i)
-            continue
-
-        # Creator patterns: Call.creator, Message.creator
-        m = _JAVA_CREATOR_RE.search(stripped)
-        if m:
-            resource = m.group(1).lower()
-            product = "general"
-            if resource == "call":
-                product = "voice"
-            elif resource == "message":
-                product = "messaging"
-            elif resource == "incomingphonenumber":
-                product = "phone-numbers"
-            detections.append(
-                Detection(
-                    pattern=stripped, line=i, detection_method="regex",
-                    context=get_context_lines(lines, i), confidence="high", product=product,
                 )
             )
             detected_lines.add(i)
@@ -1033,7 +1059,7 @@ def scan_java_file(filepath: Path, lines: List[str]) -> List[Detection]:
         if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
             continue
         inferred = infer_product_from_text(stripped)
-        if inferred != "general":
+        if inferred != "general" and _JAVA_TWILIO_RE.search(stripped):
             detections.append(
                 Detection(
                     pattern=stripped, line=i, detection_method="regex",
@@ -1059,11 +1085,22 @@ def scan_php_file(filepath: Path, lines: List[str]) -> List[Detection]:
     detections: List[Detection] = []
     detected_lines: Set[int] = set()
 
+    source = "\n".join(lines)
+    lexed = _ownership.lexed_source(source, filepath.suffix)
+    syntax_lines = lexed.code.split("\n")
+    lines = lexed.without_comments.split("\n")
+    for line, product in _ownership.contextual_calls(source, filepath.suffix):
+        detections.append(Detection(
+            pattern=lines[line - 1].strip(), line=line, detection_method="regex",
+            context=get_context_lines(lines, line), confidence="high", product=product))
+        detected_lines.add(line)
     for i, line in enumerate(lines, start=1):
+        if i in detected_lines:
+            continue
         stripped = line.strip()
 
         # use Twilio\* namespace imports
-        m = _PHP_USE_RE.search(stripped)
+        m = _PHP_USE_RE.search(syntax_lines[i - 1])
         if m:
             ns = m.group(1).lower()
             product = "general"
@@ -1106,30 +1143,6 @@ def scan_php_file(filepath: Path, lines: List[str]) -> List[Detection]:
             detected_lines.add(i)
             continue
 
-        # $twilio-> method calls
-        m = _PHP_METHOD_RE.search(stripped)
-        if m:
-            method = m.group(1).lower()
-            product = "general"
-            if method in ("messages", "message"):
-                product = "messaging"
-            elif method in ("calls", "call"):
-                product = "voice"
-            elif method in ("verify", "verification"):
-                product = "verify"
-            elif method in ("video",):
-                product = "video"
-            elif method in ("lookups", "lookup"):
-                product = "lookup"
-            detections.append(
-                Detection(
-                    pattern=stripped, line=i, detection_method="regex",
-                    context=get_context_lines(lines, i), confidence="high", product=product,
-                )
-            )
-            detected_lines.add(i)
-            continue
-
         # Env vars: getenv('TWILIO_*'), $_ENV['TWILIO_*']
         m = _PHP_ENV_RE.search(stripped)
         if m:
@@ -1161,7 +1174,7 @@ def scan_php_file(filepath: Path, lines: List[str]) -> List[Detection]:
         if stripped.startswith("//") or stripped.startswith("#") or stripped.startswith("/*") or stripped.startswith("*"):
             continue
         inferred = infer_product_from_text(stripped)
-        if inferred != "general":
+        if inferred != "general" and _PHP_TWILIO_RE.search(stripped):
             detections.append(
                 Detection(
                     pattern=stripped, line=i, detection_method="regex",
@@ -1182,16 +1195,27 @@ def scan_php_file(filepath: Path, lines: List[str]) -> List[Detection]:
     return detections
 
 
-def scan_csharp_file(filepath: Path, lines: List[str]) -> List[Detection]:
+def scan_csharp_file(filepath: Path, lines: List[str], global_using_code: str = "") -> List[Detection]:
     """Regex-based scanning for C# files."""
     detections: List[Detection] = []
     detected_lines: Set[int] = set()
+    source = "\n".join(lines)
+    lexed = _ownership.lexed_source(source, filepath.suffix)
+    syntax_lines = lexed.code.split("\n")
+    lines = lexed.without_comments.split("\n")
+    for line, product in _ownership.contextual_calls(source, filepath.suffix, global_using_code):
+        detections.append(Detection(
+            pattern=lines[line - 1].strip(), line=line, detection_method="regex",
+            context=get_context_lines(lines, line), confidence="high", product=product))
+        detected_lines.add(line)
 
     for i, line in enumerate(lines, start=1):
+        if i in detected_lines:
+            continue
         stripped = line.strip()
 
         # using Twilio* imports
-        m = _CSHARP_USING_RE.search(stripped)
+        m = _CSHARP_USING_RE.search(syntax_lines[i - 1])
         if m:
             ns = m.group(1).lower()
             product = "general"
@@ -1234,26 +1258,6 @@ def scan_csharp_file(filepath: Path, lines: List[str]) -> List[Detection]:
             detected_lines.add(i)
             continue
 
-        # Resource method calls: MessageResource.Create, CallResource.Create, etc.
-        m = _CSHARP_RESOURCE_RE.search(stripped)
-        if m:
-            resource = m.group(1).lower()
-            product = "general"
-            if "message" in resource:
-                product = "messaging"
-            elif "call" in resource:
-                product = "voice"
-            elif "incomingphonenumber" in resource:
-                product = "phone-numbers"
-            detections.append(
-                Detection(
-                    pattern=stripped, line=i, detection_method="regex",
-                    context=get_context_lines(lines, i), confidence="high", product=product,
-                )
-            )
-            detected_lines.add(i)
-            continue
-
         # Env vars: Environment.GetEnvironmentVariable("TWILIO_*")
         m = _CSHARP_ENV_RE.search(stripped)
         if m:
@@ -1274,7 +1278,7 @@ def scan_csharp_file(filepath: Path, lines: List[str]) -> List[Detection]:
         if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
             continue
         inferred = infer_product_from_text(stripped)
-        if inferred != "general":
+        if inferred != "general" and _CSHARP_TWILIO_RE.search(stripped):
             detections.append(
                 Detection(
                     pattern=stripped, line=i, detection_method="regex",
@@ -1326,7 +1330,9 @@ def walk_project(root: Path):
     """Yield file paths, skipping common non-source directories."""
     for dirpath, dirnames, filenames in os.walk(root):
         # Prune skip dirs in-place
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+        # Hidden source folders (for example .github/scripts) are still source.
+        # Exclude named generated/tool directories, not every dot-directory.
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for fname in filenames:
             yield Path(dirpath) / fname
 
@@ -1345,7 +1351,10 @@ def run_scan(project_root: Path) -> Dict[str, Any]:
     method_counts: Dict[str, int] = {"ast": 0, "regex": 0, "heuristic": 0}
     confidence_counts: Dict[str, int] = {"high": 0, "medium": 0, "low": 0}
 
-    for filepath in walk_project(project_root):
+    paths = list(walk_project(project_root))
+    global_usings = _ownership.CsharpGlobalUsings(project_root, paths)
+    go_clients = _ownership.GoPackageClients(paths)
+    for filepath in paths:
         ext = filepath.suffix.lower()
         name = filepath.name
 
@@ -1463,11 +1472,12 @@ def run_scan(project_root: Path) -> Dict[str, Any]:
                 text = filepath.read_text(errors="replace")
             except (OSError, PermissionError):
                 continue
-            if "twilio" not in text.lower():
+            package_clients = go_clients.for_file(filepath)
+            if "twilio" not in text.lower() and not package_clients:
                 continue
             lines = text.splitlines()
             rel = str(filepath.relative_to(project_root))
-            go_detections = scan_go_file(filepath, lines)
+            go_detections = scan_go_file(filepath, lines, package_clients)
             if go_detections:
                 fr = FileResult(rel, "go")
                 fr.detections = go_detections
@@ -1523,7 +1533,7 @@ def run_scan(project_root: Path) -> Dict[str, Any]:
             rel = str(filepath.relative_to(project_root))
             java_detections = scan_java_file(filepath, lines)
             if java_detections:
-                lang = "kotlin" if ext == ".kt" else "scala" if ext == ".scala" else "java"
+                lang = "kotlin" if ext in {".kt", ".kts"} else "scala" if ext == ".scala" else "java"
                 fr = FileResult(rel, lang)
                 fr.detections = java_detections
                 file_results.append(fr)
@@ -1586,11 +1596,12 @@ def run_scan(project_root: Path) -> Dict[str, Any]:
                 text = filepath.read_text(errors="replace")
             except (OSError, PermissionError):
                 continue
-            if "twilio" not in text.lower():
+            global_using_code = global_usings.for_file(filepath)
+            if "twilio" not in text.lower() and not global_using_code:
                 continue
             lines = text.splitlines()
             rel = str(filepath.relative_to(project_root))
-            csharp_detections = scan_csharp_file(filepath, lines)
+            csharp_detections = scan_csharp_file(filepath, lines, global_using_code)
             if csharp_detections:
                 fr = FileResult(rel, "csharp")
                 fr.detections = csharp_detections
