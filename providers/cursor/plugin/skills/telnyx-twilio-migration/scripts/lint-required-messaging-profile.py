@@ -928,6 +928,24 @@ def _interpolation_hole_closing(
     return None
 
 
+def _shell_comment_start(source: str, index: int, start: int = 0) -> bool:
+    """A shell hash starts a comment only at an unescaped word boundary."""
+    before = index - 1
+    # A continued physical line does not introduce a new shell word.
+    while before > start and source[before - 1:before + 1] == "\\\n":
+        before -= 2
+    if before < start:
+        return True
+    if not (source[before].isspace() or source[before] in ";|&()<>"):
+        return False
+    backslashes = 0
+    cursor = before - 1
+    while cursor >= start and source[cursor] == "\\":
+        backslashes += 1
+        cursor -= 1
+    return backslashes % 2 == 0
+
+
 def _shell_command_substitution_end(
     source: str, start: int, end: int
 ) -> int | None:
@@ -952,6 +970,12 @@ def _shell_command_substitution_end(
                 quote = ""
             index += 1
             continue
+        if character == "#" and _shell_comment_start(source, index, start):
+            # Parentheses in a shell comment cannot close (or nest) this
+            # substitution. Commands after its newline still execute.
+            newline = source.find("\n", index, end)
+            index = end if newline < 0 else newline + 1
+            continue
         if character in {"'", '"', "`"}:
             quote = character
         elif source.startswith("$(", index):
@@ -970,29 +994,40 @@ def _shell_command_substitution_end(
 def _shell_command_substitution_ranges(
     source: str, start: int, end: int
 ) -> list[tuple[int, int]]:
-    """Return executable command spans inside a shell double-quoted string."""
+    """Return outer substitutions in expanding shell text.
+
+    Each command is lexed in its own shell context by the caller. Descending
+    here would incorrectly execute substitutions inside that command's single
+    quotes or comments. Quotes in the surrounding string/heredoc are data.
+    """
 
     ranges: list[tuple[int, int]] = []
     cursor = start
     while cursor < end:
-        marker = source.find("$(", cursor, end)
-        if marker < 0:
-            break
-        backslashes = 0
-        before = marker - 1
-        while before >= start and source[before] == "\\":
-            backslashes += 1
-            before -= 1
-        if backslashes % 2:
-            cursor = marker + 2
+        if source[cursor] == "\\":
+            cursor += 2
             continue
-        closing = _shell_command_substitution_end(source, marker + 2, end)
+        if source.startswith("$(", cursor):
+            opening = cursor + 2
+            closing = _shell_command_substitution_end(source, opening, end)
+        elif source[cursor] == "`":
+            opening = cursor + 1
+            closing = opening
+            while closing < end:
+                if source[closing] == "\\":
+                    closing += 2
+                elif source[closing] == "`":
+                    break
+                else:
+                    closing += 1
+            if closing >= end:
+                closing = None
+        else:
+            cursor += 1
+            continue
         if closing is None:
             break
-        ranges.append((marker + 2, closing))
-        ranges.extend(
-            _shell_command_substitution_ranges(source, marker + 2, closing)
-        )
+        ranges.append((opening, closing))
         cursor = closing + 1
     return ranges
 
@@ -1804,6 +1839,8 @@ CSHARP_JSON_MUTATING_METHODS = frozenset(
 CSHARP_ONLY_FETCH_METHODS = frozenset(
     {"PutAsync", "PatchAsync", *CSHARP_JSON_MUTATING_METHOD_NAMES}
 )
+# Both net/http constructors share method/URL/body order after optional context.
+GO_REQUEST_METHOD_INDEX = {"NewRequest": 0, "NewRequestWithContext": 1}
 FETCH_CALL_RE = re.compile(
     rf"(?<![\w$])(?:fetch|request|post_form|postAsync|"
     rf"(?:{CSHARP_HTTP_CONTENT_METHOD_PATTERN})|"
@@ -1819,7 +1856,7 @@ FETCH_CALL_RE = re.compile(
     # migrated Ruby uses. Modelling only Net::HTTP.post made the whole shape
     # invisible: zero sends detected, so the fail-safe could not fire either.
     r"Net::HTTP::(?:Post|Put|Patch)\s*\.\s*new|"
-    r"NewRequest|curl_setopt_array|curl_setopt|curl_init|"
+    r"NewRequest(?:WithContext)?|curl_setopt_array|curl_setopt|curl_init|"
     r"HttpRequestMessage|RestRequest|Request|open|file_get_contents|"
     r"axios\s*\.\s*post|axios)\s*\("
 )
@@ -2294,7 +2331,7 @@ def _heredoc_langs(suffix: str) -> bool:
     return suffix in {".php", ".rb"}
 
 
-def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
+def _shell_heredoc_ranges(source: str) -> list[tuple[int, int, bool]]:
     """Return shell heredoc body ranges in one command-aware linear pass.
 
     The scan follows quotes, arithmetic contexts and backslash continuations,
@@ -2304,8 +2341,11 @@ def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
     arithmetic shifts and here-strings.
     """
 
-    ranges: list[tuple[int, int]] = []
-    pending: list[tuple[str, bool]] = []
+    ranges: list[tuple[int, int, bool]] = []
+    pending: list[tuple[str, bool, bool]] = []
+    opener_re = re.compile(
+        r'''<<(?P<tabs>-)?[ \t]*(?P<word>(?:\\.|'[^'\n]*'|"[^"\n]*"|[^\s\\'"<>;&|])+)'''
+    )
     quote = ""
     escaped = False
     parenthesis_depth = 0
@@ -2360,9 +2400,7 @@ def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
             quote = character
             index += 1
             continue
-        if character == "#" and (
-            index == command_start or source[index - 1].isspace()
-        ):
+        if character == "#" and _shell_comment_start(source, index, command_start):
             comment_start = index
             newline = source.find("\n", index + 1)
             index = len(source) if newline < 0 else newline
@@ -2370,11 +2408,17 @@ def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
         if source.startswith("<<<", index):
             index += 3
             continue
-        opener = _HEREDOC_OPENER_RE.match(source, index)
+        opener = opener_re.match(source, index)
         if opener is not None and (
             index == 0 or source[index - 1] != "<"
         ):
-            pending.append((opener.group("tag"), "<<-" in opener.group(0)))
+            word = opener.group("word")
+            try:
+                tag = shlex.split(word, posix=True)[0]
+            except (ValueError, IndexError):
+                index = opener.end()
+                continue
+            pending.append((tag, bool(opener.group("tabs")), not any(c in word for c in "'\"\\")))
             index = opener.end()
             continue
         if character != "\n":
@@ -2393,7 +2437,7 @@ def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
             continue
 
         body_start = index + 1
-        for tag, strips_tabs in pending:
+        for tag, strips_tabs, expands in pending:
             cursor = body_start
             terminator_start: int | None = None
             terminator_end: int | None = None
@@ -2411,7 +2455,7 @@ def _shell_heredoc_ranges(source: str) -> list[tuple[int, int]]:
                 cursor = line_end + 1
             body_end = len(source) if terminator_start is None else terminator_start
             if body_start < body_end:
-                ranges.append((body_start, body_end))
+                ranges.append((body_start, body_end, expands))
             if terminator_end is None:
                 body_start = len(source)
                 break
@@ -2976,9 +3020,16 @@ def _lex_source_once(
         ):
             shell_heredoc_index += 1
         if shell_heredoc_index < len(shell_heredoc_ranges):
-            body_start, body_end = shell_heredoc_ranges[shell_heredoc_index]
+            body_start, body_end, expands = shell_heredoc_ranges[shell_heredoc_index]
             if body_start <= index < body_end:
                 _blank(code, body_start, body_end)
+                if expands:
+                    for start, end in _shell_command_substitution_ranges(source, body_start, body_end):
+                        nested = lex_source(source[start:end], suffix, dialect)
+                        code[start:end] = list(nested.code)
+                        without_comments[start:end] = list(nested.without_comments)
+                        strings.extend(StringToken(start + token.start, start + token.end, token.contents)
+                                       for token in nested.strings)
                 strings.append(
                     StringToken(
                         body_start, body_end, source[body_start:body_end]
@@ -3062,7 +3113,9 @@ def _lex_source_once(
             index = end
             continue
 
-        if hash_comments and source[index] == "#":
+        if hash_comments and source[index] == "#" and (
+            suffix != ".sh" or _shell_comment_start(source, index)
+        ):
             if suffix == ".sh" and index == 0 and source.startswith("#!", index):
                 end = _line_comment_end(source, index + 2, suffix)
                 index = end
@@ -4251,6 +4304,18 @@ def rest_payload_spans(
         return assigned_named_payload_spans(
             lexed, arguments[0], call.start, suffix
         )
+    if suffix in JS_TS_SUFFIXES and callee == "request":
+        if node_core_request(lexed, call, suffix):
+            return request_write_payload_spans(lexed, call, suffix)
+        # URL/options overloads carry no positional body. In particular the
+        # optional callback must never be inspected as a request payload.
+        config = next((span for span in arguments[:2]
+                       if resolved_config_object_span(lexed, span, call.start, suffix)
+                       is not None), None)
+        if config is not None:
+            configured = named_payload_spans(lexed.code, [config], allow_js_shorthand=True)
+            configured = configured or assigned_named_payload_spans(lexed, config, call.start, suffix)
+            return configured or request_write_payload_spans(lexed, call, suffix)
     named = named_payload_spans(
         lexed.code,
         arguments,
@@ -4263,11 +4328,11 @@ def rest_payload_spans(
         if method is None or method.upper() in MUTATING_HTTP_METHODS:
             return arguments[2:3]
 
-    if callee == "NewRequest" and len(arguments) >= 3:
+    if callee in GO_REQUEST_METHOD_INDEX and len(arguments) >= GO_REQUEST_METHOD_INDEX[callee] + 3:
         # http.NewRequest(method, url, body): the body is the third argument,
         # normally wrapped (bytes.NewBuffer(json.Marshal output)).
         return [
-            resolve_wrapped_payload(lexed, arguments[2], call.start, suffix)
+            resolve_wrapped_payload(lexed, arguments[GO_REQUEST_METHOD_INDEX[callee] + 2], call.start, suffix)
         ]
     if callee.split(".")[-1] == "post_form":
         # Net::HTTP.post_form(uri, k => v, ...): every pair after the URI is
@@ -4832,6 +4897,11 @@ def call_has_profile(
             if resolver.text_presence(value).state == PRESENT:
                 return True
         return False
+    if not sdk_call and suffix in JS_TS_SUFFIXES and normalized_call_callee(lexed, call) == "request":
+        written = request_write_events(lexed, call, suffix)
+        spans = rest_payload_spans(lexed, call, suffix)
+        if node_core_request(lexed, call, suffix) or spans == [event.span for event in written if event.span]:
+            return request_writes_have_profile(lexed, call, suffix, resolver, written)
     return any(
         resolver.span_presence(start, end, call.start).state == PRESENT
         for start, end in payload_spans(
@@ -6020,21 +6090,26 @@ def _top_level_ternary(
         elif char in ")]}":
             depth -= 1
         elif char == "?" and depth == 0:
-            if code[index + 1:index + 2] in (".", "?"):
+            if code[index + 1:index + 2] in (".", "?") or code[index - 1:index] == "?":
                 continue
             question = index
             break
     if question < 0:
         return None
-    depth = 0
+    depth = nested = 0
     for index in range(question + 1, end):
         char = code[index]
         if char in "([{":
             depth += 1
         elif char in ")]}":
             depth -= 1
+        elif char == "?" and depth == 0 and code[index + 1:index + 2] not in (".", "?") and code[index - 1:index] != "?":
+            nested += 1
         elif char == ":" and depth == 0:
-            return (question + 1, index), (index + 1, end)
+            if nested:
+                nested -= 1
+            else:
+                return (question + 1, index), (index + 1, end)
     return None
 
 
@@ -6615,28 +6690,550 @@ ASSIGNED_HANDLE_RE = re.compile(
 )
 
 
-def request_write_payload_spans(
-    lexed: LexedSource, call: Call
-) -> list[tuple[int, int]]:
-    """Return <handle>.write(...) payload spans after a request(...) call."""
+def node_core_request(lexed: LexedSource, call: Call, suffix: str) -> bool:
+    """Resolve core http(s) module ownership without treating library body as core."""
+    source = SourceEndpointResolver(lexed, suffix)
+    receiver = re.search(r"([A-Za-z_$][\w$]*)\s*\.\s*$", lexed.code[:call.start])
+    name = receiver[1] if receiver else "request"
+
+    def owned(name: str, before: int, seen: frozenset[str]) -> bool:
+        if name in seen:
+            return False
+        binding = source.graph.visible_binding(name, source.scope_at(before), before)
+        assignments = [a for a in source.root_assignments if a.start() < before and a[1] == name
+                       and source.graph.visible_binding(name, source.scope_at(a.start()), a.start()) == binding]
+        if assignments:
+            assignment = assignments[-1]
+            end = assignment_end(lexed, assignment.end(), suffix)
+            rhs = lexed.without_comments[assignment.end():end].strip().rstrip(";").strip()
+            if re.fullmatch(r"require\s*\(\s*['\"](?:node:)?https?['\"]\s*\)(?:\s*\.\s*request)?", rhs):
+                return True
+            alias = re.fullmatch(r"([A-Za-z_$][\w$]*)(?:\s*\.\s*request)?", rhs)
+            return bool(alias and owned(alias[1], assignment.start(), seen | {name}))
+        prefix = lexed.without_comments[:before]
+        module = r"['\"](?:node:)?https?['\"]"
+        if receiver:
+            patterns = [r"\bimport\s+(?:\*\s+as\s+)?" + re.escape(name) + r"\s+from\s*" + module]
+        else:
+            patterns = [r"\bimport\s*\{(?P<members>[^{}]*)\}\s*from\s*" + module,
+                        r"\b(?:const|let|var)\s*\{(?P<members>[^{}]*)\}\s*=\s*require\s*\(\s*" + module]
+        for pattern in patterns:
+            for origin in re.finditer(pattern, prefix):
+                # Require executable syntax, and the same binding at its origin:
+                # neither import-looking strings nor shadowed parameters own it.
+                if not re.match(r"(?:import|const|let|var)\b", lexed.code[origin.start():]):
+                    continue
+                if not receiver and not any(re.fullmatch(r"request(?:\s*(?:as|:)\s*request)?", member.strip())
+                                            for member in origin["members"].split(",")):
+                    continue
+                if source.graph.visible_binding(name, source.scope_at(origin.start()), origin.end()) == binding:
+                    return True
+        return False
+
+    return owned(name, call.start, frozenset())
+
+
+@dataclass(frozen=True)
+class RequestWriteEvent:
+    offset: int
+    method: str
+    span: tuple[int, int] | None = None
+    binding: int | tuple[int | None, str] | None = None
+    source_binding: int | tuple[int | None, str] | None = None
+
+
+@dataclass(frozen=True)
+class RequestClosure:
+    start: int
+    parameters: tuple[tuple[int, int], ...]
+    body: int
+    end: int
+    arguments: tuple[tuple[int, int], ...] | None
+    invocation_end: int | None
+
+
+def request_closures(resolver: SourceEndpointResolver) -> list[RequestClosure]:
+    """Balanced closure boundaries, including deferred parameter initializers.
+
+    Only direct synchronous invocations are folded. A callback, stored closure,
+    async function or generator does not establish a write before a later end.
+    """
+    cached = getattr(resolver, "_request_closures", None)
+    if cached is not None:
+        return cached
+    code = resolver.lexed.code
+    pairs: dict[int, int] = {}
+    stack: list[int] = []
+    for index, char in enumerate(code):
+        if char in "([{":
+            stack.append(index)
+        elif char in ")]}" and stack:
+            opening = stack.pop()
+            pairs[opening] = index
+            pairs[index] = opening
+    closures = []
+    for token in re.finditer(r"\bfunction\b|=>", code):
+        start = token.start()
+        if token[0] == "function":
+            header = re.match(r"function\s*\*?\s*(?:[A-Za-z_$][\w$]*\s*)?\(", code[start:])
+            if header is None:
+                continue
+            opening = start + header.end() - 1
+            closing = pairs.get(opening)
+            if closing is None:
+                continue
+            body = closing + 1
+        else:
+            closing = token.start() - 1
+            while closing >= 0 and code[closing].isspace():
+                closing -= 1
+            if code[closing:closing + 1] == ")":
+                opening = pairs.get(closing)
+                if opening is None:
+                    continue
+                start = opening
+            else:
+                parameter = re.search(r"[A-Za-z_$][\w$]*$", code[:closing + 1])
+                if parameter is None:
+                    continue
+                start = parameter.start()
+                opening = start - 1
+            body = token.end()
+        parameters = tuple(span for span in split_arguments(code, opening + 1, closing)
+                           if code[slice(*span)].strip())
+        async_prefix = re.search(r"\basync\s*$", code[:start])
+        if async_prefix:
+            start = async_prefix.start()
+        while body < len(code) and code[body].isspace():
+            body += 1
+        if code[body:body + 1] == "{":
+            if body not in pairs:
+                continue
+            end = pairs[body] + 1
+        else:
+            end = body
+            while end < len(code) and code[end] not in ",;\n)]}":
+                end = pairs[end] + 1 if code[end] in "([{" and end in pairs else end + 1
+        wrapped_start, wrapped_end = start, end
+        while True:
+            before = wrapped_start - 1
+            while before >= 0 and code[before].isspace():
+                before -= 1
+            after = wrapped_end
+            while after < len(code) and code[after].isspace():
+                after += 1
+            if before < 0 or code[before] != "(" or pairs.get(before) != after:
+                break
+            # Parentheses owned by an outer call are not grouping parentheses.
+            if re.search(r"[\w$)\]]\s*$", code[:before]):
+                break
+            wrapped_start, wrapped_end = before, after + 1
+        invocation = re.match(r"\s*(?:\.\s*call\s*)?\(", code[wrapped_end:])
+        # A declaration followed by a parenthesized statement is not an IIFE.
+        if (re.match(r"function\s+[A-Za-z_$][\w$]*\s*\(", code[start:])
+                and wrapped_start == start
+                and not re.search(r"[=(:,\[!&|?]\s*$|\breturn\s*$", code[:start])):
+            invocation = None
+        arguments = None
+        invocation_end = None
+        if invocation and not async_prefix and not re.match(r"function\s*\*", code[start:]):
+            argument_open = wrapped_end + invocation.end() - 1
+            argument_end = pairs.get(argument_open)
+            if argument_end is not None:
+                invocation_end = argument_end + 1
+                arguments = tuple(span for span in split_arguments(code, argument_open + 1, argument_end)
+                                  if code[slice(*span)].strip())
+                if "." in invocation[0]:
+                    arguments = arguments[1:]
+        closures.append(RequestClosure(start, parameters, body, end, arguments, invocation_end))
+    resolver._request_closures = closures
+    return closures
+
+
+def request_argument_is_undefined(resolver: SourceEndpointResolver, span: tuple[int, int]) -> bool:
+    """Recognize undefined values without running code or guessing call results."""
+    start, end = span
+    code = resolver.lexed.code
+    while start < end and code[start].isspace():
+        start += 1
+    while end > start and code[end - 1].isspace():
+        end -= 1
+    while code[start:start + 1] == "(" and matching_delimiter(code, start, "(", ")") == end - 1:
+        start, end = start + 1, end - 1
+        while start < end and code[start].isspace():
+            start += 1
+        while end > start and code[end - 1].isspace():
+            end -= 1
+    value = code[start:end]
+    if value == "undefined":
+        return resolver.graph.visible_binding("undefined", resolver.scope_at(start), start) is None
+    # The operand may have effects; event ordering evaluates it before defaults.
+    void = re.match(r"void\b\s*", value)
+    if void:
+        cursor = start + void.end()
+        # A unary void expression is undefined; a binary/conditional
+        # expression containing void need not be. Consume one primary and
+        # balanced postfix operations, not a prefix of an arbitrary expression.
+        primary = re.match(r"[A-Za-z_$][\w$]*|\d+(?:\.\d+)?", code[cursor:end])
+        if primary:
+            cursor += primary.end()
+        elif code[cursor:cursor + 1] != "(":
+            return False
+        while cursor < end:
+            if code[cursor] in "([":
+                closing = matching_delimiter(code, cursor, code[cursor], {"(": ")", "[": "]"}[code[cursor]])
+                if closing is None or closing >= end:
+                    return False
+                cursor = closing + 1
+            elif code[cursor].isspace():
+                cursor += 1
+            elif code[cursor] == ".":
+                member = re.match(r"\.\s*[A-Za-z_$][\w$]*", code[cursor:end])
+                if member is None:
+                    return False
+                cursor += member.end()
+            else:
+                return False
+        return True
+    for closure in request_closures(resolver):
+        if (closure.start < start or code[start:closure.start].strip("( \t\r\n")
+                or closure.invocation_end != end or closure.parameters):
+            continue
+        body = code[closure.body:closure.end]
+        returned = re.fullmatch(r"\{\s*return\s*(undefined|void\s+0)?\s*;?\s*\}", body)
+        if returned:
+            return returned[1] != "undefined" or resolver.graph.visible_binding(
+                "undefined", resolver.scope_at(closure.body), closure.body
+            ) is None
+    return False
+
+
+def request_event_order(resolver: SourceEndpointResolver, offset: int) -> tuple[int, ...]:
+    """Arguments execute before parameters/body, despite their source positions."""
+    key: list[int] = []
+    for closure in sorted(request_closures(resolver), key=lambda item: item.start):
+        if closure.invocation_end is not None and closure.start <= offset < closure.invocation_end:
+            key.extend((closure.start, int(offset < closure.end)))
+    return (*key, offset)
+
+
+def request_argument_has_unknown_call(resolver: SourceEndpointResolver, span: tuple[int, int]) -> bool:
+    """Do not lend ownership across calls whose side effects are unmodelled.
+
+    Direct closures have explicit events. A named no-argument empty function
+    is also harmless, but arbitrary helpers need interprocedural analysis and
+    conservatively invalidate ownership even when void fixes their result.
+    """
+    code = resolver.lexed.code
+    closures = request_closures(resolver)
+    for called in re.finditer(r"(?<![\w$])([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\s*\(", code[slice(*span)]):
+        offset = span[0] + called.start()
+        if called[1] == "void" or any(closure.start <= offset < closure.body for closure in closures):
+            continue
+        candidates = [closure for closure in closures
+                      if not closure.parameters
+                      and re.fullmatch(r"\{\s*\}", code[closure.body:closure.end])
+                      and re.match(rf"function\s+{re.escape(called[1])}\s*\(", code[closure.start:])
+                      and resolver.scope_at(closure.start) in resolver.graph.ancestors(resolver.scope_at(offset))]
+        if len(candidates) != 1 or resolver.graph.visible_binding(
+            called[1], resolver.scope_at(offset), offset
+        ) is not None:
+            return True
+    # Parenthesized callee expressions are not ordinary direct closures.
+    for invoked in re.finditer(r"\)\s*\(", code[slice(*span)]):
+        opening = span[0] + invoked.end() - 1
+        if not any(closure.invocation_end is not None and closure.end <= opening
+                   and re.fullmatch(r"\s*\)*\s*\(", code[closure.end:opening + 1])
+                   for closure in closures):
+            return True
+    return False
+
+
+def request_execution_scope(resolver: SourceEndpointResolver, offset: int) -> int:
+    """Fold invoked closures, but not skipped defaults, into their caller."""
+    closures = request_closures(resolver)
+    containing = [closure for closure in closures if closure.start <= offset < closure.end]
+    for closure in containing:
+        if closure.arguments is None:
+            return -closure.start - 1
+        for index, (start, end) in enumerate(closure.parameters):
+            if not start <= offset < end:
+                continue
+            # Destructuring adds property-level defaults whose execution
+            # depends on the supplied/default object's shape. Do not lend
+            # those effects without resolving that additional condition.
+            if not re.match(r"\s*[A-Za-z_$][\w$]*\s*=", resolver.lexed.code[start:end]):
+                return -closure.start - 1
+            if index < len(closure.arguments):
+                if not request_argument_is_undefined(resolver, closure.arguments[index]):
+                    return -closure.start - 1
+    execution = resolver.graph.execution_scope(resolver.scope_at(offset))
+    while execution:
+        scope = resolver.graph.scopes[execution]
+        if not any(closure.body == scope.start for closure in containing):
+            break
+        execution = resolver.graph.execution_scope(scope.parent or 0)
+    return execution
+
+
+def request_write_events(
+    lexed: LexedSource, call: Call, suffix: str = ".js"
+) -> list[RequestWriteEvent]:
+    """Return write/end bodies belonging to this request handle's lifetime."""
+    chained = re.match(r"\s*\.\s*end\s*\(", lexed.code[call.end:])
+    if chained:
+        opening = call.end + chained.end() - 1
+        closing = matching_delimiter(lexed.code, opening, "(", ")")
+        if closing is not None:
+            args = split_arguments(lexed.code, opening + 1, closing)
+            return [RequestWriteEvent(call.end, "init"),
+                    RequestWriteEvent(call.end, "end", args[0] if args else None)]
     prefix = lexed.code[max(0, call.start - 160):call.start]
-    match = ASSIGNED_HANDLE_RE.search(prefix)
+    match = re.search(
+        r"(?<![\w$.])([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)"
+        r"\s*=\s*(?:new\s+)?(?:[A-Za-z_$][\w$]*\s*\.\s*)?$", prefix
+    )
     if match is None:
         return []
-    handle = match.group(1)
+    handle = re.sub(r"\s+", "", match.group(1))
+    resolver = SourceEndpointResolver(lexed, suffix)
+
+    def receiver_binding(receiver: str, offset: int) -> int | tuple[int | None, str] | None:
+        root, separator, members = re.sub(r"\s+", "", receiver).partition(".")
+        # Parameters are in scope during later initializers as well as the body.
+        parameter_owner = [closure for closure in request_closures(resolver)
+                           if closure.start <= offset < closure.body]
+        lookup = max(parameter_owner, key=lambda item: item.start).body if parameter_owner else offset
+        root_binding = resolver.graph.visible_binding(root, resolver.scope_at(lookup), lookup)
+        return ((root_binding, members if root_binding is not None else root + "." + members)
+                if separator else root_binding)
+
+    binding = receiver_binding(handle, call.start)
+    execution = request_execution_scope(resolver, call.start)
+    assignments: list[RequestWriteEvent] = []
+    # Direct invocation binds arguments before entering the closure body.
+    # Parameter bindings remain lexical, so a stored callback or shadowing
+    # parameter cannot acquire ownership from a similarly named request.
+    for closure in request_closures(resolver):
+        if closure.start <= call.end or closure.arguments is None or request_execution_scope(resolver, closure.body) != execution:
+            continue
+        for index, parameter in enumerate(closure.parameters):
+            declared = re.fullmatch(r"\s*([A-Za-z_$][\w$]*)\s*(?:=([\s\S]*))?", lexed.code[slice(*parameter)])
+            if declared is None:
+                continue
+            name = declared[1]
+            argument = closure.arguments[index] if index < len(closure.arguments) else None
+            defaulted = argument is None or request_argument_is_undefined(resolver, argument)
+            value = (declared[2] or "").strip() if defaulted else lexed.code[slice(*argument)].strip()
+            if not re.fullmatch(
+                r"[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*", value
+            ):
+                continue
+            target = resolver.graph.visible_binding(name, resolver.scope_at(closure.body), closure.body)
+            source = receiver_binding(value, parameter[0] if defaulted else argument[0])
+            # Supplied arguments capture their value before subsequent
+            # arguments can rebind it; defaults run in parameter order later.
+            assigned_at = parameter[1] if defaulted else argument[1]
+            assignments.append(RequestWriteEvent(assigned_at, "assign", binding=target, source_binding=source))
+            if isinstance(binding, tuple):
+                assignments.append(RequestWriteEvent(
+                    assigned_at, "assign", binding=(target, binding[1]),
+                    source_binding=(source, binding[1]) if isinstance(source, int) else None,
+                ))
+    # A broad typed-declaration match can cross an object literal and swallow
+    # a later bare assignment. Recover those lifetime mutations independently
+    # of the endpoint graph's declaration parser.
+    root_assignments = {assignment.start(): assignment for assignment in resolver.root_assignments}
+    parameter_starts = {start + len(lexed.code[start:end]) - len(lexed.code[start:end].lstrip())
+                        for closure in request_closures(resolver) for start, end in closure.parameters}
+    for assignment in re.finditer(r"(?<![\w$.>])([A-Za-z_$][\w$]*)\s*=(?!=|>)", lexed.code):
+        if assignment.start() not in parameter_starts:
+            root_assignments.setdefault(assignment.start(), assignment)
+    for assignment in root_assignments.values():
+        if assignment.start() <= call.end:
+            continue
+        scope = resolver.scope_at(assignment.start())
+        if request_execution_scope(resolver, assignment.start()) != execution:
+            continue
+        assigned_binding = receiver_binding(assignment[1], assignment.start())
+        end = assignment_end(lexed, assignment.end(), suffix)
+        rhs = lexed.code[assignment.end():end].strip().rstrip(";").strip()
+        source_binding = (receiver_binding(rhs, assignment.start())
+                          if re.fullmatch(r"[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*", rhs) else None)
+        assignments.append(RequestWriteEvent(assignment.start(), "assign",
+                                             binding=assigned_binding, source_binding=source_binding))
+        if isinstance(binding, tuple):
+            # Root aliases carry the owned member at this point in time.
+            # A later root rebind kills only that root's view, not aliases
+            # which still point at the original owner object.
+            assignments.append(RequestWriteEvent(
+                assignment.start(), "assign", binding=(assigned_binding, binding[1]),
+                source_binding=(source_binding, binding[1])
+                if isinstance(source_binding, int) else None,
+            ))
+    if isinstance(binding, tuple):
+        for reference, start, _, _ in direct_member_assignments(lexed, len(lexed.code), suffix):
+            if start <= call.end or request_execution_scope(resolver, start) != execution:
+                continue
+            target = receiver_binding(".".join(reference), start)
+            if isinstance(target, tuple) and (
+                target[1] == binding[1] or binding[1].startswith(target[1] + ".")
+            ):
+                assignments.append(RequestWriteEvent(start, "member_assign", binding=(target[0], binding[1])))
+    # Finite alias closure keeps unrelated assignments/branches out of the
+    # path product. Runtime ownership is still evaluated per environment below.
+    aliases = {binding}
+    for _ in range(len(assignments)):
+        expanded = aliases | {event.binding for event in assignments
+                              if event.source_binding is not None and event.source_binding in aliases}
+        if expanded == aliases:
+            break
+        aliases = expanded
     write_re = re.compile(
-        r"(?<![\w$])" + re.escape(handle) + r"\s*\.\s*write\s*\("
+        r"(?<![\w$.])([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)"
+        r"\s*\.\s*(write|end)\s*\("
     )
-    spans: list[tuple[int, int]] = []
+    events = [RequestWriteEvent(call.end, "init", binding=binding)]
+    events.extend(event for event in assignments if event.binding in aliases)
+    for closure in request_closures(resolver):
+        for argument in closure.arguments or ():
+            if (argument[0] > call.end and request_execution_scope(resolver, argument[0]) == execution
+                    and request_argument_is_undefined(resolver, argument)
+                    and request_argument_has_unknown_call(resolver, argument)):
+                events.append(RequestWriteEvent(argument[1], "invalidate"))
+    # Abrupt completion skips the remainder of this closure on its active
+    # branch. Keep return-expression effects before the skip boundary.
+    for abrupt in re.finditer(r"\b(?:return|throw)\b", lexed.code[call.end:]):
+        position = call.end + abrupt.start()
+        if lexed.code[:position].rstrip().endswith("."):
+            continue
+        containing = [closure for closure in request_closures(resolver)
+                      if closure.body <= position < closure.end]
+        if not containing or request_execution_scope(resolver, position) != execution:
+            continue
+        closure = max(containing, key=lambda item: item.start)
+        after = position + len(abrupt[0])
+        while after < closure.end and lexed.code[after] not in ";\n}":
+            if lexed.code[after] in "([{":
+                closing = matching_delimiter(lexed.code, after, lexed.code[after],
+                                             {"(": ")", "[": "]", "{": "}"}[lexed.code[after]])
+                if closing is not None:
+                    after = closing + 1
+                    continue
+            after += 1
+        # Return leaves the closure only after enclosing finally bodies run.
+        # Preserve their writes AND lifetime mutations (e.g. req = other).
+        finalizers: list[tuple[int, int]] = []
+        for attempt in re.finditer(r"\btry\s*\{", lexed.code[closure.body:position]):
+            opening = closure.body + attempt.end() - 1
+            try_end = matching_delimiter(lexed.code, opening, "{", "}")
+            if try_end is None:
+                continue
+            protected = opening < position < try_end
+            tail = try_end + 1
+            catcher = re.match(r"\s*catch\s*(?:\([^()]*\)\s*)?\{", lexed.code[tail:])
+            if catcher:
+                catch_end = matching_delimiter(lexed.code, tail + catcher.end() - 1, "{", "}")
+                if catch_end is None:
+                    continue
+                protected = protected or tail + catcher.end() - 1 < position < catch_end
+                tail = catch_end + 1
+            if not protected:
+                continue
+            finalizer = re.match(r"\s*finally\s*\{", lexed.code[tail:])
+            if finalizer:
+                final_open = tail + finalizer.end() - 1
+                final_end = matching_delimiter(lexed.code, final_open, "{", "}")
+                if final_end is not None:
+                    finalizers.append((final_open, final_end + 1))
+        skip = after
+        for final_start, final_end in sorted(finalizers):
+            events.append(RequestWriteEvent(position, "terminate", (skip, final_start)))
+            skip = final_end
+        events.append(RequestWriteEvent(position, "terminate", (skip, closure.end)))
+        if abrupt[0] == "throw":
+            # Catch dispatch is not modelled as a callable return. It can
+            # change ownership before control resumes; do not certify later
+            # writes through handles whose lifetime crossed that exception.
+            events.append(RequestWriteEvent(position, "throw"))
     for found in write_re.finditer(lexed.code, call.end):
+        if lexed.code[:found.start()].rstrip().endswith("."):
+            continue
+        event_binding = receiver_binding(found[1], found.start())
+        if event_binding not in aliases or (event_binding is None and found[1] != handle):
+            continue
+        if request_execution_scope(resolver, found.start()) != execution:
+            continue
         open_paren = lexed.code.index("(", found.end() - 1)
         closing = matching_delimiter(lexed.code, open_paren, "(", ")")
         if closing is None:
             continue
         arguments = split_arguments(lexed.code, open_paren + 1, closing)
-        if arguments:
-            spans.append(arguments[0])
-    return spans
+        events.append(RequestWriteEvent(found.start(), found[2], arguments[0] if arguments else None,
+                                        binding=event_binding))
+    return sorted(events, key=lambda event: request_event_order(resolver, event.offset))
+
+
+def request_write_payload_spans(lexed: LexedSource, call: Call, suffix: str = ".js") -> list[tuple[int, int]]:
+    return [event.span for event in request_write_events(lexed, call, suffix) if event.span]
+
+
+def request_writes_have_profile(lexed: LexedSource, call: Call, suffix: str,
+                               resolver: PayloadStateResolver,
+                               events: list[RequestWriteEvent]) -> bool:
+    control = resolver.control
+    paths = [control.path(event.offset) for event in events]
+    environments = control.environments(paths, control.path(call.start))
+    # Refine literal conditions within the same branch model. Unknown tests
+    # retain every environment; no conditional write alone certifies a send.
+    literal: dict[int, bool] = {}
+    for path in paths:
+        for group, _ in path:
+            condition = re.match(r"if\s*\(\s*(true|false)\s*\)", lexed.code[group:])
+            if condition:
+                literal[group] = condition[1] == "true"
+    environments = [env for env in environments if all(
+        (env.get(group) == 0) == value for group, value in literal.items())]
+    if not environments:
+        return False
+    for environment in environments:
+        present = False
+        aliases: set[int | tuple[int | None, str] | None] = set()
+        terminated: list[tuple[int, int]] = []
+        for event, path in zip(events, paths):
+            if not control.active(path, environment) or any(
+                start <= event.offset < end for start, end in terminated
+            ):
+                continue
+            if event.method == "terminate":
+                if event.span:
+                    terminated.append(event.span)
+                continue
+            if event.method in {"throw", "invalidate"}:
+                aliases.clear()
+                continue
+            if event.method == "init":
+                aliases.add(event.binding)
+                continue
+            if event.method == "member_assign":
+                if event.binding in aliases:
+                    aliases = {alias for alias in aliases if not isinstance(alias, tuple)}
+                continue
+            if event.method == "assign":
+                if event.source_binding is not None and event.source_binding in aliases:
+                    aliases.add(event.binding)
+                else:
+                    aliases.discard(event.binding)
+                continue
+            if event.binding not in aliases:
+                continue
+            if event.span and resolver.span_presence(*event.span, event.offset).state == PRESENT:
+                present = True
+            if event.method == "end":
+                break
+        if not present:
+            return False
+    return True
 
 
 URL_CONSTRUCTOR_RE = re.compile(
@@ -7087,10 +7684,11 @@ def _request_url_spans(
         # ENDPOINT, unlike net/http.Post(url, contentType, body). Without this
         # the whole send was invisible.
         return args[0:1]
-    if callee == "NewRequest" and len(args) >= 2:
+    if callee in GO_REQUEST_METHOD_INDEX and len(args) >= GO_REQUEST_METHOD_INDEX[callee] + 3:
         # Go net/http: http.NewRequest(method, url, body) + client.Do(req).
         # The idiomatic non-shortcut form; only mutating methods matter here.
-        method = static_method_value(lexed, args[0], call.start, suffix)
+        method_index = GO_REQUEST_METHOD_INDEX[callee]
+        method = static_method_value(lexed, args[method_index], call.start, suffix)
         if method is not None and method not in MUTATING_HTTP_METHODS:
             return []
         # NOTE: http.NewRequest is NOT gated on a client.Do(req) execution link.
@@ -7100,7 +7698,7 @@ def _request_url_spans(
         # behaviour change beyond the scope of this work, so it is left as-is;
         # the execution requirement applies only to the clients newly modelled
         # in this change (OkHttp, HttpRequestMessage, RestSharp, urllib).
-        return args[1:2]
+        return args[method_index + 1:method_index + 2]
     if callee.endswith("new") and "Net::HTTP::" in callee and len(args) >= 1:
         return args[0:1] if request_object_is_executed(lexed, call, suffix) else []
     if callee == "curl_init" and len(args) >= 1:
@@ -7525,12 +8123,27 @@ def c_function_headers(
     if suffix not in supported:
         return {}
     headers: dict[int, tuple[int, int]] = {}
+    if suffix in JS_TS_SUFFIXES:
+        # Grouping and default expressions can contain parentheses/braces
+        # before the function body; index its balanced parameter pair directly.
+        for function in re.finditer(r"\bfunction\s*\*?\s*(?:[A-Za-z_$][\w$]*\s*)?\(", lexed.code):
+            params_open = function.end() - 1
+            params_close = matching_delimiter(lexed.code, params_open, "(", ")")
+            if params_close is None:
+                continue
+            body = params_close + 1
+            while body < len(lexed.code) and lexed.code[body].isspace():
+                body += 1
+            if lexed.code[body:body + 1] == "{":
+                headers[body] = (params_open + 1, params_close)
     controls = {
         "catch", "checked", "fixed", "for", "foreach", "if", "lock",
         "switch", "synchronized", "try", "unchecked", "using", "while",
         "with",
     }
     for opening in (index for index, char in enumerate(lexed.code) if char == "{"):
+        if opening in headers:
+            continue
         statement_start = max(
             lexed.code.rfind(";", 0, opening),
             lexed.code.rfind("{", 0, opening),
@@ -7555,7 +8168,7 @@ def c_function_headers(
                 params_open = matching_opening(
                     lexed.code, cursor, "(", ")"
                 )
-                if params_open is not None and params_open >= statement_start:
+                if params_open is not None:
                     headers[opening] = (params_open + 1, cursor)
                 continue
             parameter = re.search(
@@ -10505,6 +11118,7 @@ class ControlIndex:
         self.lexed, self.suffix = lexed, suffix
         self.arms: list[ControlArm] = []
         self.exhaustive: set[int] = set()
+        self.logical_traces: list[list[dict[int, int | None]]] = []
         if suffix in self.C_SUFFIXES:
             self._curly()
             # Expression-level guards are not a JavaScript peculiarity: PHP,
@@ -10549,6 +11163,57 @@ class ControlIndex:
             index += 1
         return None
 
+    def _logical_expression_traces(self, start: int, end: int) -> None:
+        """Keep short-circuit choices correlated by expression evaluation.
+
+        In ``a && b || c``, skipping b forces c to run. Independent optional
+        guards invent a path which skips both. Leaves have unknown truthiness;
+        no API-specific return-value assumptions are needed.
+        """
+        code = self.lexed.code
+        if len(re.findall(r"&&|\|\|", code[start:end])) > 6:
+            return  # Preserve the existing conservative finite-path bound.
+
+        def traces(left: int, right: int) -> list[tuple[bool, dict[int, int | None]]]:
+            while left < right and code[left].isspace():
+                left += 1
+            while right > left and code[right - 1].isspace():
+                right -= 1
+            if left < right and code[left] == "(" and matching_delimiter(code, left, "(", ")") == right - 1:
+                return traces(left + 1, right - 1)
+            operators: list[tuple[int, str]] = []
+            index = left
+            while index < right:
+                if code[index] in "([{":
+                    closing = matching_delimiter(code, index, code[index], {"(": ")", "[": "]", "{": "}"}[code[index]])
+                    if closing is None:
+                        return [(True, {}), (False, {})]
+                    index = closing + 1
+                    continue
+                if code[index:index + 2] in {"&&", "||"} and code[index + 2:index + 3] != "=":
+                    operators.append((index, code[index:index + 2]))
+                    index += 2
+                    continue
+                index += 1
+            if not operators:
+                return [(True, {}), (False, {})]
+            # Lowest precedence, rightmost operator is the expression root.
+            position, operator = next((item for item in reversed(operators) if item[1] == "||"), operators[-1])
+            before, after = traces(left, position), traces(position + 2, right)
+            right_groups = {group for _, path in after for group in path}
+            result = []
+            for value, path in before:
+                evaluate = value if operator == "&&" else not value
+                if evaluate:
+                    result.extend((outcome, path | tail | {position: 0}) for outcome, tail in after)
+                else:
+                    result.append((value, path | dict.fromkeys(right_groups) | {position: None}))
+            return result
+
+        choices = [path for _, path in traces(start, end)]
+        if any(choices):
+            self.logical_traces.append(choices)
+
     def _expression_guards(self) -> None:
         """Index short-circuit and ternary expression arms in JS/TS.
 
@@ -10569,15 +11234,15 @@ class ControlIndex:
         word_ops = self.suffix in {".php", ".rb", ".py"}
         logical_re = (
             r"&&=?|\|\|=?|(?<![\w])(?:and|or)(?![\w])" if word_ops
-            else r"&&=?|\|\|=?"
+            else r"&&=?|\|\|=?|\?\?=?"
         )
         dangling = re.compile(
             r"(?:&&|\|\||\?|(?<![\w])(?:and|or))\s*$" if word_ops
-            else r"(?:&&|\|\||\?)\s*$"
+            else r"(?:&&|\|\||\?\?|\?)\s*$"
         )
         continuing = re.compile(
             r"[ \t]*(?:&&|\|\||\?|:|(?<![\w])(?:and|or)(?![\w]))" if word_ops
-            else r"[ \t]*(?:&&|\|\||\?|:)"
+            else r"[ \t]*(?:&&|\|\||\?\?|\?|:)"
         )
         statement_start = 0
         for match in re.finditer(r"[;\n]|$", code):
@@ -10596,26 +11261,99 @@ class ControlIndex:
             profile = PROFILE_IDENTIFIER_RE.search(
                 self.lexed.original[statement_start:statement_end]
             )
-            if profile is not None:
-                absolute_profile = statement_start + profile.start()
+            if profile is not None or self.suffix in JS_TS_SUFFIXES:
+                absolute_profile = statement_start + profile.start() if profile else statement_end
                 logical = list(re.finditer(logical_re, segment))
                 for operator in logical:
                     operator_end = statement_start + operator.end()
-                    if operator_end <= absolute_profile:
+                    if self.suffix in JS_TS_SUFFIXES or operator_end <= absolute_profile:
+                        guard_end = statement_end
+                        if self.suffix in JS_TS_SUFFIXES and not operator[0].endswith("="):
+                            # A logical RHS may be skipped, but a surrounding
+                            # ternary still chooses an arm after evaluating
+                            # its whole condition: `a ?? b ? yes : no`.
+                            # Logical assignments instead guard the entire
+                            # RHS ternary, due to their lower precedence.
+                            stack: list[int] = []
+                            for index in range(statement_start, operator_end):
+                                if code[index] in "([{":
+                                    stack.append(index)
+                                elif code[index] in ")]}" and stack:
+                                    stack.pop()
+                            expression_start = statement_start
+                            if stack:
+                                opening = stack[-1]
+                                closing = matching_delimiter(code, opening, code[opening], {"(": ")", "[": "]", "{": "}"}[code[opening]])
+                                if closing is not None:
+                                    expression_start, guard_end = opening + 1, closing
+                            outer = _top_level_ternary(code, expression_start, guard_end)
+                            if outer and operator_end < outer[0][0]:
+                                guard_end = outer[0][0] - 1
+                        if self.suffix in JS_TS_SUFFIXES:
+                            # The RHS stops at its own comma/closing delimiter
+                            # or an enclosing ternary's alternate arm. Nested
+                            # expressions keep their internal separators.
+                            depth = ternaries = 0
+                            for index in range(operator_end, guard_end):
+                                char = code[index]
+                                if char in "([{":
+                                    depth += 1
+                                elif char in ")]}":
+                                    if not depth:
+                                        guard_end = index
+                                        break
+                                    depth -= 1
+                                elif not depth:
+                                    if not operator[0].endswith("=") and (
+                                        code[index:index + 2] == "||" or
+                                        code[index:index + 2] == "&&" and operator[0] == "&&"
+                                    ):
+                                        guard_end = index
+                                        break
+                                    if char == "?" and code[index:index + 2] not in {"??", "?."} and code[index - 1] != "?":
+                                        ternaries += 1
+                                    elif char == ":" and ternaries:
+                                        ternaries -= 1
+                                    elif char == "," or char == ":":
+                                        guard_end = index
+                                        break
                         self.arms.append(
-                            ControlArm(statement_start, 0, operator_end, statement_end)
+                            ControlArm(statement_start + operator.start(), 0, operator_end, guard_end)
                         )
-                question = segment.find("?")
-                colon = segment.find(":", question + 1) if question >= 0 else -1
-                if question >= 0 and colon >= 0 and absolute_profile > statement_start + question:
-                    self.arms.append(
-                        ControlArm(
-                            statement_start,
-                            0 if absolute_profile < statement_start + colon else 1,
-                            statement_start + question + 1,
-                            statement_end,
-                        )
-                    )
+                # Visit balanced subexpressions too: a ternary inside `(…)`
+                # or a call argument still guards its mutations. Balanced
+                # extraction avoids mistaking object-key colons for `?:`.
+                pending = [(statement_start, statement_end)]
+                seen: set[tuple[int, int]] = set()
+                while pending:
+                    start, end = pending.pop()
+                    if (start, end) in seen:
+                        continue
+                    seen.add((start, end))
+                    if self.suffix in JS_TS_SUFFIXES:
+                        # Comma has lower precedence than ?:; a following
+                        # expression is outside both conditional arms.
+                        expressions = split_arguments(code, start, end)
+                        if len(expressions) > 1:
+                            pending.extend(expressions)
+                            continue
+                    ternary = _top_level_ternary(code, start, end)
+                    if self.suffix in JS_TS_SUFFIXES and ternary is None:
+                        self._logical_expression_traces(start, end)
+                    if ternary is not None:
+                        group = ternary[0][0] - 1
+                        for branch, (arm_start, arm_end) in enumerate(ternary):
+                            self.arms.append(ControlArm(group, branch, arm_start, arm_end))
+                        self.exhaustive.add(group)
+                        pending.extend(ternary)
+                    stack: list[int] = []
+                    for index in range(start, end):
+                        if code[index] in "([{":
+                            stack.append(index)
+                        elif code[index] in ")]}" and stack:
+                            opening = stack.pop()
+                            if not stack:
+                                pending.append((opening + 1, index))
             statement_start = match.end()
 
     def _body_arm(self, group: int, branch: int, after: int) -> int | None:
@@ -11402,7 +12140,11 @@ class ControlIndex:
             environments = expanded
             if len(environments) > 64:
                 return []
-        return environments
+        return [environment for environment in environments if all(
+            any(all(group not in environment or environment[group] == choice
+                    for group, choice in trace.items()) for trace in traces)
+            for traces in self.logical_traces
+        )]
 
     @staticmethod
     def active(path: tuple[tuple[int, int], ...], environment: dict[int, int | None]) -> bool:
@@ -12186,6 +12928,10 @@ def shell_embedded_command_span(
     """Bound the narrowest quoted shell command containing ``offset``."""
 
     candidates: list[tuple[int, int]] = []
+    for start, end, expands in _shell_heredoc_ranges(lexed.original):
+        if expands and start <= offset < end:
+            candidates.extend(span for span in _shell_command_substitution_ranges(lexed.original, start, end)
+                              if span[0] <= offset < span[1])
     for token in lexed.strings:
         if not (token.start < offset < token.end):
             continue

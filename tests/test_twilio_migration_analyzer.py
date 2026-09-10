@@ -1502,6 +1502,596 @@ class CorrectnessLinterContracts(unittest.TestCase):
             with self.subTest(shape=label, body="compliant"):
                 self.assert_required_profile_passes({name: template % profile})
 
+    def test_go_request_constructor_signatures_through_wrapper(self) -> None:
+        # net/http.NewRequestWithContext inserts ctx before method, URL, body.
+        url = '"https://api.telnyx.com/v2/messages/number_pool"'
+        for profile in (False, True):
+            files = {}
+            for constructor in ("NewRequest", "NewRequestWithContext"):
+                for alias in (False, True):
+                    context = "ctx, " if constructor.endswith("WithContext") else ""
+                    field = ', "messaging_profile_id": "mp"' if profile else ""
+                    endpoint = "endpoint" if alias else url
+                    name = f"{constructor}_{'alias' if alias else 'direct'}.go"
+                    files[name] = (
+                        "package main\nfunc send() {\n"
+                        + (f"endpoint := {url}\n" if alias else "")
+                        + 'payload := map[string]string{"to": "+1", "text": "hi"'
+                        + field + "}\nbody, _ := json.Marshal(payload)\n"
+                        + f'req, _ := http.{constructor}({context}"POST", '
+                        + f"{endpoint}, bytes.NewBuffer(body))\n"
+                        + "http.DefaultClient.Do(req)\n}\n"
+                    )
+            result, payload = self.run_messaging_linter(files)
+            with self.subTest(profile=profile):
+                self.assertEqual(0 if profile else 1, result.returncode, payload)
+            if profile:
+                self.assertEqual("pass", next(
+                    item["status"] for item in payload["checks"]
+                    if item["name"] == "required_messaging_profile_id"
+                ), payload)
+            else:
+                for name in files:
+                    with self.subTest(profile=profile, file=name):
+                        self.assert_required_profile_detected(payload, name)
+
+    def test_node_request_overloads_attach_body_to_returned_handle(self) -> None:
+        # http(s).request supports (options[, callback]) and
+        # (url[, options][, callback]); a callback is never the request body.
+        for profile in (False, True):
+            files = {}
+            for transport in ("http", "https"):
+                for url_overload in (False, True):
+                    for callback in (False, True):
+                        for body_method in ("write", "end"):
+                            name = (
+                                f"{transport}_{'url' if url_overload else 'options'}"
+                                f"_{callback}_{body_method}.js"
+                            )
+                            options = "{method:'POST'"
+                            if not url_overload:
+                                options += (
+                                    ",hostname:'api.telnyx.com',"
+                                    "path:'/v2/messages/number_pool'"
+                                )
+                            options += "}"
+                            args = options
+                            if url_overload:
+                                args = f"'{transport}://api.telnyx.com/v2/messages/number_pool', " + args
+                            if callback:
+                                args += ", response => response.resume()"
+                            field = ",messaging_profile_id:'mp'" if profile else ""
+                            files[name] = (
+                                f"const {transport} = require('{transport}');\n"
+                                f"const payload = JSON.stringify({{to:'+1',text:'hi'{field}}});\n"
+                                f"const req = {transport}.request({args});\n"
+                                f"req.{body_method}(payload);\n"
+                                + ("req.end();\n" if body_method == "write" else "")
+                            )
+            result, payload = self.run_messaging_linter(files)
+            with self.subTest(profile=profile):
+                self.assertEqual(0 if profile else 1, result.returncode, payload)
+            if profile:
+                self.assertEqual("pass", next(
+                    item["status"] for item in payload["checks"]
+                    if item["name"] == "required_messaging_profile_id"
+                ), payload)
+            else:
+                for name in files:
+                    with self.subTest(profile=profile, file=name):
+                        self.assert_required_profile_detected(payload, name)
+
+    def test_request_signature_read_only_and_unrelated_handle_controls(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        files = {}
+        for constructor in ("NewRequest", "NewRequestWithContext"):
+            context = "ctx, " if constructor.endswith("WithContext") else ""
+            for label, method in (("get", '"GET"'), ("default", '""')):
+                files[f"{constructor}_{label}.go"] = (
+                    f'endpoint := "{url}"\n'
+                    f"req, _ := http.{constructor}({context}{method}, endpoint, nil)\n"
+                    "http.DefaultClient.Do(req)\n"
+                )
+        for transport in ("http", "https"):
+            for options in ("{}", "{method:'GET'}"):
+                files[f"{transport}_{'get' if 'GET' in options else 'default'}.js"] = (
+                    f"const {transport} = require('{transport}');\n"
+                    f"const req = {transport}.request('{url}', {options}, res => res.resume());\n"
+                    "req.end();\n"
+                )
+        self.assert_required_profile_passes(files)
+
+        # A valid profile written to a different request must not satisfy req.
+        result, payload = self.run_messaging_linter({"unrelated.js": (
+            "const https = require('https');\n"
+            f"const req = https.request('{url}', {{method:'POST'}}, res => res.resume());\n"
+            "const other = https.request('https://example.com/events', {method:'POST'});\n"
+            "other.write(JSON.stringify({messaging_profile_id:'mp'}));\n"
+            "other.end();\nreq.end(JSON.stringify({to:'+1',text:'hi'}));\n"
+        )})
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, "unrelated.js")
+
+    def test_node_request_handle_lifetime_and_alias_matrix(self) -> None:
+        url = "https://api.telnyx.com/v2/messages/number_pool"
+        request = f"https.request('{url}', {{method:'POST'}})"
+        other = "https.request('https://example.com/events', {method:'POST'})"
+        present = "JSON.stringify({to:'+1',messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        prefix = "const https = require('https');\n"
+        negatives = {
+            "sibling.js": (
+                f"function first() {{ const req = {request}; req.write({absent}); }}\n"
+                f"function second() {{ const req = {other}; req.end({present}); }}\n"
+            ),
+            "shadow.js": (
+                f"const req = {request};\n"
+                f"{{ const req = {other}; req.end({present}); }}\n"
+                f"req.end({absent});\n"
+            ),
+            "reassigned.js": (
+                f"let req = {request}; req.write({absent});\n"
+                f"req = {other}; req.end({present});\n"
+            ),
+            "after_end.js": (
+                f"const req = {request}; req.end({absent});\n"
+                f"req.write({present});\n"
+            ),
+            "callback_decoy.js": (
+                f"const req = https.request('{url}', {{method:'POST'}}, res => {{\n"
+                f"  const body = {present}; console.log(body);\n"
+                "});\nreq.end();\n"
+            ),
+            "end_callback.js": (
+                f"const req = {request};\n"
+                f"req.end(() => {{ const body = {present}; console.log(body); }});\n"
+            ),
+        }
+        result, payload = self.run_messaging_linter({
+            name: prefix + source for name, source in negatives.items()
+        })
+        self.assertEqual(1, result.returncode, payload)
+        for name in negatives:
+            with self.subTest(case=name):
+                self.assert_required_profile_detected(payload, name)
+
+        positives = {}
+        for suffix in ("js", "ts"):
+            for url_overload in (False, True):
+                for body_method in ("write", "end"):
+                    options = "{method:'POST'"
+                    if not url_overload:
+                        options += ",hostname:'api.telnyx.com',path:'/v2/messages/number_pool'"
+                    options += "}"
+                    args = "endpoint, options" if url_overload else "options"
+                    name = f"aliases_{url_overload}_{body_method}.{suffix}"
+                    positives[name] = (
+                        prefix + f"const endpoint = '{url}';\nconst options = {options};\n"
+                        f"const req = https.request({args}, res => res.resume());\n"
+                        f"req.{body_method}({present});\n"
+                        + ("req.end();\n" if body_method == "write" else "")
+                    )
+        self.assert_required_profile_passes(positives)
+
+    def test_node_request_execution_paths_and_chained_bodies(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        present = "JSON.stringify({to:'+1',messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        request = f"https.request('{endpoint}', {{method:'POST'}})"
+        prefix = "const https = require('node:https');\n"
+        cases = {
+            "dead_write": (f"const req={request}; if(false){{req.write({present});}} req.end({absent});", False),
+            "dead_end": (f"const req={request}; if(false){{req.end();}} req.end({present});", True),
+            "optional_write": (f"const req={request}; if(flag){{req.write({present});}} req.end();", False),
+            "both_ends_present": (f"const req={request}; if(flag){{req.end({present});}}else{{req.end({present});}}", True),
+            "one_end_missing": (f"const req={request}; if(flag){{req.end({present});}}else{{req.end({absent});}}", False),
+            "both_writes_present": (f"const req={request}; if(flag){{req.write({present});}}else{{req.write({present});}} req.end();", True),
+            "uninvoked_writer": (f"const req={request}; function unused(){{req.write({present});}} req.end({absent});", False),
+            "false_and_write": (f"const req={request}; false && req.write({present}); req.end({absent});", False),
+            "true_or_write": (f"const req={request}; true || req.write({present}); req.end({absent});", False),
+            "ternary_present": (f"const req={request}; flag ? req.end({present}) : req.end({present});", True),
+            "ternary_missing": (f"const req={request}; flag ? req.end({present}) : req.end({absent});", False),
+            "handle_alias_present": (f"const req={request}; const out=req; out.end({present});", True),
+            "handle_alias_missing": (f"const req={request}; const out=req; out.end({absent});", False),
+            "dead_reassignment": (f"let req={request}; if(false){{req=other;}} req.end({present});", True),
+            "alias_before_reassignment": (f"let req={request}; const out=req; req=other; out.end({present});", True),
+            "alias_after_reassignment": (f"let req={request}; req=other; const out=req; out.end({present});", False),
+            "chained_present": (f"{request}.end({present});", True),
+            "chained_missing": (f"{request}.end({absent});", False),
+            "chained_callback_only": (f"{request}.end(()=>{{const body={present};}});", False),
+        }
+        for expected in (False, True):
+            files = {name + ".js": prefix + source for name, (source, compliant) in cases.items()
+                     if compliant == expected}
+            result, payload = self.run_messaging_linter(files)
+            self.assertEqual(0 if expected else 1, result.returncode, payload)
+            if expected:
+                self.assertEqual("pass", next(check["status"] for check in payload["checks"]
+                                             if check["name"] == "required_messaging_profile_id"), payload)
+            else:
+                for name in files:
+                    with self.subTest(file=name):
+                        self.assert_required_profile_detected(payload, name)
+
+    def test_request_member_and_execution_siblings(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        present = "JSON.stringify({to:'+1',messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        prefix = f"const https=require('https'); const req=https.request('{endpoint}',{{method:'POST'}});\n"
+        cases = {
+            "member_decoy": (f"const state={{req:https.request('https://example.com/events',{{method:'POST'}})}};state.req.end({present});req.end({absent});", False),
+            "member_decoy_write": (f"const state={{req:https.request('https://example.com/events',{{method:'POST'}})}};state.req.write({present});state.req.end();req.end({absent});", False),
+            "comma": (f"flag && sideEffect(), req.end({present});", True),
+            "comma_or": (f"flag || sideEffect(), req.end({present});", True),
+            "comma_missing": (f"flag && sideEffect(), req.end({absent});", False),
+            "iife_arrow": (f"(()=>req.write({present}))();req.end();", True),
+            "iife_function": (f"(function(){{req.write({present});}})();req.end();", True),
+            "unused_function": (f"const unused=()=>req.write({present});req.end({absent});", False),
+            "callback": (f"setTimeout(()=>req.write({present}),0);req.end({absent});", False),
+            "parenthesized_callback": (f"run((function(){{req.write({present});}}));req.end({absent});", False),
+            "function_callback": (f"run(function(){{req.write({present});}});req.end({absent});", False),
+            "stored_function": (f"const unused=(function(){{req.write({present});}});req.end({absent});", False),
+        }
+        for expected in (False, True):
+            files = {name+'.js':prefix+body for name,(body,good) in cases.items() if good==expected}
+            result, payload = self.run_messaging_linter(files)
+            self.assertEqual(0 if expected else 1, result.returncode, payload)
+            if not expected:
+                for name in files:
+                    self.assert_required_profile_detected(payload, name)
+        for body, expected in ((present,True),(absent,False)):
+            source = ("const https=require('https');const state={};"
+                      +f"state.req=https.request('{endpoint}',{{method:'POST'}});state.req.end({body});")
+            result,payload=self.run_messaging_linter({'member-own.js':source})
+            self.assertEqual(0 if expected else 1,result.returncode,payload)
+        source = ("const https=require('https');const left={},right={};"
+                  +f"left.req=https.request('{endpoint}',{{method:'POST'}});"
+                  +"right.req=https.request('https://example.com/events',{method:'POST'});"
+                  +f"right.req.end({present});left.req.end({absent});")
+        result,payload=self.run_messaging_linter({'member-other.js':source})
+        self.assertEqual(1,result.returncode,payload)
+        self.assert_required_profile_detected(payload,'member-other.js')
+        for mutation in ("state.req=other;", "state={};"):
+            source=("const https=require('https');let state={};"
+                    +f"state.req=https.request('{endpoint}',{{method:'POST'}});"
+                    +mutation+f"state.req.end({present});")
+            result,payload=self.run_messaging_linter({'member-reset.js':source})
+            self.assertEqual(1,result.returncode,payload)
+        source=("const https=require('https');const state={};"
+                +f"state.req=https.request('{endpoint}',{{method:'POST'}});"
+                +f"const alias=state.req;alias.end({present});")
+        self.assert_required_profile_passes({'member-alias.js':source})
+
+    def test_request_closure_defaults_and_abrupt_completion_matrix(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        present = "JSON.stringify({messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        prefix = f"const https=require('https');const req=https.request('{endpoint}',{{method:'POST'}});"
+        cases = {
+            "stored_arrow_default": (f"const later=(x=req.write({present}))=>{{}};req.end({absent});", False),
+            "stored_function_default": (f"const later=function(x=req.write({present})){{}};req.end({absent});", False),
+            "callback_default": (f"run((x=req.write({present}))=>{{}});req.end({absent});", False),
+            "called_arrow_default": (f"((x=req.write({present}))=>{{}})();req.end();", True),
+            "called_function_default": (f"(function(x=req.write({present})){{}})();req.end();", True),
+            "supplied_arrow_argument": (f"((x=req.write({present}))=>{{}})(1);req.end({absent});", False),
+            "supplied_function_argument": (f"(function(x=req.write({present})){{}})(1);req.end({absent});", False),
+            "undefined_default": (f"((x=req.write({present}))=>{{}})(undefined);req.end();", True),
+            "void_default": (f"((x=req.write({present}))=>{{}})(void 0);req.end();", True),
+            "null_skips_default": (f"((x=req.write({present}))=>{{}})(null);req.end({absent});", False),
+            "unreachable_arrow_write": (f"(()=>{{return;req.write({present});}})();req.end({absent});", False),
+            "unreachable_function_write": (f"(function(){{return;req.write({present});}})();req.end({absent});", False),
+            "conditional_return": (f"(()=>{{if(flag)return;req.write({present});}})();req.end({absent});", False),
+            "literal_false_return": (f"(()=>{{if(false)return;req.write({present});}})();req.end();", True),
+            "return_expression": (f"(()=>{{return req.write({present});}})();req.end();", True),
+            "write_before_return": (f"(()=>{{req.write({present});return;}})();req.end();", True),
+            "caught_throw": (f"try{{(()=>{{throw Error();req.write({present});}})();}}catch(e){{}}req.end({absent});", False),
+            "conditional_throw": (f"try{{(()=>{{if(flag)throw Error();req.write({present});}})();}}catch(e){{}}req.end({absent});", False),
+            "async_default": (f"(async(x=req.write({present}))=>{{}})();req.end({absent});", False),
+            "async_await": (f"(async()=>{{await tick();req.write({present});}})();req.end({absent});", False),
+            "generator": (f"(function*(){{req.write({present});}})();req.end({absent});", False),
+            "call_present": (f"(function(){{req.write({present});}}).call(null);req.end();", True),
+            "call_absent": (f"(function(){{req.write({absent});}}).call(null);req.end();", False),
+            "ternary_comma_present": (f"flag?side():side(),req.end({present});", True),
+            "ternary_comma_absent": (f"flag?side():side(),req.end({absent});", False),
+            "nested_comma_guard": (f"flag?(side(),req.write({present})):side();req.end({absent});", False),
+            "argument_iife": (f"((out)=>out.write({present}))(req);req.end();", True),
+            "argument_iife_missing": (f"((out)=>out.write({absent}))(req);req.end();", False),
+            "argument_iife_other": (f"((out)=>out.write({present}))(other);req.end({absent});", False),
+            "argument_iife_rebound": (f"((out)=>{{out=other;out.write({present});}})(req);req.end({absent});", False),
+            "logical_exhaustive": (f"flag&&req.end({present})||req.end({present});", True),
+            "logical_missing_first": (f"flag&&req.end({absent})||req.end({present});", False),
+            "logical_missing_last": (f"flag&&req.end({present})||req.end({absent});", False),
+            "logical_nonexhaustive": (f"flag&&req.end({present})||other&&req.end({present});", False),
+            "logical_grouped_exhaustive": (f"(flag&&req.end({present}))||req.end({present});", True),
+            "destructured_default_skipped": (f"(({{x=req.write({present})}}={{x:1}})=>{{}})();req.end({absent});", False),
+            "finally_write": (f"(()=>{{try{{return;}}finally{{req.write({present});}}}})();req.end();", True),
+            "finally_missing": (f"(()=>{{try{{return;}}finally{{req.write({absent});}}}})();req.end();", False),
+        }
+        for expected in (False, True):
+            selected = [(name + '.js', prefix + body) for name, (body, good) in cases.items() if good == expected]
+            # The public report deliberately caps issue details at 20 files.
+            for start in range(0, len(selected), 12):
+                files = dict(selected[start:start + 12])
+                result, payload = self.run_messaging_linter(files)
+                self.assertEqual(0 if expected else 1, result.returncode, payload)
+                if not expected:
+                    for name in files:
+                        with self.subTest(file=name):
+                            self.assert_required_profile_detected(payload, name)
+        source = (prefix.replace("const req=", "let req=") + "const saved=req;const other={write(){}};"
+                  + f"(()=>{{try{{return;}}finally{{req=other;}}}})();req.write({present});saved.end({absent});")
+        result, payload = self.run_messaging_linter({'finally-rebind.js': source})
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, 'finally-rebind.js')
+        source = (prefix.replace("const req=", "let req=") + "const saved=req;const other={write(){}};"
+                  + f"(()=>{{try{{throw Error();}}catch(e){{req=other;}}}})();req.write({present});saved.end({absent});")
+        result, payload = self.run_messaging_linter({'caught-throw-rebind.js': source})
+        self.assertEqual(1, result.returncode, payload)
+        self.assert_required_profile_detected(payload, 'caught-throw-rebind.js')
+
+    def test_request_owner_alias_lifetime_matrix(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        present = "JSON.stringify({messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        prefix = f"const https=require('https');let state={{}};state.req=https.request('{endpoint}',{{method:'POST'}});"
+        cases = {
+            "owner_alias": (f"const alias=state;alias.req.end({present});", True),
+            "owner_alias_missing": (f"const alias=state;alias.req.end({absent});", False),
+            "owner_rebound_alias_retained": (f"const alias=state;state={{}};alias.req.end({present});", True),
+            "owner_rebound_original_lost": (f"const alias=state;state={{}};state.req.end({present});alias.req.end({absent});", False),
+            "alias_rebound_original_retained": (f"let alias=state;alias={{}};state.req.end({present});", True),
+            "alias_rebound_lost": (f"let alias=state;alias={{}};alias.req.end({present});state.req.end({absent});", False),
+            "alias_mutates_shared_member": (f"const alias=state;alias.req=other;state.req.end({present});", False),
+            "retained_handle_after_member_mutation": (f"const alias=state;const saved=state.req;alias.req=other;saved.end({present});", True),
+            "conditional_alias": (f"let alias=other;if(flag)alias=state;alias.req.end({present});", False),
+        }
+        for expected in (False, True):
+            files = {name + '.js': prefix + body for name, (body, good) in cases.items() if good == expected}
+            result, payload = self.run_messaging_linter(files)
+            self.assertEqual(0 if expected else 1, result.returncode, payload)
+            if not expected:
+                for name in files:
+                    self.assert_required_profile_detected(payload, name)
+
+    def test_alternate_ternary_guards_do_not_certify_missing_paths(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        for operator in ("&&", "||", "??"):
+            files = {
+                "fetch.js": ("const payload={to:'+1'};flag ? payload.messaging_profile_id='mp' : other "
+                             +operator+" (payload.messaging_profile_id='other');"
+                             +f"fetch('{endpoint}',{{method:'POST',body:JSON.stringify(payload)}});"),
+                "node.js": (f"const https=require('https');const req=https.request('{endpoint}',{{method:'POST'}});"
+                            +"flag ? req.write(JSON.stringify({messaging_profile_id:'mp'})) : other "
+                            +operator+" req.write(JSON.stringify({messaging_profile_id:'mp'}));req.end();"),
+            }
+            result,payload=self.run_messaging_linter(files)
+            self.assertEqual(1,result.returncode,payload)
+            for name in files:
+                self.assert_required_profile_detected(payload,name)
+
+    def test_request_parameter_value_and_alias_boundaries(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        prefix = ("const https=require('https');let req=https.request('" + endpoint
+                  + "',{method:'POST'});const saved=req;const other={write(){}};")
+        for present in (False, True):
+            body = "JSON.stringify({messaging_profile_id:'mp'})" if present else "JSON.stringify({to:'+1'})"
+            shapes = {
+                "prior_default_alias": f"((out=req,x=out.write({body}))=>{{}})();req.end();",
+                "prior_default_alias_function": f"(function(out=req,x=out.write({body})){{}})();req.end();",
+                "prior_default_chain": f"((out=req,alias=out,x=alias.write({body}))=>{{}})();req.end();",
+                "void_call": f"function side(){{}}((x=req.write({body}))=>{{}})(void side());req.end();",
+                "void_expression": f"((x=req.write({body}))=>{{}})(void(1+2));req.end();",
+                "returned_undefined": f"((x=req.write({body}))=>{{}})((()=>{{return undefined;}})());req.end();",
+                "returned_void": f"((x=req.write({body}))=>{{}})((()=>{{return void 0;}})());req.end();",
+                "bare_return": f"((x=req.write({body}))=>{{}})((()=>{{return;}})());req.end();",
+                "call_alias": f"(function(out){{out.write({body});}}).call(null,req);req.end();",
+                "call_default_alias": f"(function(out=req){{out.write({body});}}).call(null);req.end();",
+                "call_supplied_default_alias": f"(function(out=other){{out.write({body});}}).call(null,req);req.end();",
+                "supplied_alias_next_default": f"((out,x=out.write({body}))=>{{}})(req);req.end();",
+                "captured_before_later_void": f"((out)=>out.write({body}))(req,void(req=other));saved.end();",
+                "captured_default_before_later_void": f"((out,x=out.write({body}))=>{{}})(req,void(req=other));saved.end();",
+                "default_captures_supplied_alias": f"((out,alias=out,x=alias.write({body}))=>{{}})(req);saved.end();",
+            }
+            result, payload = self.run_messaging_linter({name+'.js':prefix+source for name,source in shapes.items()})
+            self.assertEqual(0 if present else 1, result.returncode, payload)
+            if not present:
+                for name in shapes:
+                    self.assert_required_profile_detected(payload, name+'.js')
+        p = "JSON.stringify({messaging_profile_id:'mp'})"
+        absent = "saved.end(JSON.stringify({to:'+1'}));"
+        negatives = {
+            "uncalled": f"const later=(out=req,x=out.write({p}))=>{{}};"+absent,
+            "supplied_alias_other": f"((out=req,x=out.write({p}))=>{{}})(other);"+absent,
+            "call_alias_other": f"(function(out){{out.write({p});}}).call(null,other);"+absent,
+            "call_receiver_not_argument": f"(function(out=other){{out.write({p});}}).call(req);"+absent,
+            "call_alias_rebound": f"(function(out){{out=other;out.write({p});}}).call(null,req);"+absent,
+            "returned_null": f"((x=req.write({p}))=>{{}})((()=>{{return null;}})());"+absent,
+            "returned_conditional": f"((x=req.write({p}))=>{{}})((()=>{{return flag?undefined:1;}})());"+absent,
+            "shadowed_undefined": f"((undefined)=>{{((x=req.write({p}))=>{{}})((()=>{{return undefined;}})());}})(1);"+absent,
+            "unknown_result": f"((x=req.write({p}))=>{{}})(getValue());"+absent,
+            "void_reassigns_handle": f"((x=req.write({p}))=>{{}})(void(req=other));"+absent,
+            "void_comparison_defined": f"function side(){{}}((x=req.write({p}))=>{{}})(void side() === undefined);"+absent,
+            "void_logical_defined": f"function side(){{}}((x=req.write({p}))=>{{}})(void side() || 1);"+absent,
+            "void_comma_defined": f"function side(){{}}((x=req.write({p}))=>{{}})((void side(), 1));"+absent,
+            "argument_reassigns_handle": f"((out)=>out.write({p}))((req=other));"+absent,
+            "default_after_later_argument": f"((out=req,x)=>out.write({p}))(undefined,req=other);"+absent,
+            "named_void_helper_reassigns": f"function side(){{req=other;}}((x=req.write({p}))=>{{}})(void side());"+absent,
+        }
+        result,payload=self.run_messaging_linter({name+'.js':prefix+source for name,source in negatives.items()})
+        self.assertEqual(1,result.returncode,payload)
+        for name in negatives:
+            self.assert_required_profile_detected(payload,name+'.js')
+
+    def test_request_call_parameter_alias_suffix_parity(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        for present in (False, True):
+            body = "JSON.stringify({messaging_profile_id:'mp'})" if present else "JSON.stringify({to:'+1'})"
+            files = {}
+            for suffix in (".js", ".jsx", ".cjs", ".mjs", ".ts", ".tsx", ".cts", ".mts"):
+                imported = ("import * as https from 'node:https';" if suffix in {".mjs", ".mts"}
+                            else "const https=require('node:https');")
+                files['call'+suffix] = (imported+f"const req=https.request('{endpoint}',{{method:'POST'}});"
+                                       +f"(function(out){{out.write({body});}}).call(null,req);req.end();")
+            result,payload=self.run_messaging_linter(files)
+            self.assertEqual(0 if present else 1,result.returncode,payload)
+            if not present:
+                for name in files:
+                    self.assert_required_profile_detected(payload,name)
+
+    def test_request_execution_repairs_cover_js_ts_suffixes(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        write = "req.write(JSON.stringify({messaging_profile_id:'mp'}))"
+        absent = "req.end(JSON.stringify({to:'+1'}));"
+        shapes = {
+            "stored": (f"const later=(x={write})=>{{}};" + absent, False),
+            "unreachable": (f"(()=>{{return;{write};}})();" + absent, False),
+            "called": (f"((x={write})=>{{}})();req.end();", True),
+            "finally": (f"(()=>{{try{{return;}}finally{{{write};}}}})();req.end();", True),
+        }
+        for good in (False, True):
+            files = {}
+            for suffix in (".js", ".jsx", ".cjs", ".mjs", ".ts", ".tsx", ".cts", ".mts"):
+                imported = ("import * as https from 'node:https';" if suffix in {".mjs", ".mts"}
+                            else "const https=require('node:https');")
+                prefix = imported + f"const req=https.request('{endpoint}',{{method:'POST'}});"
+                for name, (body, expected) in shapes.items():
+                    if expected == good:
+                        files[name + suffix] = prefix + body
+            result, payload = self.run_messaging_linter(files)
+            self.assertEqual(0 if good else 1, result.returncode, payload)
+            if not good:
+                for name in files:
+                    self.assert_required_profile_detected(payload, name)
+
+    def test_shell_nested_substitutions_keep_their_own_quote_context(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        for present in (False, True):
+            body = '{"to":"+1"' + (',"messaging_profile_id":"mp"' if present else '') + '}'
+            curl = f"curl -X POST '{endpoint}' -d '{body}'"
+            inert = f'curl -X POST "{endpoint}" -d "{{}}"'
+            expressions = {
+                "dollar_live": (f'$(printf "%s" "$({curl})")', True),
+                "dollar_literal": (f'$(printf "%s" \'$({inert})\')', False),
+                "backtick_literal": (f'$(printf "%s" \'`{inert}`\')', False),
+                "comment_literal": (f'$(printf safe # $({inert})\n)', False),
+                "comment_open_paren": (f'$(printf safe # (\n{curl})', True),
+                "comment_close_paren": (f'$(printf safe # )\n{curl})', True),
+                "hash_in_word": (f'$(printf word#; {curl})', True),
+                "escaped_hash": (f'$(printf \\#; {curl})', True),
+                "quoted_hash": (f"$(printf '#('; {curl})", True),
+                "escaped_space_hash": (f'$(printf word\\ #; {curl})', True),
+                "backtick_live": (f'`{curl}`', True),
+                "adjacent_live": (f'$(printf "%s" \'$({inert})\')$({curl})', True),
+            }
+            for name, (expression, executes) in expressions.items():
+                with self.subTest(present=present, shape=name):
+                    source = f"cat <<DOC\n{expression}\nDOC\n"
+                    result, payload = self.run_messaging_linter({"nested.sh": source})
+                    check = next(c for c in payload["checks"] if c["name"] == "required_messaging_profile_id")
+                    self.assertEqual("issue" if executes and not present else "pass", check["status"], payload)
+                    self.assertEqual(1 if executes and not present else 0, result.returncode, payload)
+
+    def test_shell_heredoc_substitutions_obey_delimiter_quoting(self) -> None:
+        openers = (("<<DOC",True),("<< DOC",True),("<<-DOC",True),
+                   ("<<'DOC'",False),('<<"DOC"',False),("<<\\DOC",False),("<<D'OC'",False))
+        for profile in (False,True):
+            files = {}
+            required = []
+            for index,(opener,expands) in enumerate(openers):
+                body = '{"to":"+1"'+(',"messaging_profile_id":"mp"' if profile else '')+'}'
+                curl = "curl -X POST 'https://api.telnyx.com/v2/messages/number_pool' -d '"+body+"'"
+                for form,command in (("dollar",'$('+curl+')'),("backtick",'`'+curl+'`')):
+                    name=f"heredoc_{index}_{form}.sh"
+                    files[name]='cat '+opener+'\n'+command+'\nDOC\n'
+                    if expands and not profile:
+                        required.append(name)
+            files['mixed-delimiters.sh'] = 'cat <<FIRST <<\'SECOND\'\n$('+curl+')\nFIRST\n$(curl bogus)\nSECOND\n'
+            if not profile:
+                required.append('mixed-delimiters.sh')
+            files['escaped-substitution.sh'] = 'cat <<DOC\n\\$('+curl+')\nDOC\n'
+            result,payload=self.run_messaging_linter(files)
+            self.assertEqual(0 if profile else 1,result.returncode,payload)
+            check=next(c for c in payload['checks'] if c['name']=='required_messaging_profile_id')
+            for name in required:
+                self.assert_required_profile_detected(payload,name)
+            if not profile:
+                details=json.dumps(check)
+                for name in files:
+                    if name not in required:
+                        self.assertNotIn(name,details)
+
+    def test_nested_ternary_profile_writes_remain_conditional(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        for wrapper in ("%s", "(%s)", "console.log(%s)", "console.log((%s))",
+                        "flag ?? %s", "flag && %s", "flag || %s"):
+            for complete in (False, True):
+                alternate = "payload.messaging_profile_id='other'" if complete else "null"
+                source = (
+                    "const payload={to:'+1'};\n"
+                    + wrapper % ("flag ? payload.messaging_profile_id='mp' : " + alternate)
+                    + f";\nfetch('{endpoint}',{{method:'POST',body:JSON.stringify(payload)}});\n"
+                )
+                with self.subTest(wrapper=wrapper, complete=complete):
+                    result, payload = self.run_messaging_linter({"ternary.js": source})
+                    self.assertEqual(0 if complete else 1, result.returncode, payload)
+                    if not complete:
+                        self.assert_required_profile_detected(payload, "ternary.js")
+        for operator in ("&&", "||", "??", "&&=", "||=", "??="):
+            with self.subTest(outer_guard=operator):
+                source = (
+                    "const payload={to:'+1'}; let flag=getFlag();\n"
+                    f"flag {operator} (other ? payload.messaging_profile_id='mp' : payload.messaging_profile_id='other');\n"
+                    f"fetch('{endpoint}',{{method:'POST',body:JSON.stringify(payload)}});\n"
+                )
+                result, payload = self.run_messaging_linter({"outer-guard.js": source})
+                self.assertEqual(1, result.returncode, payload)
+                self.assert_required_profile_detected(payload, "outer-guard.js")
+        for operator in ("&&=", "||=", "??="):
+            with self.subTest(assignment_guard=operator):
+                source = (
+                    "const payload={to:'+1'}; let flag=getFlag();\n"
+                    f"flag {operator} other ? payload.messaging_profile_id='mp' : payload.messaging_profile_id='other';\n"
+                    f"fetch('{endpoint}',{{method:'POST',body:JSON.stringify(payload)}});\n"
+                )
+                result, payload = self.run_messaging_linter({"assignment-guard.js": source})
+                self.assertEqual(1, result.returncode, payload)
+                self.assert_required_profile_detected(payload, "assignment-guard.js")
+
+    def test_node_core_options_cannot_supply_request_body(self) -> None:
+        endpoint = "https://api.telnyx.com/v2/messages/number_pool"
+        present = "JSON.stringify({to:'+1',messaging_profile_id:'mp'})"
+        absent = "JSON.stringify({to:'+1'})"
+        imports = (
+            ("const https=require('https');", "https.request"),
+            ("const transport=require('node:https');", "transport.request"),
+            ("import transport from 'node:http';", "transport.request"),
+            ("import * as transport from 'https';", "transport.request"),
+            ("const {request}=require('node:https');", "request"),
+            ("const {request,get}=require('node:https');", "request"),
+            ("import {request,get} from 'node:https';", "request"),
+            ("import {request as request} from 'node:https';", "request"),
+        )
+        for actual_profile in (False, True):
+            files = {}
+            for index, (statement, callee) in enumerate(imports):
+                for key in ("body", "data", "json"):
+                    files[f"options_{index}_{key}.js"] = (
+                        statement + f"\nconst options={{method:'POST',{key}:{present}}};\n"
+                        f"const req={callee}('{endpoint}',options);\n"
+                        f"req.end({present if actual_profile else absent});\n"
+                    )
+            # The wrapper intentionally caps displayed findings at 20 files.
+            # Keep each batch below that cap so every negative is asserted.
+            items = list(files.items())
+            for start in range(0, len(items), 12):
+                batch = dict(items[start:start + 12])
+                result, payload = self.run_messaging_linter(batch)
+                self.assertEqual(0 if actual_profile else 1, result.returncode, payload)
+                if not actual_profile:
+                    for name in batch:
+                        with self.subTest(file=name):
+                            self.assert_required_profile_detected(payload, name)
+
     def test_extensionless_shebang_send_is_analyzed(self) -> None:
         # package.json "bin" entry points have no extension; the analyzer
         # refused to open them while the Phase-1 scanner reported them.
