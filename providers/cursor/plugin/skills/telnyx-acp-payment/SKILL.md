@@ -53,7 +53,7 @@ There is one product: USD account credit, catalog item `account_credit_usd`. Eac
 
 ## Setup
 
-You need `curl`, `jq`, Node.js, npm, and a Telnyx API key. Link payments use `@stripe/link-cli@0.16.0`. Tempo payments use `mppx@0.6.28` and a funded Tempo wallet.
+You need `curl`, `jq`, Node.js, npm, and a Telnyx API key. Link payments use `@stripe/link-cli@0.16.0`. Tempo payments use `mppx@0.6.28` and a funded Tempo wallet. Both tools run through `npx`, so nothing is installed into your project.
 
 ## Environment variables
 
@@ -144,7 +144,7 @@ Open the URL shown by the CLI, confirm the phrase, and approve access.
 npx --yes @stripe/link-cli@0.16.0 payment-methods list --format json
 ```
 
-Choose a card marked as eligible for agentic payments. Link accepts eligible cards in supported regions — currently cards issued in the United States or Canada.
+Choose a card whose `capabilities.agentic_payments.eligible` is not `false`. Link accepts eligible cards in supported regions — currently cards issued in the United States or Canada.
 
 ```sh
 export LINK_PAYMENT_METHOD_ID='<csmrpd-id>'
@@ -175,7 +175,7 @@ npx --yes @stripe/link-cli@0.16.0 spend-request create \
   --format json
 ```
 
-The response has `status: "pending_approval"` and an approval URL of the form `https://app.link.com/activity/approve/<lsrq-id>`. Open it, check the card and amount, and click **Approve**. Save the spend-request ID:
+The output includes the spend-request `id` and an approval URL of the form `https://app.link.com/activity/approve/<lsrq-id>`. The CLI may return at once with `status: "pending_approval"` or keep waiting until the request is approved, denied, or expired. Either way, open the URL, check the card and amount, and click **Approve**. Save the spend-request ID:
 
 ```sh
 export LINK_SPEND_REQUEST_ID='<lsrq-id>'
@@ -196,7 +196,8 @@ COMPLETE_RESULT="$(mktemp /tmp/telnyx-acp-result.XXXXXX.json)"
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" \
   --include shared_payment_token --format json > "$SPEND"
 
-jq -e '.status == "approved" or .status == "succeeded"' "$SPEND" > /dev/null
+jq -e '.status == "approved" or .status == "succeeded"' "$SPEND" > /dev/null \
+  || echo 'NOT APPROVED: stop here, wait for the Link approval, then retrieve again'
 jq '{payment_data: {handler_id: "stripe_shared_payment_token",
      instrument: {type: "card", credential: {type: "spt", token: .shared_payment_token.id}}}}' \
   "$SPEND" > "$COMPLETE_BODY"
@@ -212,7 +213,7 @@ curl -sS \
   --data-binary "@$COMPLETE_BODY"
 ```
 
-Submit the completion once. Read [Check whether the payment went through](#check-whether-the-payment-went-through) before doing anything else.
+If the status check prints `NOT APPROVED`, do not run the completion. Submit the completion once. Read [Check whether the payment went through](#check-whether-the-payment-went-through) before doing anything else.
 
 ## Pay with Tempo USDC
 
@@ -230,9 +231,9 @@ Back up the wallet and keep its private key secret. Transfer enough USDC to cove
 npx --yes mppx@0.6.28 account view --account my-telnyx-payer --network mainnet --json
 ```
 
-### Sign the checkout's challenge
+### Inspect the checkout's challenge
 
-The Tempo handler's `config.challenge` is the exact MPP challenge to pay. Decode its `request` parameter and confirm the chain is Tempo mainnet (`chainId` `4217`), the amount matches your checkout in six-decimal USDC units (cents × 10000), and the recipient is the address you expect. Then create one payment credential with `mppx`:
+The Tempo handler's `config.challenge` is the exact MPP challenge to pay. Save it, validate it, and decode its `request` parameter (base64url JSON):
 
 ```sh
 umask 077
@@ -240,24 +241,34 @@ TEMPO_CHALLENGE="$(mktemp /tmp/telnyx-acp-tempo-challenge.XXXXXX)"
 TEMPO_CREDENTIAL="$(mktemp /tmp/telnyx-acp-tempo-credential.XXXXXX)"
 jq -r '.capabilities.payment.handlers[] | select(.name=="com.telnyx.mpp.tempo") | .config.challenge' "$CHECKOUT" > "$TEMPO_CHALLENGE"
 
-npm install --silent --no-save mppx@0.6.28
-cat > /tmp/telnyx-acp-sign.mjs <<'EOF'
-import fs from 'node:fs'
-import { Mppx, tempo } from 'mppx/client'
-import { resolveAccount } from 'mppx/cli'
-const [challengePath, outPath, accountName] = process.argv.slice(2)
-const challenge = fs.readFileSync(challengePath, 'utf8').trim()
-const account = await resolveAccount(accountName)
-const mppx = Mppx.create({ methods: [tempo({ account, autoSwap: false })], polyfill: false })
-const credential = await mppx.createCredential(
-  new Response(null, { status: 402, headers: { 'WWW-Authenticate': challenge } })
-)
-fs.writeFileSync(outPath, credential, { mode: 0o600 })
-EOF
-node /tmp/telnyx-acp-sign.mjs "$TEMPO_CHALLENGE" "$TEMPO_CREDENTIAL" my-telnyx-payer
+npx --yes mppx@0.6.28 sign --network mainnet --dry-run --challenge "$(cat "$TEMPO_CHALLENGE")"
+
+sed -E 's/.*request="([^"]+)".*/\1/' "$TEMPO_CHALLENGE" \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(Buffer.from(s.trim(),"base64url").toString()),null,2)))'
 ```
 
-Signing authorizes the USDC transfer, so treat it as the payment step. Sign once per checkout.
+The dry run should print `Challenge is valid.` In the decoded request, confirm before you sign:
+
+| Field | Expected |
+|---|---|
+| `methodDetails.chainId` | `4217` (Tempo mainnet) |
+| `currency` | `0x20C000000000000000000000b9537d11c60E8b50` (USDC.e on Tempo, 6 decimals) |
+| `amount` | `ACP_AMOUNT_CENTS` × 10000 (for example `1200` cents → `12000000`) |
+| `externalId` | `telnyx:account-credit:<your account id>:usd:<amount>` |
+| `recipient` | The Tempo deposit address Telnyx assigned to this checkout. It can differ between checkouts. Record it; it is where your USDC goes |
+
+### Sign the challenge
+
+Signing authorizes the USDC transfer, so treat it as the payment step. Sign once per checkout:
+
+```sh
+npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
+  --challenge "$(cat "$TEMPO_CHALLENGE")" \
+  | jq -r '.authorization' > "$TEMPO_CREDENTIAL"
+test -s "$TEMPO_CREDENTIAL" && echo 'credential saved'
+```
+
+`mppx` signs the exact challenge and writes the `Payment ...` credential to the private file. It never prints your private key.
 
 ### Complete the checkout
 
@@ -292,9 +303,9 @@ A successful completion returns HTTP `200` with `status: "completed"` and an `or
 jq '{status, order: {id: .order.id, checkout_session_id: .order.checkout_session_id, status: .order.status}}' "$COMPLETE_RESULT"
 ```
 
-`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit. Save both.
+`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit. Save both. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
 
-HTTP `202` means Telnyx could not confirm the payment provider's outcome yet. Do not submit the completion again and do not create a replacement checkout. Retrieve the checkout until its status settles.
+HTTP `202` means Telnyx could not confirm the payment provider's outcome yet. Do not submit the completion again and do not create a replacement checkout. Retrieve the checkout every 5 seconds for up to a minute until its status settles, then follow the balance and support steps below if it has not.
 
 ### Retrieve the checkout
 
@@ -318,7 +329,7 @@ curl -sS "$ACP_BASE_URL/v2/payment/crypto_transactions/<order-id>" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
-A completed transaction normally has `status: "settled"`. The list endpoint `GET /v2/payment/crypto_transactions` shows recent machine payments if you lost the order ID.
+Despite the path name, this endpoint lists every machine payment, including Link card payments. A completed transaction normally has `status: "settled"`. The list endpoint `GET /v2/payment/crypto_transactions` shows recent machine payments if you lost the order ID.
 
 ### Check your Telnyx balance
 
@@ -327,7 +338,7 @@ curl -sS "$ACP_BASE_URL/v2/balance" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
-Confirm that `available_credit` rose by the checkout amount. The balance may update shortly after the completion response, so check again after a brief wait before contacting support.
+Confirm that `data.available_credit` rose by the checkout amount. The balance may update shortly after the completion response, so check again after a brief wait before contacting support.
 
 ### Check Link or Tempo
 
@@ -356,7 +367,7 @@ Only a checkout in `ready_for_payment` can be cancelled. A completed or already 
 Delete the temporary files once you have recorded the checkout ID, order ID, and balance:
 
 ```sh
-rm -f "$CHECKOUT" "$SPEND" "$COMPLETE_BODY" "$COMPLETE_RESULT" "$TEMPO_CHALLENGE" "$TEMPO_CREDENTIAL" /tmp/telnyx-acp-sign.mjs
+rm -f "$CHECKOUT" "$SPEND" "$COMPLETE_BODY" "$COMPLETE_RESULT" "$TEMPO_CHALLENGE" "$TEMPO_CREDENTIAL"
 ```
 
 ## What to save for support
@@ -377,7 +388,7 @@ Send these identifiers to Telnyx Support if you need help tracing a payment. Do 
 
 ## If something goes wrong
 
-Errors use the ACP error shape: `{"type": "...", "code": "...", "message": "..."}`.
+Checkout errors use the ACP error shape: `{"type": "...", "code": "...", "message": "..."}`. Authentication failures (`401`) use the standard Telnyx envelope instead: `{"errors": [{"code": "10009", "title": "Authentication failed", "detail": "..."}]}`.
 
 ### HTTP `400`
 

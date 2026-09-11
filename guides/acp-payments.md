@@ -97,7 +97,10 @@ curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" 
 TEMPO_CHALLENGE="$(mktemp /tmp/telnyx-acp-tempo-challenge.XXXXXX)"
 TEMPO_CREDENTIAL="$(mktemp /tmp/telnyx-acp-tempo-credential.XXXXXX)"
 jq -r '.capabilities.payment.handlers[] | select(.name=="com.telnyx.mpp.tempo") | .config.challenge' "$CHECKOUT" > "$TEMPO_CHALLENGE"
-# Sign with the mppx SDK (see the telnyx-acp-payment skill for the signing script), producing $TEMPO_CREDENTIAL
+# Validate, then sign with mppx (signing authorizes the transfer — once per checkout)
+npx --yes mppx@0.6.28 sign --network mainnet --dry-run --challenge "$(cat "$TEMPO_CHALLENGE")"
+npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
+  --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization' > "$TEMPO_CREDENTIAL"
 COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX.json)"
 jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
         instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
