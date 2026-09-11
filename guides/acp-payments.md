@@ -41,7 +41,7 @@ export ACP_BASE_URL='https://api.telnyx.com'
 
 # Step 1: Create the checkout (expect HTTP 201, status ready_for_payment)
 umask 077
-CHECKOUT="$(mktemp /tmp/telnyx-acp-checkout.XXXXXX.json)"
+CHECKOUT="$(mktemp /tmp/telnyx-acp-checkout.XXXXXX)"
 curl -sS --output "$CHECKOUT" --write-out '%{http_code}\n' \
   -X POST "$ACP_BASE_URL/v2/checkout_sessions" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
@@ -75,8 +75,8 @@ npx --yes @stripe/link-cli@0.16.0 spend-request create \
 export LINK_SPEND_REQUEST_ID='<lsrq-id>'
 
 # Retrieve the approved token into a private file and complete once
-SPEND="$(mktemp /tmp/telnyx-acp-spend.XXXXXX.json)"
-COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX.json)"
+SPEND="$(mktemp /tmp/telnyx-acp-spend.XXXXXX)"
+COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" \
   --include shared_payment_token --format json > "$SPEND"
 jq '{payment_data: {handler_id: "stripe_shared_payment_token",
@@ -101,7 +101,7 @@ jq -r '.capabilities.payment.handlers[] | select(.name=="com.telnyx.mpp.tempo") 
 npx --yes mppx@0.6.28 sign --network mainnet --dry-run --challenge "$(cat "$TEMPO_CHALLENGE")"
 npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
   --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization' > "$TEMPO_CREDENTIAL"
-COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX.json)"
+COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
 jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
         instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
   "$TEMPO_CREDENTIAL" > "$COMPLETE_BODY"

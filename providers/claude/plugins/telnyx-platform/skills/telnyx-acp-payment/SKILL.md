@@ -55,6 +55,8 @@ There is one product: USD account credit, catalog item `account_credit_usd`. Eac
 
 You need `curl`, `jq`, Node.js, npm, and a Telnyx API key. Link payments use `@stripe/link-cli@0.16.0`. Tempo payments use `mppx@0.6.28` and a funded Tempo wallet. Both tools run through `npx`, so nothing is installed into your project.
 
+Run every command block below in the same shell session. Later blocks reuse variables such as `CHECKOUT` and `ACP_CHECKOUT_ID` that earlier blocks set.
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -90,7 +92,7 @@ Save the response in a private temporary file because it contains the payment ch
 
 ```sh
 umask 077
-CHECKOUT="$(mktemp /tmp/telnyx-acp-checkout.XXXXXX.json)"
+CHECKOUT="$(mktemp /tmp/telnyx-acp-checkout.XXXXXX)"
 
 curl -sS \
   --output "$CHECKOUT" \
@@ -183,21 +185,30 @@ export LINK_SPEND_REQUEST_ID='<lsrq-id>'
 
 Each spend request can be used once. Create and approve a new one for every payment.
 
-### Retrieve the token and complete the checkout
+### Retrieve the token
 
-Write the token and completion body to private files. Never put the token in a command argument:
+Write the token to a private file. Never put the token in a command argument:
 
 ```sh
 umask 077
-SPEND="$(mktemp /tmp/telnyx-acp-spend.XXXXXX.json)"
-COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX.json)"
-COMPLETE_RESULT="$(mktemp /tmp/telnyx-acp-result.XXXXXX.json)"
+SPEND="$(mktemp /tmp/telnyx-acp-spend.XXXXXX)"
 
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" \
   --include shared_payment_token --format json > "$SPEND"
 
 jq -e '.status == "approved" or .status == "succeeded"' "$SPEND" > /dev/null \
-  || echo 'NOT APPROVED: stop here, wait for the Link approval, then retrieve again'
+  && echo 'APPROVED' \
+  || echo 'NOT APPROVED: wait for the Link approval, then run this block again'
+```
+
+Continue only when the check prints `APPROVED`. If it prints `NOT APPROVED`, wait about 10 seconds and run this block again; give up and cancel the checkout if the spend request is denied or expires.
+
+### Complete the checkout
+
+```sh
+COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
+COMPLETE_RESULT="$(mktemp /tmp/telnyx-acp-result.XXXXXX)"
+
 jq '{payment_data: {handler_id: "stripe_shared_payment_token",
      instrument: {type: "card", credential: {type: "spt", token: .shared_payment_token.id}}}}' \
   "$SPEND" > "$COMPLETE_BODY"
@@ -213,7 +224,7 @@ curl -sS \
   --data-binary "@$COMPLETE_BODY"
 ```
 
-If the status check prints `NOT APPROVED`, do not run the completion. Submit the completion once. Read [Check whether the payment went through](#check-whether-the-payment-went-through) before doing anything else.
+Submit the completion once. Read [Check whether the payment went through](#check-whether-the-payment-went-through) before doing anything else.
 
 ## Pay with Tempo USDC
 
@@ -225,10 +236,10 @@ Create a named mainnet wallet if you do not already have one:
 npx --yes mppx@0.6.28 account create --account my-telnyx-payer --network mainnet
 ```
 
-Back up the wallet and keep its private key secret. Transfer enough USDC to cover the payment and network fees, then check the wallet:
+Back up the wallet and keep its private key secret. Transfer enough USDC.e (`0x20C000000000000000000000b9537d11c60E8b50` on Tempo) to cover the payment plus network fees, then confirm the wallet address and check its balance in your wallet tooling:
 
 ```sh
-npx --yes mppx@0.6.28 account view --account my-telnyx-payer --network mainnet --json
+npx --yes mppx@0.6.28 account view --account my-telnyx-payer --network mainnet --format json
 ```
 
 ### Inspect the checkout's challenge
@@ -247,15 +258,15 @@ sed -E 's/.*request="([^"]+)".*/\1/' "$TEMPO_CHALLENGE" \
   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.stringify(JSON.parse(Buffer.from(s.trim(),"base64url").toString()),null,2)))'
 ```
 
-The dry run should print `Challenge is valid.` In the decoded request, confirm before you sign:
+The dry run prints `Challenge is valid.` (on stderr) and nothing else. In the decoded request, confirm before you sign:
 
 | Field | Expected |
 |---|---|
 | `methodDetails.chainId` | `4217` (Tempo mainnet) |
 | `currency` | `0x20C000000000000000000000b9537d11c60E8b50` (USDC.e on Tempo, 6 decimals) |
-| `amount` | `ACP_AMOUNT_CENTS` × 10000 (for example `1200` cents → `12000000`) |
-| `externalId` | `telnyx:account-credit:<your account id>:usd:<amount>` |
-| `recipient` | The Tempo deposit address Telnyx assigned to this checkout. It can differ between checkouts. Record it; it is where your USDC goes |
+| `amount` | A string equal to `ACP_AMOUNT_CENTS` × 10000 (for example `1200` cents → `"12000000"`) |
+| `externalId` | `telnyx:account-credit:<account id>:usd:<dollars>` where `<dollars>` is the amount with two decimals (for example `12.00`). The account ID is the numeric ID of the account that owns your API key; if you do not know it, check only the shape |
+| `recipient` | The Tempo deposit address Telnyx assigned to this checkout. It can differ between checkouts and there is no published value to compare it with; the signed challenge binds it. Record it for your records; it is where your USDC goes |
 
 ### Sign the challenge
 
@@ -268,13 +279,13 @@ npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format 
 test -s "$TEMPO_CREDENTIAL" && echo 'credential saved'
 ```
 
-`mppx` signs the exact challenge and writes the `Payment ...` credential to the private file. It never prints your private key.
+`mppx` signs the exact challenge and writes the `Payment ...` credential to the private file. It never prints your private key. If `credential saved` is not printed, the file is empty: do not continue, check the wallet has enough USDC.e and fees, and do not run the sign again until you have read the error.
 
 ### Complete the checkout
 
 ```sh
-COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX.json)"
-COMPLETE_RESULT="$(mktemp /tmp/telnyx-acp-result.XXXXXX.json)"
+COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
+COMPLETE_RESULT="$(mktemp /tmp/telnyx-acp-result.XXXXXX)"
 
 jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
         instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
@@ -300,8 +311,11 @@ Submit the completion once. If the response is slow or interrupted, check the ch
 A successful completion returns HTTP `200` with `status: "completed"` and an `order` object:
 
 ```sh
-jq '{status, order: {id: .order.id, checkout_session_id: .order.checkout_session_id, status: .order.status}}' "$COMPLETE_RESULT"
+jq '{status, order: {id: .order.id, checkout_session_id: .order.checkout_session_id, status: .order.status,
+     fulfilled: (.order.line_items[0].status)}, matches_checkout: (.order.checkout_session_id == env.ACP_CHECKOUT_ID)}' "$COMPLETE_RESULT"
 ```
+
+`matches_checkout` must be `true`.
 
 `order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit. Save both. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
 
@@ -329,7 +343,7 @@ curl -sS "$ACP_BASE_URL/v2/payment/crypto_transactions/<order-id>" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
-Despite the path name, this endpoint lists every machine payment, including Link card payments. A completed transaction normally has `status: "settled"`. The list endpoint `GET /v2/payment/crypto_transactions` shows recent machine payments if you lost the order ID.
+Despite the path name, this endpoint lists every machine payment, including Link card payments. A completed transaction normally has `status: "settled"`. For Tempo payments its `receipt_reference` is the on-chain transaction hash. The list endpoint `GET /v2/payment/crypto_transactions` shows recent machine payments if you lost the order ID.
 
 ### Check your Telnyx balance
 
@@ -348,7 +362,7 @@ For Link, retrieve the spend request without the token:
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" --format json
 ```
 
-A completed Link payment shows `status: "succeeded"` and a successful payment outcome. For Tempo, look up the transaction in your wallet or a Tempo transaction viewer and confirm that it succeeded.
+A completed Link payment shows `status: "succeeded"` and a successful payment outcome. For Tempo, take the `receipt_reference` hash from the Telnyx transaction above and confirm in your wallet or a Tempo block explorer that it succeeded.
 
 ## Cancel a checkout you will not pay
 
@@ -380,7 +394,7 @@ Save these details for each payment:
 - amount in cents and currency;
 - handler `id` you used;
 - Link spend-request ID, if you used Link;
-- Tempo transaction hash, if you used Tempo;
+- Tempo transaction hash and the recipient address from the challenge, if you used Tempo;
 - the approximate UTC time you completed the checkout; and
 - the final HTTP status and error body if the payment did not complete.
 
