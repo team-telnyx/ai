@@ -4,7 +4,6 @@
   "description": "Programmable telecom platform — voice, messaging, email, IoT, AI, networking, storage.",
   "version": "1.0.0",
   "updated": "2026-09-03T00:00:00Z",
-
   "auth": {
     "type": "api_key",
     "header": "Authorization",
@@ -13,7 +12,6 @@
     "signup_manifest": "https://telnyx.com/.well-known/agent-access.json",
     "docs": "https://developers.telnyx.com/docs/api/v2/overview#authentication"
   },
-
   "capabilities": [
     {
       "id": "messaging",
@@ -23,7 +21,11 @@
       "cli": "telnyx message send --from +15551234567 --to +15559876543 --text 'Hello'",
       "api": "POST /v2/messages",
       "docs": "https://developers.telnyx.com/docs/messaging",
-      "requires": ["messaging_profile", "phone_number", "10dlc_registration"]
+      "requires": [
+        "messaging_profile",
+        "phone_number",
+        "10dlc_registration"
+      ]
     },
     {
       "id": "rcs",
@@ -33,7 +35,10 @@
       "cli": "telnyx-agent rcs-send --agent-id AGENT_ID --messaging-profile-id PROFILE_ID --to +15559876543 --text 'Hello from RCS'",
       "api": "POST /v2/messages/rcs",
       "docs": "https://developers.telnyx.com/docs/messaging/messages/rcs-capabilities",
-      "requires": ["rcs_agent", "messaging_profile"]
+      "requires": [
+        "rcs_agent",
+        "messaging_profile"
+      ]
     },
     {
       "id": "voice",
@@ -43,7 +48,10 @@
       "cli": "telnyx call dial --from +15551234567 --to +15559876543",
       "api": "POST /v2/calls",
       "docs": "https://developers.telnyx.com/docs/voice",
-      "requires": ["voice_connection", "phone_number"]
+      "requires": [
+        "voice_connection",
+        "phone_number"
+      ]
     },
     {
       "id": "ai_assistants",
@@ -53,7 +61,9 @@
       "cli": "telnyx assistant create --name 'Support Bot'",
       "api": "POST /v2/ai/assistants",
       "docs": "https://developers.telnyx.com/docs/ai/assistants",
-      "requires": ["phone_number"]
+      "requires": [
+        "phone_number"
+      ]
     },
     {
       "id": "ai_inference",
@@ -80,7 +90,10 @@
       "guide": "/guides/email.md",
       "api": "POST /v2/email_messages",
       "docs": "https://developers.telnyx.com/docs/email",
-      "requires": ["sending_domain", "api_key"]
+      "requires": [
+        "sending_domain",
+        "api_key"
+      ]
     },
     {
       "id": "numbers",
@@ -100,7 +113,9 @@
       "cli": "telnyx-agent verify-send --phone-number +15551234567 --verify-profile-id prof_xxx --method whatsapp",
       "api": "POST /v2/verifications/whatsapp",
       "docs": "https://developers.telnyx.com/docs/verify",
-      "requires": ["verify_profile"]
+      "requires": [
+        "verify_profile"
+      ]
     },
     {
       "id": "fax",
@@ -109,7 +124,9 @@
       "cli": "telnyx fax send --to +15551234567 --media-url https://example.com/doc.pdf",
       "api": "POST /v2/faxes",
       "docs": "https://developers.telnyx.com/docs/fax",
-      "requires": ["phone_number"]
+      "requires": [
+        "phone_number"
+      ]
     },
     {
       "id": "iot",
@@ -185,6 +202,15 @@
       "requires": []
     },
     {
+      "id": "acp_payments",
+      "name": "ACP Payments",
+      "description": "Fund account through an Agentic Commerce Protocol (ACP) checkout with Stripe Link or Tempo USDC — create, complete, retrieve, and cancel checkouts with idempotency keys.",
+      "guide": "/guides/acp-payments.md",
+      "api": "POST /v2/checkout_sessions",
+      "docs": "https://telnyx.com/.well-known/agent-skills/telnyx-acp-payment/SKILL.md",
+      "requires": []
+    },
+    {
       "id": "porting",
       "name": "Number Porting",
       "description": "Check portability, create and manage port-in orders, upload LOA and supporting documents, track requirements and activation status, and monitor port-out activity.",
@@ -195,38 +221,180 @@
       "requires": []
     }
   ],
-
   "cli": {
     "package": "@telnyx/api-cli",
     "version": "1.1.0",
     "install": "npm install -g @telnyx/api-cli",
-    "global_flags": ["--json", "-o table|json|csv|tsv|ids", "-v", "-p <profile>"],
+    "global_flags": [
+      "--json",
+      "-o table|json|csv|tsv|ids",
+      "-v",
+      "-p <profile>"
+    ],
     "topics": {
-      "10dlc": ["brand list", "brand get", "brand create", "brand delete", "campaign list", "campaign get", "campaign create", "campaign delete", "campaign submit", "assign", "usecases", "verticals", "wizard"],
-      "ai": ["chat", "embed", "models"],
-      "assistant": ["create", "delete", "get", "list", "call"],
-      "auth": ["setup", "status", "whoami"],
-      "billing": ["balance", "group list", "group get", "group create", "group delete"],
-      "call": ["dial", "hangup", "list", "speak", "transfer"],
-      "connection": ["create", "delete", "get", "list"],
-      "debugger": ["get", "list"],
-      "e911": ["address list", "address get", "address create", "address delete", "assign"],
-      "fax": ["send", "get", "list", "delete"],
-      "lookup": ["number"],
-      "message": ["send", "get", "list"],
-      "messaging-profile": ["create", "delete", "get", "list"],
-      "number": ["search", "order", "get", "list", "update", "delete"],
-      "porting": ["check", "order list", "order get", "order create", "order update", "order delete", "order submit", "order cancel", "order activate", "phone-numbers", "comments", "documents", "events", "requirements"],
-      "profile": ["list", "use", "delete"],
-      "sim": ["enable", "disable", "get", "list"],
-      "storage": ["bucket list", "bucket get", "bucket create", "bucket delete", "object list", "object get", "object put", "object delete", "presign"],
-      "usage": ["report", "options"],
-      "verify": ["send", "check", "profile list", "profile get", "profile create", "profile delete", "template list", "template get", "template create"],
-      "video": ["room list", "room get", "room create", "room delete", "session list", "session get", "recording list", "recording get", "recording delete"],
-      "voice-profile": ["create", "delete", "get", "list"]
+      "10dlc": [
+        "brand list",
+        "brand get",
+        "brand create",
+        "brand delete",
+        "campaign list",
+        "campaign get",
+        "campaign create",
+        "campaign delete",
+        "campaign submit",
+        "assign",
+        "usecases",
+        "verticals",
+        "wizard"
+      ],
+      "ai": [
+        "chat",
+        "embed",
+        "models"
+      ],
+      "assistant": [
+        "create",
+        "delete",
+        "get",
+        "list",
+        "call"
+      ],
+      "auth": [
+        "setup",
+        "status",
+        "whoami"
+      ],
+      "billing": [
+        "balance",
+        "group list",
+        "group get",
+        "group create",
+        "group delete"
+      ],
+      "call": [
+        "dial",
+        "hangup",
+        "list",
+        "speak",
+        "transfer"
+      ],
+      "connection": [
+        "create",
+        "delete",
+        "get",
+        "list"
+      ],
+      "debugger": [
+        "get",
+        "list"
+      ],
+      "e911": [
+        "address list",
+        "address get",
+        "address create",
+        "address delete",
+        "assign"
+      ],
+      "fax": [
+        "send",
+        "get",
+        "list",
+        "delete"
+      ],
+      "lookup": [
+        "number"
+      ],
+      "message": [
+        "send",
+        "get",
+        "list"
+      ],
+      "messaging-profile": [
+        "create",
+        "delete",
+        "get",
+        "list"
+      ],
+      "number": [
+        "search",
+        "order",
+        "get",
+        "list",
+        "update",
+        "delete"
+      ],
+      "porting": [
+        "check",
+        "order list",
+        "order get",
+        "order create",
+        "order update",
+        "order delete",
+        "order submit",
+        "order cancel",
+        "order activate",
+        "phone-numbers",
+        "comments",
+        "documents",
+        "events",
+        "requirements"
+      ],
+      "profile": [
+        "list",
+        "use",
+        "delete"
+      ],
+      "sim": [
+        "enable",
+        "disable",
+        "get",
+        "list"
+      ],
+      "storage": [
+        "bucket list",
+        "bucket get",
+        "bucket create",
+        "bucket delete",
+        "object list",
+        "object get",
+        "object put",
+        "object delete",
+        "presign"
+      ],
+      "usage": [
+        "report",
+        "options"
+      ],
+      "verify": [
+        "send",
+        "check",
+        "profile list",
+        "profile get",
+        "profile create",
+        "profile delete",
+        "template list",
+        "template get",
+        "template create"
+      ],
+      "video": [
+        "room list",
+        "room get",
+        "room create",
+        "room delete",
+        "session list",
+        "session get",
+        "recording list",
+        "recording get",
+        "recording delete"
+      ],
+      "voice-profile": [
+        "create",
+        "delete",
+        "get",
+        "list"
+      ]
     }
   },
-
   "quickstart": {
     "signup": "curl -s https://telnyx.com/agent-signup.md",
     "signup_guide": "https://telnyx.com/agent-signup.md",
@@ -269,7 +437,6 @@
       }
     ]
   },
-
   "sdks": {
     "cli": {
       "name": "@telnyx/api-cli",
@@ -302,7 +469,6 @@
       "docs": "https://github.com/team-telnyx/telnyx-go"
     }
   },
-
   "links": {
     "api_reference": "https://developers.telnyx.com/docs/api/v2",
     "portal": "https://portal.telnyx.com",

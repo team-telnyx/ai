@@ -18,7 +18,7 @@ Telnyx ships one Claude Code plugin per product area. Install only what your pro
 | `telnyx-numbers` | Phone numbers — search, buy, manage, 10DLC compliance, porting | 42 |
 | `telnyx-webrtc` | WebRTC — video rooms and browser/mobile client SDKs | 17 |
 | `telnyx-ai` | AI — LLM inference, chat completions, embeddings, AI assistants, Meeting Bot, conversation insights | 13 |
-| `telnyx-platform` | Everything account-level and cross-product — account management, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration | 98 |
+| `telnyx-platform` | Everything account-level and cross-product — account management, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration | 99 |
 
 Install with:
 
