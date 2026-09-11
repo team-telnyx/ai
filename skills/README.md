@@ -191,10 +191,11 @@ Available payment skills:
 
 | Skill | Description |
 |-------|-------------|
+| `telnyx-acp-payment` | Add account credit through an Agentic Commerce Protocol (ACP) checkout paid with Stripe Link or Tempo USDC — create, complete, and verify the order and balance |
 | `telnyx-mpp-payment` | Add account credit via Machine Payment Protocol (HTTP 402) using Stripe Link or Tempo USDC, then verify the transaction and balance |
 | `telnyx-x402-payment` | Fund an account with USDC on Base via the x402 protocol — quoting, EIP-712 signing, and settlement |
 
-> **Note:** These payments move real funds. Both skills include verification steps and safe support-handoff guidance.
+> **Note:** These payments move real funds. All three skills include verification steps and safe support-handoff guidance.
 
 ## WebRTC Client SDKs
 

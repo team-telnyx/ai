@@ -2,7 +2,7 @@
 
 > Fund your Telnyx account through an HTTP `402 Payment Required` flow, paying with a Stripe Link agent wallet or USDC from a Tempo wallet.
 
-This is **authenticated account funding**: every call carries your Telnyx API key, and the credit lands on the account that owns the key. A funded balance pays for any Telnyx product. For paying per request without any Telnyx account (inference/TTS/STT only), use the keyless x402 endpoints at [x402.telnyx.com](https://x402.telnyx.com/) instead; for funding with USDC on Base rather than Link/Tempo, see [x402-payments.md](./x402-payments.md).
+This is **authenticated account funding**: every call carries your Telnyx API key, and the credit lands on the account that owns the key. A funded balance pays for any Telnyx product. For paying per request without any Telnyx account (inference/TTS/STT only), use the keyless x402 endpoints at [x402.telnyx.com](https://x402.telnyx.com/) instead; for funding with USDC on Base rather than Link/Tempo, see [x402-payments.md](./x402-payments.md); for the same Link/Tempo payment wrapped in an ACP checkout with idempotency keys and an order record, see [acp-payments.md](./acp-payments.md).
 
 ## Prerequisites
 
