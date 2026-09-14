@@ -81,7 +81,9 @@ for entry in "${PLUGIN_PATTERNS[@]}"; do
     fi
 
     if [ "$match" = "1" ]; then
-      cp -R "$skill_dir" "$skills_dir/$skill_name"
+      # Preserve source modes so provider trees are deterministic even when
+      # the caller has a restrictive umask (for example Claude's 077).
+      cp -Rp "$skill_dir" "$skills_dir/$skill_name"
       ((++count))
     fi
   done
@@ -101,7 +103,7 @@ mkdir -p "$CURSOR_SKILLS"
 for skill_dir in "$SKILLS_SRC"/*/; do
   [ -d "$skill_dir" ] || continue
   skill_name=$(basename "$skill_dir")
-  cp -R "$skill_dir" "$CURSOR_SKILLS/$skill_name"
+  cp -Rp "$skill_dir" "$CURSOR_SKILLS/$skill_name"
 done
 
 total_cursor=$(find "$CURSOR_SKILLS" -name "SKILL.md" | wc -l | tr -d ' ')

@@ -45,10 +45,10 @@ PROJECT_ROOT=""
 SCAN_JSON=""
 STATE_FILE=""
 HYBRID_PRODUCTS=""
-MIGRATED_FILES=""
+MIGRATED_FILES_JSON="[]"
 JSON_CHECKS="[]"
 
-EXCLUDE_DIRS="node_modules .git vendor __pycache__ venv .venv dist build"
+EXCLUDE_DIRS="node_modules .git vendor __pycache__ venv .venv dist build .next .nuxt coverage .tox"
 EXCLUDE_LOCK_FILES="--exclude=package-lock.json --exclude=yarn.lock --exclude=pnpm-lock.yaml --exclude=Gemfile.lock --exclude=Pipfile.lock --exclude=poetry.lock --exclude=go.sum"
 EXCLUDE_SCAN_FILES="--exclude=twilio-scan.json --exclude=twilio-deep-scan.json --exclude=migration-state.json --exclude=MIGRATION-PLAN.md --exclude=MIGRATION-REPORT.md"
 
@@ -70,21 +70,212 @@ build_exclude_args() {
   done
   args="$args $EXCLUDE_LOCK_FILES"
   args="$args $EXCLUDE_SCAN_FILES"
-  args="$args --exclude=*.md --exclude=*.min.js"
+  args="$args --exclude=*.md --exclude=*.min.js --exclude=*.min.css --exclude=*.bundle.js --exclude=*.chunk.js"
   echo "$args"
 }
 
 GREP_EXCLUDES=""
 
+# Finding records are LF-delimited, so path identity uses a reversible display
+# encoding. Escape backslashes first to distinguish a literal `\n` filename
+# segment from an actual newline. The Python analyzer and grep adapter use this
+# exact contract too.
+escape_record_path() {
+  local value="$1"
+  value=${value//\\/\\\\}
+  value=${value//$'\r'/\\r}
+  value=${value//$'\n'/\\n}
+  printf '%s' "$value"
+}
+
+# Build every find(1) prune expression from the same policy as grep.  Keeping
+# literal copies in each traversal caused generated directories to re-enter
+# through the directory-name and shebang scans after source scanning excluded
+# them.
+FIND_EXCLUDE_EXPR=()
+for excluded_dir in $EXCLUDE_DIRS; do
+  if [ ${#FIND_EXCLUDE_EXPR[@]} -gt 0 ]; then
+    FIND_EXCLUDE_EXPR+=(-o)
+  fi
+  FIND_EXCLUDE_EXPR+=(-name "$excluded_dir")
+done
+
+
+# grep --include globs are case-sensitive; SEND.JS is the same JavaScript as
+# send.js. Rewrite '*.ext' into a character-class glob matching any casing.
+ci_glob() {
+  local glob="$1"
+  case "$glob" in
+    \*.*)
+      local ext="${glob#\*.}" out="*." i c upper
+      for ((i = 0; i < ${#ext}; i++)); do
+        c="${ext:$i:1}"
+        if [[ "$c" == [a-z] ]]; then
+          upper=$(printf '%s' "$c" | tr '[:lower:]' '[:upper:]')
+          out+="[${c}${upper}]"
+        else
+          out+="$c"
+        fi
+      done
+      echo "$out"
+      ;;
+    *) echo "$glob" ;;
+  esac
+}
+
+# grep returns 1 when it found no matches and >1 for an operational error.
+# Static-analysis discovery may accept the former, but must never translate
+# the latter into a clean migration result.
+grep_allow_no_match() {
+  local status
+  set +e
+  grep "$@"
+  status=$?
+  set -e
+  if [ "$status" -gt 1 ]; then
+    return "$status"
+  fi
+  return 0
+}
+
+# Extensionless executables with shebangs (package.json "bin" entry points,
+# repo CLIs) are source files no --include glob can ever match; the Phase-1
+# scanner greps without includes and sees them, so skipping them here made
+# the validator certify trees the scanner had put in migration scope.
+SHEBANG_FILES=()
+SHEBANG_CATEGORIES=()
+
+collect_shebang_files() {
+  local _f _first _category
+  while IFS= read -r -d '' _f; do
+    _first=""
+    IFS= read -r _first < "$_f" 2>/dev/null || [ -n "$_first" ] || _first=""
+    case "$_first" in
+      '#!'*node*)   _category="javascript" ;;
+      '#!'*python*) _category="python" ;;
+      '#!'*ruby*)   _category="ruby" ;;
+      '#!'*sh*)     _category="shell" ;;
+      *)            _category="" ;;
+    esac
+    if [ -n "$_category" ]; then
+      # Bash variables cannot contain NUL, and LF-delimited path lists cannot
+      # represent every legal pathname. Indexed arrays retain each `find
+      # -print0` record as one argument all the way through grep.
+      SHEBANG_FILES+=("$_f")
+      SHEBANG_CATEGORIES+=("$_category")
+    fi
+  done < <(find "$PROJECT_ROOT" \
+    \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
+    -o -type f ! -name '*.*' -size -1048576c -print0 2>/dev/null)
+}
+
+grep_shebang_files() {
+  local pattern="$1"; shift
+  local glob _index _f category seen_categories=""
+  for glob in "$@"; do
+    case "$glob" in
+      '*.js'|'*.ts') category="javascript" ;;
+      '*.py') category="python" ;;
+      '*.rb') category="ruby" ;;
+      '*.sh') category="shell" ;;
+      *) category="" ;;
+    esac
+    [ -z "$category" ] && continue
+    case " $seen_categories " in
+      *" $category "*) continue ;;
+    esac
+    seen_categories="$seen_categories $category"
+    for _index in "${!SHEBANG_FILES[@]}"; do
+      [ "${SHEBANG_CATEGORIES[$_index]}" = "$category" ] || continue
+      _f=${SHEBANG_FILES[$_index]}
+      grep_allow_no_match -a -nH --null -E "$pattern" "$_f"
+    done
+  done
+}
+
+# A caller asking for "*.js" means "JavaScript", not "files whose name ends in
+# .js". Node resolves .cjs/.mjs, bundlers resolve .jsx/.tsx/.mts/.cts, and
+# component frameworks embed JavaScript in .vue/.svelte/.astro files. A check
+# that only globs the bare extension silently passes projects using them.
+# Expanding here fixes every call site at once; per-call glob lists drift apart
+# as checks are added.
+expand_source_globs() {
+  local glob
+  for glob in "$@"; do
+    case "$glob" in
+      '*.js') echo '*.js' '*.jsx' '*.cjs' '*.mjs' '*.vue' '*.svelte' '*.astro' '*.ejs' ;;
+      '*.ts') echo '*.ts' '*.tsx' '*.mts' '*.cts' ;;
+      '*.py') echo '*.py' '*.pyw' ;;
+      '*.rb') echo '*.rb' '*.rake' 'Rakefile' 'rakefile' '*.erb' ;;
+      '*.php') echo '*.php' '*.phtml' ;;
+      '*.java') echo '*.java' '*.kt' '*.kts' '*.scala' '*.jsp' ;;
+      '*.cs') echo '*.cs' '*.cshtml' '*.razor' ;;
+      *) echo "$glob" ;;
+    esac
+  done
+}
+
+# Filter grep hits through the same lexer used by the messaging-profile
+# analyzer.  Line-prefix filters cannot distinguish a trailing dead comment
+# from live code, and syntax checks must not treat a quoted migration note as
+# an executable builder call.  `comments` preserves string literals (needed
+# for imports, URLs, and configuration); `code` masks both comments and
+# strings (needed for identifiers such as VoiceResponse()).
+filter_source_matches() {
+  local mode="$1"
+  local pattern="$2"
+  local scripts_dir
+  scripts_dir=$(cd "$(dirname "$0")" && pwd)
+  python3 -B "$scripts_dir/filter-source-matches.py" \
+    --mode "$mode" --pattern "$pattern" \
+    --analyzer "$scripts_dir/lint-required-messaging-profile.py"
+}
+
+filter_backend_matches() {
+  local pattern="$1"
+  local scripts_dir
+  scripts_dir=$(cd "$(dirname "$0")" && pwd)
+  python3 -B "$scripts_dir/filter-source-matches.py" \
+    --mode comments --region backend --pattern "$pattern" \
+    --exclude-suffix .vue --exclude-suffix .svelte --exclude-suffix .astro \
+    --analyzer "$scripts_dir/lint-required-messaging-profile.py"
+}
+
+search_live_files() {
+  local mode="$1"
+  local pattern="$2"
+  shift 2
+  search_raw_files "$pattern" "$@" | filter_source_matches "$mode" "$pattern"
+}
+
 search_files() {
   local pattern="$1"
   shift
+  # All source searches share the executable-region/comment contract. This
+  # keeps component markup and server-template prose out of semantic checks;
+  # callers needing identifiers with strings masked use search_live_files code.
+  search_raw_files "$pattern" "$@" | filter_source_matches comments "$pattern"
+}
+
+search_raw_files() {
+  local pattern="$1"
+  shift
   local include_args=""
-  for glob in "$@"; do
-    include_args="$include_args --include=$glob"
+  local glob
+  # shellcheck disable=SC2046
+  # `for glob in $(...)` lets the shell PATHNAME-EXPAND each glob against the
+  # CALLER'S cwd: if a matching file happens to exist there the glob collapses
+  # to that basename, silently restricting grep to it; if none matches the glob
+  # survives. Either way whole languages could stop being scanned. set -f keeps
+  # the patterns literal.
+  set -f
+  for glob in $(expand_source_globs "$@"); do
+    include_args="$include_args --include=$(ci_glob "$glob")"
   done
   # shellcheck disable=SC2086
-  grep -rn $GREP_EXCLUDES $include_args -E "$pattern" "$PROJECT_ROOT" 2>/dev/null || true
+  set +f
+  grep_allow_no_match -a -rnH --null $include_args $GREP_EXCLUDES -E "$pattern" "$PROJECT_ROOT"
+  grep_shebang_files "$pattern" "$@"
 }
 
 count_matches() {
@@ -191,23 +382,27 @@ hybrid_waiver_applies() {
     # A retained product never waives a residual inside a file explicitly
     # recorded as migrated. Only downgrade when every matched path is outside
     # that set; mixed or migrated-only results must keep the gate blocking.
-    [ -n "$MIGRATED_FILES" ] || return 0
+    [ "$MIGRATED_FILES_JSON" != "[]" ] || return 0
     while IFS= read -r match; do
       [ -n "$match" ] || continue
-      path=$(printf '%s\n' "$match" | sed -E 's/:[0-9]+:.*$//')
-      case "$path" in
-        "$PROJECT_ROOT"/*) path=${path#"$PROJECT_ROOT"/} ;;
-        ./*) path=${path#./} ;;
-      esac
-      while IFS= read -r migrated_file; do
+      while IFS= read -r -d '' migrated_file; do
         [ -n "$migrated_file" ] || continue
+        migrated_path=$(escape_record_path "$PROJECT_ROOT/$migrated_file")
+        # Filtered grep output is `<absolute path>:<line>:<text>`. Do not
+        # recover the path with a colon regex: POSIX paths may themselves
+        # contain `:<digits>:`. Instead compare each complete, known migrated
+        # path and then validate only its numeric locator suffix.
+        remainder=${match#"$migrated_path:"}
+        if [ "$remainder" != "$match" ] && [[ "$remainder" =~ ^[0-9]+: ]]; then
+          return 1
+        fi
         # A directory finding covers every file below it. Do not waive a
         # Twilio-named directory when any explicitly migrated file lives in
         # that directory, even though the grep finding names only the parent.
-        if [ "$migrated_file" = "$path" ] || [[ "$migrated_file" = "$path"/* ]]; then
+        if [ "$migrated_path" = "$match" ] || [[ "$migrated_path" = "$match"/* ]]; then
           return 1
         fi
-      done <<<"$MIGRATED_FILES"
+      done < <(printf '%s' "$MIGRATED_FILES_JSON" | jq -j '.[] | ., "\u0000"')
     done <<<"${1:-}"
     return 0
   fi
@@ -231,6 +426,17 @@ while [ $# -gt 0 ]; do
     --product)
       if [ $# -lt 2 ]; then echo "Error: --product requires a value" >&2; usage; fi
       PRODUCT_FILTER="$2"
+      # An unvalidated value silently matches no check_products list, so a typo
+      # skips every product-scoped check and still exits 0 — a silent pass.
+      # Same accepted set as validate-migration.sh.
+      case "$PRODUCT_FILTER" in
+        all|voice|messaging|verify|webrtc|sip|fax|video|iot|lookup|numbers|phone-numbers|porting) ;;
+        *)
+          echo "Error: Unknown product '$PRODUCT_FILTER'" >&2
+          echo "Valid products: all, voice, messaging, verify, webrtc, sip, fax, video, iot, lookup, numbers, phone-numbers, porting" >&2
+          exit 2
+          ;;
+      esac
       shift 2
       ;;
     --json)
@@ -281,13 +487,16 @@ if [ ! -d "$PROJECT_ROOT" ]; then
   exit 2
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "Error: python3 is required for correctness analysis" >&2
+if ! command -v python3 >/dev/null 2>&1 || ! python3 -c \
+  'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' \
+  >/dev/null 2>&1; then
+  echo "Error: python3 is required for correctness analysis; Python 3.10+ is required for correctness analysis" >&2
   exit 2
 fi
 
 PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
 GREP_EXCLUDES=$(build_exclude_args)
+collect_shebang_files
 
 if [ -z "$STATE_FILE" ] && [ -f "$PROJECT_ROOT/migration-state.json" ]; then
   STATE_FILE="$PROJECT_ROOT/migration-state.json"
@@ -308,25 +517,24 @@ if [ -n "$STATE_FILE" ]; then
       echo "Error: --state-file '$STATE_FILE' is not valid migration state JSON" >&2
       exit 2
     }
-    MIGRATED_FILES=$(jq -r --arg root "$PROJECT_ROOT/" '
+    MIGRATED_FILES_JSON=$(jq -c --arg root "$PROJECT_ROOT/" '
       [(.migrated_files? // {}) | .. | arrays | .[]?
        | select(type == "string")
        | if startswith($root) then .[($root | length):]
          elif startswith("./") then .[2:]
          else . end]
-      | unique[]
+      | unique
     ' "$STATE_FILE" 2>/dev/null) || {
       echo "Error: --state-file '$STATE_FILE' has invalid migrated_files" >&2
       exit 2
     }
   fi
 fi
-
 # Load scan context if provided (for context-aware checks like webhook validation)
 ORIGINAL_HAD_WEBHOOK_VALIDATION="unknown"
 SCAN_PRODUCTS=""
 if [ -n "$SCAN_JSON" ] && [ -f "$SCAN_JSON" ] && command -v jq >/dev/null 2>&1; then
-  ORIGINAL_HAD_WEBHOOK_VALIDATION=$(jq -r '.has_webhook_validation // false' "$SCAN_JSON" 2>/dev/null || echo "unknown")
+  ORIGINAL_HAD_WEBHOOK_VALIDATION=$(jq -r 'if (.summary.has_webhook_validation != null) then .summary.has_webhook_validation elif (.has_webhook_validation != null) then .has_webhook_validation else "unknown" end' "$SCAN_JSON" 2>/dev/null || echo "unknown")
   SCAN_PRODUCTS=$(jq -r '.products_used // [] | map(ascii_downcase) | join(",")' "$SCAN_JSON" 2>/dev/null || true)
 fi
 
@@ -355,56 +563,78 @@ fi
 if product_applies "messaging"; then
   section_header "Messaging Correctness"
 
-  # Check 1: .messages.create( — Twilio pattern, Telnyx uses .send() or messages.create differently
-  matches=$(search_files '\.messages\.create\(' "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
-  count=$(count_matches "$matches")
+  # Check 1: Twilio and Telnyx both expose messages.create() in some SDKs.
+  # Classify the call by its request field: Twilio uses `body`, while Telnyx
+  # uses `text`. Reuse the quote-aware source lexer so strings, comments, URLs,
+  # nested objects, and adjacent calls cannot create false classifications.
+  messaging_source_analyzer="$(cd "$(dirname "$0")" && pwd)/lint-required-messaging-profile.py"
+  if ! command -v python3 >/dev/null 2>&1 || [ ! -f "$messaging_source_analyzer" ]; then
+    echo "Error: messaging source analysis requires python3 and $messaging_source_analyzer" >&2
+    exit 2
+  fi
+  if ! twilio_create_calls=$(python3 -B "$messaging_source_analyzer" --twilio-body-fields --kept-products "$HYBRID_PRODUCTS" "$PROJECT_ROOT"); then
+    echo "Error: Twilio messages.create analysis failed" >&2
+    exit 2
+  fi
+  count=$(count_matches "$twilio_create_calls")
   if [ "$count" -gt 0 ]; then
     lint_issue "twilio_messages_create" \
-      "Twilio .messages.create() pattern found in $count file(s)" \
-      "Use telnyx.messages.send() (Python) or telnyx.messages.create() with text parameter (JS/Ruby)" \
-      "$(matches_to_json "$matches")"
+      "Twilio .messages.create() request using body found at $count call site(s)" \
+      "Use telnyx.messages.send() (Python) or telnyx.messages.create() with the text parameter (JavaScript/Ruby)" \
+      "$(matches_to_json "$twilio_create_calls")"
   else
-    lint_pass "twilio_messages_create" "No Twilio .messages.create() pattern found"
+    lint_pass "twilio_messages_create" "No Twilio .messages.create() request using body found"
   fi
 
   # Check 2: body= or body: in message send context — Telnyx uses 'text' not 'body'
-  matches=$(search_files '(\.send\(|\.create\().*body[=:]' "*.py" "*.js" "*.ts" "*.rb")
+  if ! matches=$(python3 -B "$messaging_source_analyzer" --message-body-fields --kept-products "$HYBRID_PRODUCTS" "$PROJECT_ROOT"); then
+    echo "Error: messaging body-field analysis failed" >&2
+    exit 2
+  fi
   count=$(count_matches "$matches")
   if [ "$count" -gt 0 ]; then
-    # Filter to only lines that also reference telnyx or messaging context
-    telnyx_context=$(echo "$matches" | grep -iE "telnyx|message|sms|mms" || true)
-    tcount=$(count_matches "$telnyx_context")
-    if [ "$tcount" -gt 0 ]; then
-      lint_issue "body_not_text" \
-        "Message send with 'body' parameter found in $tcount file(s)" \
-        "Telnyx uses 'text' not 'body' for message content" \
-        "$(matches_to_json "$telnyx_context")"
-    else
-      lint_pass "body_not_text" "No 'body' parameter in Telnyx messaging context"
-    fi
+    lint_issue "body_not_text" \
+      "Message send with 'body' parameter found at $count call site(s)" \
+      "Telnyx uses 'text' not 'body' for message content" \
+      "$(matches_to_json "$matches")"
   else
     lint_pass "body_not_text" "No 'body' parameter in message send calls"
   fi
 
-  # Check 3: messaging_profile_id missing in send calls (skip if messaging not detected in scan)
-  if scan_has_product "messaging"; then
-    telnyx_send=$(search_files '(telnyx.*message|message.*send|messages\.create)' "*.py" "*.js" "*.ts" "*.rb" "*.go")
-    send_count=$(count_matches "$telnyx_send")
-    if [ "$send_count" -gt 0 ]; then
-      profile_refs=$(search_files 'messaging_profile_id' "*.py" "*.js" "*.ts" "*.rb" "*.go")
-      profile_count=$(count_matches "$profile_refs")
-      if [ "$profile_count" -eq 0 ]; then
-        lint_warn "missing_messaging_profile_id" \
-          "Telnyx messaging calls found but no messaging_profile_id reference" \
-          "Include messaging_profile_id in send calls or set a default on the messaging profile"
-      else
-        lint_pass "missing_messaging_profile_id" "messaging_profile_id referenced in code"
-      fi
-    fi
+  # Check 3: number-pool and alphanumeric-sender sends require a Messaging
+  # Profile ID. Normal phone-number sends may omit it when the sender already
+  # belongs to the intended profile, which source inspection cannot infer.
+  # Run the source analyzer unconditionally inside the messaging section.
+  # The scanner and analyzer intentionally recognize different evidence; using
+  # scanner attribution as a gate let newly-supported URL builders disappear
+  # before the analyzer could evaluate them (a silent false pass).
+  if ! required_profile_analysis=$(python3 -B "$messaging_source_analyzer" "$PROJECT_ROOT"); then
+    echo "Error: required Messaging Profile analysis failed" >&2
+    exit 2
+  fi
+  required_sender_count=$(printf '%s\n' "$required_profile_analysis" | sed -n '1p')
+  case "$required_sender_count" in
+    ''|*[!0-9]*)
+      echo "Error: required Messaging Profile analysis returned an invalid count" >&2
+      exit 2
+      ;;
+  esac
+  missing_profile_calls=$(printf '%s\n' "$required_profile_analysis" | sed '1d; /^$/d')
+  missing_profile_count=$(count_matches "$missing_profile_calls")
+
+  if [ "$missing_profile_count" -gt 0 ]; then
+    lint_issue "required_messaging_profile_id" \
+      "Number-pool or dedicated alphanumeric-sender call sites found without a messaging_profile_id ($missing_profile_count)" \
+      "Include messaging_profile_id for every number-pool or alphanumeric-sender send. Phone-number sends may omit it when from already resolves to the intended Messaging Profile." \
+      "$(matches_to_json "$missing_profile_calls")"
+  elif [ "$required_sender_count" -gt 0 ]; then
+    lint_pass "required_messaging_profile_id" "Every detected required-profile messaging call has a messaging_profile_id"
+  else
+    lint_pass "required_messaging_profile_id" "No dedicated number-pool or alphanumeric-sender call sites detected"
   fi
 
   # Check 4: MessagingResponse builder class (doesn't exist in Telnyx)
-  matches=$(search_files 'MessagingResponse\(' "*.py" "*.js" "*.ts" "*.rb")
+  matches=$(search_live_files code 'MessagingResponse\(' "*.py" "*.js" "*.ts" "*.rb")
   count=$(count_matches "$matches")
   if [ "$count" -gt 0 ]; then
     lint_issue "messaging_response_builder" \
@@ -423,7 +653,7 @@ if product_applies "voice"; then
   section_header "Voice Correctness"
 
   # Check 5: VoiceResponse builder (Twilio TwiML — doesn't exist in Telnyx SDK)
-  matches=$(search_files 'VoiceResponse\(' "*.py" "*.js" "*.ts" "*.rb" "*.java" "*.php")
+  matches=$(search_live_files code 'VoiceResponse\(' "*.py" "*.js" "*.ts" "*.rb" "*.java" "*.php")
   count=$(count_matches "$matches")
   if [ "$count" -gt 0 ]; then
     lint_issue "voice_response_builder" \
@@ -437,18 +667,35 @@ if product_applies "voice"; then
   # Check 6: speechModel must be translated on Gather/Transcription, but it is
   # a documented attribute on a Language child of ConversationRelay. Inspect
   # tag ancestry instead of rejecting every textual occurrence.
-  matches=$(python3 - "$PROJECT_ROOT" <<'PYEOF'
+  speech_source_analyzer="$(cd "$(dirname "$0")" && pwd)/lint-required-messaging-profile.py"
+  matches=$(python3 -B - "$PROJECT_ROOT" "$speech_source_analyzer" "$EXCLUDE_DIRS" <<'PYEOF'
+import importlib.util
 import os
-import pathlib
 import re
 import sys
+from pathlib import Path
 
-root = pathlib.Path(sys.argv[1])
-excluded = {
-    ".git", ".next", ".nuxt", ".tox", ".venv", "__pycache__",
-    "build", "coverage", "dist", "node_modules", "vendor", "venv",
+root = Path(sys.argv[1])
+analyzer_path = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("telnyx_source_lexer", analyzer_path)
+if spec is None or spec.loader is None:
+    raise RuntimeError(f"Could not load {analyzer_path}")
+analyzer = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = analyzer
+spec.loader.exec_module(analyzer)
+excluded_dirs = set(sys.argv[3].split())
+excluded_files = {
+    "MIGRATION-PLAN.md", "MIGRATION-REPORT.md", "migration-state.json",
+    "twilio-deep-scan.json", "twilio-scan.json",
 }
-suffixes = {".xml", ".py", ".js", ".ts", ".rb", ".java", ".php"}
+suffixes = {
+    ".astro", ".bash", ".cjs", ".cs", ".cshtml", ".razor", ".dart", ".ejs", ".erb",
+    ".ksh", ".zsh", ".go", ".handlebars", ".hbs", ".java", ".jinja",
+    ".jinja2", ".cts", ".j2", ".js", ".jsp", ".jsx", ".kt", ".kts",
+    ".mjs", ".mts", ".mustache", ".php", ".phtml", ".py", ".pyw",
+    ".rb", ".rake", ".scala", ".sh", ".svelte", ".swift", ".texml",
+    ".tmpl", ".ts", ".tsx", ".twiml", ".twig", ".vue", ".xml",
+}
 tag_pattern = re.compile(
     r"<(?P<closing>/)?\s*(?P<tag>[A-Za-z_][\w:.-]*)"
     r"(?P<attrs>(?:\"[^\"]*\"|'[^']*'|[^>])*)>",
@@ -457,23 +704,33 @@ tag_pattern = re.compile(
 speech_model = re.compile(r"(?<![\w:.-])speechModel\s*(?:=|:)")
 
 for directory, child_dirs, filenames in os.walk(root):
-    child_dirs[:] = sorted(name for name in child_dirs if name not in excluded)
+    child_dirs[:] = sorted(name for name in child_dirs if name not in excluded_dirs)
     for filename in sorted(filenames):
-        path = pathlib.Path(directory, filename)
-        if path.suffix.lower() not in suffixes:
+        path = Path(directory, filename)
+        if filename in excluded_files or path.suffix.lower() not in suffixes:
             continue
         source = path.read_text(encoding="utf-8", errors="replace")
-        source = re.sub(
-            r"<!--.*?-->|<!\[CDATA\[.*?\]\]>",
+        executable = analyzer.executable_source(path, source)
+        masked_executable = analyzer.lex_source(
+            executable, analyzer.canonical_suffix(path)
+        ).without_comments
+        scan_source = "".join(
+            masked if code != " " or raw in "\r\n" else raw
+            for raw, code, masked in zip(source, executable, masked_executable)
+        )
+        scan_source = re.sub(
+            r"<!--.*?-->|<!\[CDATA\[.*?\]\]>|"
+            r"<%#.*?%>|<%--.*?--%>|"
+            r"\{\{!--.*?--\}\}|\{\{!.*?\}\}|\{#.*?#\}",
             lambda match: "".join(
                 char if char in "\r\n" else " " for char in match.group(0)
             ),
-            source,
+            scan_source,
             flags=re.DOTALL,
         )
         stack = []
         tagged_speech_model = set()
-        for match in tag_pattern.finditer(source):
+        for match in tag_pattern.finditer(scan_source):
             tag = match.group("tag").rsplit(":", 1)[-1]
             if match.group("closing"):
                 if stack and stack[-1] == tag:
@@ -486,20 +743,17 @@ for directory, child_dirs, filenames in os.walk(root):
             tagged_speech_model.update(
                 attr_start + occurrence.start() for occurrence in attr_occurrences
             )
-            if attr_occurrences:
-                if not (tag == "Language" and stack[-1:] == ["ConversationRelay"]):
-                    line = source.count("\n", 0, match.start()) + 1
-                    print(f"{path}:{line}: <{tag}> speechModel")
+            if attr_occurrences and not (
+                tag == "Language" and stack[-1:] == ["ConversationRelay"]
+            ):
+                line = scan_source.count("\n", 0, match.start()) + 1
+                print(f"{path}:{line}: <{tag}> speechModel")
             if not match.group("attrs").rstrip().endswith("/"):
                 stack.append(tag)
-        # Builder/object forms (for example `{speechModel: "phone_call"}`)
-        # are migration-sensitive even when no literal XML tag exists. Only
-        # suppress occurrences already classified inside an XML tag, including
-        # the valid ConversationRelay <Language> form above.
-        for occurrence in speech_model.finditer(source):
+        for occurrence in speech_model.finditer(scan_source):
             if occurrence.start() in tagged_speech_model:
                 continue
-            line = source.count("\n", 0, occurrence.start()) + 1
+            line = scan_source.count("\n", 0, occurrence.start()) + 1
             print(f"{path}:{line}: non-XML speechModel")
 PYEOF
 )
@@ -549,7 +803,14 @@ if product_applies "verify"; then
 
   # Check 9: verify_profile_id missing (skip if verify not detected in scan)
   if scan_has_product "verify"; then
-    telnyx_verify=$(search_files '(telnyx.*verif|verif.*telnyx|verify_profile|verification)' "*.py" "*.js" "*.ts" "*.rb" "*.go")
+    # "verification" alone matched WEBHOOK SIGNATURE verification - which every
+    # correctly migrated app now has - so repos with no Verify product at all
+    # were told to add a verify_profile_id. Match the Verify PRODUCT's own API
+    # surface instead, and exclude the signature/webhook sense explicitly.
+    telnyx_verify=$(search_files \
+      '(telnyx.*\bverifications?\b|\bverifications?\b.*telnyx|verify_profile|/v2/verifications|verifications\.(create|by_phone_number)|\bVerifyProfile\b)' \
+      "*.py" "*.js" "*.ts" "*.rb" "*.go" \
+      | grep -v -iE '(webhook|signature|ed25519|unwrap|construct_event|verify_webhook|verification_key|public_key)' || true)
     verify_count=$(count_matches "$telnyx_verify")
     if [ "$verify_count" -gt 0 ]; then
       profile_refs=$(search_files 'verify_profile_id' "*.py" "*.js" "*.ts" "*.rb" "*.go")
@@ -611,12 +872,21 @@ if product_applies "all"; then
   section_header "Webhook Signature Validation"
 
   # Check 12: Webhook handlers without Ed25519 signature verification
-  webhook_handlers=$(search_files "(app\.(post|put)|router\.(post|put)|@app\.route|@csrf_exempt|http\.HandleFunc|post.*do)" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
+  # Vue/Svelte/Astro expressions are executable client code, but never server
+  # route declarations. Exclude those component files from this backend-only
+  # cross-file heuristic after applying the normal executable-source filter.
+  webhook_pattern="(app\.(post|put)|router\.(post|put)|@app\.route|@csrf_exempt|http\.HandleFunc|post.*do)"
+  webhook_handlers=$(search_raw_files "$webhook_pattern" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" \
+    | filter_backend_matches "$webhook_pattern")
   webhook_count=$(count_matches "$webhook_handlers")
   if [ "$webhook_count" -gt 0 ]; then
-    ed25519_refs=$(search_files "(telnyx-signature-ed25519|ed25519|verify_signature|verifySignature|construct_event|webhooks\.unwrap|TELNYX_PUBLIC_KEY)" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
+    ed25519_pattern="(telnyx-signature-ed25519|ed25519|verify_signature|verifySignature|construct_event|webhooks\.unwrap|TELNYX_PUBLIC_KEY)"
+    ed25519_refs=$(search_raw_files "$ed25519_pattern" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" \
+      | filter_backend_matches "$ed25519_pattern")
     ed25519_count=$(count_matches "$ed25519_refs")
-    telnyx_webhook_parse=$(search_files "(data\.payload|data\[.payload.\]|data\.event_type|data\[.event_type.\])" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
+    webhook_parse_pattern="(data\.payload|data\[.payload.\]|data\.event_type|data\[.event_type.\])"
+    telnyx_webhook_parse=$(search_raw_files "$webhook_parse_pattern" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" \
+      | filter_backend_matches "$webhook_parse_pattern")
     telnyx_parse_count=$(count_matches "$telnyx_webhook_parse")
     if [ "$telnyx_parse_count" -gt 0 ] && [ "$ed25519_count" -eq 0 ]; then
       lint_issue "webhook_ed25519_missing" \
@@ -655,7 +925,7 @@ fi
 if product_applies "voice"; then
   section_header "Polly Voice Compatibility"
 
-  # Check 14: Non-Neural Polly voices (may fall back to default voice)
+  # Check 14: Named Polly voices are valid and must retain caller-facing audio.
   polly_refs=$(search_files "Polly\.[A-Z][a-z]+" "*.xml" "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
   polly_count=$(count_matches "$polly_refs")
   if [ "$polly_count" -gt 0 ]; then
@@ -679,14 +949,29 @@ section_header "Documentation Updates"
 
 # Check 15: README and docs still referencing Twilio
 doc_files=""
-for f in README.md README README.rst CONTRIBUTING.md; do
-  if [ -f "$PROJECT_ROOT/$f" ]; then
-    twilio_in_doc=$(grep -in "twilio" "$PROJECT_ROOT/$f" 2>/dev/null | grep -v -iE '(migrat|port|formerly|previously|was twilio|from twilio to)' || true)
+while IFS= read -r -d '' doc_path; do
+    # Prose EXPLAINING the migration is not residual Twilio. Two defects here:
+    #  - 'formerly' did not cover 'the former Twilio Verify SID', so an
+    #    operator's mapping note gated a correctly migrated repo with exit 1;
+    #  - bare 'port' matched inside 'support', 'important' and 'export', which
+    #    silently excluded real leftovers. Both are now word-anchored.
+    # A HYBRID deployment also documents its remaining Twilio use on purpose -
+    # the skill mandates recording it - so those lines are expected too.
+    # Upstream repository ownership is historical provenance, not a runtime
+    # dependency. Rewriting a TwilioDevEd badge/clone URL would create a dead
+    # link while leaving the actual migration unchanged.
+    # NOTE: no \b before 'behaviour change'. Markdown bold writes
+    # __Behavior change from the Twilio integration__, and '_' is a WORD
+    # character, so \bbehavior could never match after it - the same
+    # word-boundary trap that made (?<![\w$]) never match $var in shell.
+    doc_exclusions='(\bmigrat|\bported\b|\bporting\b|\bformer|\bpreviousl|\bwas twilio\b|from twilio to|\breplaces?\b|\bno longer\b|\binstead of\b|\bequivalent\b|behaviou?r change|\btwilio integration\b|\bcounterpart\b|\bunlike twilio\b|\bcompared (to|with)\b|\bhybrid\b|\bstill uses? twilio\b|\bno telnyx equivalent\b|github\.com[:/]twiliodeved/)'
+    twilio_in_doc=$(grep -in "twilio" "$doc_path" 2>/dev/null | grep -v -iE "$doc_exclusions" || true)
     if [ -n "$twilio_in_doc" ]; then
-      doc_files+="$PROJECT_ROOT/$f"$'\n'
+      doc_files+="$doc_path"$'\n'
     fi
-  fi
-done
+done < <(find "$PROJECT_ROOT" -maxdepth 1 -type f \
+  \( -iname README -o -iname README.md -o -iname README.rst -o -iname CONTRIBUTING.md \) \
+  -print0 2>/dev/null)
 doc_files=$(echo "$doc_files" | sed '/^$/d')
 doc_count=$(echo "$doc_files" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$doc_count" -gt 0 ]; then
@@ -704,7 +989,7 @@ fi
 section_header "Residual Twilio Patterns"
 
 # Check 10: Residual Twilio imports still present alongside Telnyx code
-matches=$(search_files '(from twilio|import twilio|require.*twilio|using Twilio)' "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" "*.cs")
+matches=$(search_live_files comments '(from twilio|import[ (=].*twilio|require.*twilio|using Twilio|import com\.twilio|use[[:space:]]+\\?Twilio|new[[:space:]]+\\?Twilio)' "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" "*.cs")
 count=$(count_matches "$matches")
 if [ "$count" -gt 0 ]; then
   if hybrid_waiver_applies "$matches"; then
@@ -723,7 +1008,7 @@ else
 fi
 
 # Check 11: Twilio client instantiation patterns
-matches=$(search_files '(Client\(.*account_sid|Twilio\(|twilio\.Twilio\(|new Twilio\.)' "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php")
+matches=$(search_live_files code '(Client\(.*account_sid|Twilio\(|twilio\.Twilio\(|new Twilio\.|TwilioClient[[:space:]]*\.[[:space:]]*Init[[:space:]]*\()' "*.py" "*.js" "*.ts" "*.rb" "*.go" "*.java" "*.php" "*.cs")
 count=$(count_matches "$matches")
 if [ "$count" -gt 0 ]; then
   if hybrid_waiver_applies "$matches"; then
@@ -742,10 +1027,12 @@ else
 fi
 
 # Check 12: Directory/path names containing "twilio"
-twilio_dirs=$(find "$PROJECT_ROOT" -mindepth 1 \
-  \( -name node_modules -o -name .git -o -name vendor -o -name __pycache__ \
-     -o -name venv -o -name .venv -o -name dist -o -name build \) -prune \
-  -o -type d -iname '*twilio*' -print 2>/dev/null || true)
+twilio_dirs=""
+while IFS= read -r -d '' twilio_dir; do
+  twilio_dirs+="$(escape_record_path "$twilio_dir")"$'\n'
+done < <(find "$PROJECT_ROOT" -mindepth 1 \
+  \( "${FIND_EXCLUDE_EXPR[@]}" \) -prune \
+  -o -type d -iname '*twilio*' -print0 2>/dev/null || true)
 twilio_dir_count=$(echo "$twilio_dirs" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$twilio_dir_count" -gt 0 ] && [ -n "$(echo "$twilio_dirs" | sed '/^$/d')" ]; then
   if hybrid_waiver_applies "$twilio_dirs"; then
