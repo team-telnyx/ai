@@ -66,7 +66,7 @@ export async function searchAiCollectionCommand(flags: Flags): Promise<void> {
   }
 
   try {
-    const resource = await resolveAiCollectionRetrieveDocumentsResource();
+    const resource = await resolveAiCollectionRetrieveDocumentsResource(MINIMUM_COLLECTIONS_CLI_VERSION);
     const response = await telnyxCli([resource, ...args], {
       minimumVersion: MINIMUM_COLLECTIONS_CLI_VERSION,
     });

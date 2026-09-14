@@ -4,14 +4,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
-const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
 type CollectionResource = "ai:collections" | "ai:knowledge:collections";
 
@@ -112,9 +111,10 @@ console.log(JSON.stringify({
 function runAgent(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
+  root = cliRoot,
 ): { stdout: string; stderr: string; status: number } {
-  const result = spawnSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
-    cwd: cliRoot,
+  const result = spawnSync(process.execPath, ["--import", "tsx", join(root, "bin", "telnyx-agent.ts"), ...args], {
+    cwd: root,
     encoding: "utf8",
     env,
     timeout: 30_000,
@@ -184,6 +184,7 @@ describe("AI collection document retrieval", () => {
       "--format", "json",
     ];
     assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
       ["ai:knowledge:collections", "--help"],
       ["ai:collections", "--help"],
       ["--version"],
@@ -202,6 +203,7 @@ describe("AI collection document retrieval", () => {
     assert.equal(output.query, null);
     assert.equal(output.documents[0].score, 0);
     assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
       ["ai:knowledge:collections", "--help"],
       ["ai:collections", "--help"],
       ["--version"],
@@ -219,11 +221,67 @@ describe("AI collection document retrieval", () => {
     const error = JSON.parse(result.stdout).error;
     assert.match(error, /0\.26\.9/);
     assert.match(error, /requires >= 0\.27\.0/);
-    assert.deepEqual(loggedArgs(fake.logPath), [
-      ["ai:knowledge:collections", "--help"],
-      ["ai:collections", "--help"],
-      ["--version"],
-    ]);
+    assert.deepEqual(loggedArgs(fake.logPath), [["--version"]]);
+  });
+
+  it("uses a minimum-compatible PATH binary for resource resolution and retrieval", () => {
+    const isolatedRoot = mkdtempSync(join(cliRoot, ".ai-collections-vendor-path-"));
+    const vendor = join(isolatedRoot, "vendor", "telnyx");
+    const pathDir = join(isolatedRoot, "path");
+    const pathBinary = join(pathDir, "telnyx");
+    const vendorLog = join(isolatedRoot, "vendor.jsonl");
+    const pathLog = join(isolatedRoot, "path.jsonl");
+    cpSync(join(cliRoot, "src"), join(isolatedRoot, "src"), { recursive: true });
+    cpSync(join(cliRoot, "bin"), join(isolatedRoot, "bin"), { recursive: true });
+    cpSync(join(cliRoot, "package.json"), join(isolatedRoot, "package.json"));
+    mkdirSync(dirname(vendor), { recursive: true });
+    mkdirSync(pathDir, { recursive: true });
+    writeFileSync(vendor, `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(process.env.TELNYX_FAKE_VENDOR_LOG, JSON.stringify(args) + "\\n");
+if (args[0] === "--version") console.log("telnyx version 0.26.9");
+`);
+    writeFileSync(pathBinary, `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(process.env.TELNYX_FAKE_PATH_LOG, JSON.stringify(args) + "\\n");
+if (args[0] === "--version") { console.log("telnyx version 0.31.0"); process.exit(0); }
+if (args[0] === "ai:knowledge:collections" && args[1] === "--help") {
+  console.log("COMMANDS:\\n  retrieve-documents  Retrieve documents");
+  process.exit(0);
+}
+if (args[0] !== "ai:knowledge:collections" || args[1] !== "retrieve-documents") process.exit(2);
+console.log(JSON.stringify({ data: [], meta: { collection_slug: "support-transcripts" } }));
+`);
+    chmodSync(vendor, 0o755);
+    chmodSync(pathBinary, 0o755);
+
+    try {
+      const result = runAgent(
+        ["search-ai-collection", "--collection-id", "support-transcripts", "--json"],
+        {
+          ...process.env,
+          TELNYX_API_KEY: undefined,
+          TELNYX_CLI_PATH: undefined,
+          TELNYX_FAKE_VENDOR_LOG: vendorLog,
+          TELNYX_FAKE_PATH_LOG: pathLog,
+          PATH: `${pathDir}:${process.env.PATH ?? ""}`,
+        },
+        isolatedRoot,
+      );
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.equal(JSON.parse(result.stdout).collection_id, "support-transcripts");
+      assert.deepEqual(loggedArgs(vendorLog), [["--version"], ["--version"]]);
+      assert.deepEqual(loggedArgs(pathLog), [
+        ["--version"],
+        ["ai:knowledge:collections", "--help"],
+        ["--version"],
+        ["ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],
+      ]);
+    } finally {
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
   });
 
   it("uses the v0.31 knowledge namespace with exact new-target argv", () => {
@@ -238,6 +296,7 @@ describe("AI collection document retrieval", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(JSON.parse(result.stdout).count, 2);
     assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
       ["ai:knowledge:collections", "--help"],
       ["--version"],
       [
@@ -259,6 +318,7 @@ describe("AI collection document retrieval", () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
       ["ai:knowledge:collections", "--help"],
       ["ai:collections", "--help"],
       ["--version"],
@@ -280,6 +340,7 @@ describe("AI collection document retrieval", () => {
     assert.notEqual(result.status, 0);
     assert.match(JSON.parse(result.stdout).error, /retrieval failed/);
     assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
       ["ai:knowledge:collections", "--help"],
       ["--version"],
       ["ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],

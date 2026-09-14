@@ -187,10 +187,10 @@ export async function resolveMessagesWhatsappSubcommand(): Promise<"send-whatsap
  * version when available; an unknown binary conservatively keeps the v0.27
  * spelling bundled by this package.
  */
-export async function resolveAiCollectionRetrieveDocumentsResource(): Promise<
+export async function resolveAiCollectionRetrieveDocumentsResource(minimumVersion?: string): Promise<
   "ai:collections" | "ai:knowledge:collections"
 > {
-  const binary = await getTelnyxBinary();
+  const binary = await getTelnyxBinary(minimumVersion);
   const newResource = "ai:knowledge:collections";
   const oldResource = "ai:collections";
 
