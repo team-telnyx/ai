@@ -1,0 +1,53 @@
+{
+  "name": "telnyx-developer-kit",
+  "version": "0.1.0",
+  "description": "Build and debug Telnyx integrations with four focused skills and an OAuth-authenticated hosted MCP connector exposing five reviewed tools for a bounded Call Control and recording catalog and account reads.",
+  "author": {
+    "name": "Telnyx",
+    "url": "https://telnyx.com"
+  },
+  "homepage": "https://developers.telnyx.com",
+  "repository": "https://github.com/team-telnyx/ai",
+  "license": "MIT",
+  "keywords": [
+    "telnyx",
+    "sms",
+    "messaging",
+    "voice",
+    "call-control",
+    "texml",
+    "webrtc",
+    "verify",
+    "numbers",
+    "10dlc",
+    "twilio-migration",
+    "twilio-alternative"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Telnyx Developer Kit",
+    "shortDescription": "Build and debug with Telnyx",
+    "longDescription": "Plan, build, review, and debug communications applications with Telnyx. Four bundled skills cover product selection, architecture, production guardrails, and troubleshooting. The OAuth-authenticated hosted MCP connector exposes exactly five focused tools: discovery and schema inspection for three reviewed endpoints, plus account-scoped call status, call events, and recording search. Other products require separate API documentation and integrations.",
+    "developerName": "Telnyx",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Navigate Telnyx products and APIs",
+      "Design communications architectures",
+      "Review security and compliance guardrails",
+      "Debug messaging and voice integrations",
+      "Inspect reviewed Telnyx API and account data through OAuth"
+    ],
+    "websiteURL": "https://developers.telnyx.com",
+    "privacyPolicyURL": "https://telnyx.com/privacy-policy",
+    "termsOfServiceURL": "https://telnyx.com/terms-and-conditions-of-service",
+    "defaultPrompt": [
+      "Which Telnyx products should I use for this communications build?",
+      "Design a production-ready Telnyx architecture for this use case.",
+      "Debug this Telnyx API, messaging, or voice failure."
+    ],
+    "brandColor": "#000000",
+    "composerIcon": "./assets/telnyx-mark.png",
+    "logo": "./assets/telnyx-mark.png"
+  }
+}

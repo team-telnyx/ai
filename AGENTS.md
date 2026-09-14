@@ -8,7 +8,7 @@ This file is a complement to `README.md` (human-facing) and `.github/CONTRIBUTIN
 
 ## What this repo is
 
-The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, per-product plugins for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, <!-- SKILL_COUNT -->237<!-- /SKILL_COUNT --> Agent Skills, and operational guides.
+The one-stop shop for AI agents and AI-first developers building with Telnyx. It contains agent toolkits (Python/TypeScript), an agent CLI, per-product plugins for Claude Code / Cursor / Gemini CLI / OpenCode, an MCP proxy, <!-- SKILL_COUNT -->241<!-- /SKILL_COUNT --> Agent Skills, and operational guides.
 
 ---
 
@@ -48,9 +48,12 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 
 | Path                    | What it contains                                                          |
 | ----------------------- | ------------------------------------------------------------------------- |
-| `skills/`               | Canonical agent skills (SKILL.md files). <!-- SKILL_COUNT -->237<!-- /SKILL_COUNT --> skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
+| `skills/`               | Canonical agent skills (SKILL.md files). <!-- SKILL_COUNT -->241<!-- /SKILL_COUNT --> skills covering messaging, voice, numbers, AI, IoT, WebRTC, Twilio migration. |
 | `providers/claude/`     | Claude Code plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
 | `providers/cursor/`     | Cursor plugin packaging — synced from `skills/` via `scripts/sync-skills.sh`. Don't edit by hand. |
+| `plugins/telnyx-developer-kit/` | Codex CLI plugin; its four-skill payload is synced from canonical `skills/`. |
+| `.agents/`              | Agent-client marketplace metadata mapping the Telnyx Developer Kit to its local plugin source. |
+| `submission/`           | Reviewer-facing submission handoff material kept outside distributable plugin archives. |
 | `plugins/opencode/`     | OpenCode plugin (auth + TUI for Telnyx-hosted models).                    |
 | `tools/python/`         | Python agent toolkit (PyPI: `telnyx-agent-toolkit`).                      |
 | `tools/typescript/`     | TypeScript agent toolkit (npm).                                           |
@@ -60,7 +63,7 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 | `cli/`                  | Agent CLI for provisioning Telnyx infrastructure.                         |
 | `inference/`            | Documentation for Telnyx-hosted inference.                                |
 | `guides/`               | Step-by-step operational guides.                                          |
-| `scripts/sync-skills.sh`| Syncs `skills/` → `providers/{claude,cursor}/plugin/skills/`.             |
+| `scripts/sync-skills.sh`| Syncs canonical skills to modular Claude, flat Cursor, and scoped Codex plugin trees. |
 | `agent.json`            | Top-level agent manifest (capabilities, auth, endpoints).                 |
 | `plugin.json`, `mcp.json` | Agent Plugins (agent-plugins.org) manifest bundling `skills/` + the hosted MCP server. |
 | `.claude-plugin/`       | Claude Code marketplace metadata.                                         |
@@ -78,7 +81,9 @@ Run the relevant package's test suite before declaring a task done. Don't run al
 ./scripts/sync-skills.sh
 ```
 
-This propagates changes to `providers/claude/` and `providers/cursor/`. Commit the sync output alongside your skill edits — don't leave them out of sync.
+This propagates changes to the modular `providers/claude/plugins/` tree,
+`providers/cursor/plugin/`, and the four-skill Codex Developer Kit where
+applicable. Commit the sync output alongside your skill edits.
 
 One exception inside hand-authored skills: embedded SDK reference files (`telnyx-twilio-migration/sdk-reference/`, `telnyx-twilio-migration/references/sdk-api-details/`, and `telnyx-webrtc-client-*/references/webrtc-server-api.md`) are pipeline-managed and will also be overwritten — treat those like generated content.
 
@@ -102,7 +107,10 @@ The capability list in `agent.json` is the source of truth for what Telnyx surfa
 
 ### Don'ts
 
-- Don't edit files under `providers/claude/plugin/skills/` or `providers/cursor/plugin/skills/` directly — they are generated. Edit the source under `skills/` and run `./scripts/sync-skills.sh`.
+- Don't edit files under `providers/claude/plugins/<plugin-name>/skills/`,
+  `providers/cursor/plugin/skills/`, or
+  `plugins/telnyx-developer-kit/skills/` directly — they are generated. Edit
+  the source under `skills/` and run `./scripts/sync-skills.sh`.
 - Don't introduce a root-level test runner — each package has its own.
 - Don't commit credentials, API keys, or `.env` files. Use the patterns in existing `.env.example` files.
 - Don't `npm install` at the root and expect it to install workspace deps — each package has its own `package.json` and `node_modules/`.

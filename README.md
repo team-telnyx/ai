@@ -7,7 +7,7 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 ## Table of contents
 
-- [Telnyx Plugins](#plugins-and-extensions) - Set up your coding assistant: Telnyx Agent Skills plugins for Claude Code and Cursor, the hosted Telnyx MCP server via the Gemini CLI extension, and a Telnyx model-provider plugin for OpenCode.
+- [Telnyx Plugins](#plugins-and-extensions) - Set up your coding assistant: Telnyx Agent Skills plugins for Claude Code and Cursor, the Telnyx Developer Kit with Agent Skills and hosted MCP for Codex CLI, the hosted Telnyx MCP server via the Gemini CLI extension, and a Telnyx model-provider plugin for OpenCode.
 
 - [Agent Toolkit](#agent-toolkit) - integrate Telnyx APIs with popular agent frameworks including OpenAI's Agent SDK, LangChain, CrewAI, and Vercel's AI SDK through function calling — available in [Python](#python) and [TypeScript](#typescript).
   
@@ -20,6 +20,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 - [Guides](#guides) - step-by-step tutorials for common workflows
 
 - [Edge Compute](#edge-compute) - agent workflows and handoff tooling for Telnyx Edge Compute functions
+
+- [Repository Layout](#repository-layout) - locate marketplace metadata and reviewer-facing submission artifacts.
 
 - [Maintainers](#maintainers) - who maintains this repo and how to reach them
 
@@ -52,6 +54,26 @@ Empowers agents to generate correct, production-ready code — and to manage the
 /plugin install telnyx-ai@telnyx         # AI inference, assistants, and Meeting Bot
 /plugin install telnyx-platform@telnyx   # Account, fax, IoT, networking, SIP, storage, TeXML, OAuth, Twilio migration
 ```
+
+### Codex CLI
+
+Install the Telnyx Developer Kit, which bundles four cross-product planning,
+architecture, guardrail, and debugging skills with the hosted Telnyx MCP server:
+
+> **Release candidate:** the repository marketplace intentionally marks this
+> plugin `NOT_AVAILABLE` until the hosted MCP deployment and production review
+> gates pass. The commands below apply only after the release-only policy change
+> makes it available.
+
+```bash
+codex plugin marketplace add team-telnyx/ai
+codex plugin add telnyx-developer-kit@telnyx
+codex mcp login telnyx
+```
+
+The plugin registers the isolated `https://api.telnyx.com/v2/ai/mcp` endpoint.
+Codex negotiates OAuth during installation; do not put a Telnyx API key in the
+plugin manifest or add a second MCP server with a bearer-token override.
 
 ### Gemini CLI extension
 
@@ -244,6 +266,15 @@ Use this repo for agent workflows against Telnyx Edge Compute: the [Agent CLI](/
 
 To create, deploy, and manage the functions themselves (secrets, bindings, lifecycle), use the `telnyx-edge` CLI from [`team-telnyx/edge-compute`](https://github.com/team-telnyx/edge-compute). For agent flows, prefer API-key auth (`telnyx-edge auth api-key set <key>`).
 
+## Repository Layout
+
+The runtime packages and canonical skills are documented above. These additional
+top-level trees support plugin discovery and review:
+
+| Path | Purpose |
+| --- | --- |
+| [`.agents/`](.agents/plugins/marketplace.json) | Agent-client marketplace metadata that maps `telnyx-developer-kit` to its local plugin source. |
+| [`submission/`](submission/telnyx-developer-kit/README.md) | Reviewer-facing Telnyx Developer Kit handoff material, including review cases, annotation justifications, the pinned five-tool connector contract, release notes, and readiness gates; it is not part of the distributable plugin archive. |
 
 ## Maintainers
 
