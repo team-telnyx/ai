@@ -17,6 +17,21 @@ on:
           - 'true'
 
 jobs:
+  claude-developer-kit-check:
+    name: Check — Claude developer kit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Validate connector and packaged skills
+        run: node scripts/check-claude-developer-kit.mjs
+      - name: Validate Claude plugin and marketplace manifests
+        run: |
+          npx --yes @anthropic-ai/claude-code@2.1.259 plugin validate providers/claude/plugins/telnyx-developer-kit
+          npx --yes @anthropic-ai/claude-code@2.1.259 plugin validate .
+
   skills-sync-check:
     name: Check — Skills in sync
     runs-on: ubuntu-latest
@@ -205,5 +220,4 @@ jobs:
         continue-on-error: true
         working-directory: cli
         run: RUN_WRITE_TESTS=true npx tsx tests/integration-ci-write.test.ts
-
 

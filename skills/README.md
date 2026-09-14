@@ -265,6 +265,7 @@ Telnyx ships one plugin per product area, so you install only the skills your pr
 **Step 2.** Install the plugins you need — pick one or more:
 
 ```bash
+/plugin install telnyx-developer-kit@telnyx  # Curated build workflow, hosted MCP access, and Twilio switching
 /plugin install telnyx-messaging@telnyx  # SMS / MMS
 /plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
 /plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API

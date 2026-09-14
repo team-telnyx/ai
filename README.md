@@ -21,6 +21,8 @@ This repo is the one-stop shop for AI Agents and AI-first developers building wi
 
 - [Edge Compute](#edge-compute) - agent workflows and handoff tooling for Telnyx Edge Compute functions
 
+- [Repository Layout](#repository-layout) - locate reviewer-facing submission artifacts.
+
 - [Maintainers](#maintainers) - who maintains this repo and how to reach them
 
 ## Plugins and Extensions
@@ -40,6 +42,7 @@ Empowers agents to generate correct, production-ready code — and to manage the
 **Step 2.** Install the plugins you need — pick one or more:
 
 ```bash
+/plugin install telnyx-developer-kit@telnyx  # Curated build workflow, hosted MCP access, and Twilio switching
 /plugin install telnyx-messaging@telnyx  # SMS / MMS
 /plugin install telnyx-voice@telnyx      # Voice API (call control, AMD, recording, etc.)
 /plugin install telnyx-whatsapp@telnyx   # WhatsApp Business API
@@ -244,6 +247,15 @@ Use this repo for agent workflows against Telnyx Edge Compute: the [Agent CLI](/
 
 To create, deploy, and manage the functions themselves (secrets, bindings, lifecycle), use the `telnyx-edge` CLI from [`team-telnyx/edge-compute`](https://github.com/team-telnyx/edge-compute). For agent flows, prefer API-key auth (`telnyx-edge auth api-key set <key>`).
 
+
+## Repository Layout
+
+The runtime packages and canonical skills are documented above. This additional
+top-level tree contains review-only material:
+
+| Path | Purpose |
+| --- | --- |
+| [`submission/`](submission/telnyx-developer-kit/connector-contract.json) | Reviewer-facing Telnyx Developer Kit handoff material, including the pinned five-tool connector contract; it is not part of the distributable plugin archive. |
 
 ## Maintainers
 
