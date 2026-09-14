@@ -24,6 +24,18 @@ type FakeEdgeOptions = {
   runtimeLogsSince?: boolean;
   runtimeLogsLast?: boolean;
   runtimeLogsJson?: boolean;
+  invocationLogsType?: boolean;
+  invocationLogsRuntime?: boolean;
+  invocationLogsInvocations?: boolean;
+  metrics?: boolean;
+  metricsFunctionUsage?: boolean;
+  metricsSince?: boolean;
+  metricsErrors?: boolean;
+  metricsJson?: boolean;
+  deployments?: boolean;
+  deploymentsFunctionUsage?: boolean;
+  deploymentsJson?: boolean;
+  deploymentsFailureReason?: boolean;
   resetFunc?: boolean;
   resetNoninteractiveConfirmation?: boolean;
   noninteractiveConfirmation?: boolean;
@@ -61,6 +73,18 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const runtimeLogsSince = config.runtimeLogsSince ?? true;
   const runtimeLogsLast = config.runtimeLogsLast ?? true;
   const runtimeLogsJson = config.runtimeLogsJson ?? true;
+  const invocationLogsType = config.invocationLogsType ?? true;
+  const invocationLogsRuntime = config.invocationLogsRuntime ?? true;
+  const invocationLogsInvocations = config.invocationLogsInvocations ?? true;
+  const metrics = config.metrics ?? true;
+  const metricsFunctionUsage = config.metricsFunctionUsage ?? true;
+  const metricsSince = config.metricsSince ?? true;
+  const metricsErrors = config.metricsErrors ?? true;
+  const metricsJson = config.metricsJson ?? true;
+  const deployments = config.deployments ?? true;
+  const deploymentsFunctionUsage = config.deploymentsFunctionUsage ?? true;
+  const deploymentsJson = config.deploymentsJson ?? true;
+  const deploymentsFailureReason = config.deploymentsFailureReason ?? true;
   const resetFunc = config.resetFunc ?? true;
   const resetNoninteractiveConfirmation = config.resetNoninteractiveConfirmation ?? false;
   const noninteractiveConfirmation = config.noninteractiveConfirmation ?? true;
@@ -117,8 +141,24 @@ if (args[0] === 'ship' && args[1] === 'status' && args.includes('--help')) {
   process.exit(0);
 }
 if (args[0] === 'logs' && args.includes('--help')) {
-  console.log(['Read deployed function runtime logs', 'Usage: telnyx-edge logs ${runtimeLogsFunctionUsage ? "<function>" : "[flags]"}', ...(${runtimeLogsSince} ? ['      --since duration  Look back over a historical window'] : []), ...(${runtimeLogsLast} ? ['  -n, --last int  Maximum number of log lines'] : []), ...(${runtimeLogsJson} ? ['      --json  Print JSON output'] : [])].join('\\n'));
+  console.log(['Read deployed function runtime logs', 'Usage: telnyx-edge logs ${runtimeLogsFunctionUsage ? "<function>" : "[flags]"}', ...(${runtimeLogsSince} ? ['      --since duration  Look back over a historical window'] : []), ...(${runtimeLogsLast} ? ['  -n, --last int  Maximum number of log lines'] : []), ...(${runtimeLogsJson} ? ['      --json  Print JSON output'] : []), ...(${invocationLogsType} ? ['      --type string  Select ' + (${invocationLogsRuntime} ? 'runtime' : '') + (${invocationLogsInvocations} ? ' invocations' : '') + ' logs'] : [])].join('\\n'));
   process.exit(0);
+}
+if (args[0] === 'metrics' && args.includes('--help')) {
+  if (${metrics}) {
+    console.log(['Summarize function request and resource metrics', 'Usage: telnyx-edge metrics ${metricsFunctionUsage ? "<function>" : "[flags]"}', ...(${metricsSince} ? ['      --since duration  Look back over a window'] : []), ...(${metricsErrors} ? ['      --errors  Show the HTTP-error view'] : []), ...(${metricsJson} ? ['      --json  Print raw aggregate JSON'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "metrics"\\n');
+  process.exit(1);
+}
+if (args[0] === 'deployments' && args.includes('--help')) {
+  if (${deployments}) {
+    console.log(['Show function deploy history with failure reasons', 'Usage: telnyx-edge deployments ${deploymentsFunctionUsage ? "<function>" : "[flags]"}', ...(${deploymentsJson} ? ['      --json  Print API response JSON'] : []), ...(${deploymentsFailureReason} ? ['Show each failed ship stage and reason'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "deployments"\\n');
+  process.exit(1);
 }
 if (args[0] === 'ship' && args.includes('--help')) {
   if (${ship}) {
@@ -321,6 +361,9 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.ship_supported, true);
     assert.equal(data.ship_status_supported, true);
     assert.equal(data.runtime_logs_supported, true);
+    assert.equal(data.invocation_logs_supported, true);
+    assert.equal(data.function_metrics_supported, true);
+    assert.equal(data.deployments_supported, true);
     assert.equal(data.stateful_actors_supported, true);
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
@@ -386,6 +429,9 @@ describe("CLI — Edge Compute handoff", () => {
       shipStatusFunctionUsage: false,
       shipStatusLogs: false,
       runtimeLogsSince: false,
+      invocationLogsType: false,
+      metrics: false,
+      deployments: false,
       sqlParam: false,
       sqlParamJson: false,
       sqlDatabaseExport: false,
@@ -397,6 +443,9 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.ready, true, "optional capabilities do not block the core handoff");
     assert.equal(data.ship_status_supported, false);
     assert.equal(data.runtime_logs_supported, false);
+    assert.equal(data.invocation_logs_supported, false);
+    assert.equal(data.function_metrics_supported, false);
+    assert.equal(data.deployments_supported, false);
     assert.equal(data.reset_func_supported, false);
     assert.equal(data.noninteractive_confirmation_supported, false);
     assert.equal(data.types_supported, false);
@@ -412,6 +461,8 @@ describe("CLI — Edge Compute handoff", () => {
       ["reset-func", "--help"],
       ["ship", "status", "--help"],
       ["logs", "--help"],
+      ["metrics", "--help"],
+      ["deployments", "--help"],
       ["delete-func", "--help"],
       ["secrets", "add", "--help"],
       ["types", "--help"],
@@ -463,6 +514,49 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.ready, true, "runtime logs must remain optional for setup handoffs");
       assert.equal(data.runtime_logs_supported, false);
       assert.ok(data.next_steps.some((step: string) => step.includes("runtime logs")));
+    }
+  });
+
+  it("requires complete v0.5.2 observability and deployment-history help surfaces", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.invocation_logs_supported, true);
+    assert.equal(available.function_metrics_supported, true);
+    assert.equal(available.deployments_supported, true);
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("logs <function-name> --type invocations --since 10m --last 200")));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("metrics <function-name> --since 24h")));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("deployments <function-name>")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [["logs", "--help"], ["metrics", "--help"], ["deployments", "--help"]]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete = [
+      [{ invocationLogsType: false }, "invocation_logs_supported", "logs <function-name> --type invocations"],
+      [{ invocationLogsRuntime: false }, "invocation_logs_supported", "logs <function-name> --type invocations"],
+      [{ invocationLogsInvocations: false }, "invocation_logs_supported", "logs <function-name> --type invocations"],
+      [{ runtimeLogsSince: false }, "invocation_logs_supported", "logs <function-name> --type invocations"],
+      [{ runtimeLogsLast: false }, "invocation_logs_supported", "logs <function-name> --type invocations"],
+      [{ metrics: false }, "function_metrics_supported", "metrics <function-name>"],
+      [{ metricsFunctionUsage: false }, "function_metrics_supported", "metrics <function-name>"],
+      [{ metricsSince: false }, "function_metrics_supported", "metrics <function-name>"],
+      [{ metricsErrors: false }, "function_metrics_supported", "metrics <function-name>"],
+      [{ metricsJson: false }, "function_metrics_supported", "metrics <function-name>"],
+      [{ deployments: false }, "deployments_supported", "deployments <function-name>"],
+      [{ deploymentsFunctionUsage: false }, "deployments_supported", "deployments <function-name>"],
+      [{ deploymentsJson: false }, "deployments_supported", "deployments <function-name>"],
+      [{ deploymentsFailureReason: false }, "deployments_supported", "deployments <function-name>"],
+    ] as const;
+    for (const [config, capability, suggestion] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "v0.5.2 observability remains optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(!data.next_steps.some((step: string) => step.includes(suggestion)));
     }
   });
 

@@ -13,7 +13,10 @@ import {
   supportsActorInstances,
   supportsApiKeyAuth,
   supportsCustomDomains,
+  supportsDeployments,
+  supportsFunctionMetrics,
   supportsInspect,
+  supportsInvocationLogs,
   supportsKvKeyManagement,
   supportsKvStorage,
   supportsNewFuncFromDir,
@@ -45,6 +48,9 @@ interface EdgeDoctorResult {
   ship_supported: boolean;
   ship_status_supported: boolean;
   runtime_logs_supported: boolean;
+  invocation_logs_supported: boolean;
+  function_metrics_supported: boolean;
+  deployments_supported: boolean;
   stateful_actors_supported: boolean;
   inspect_supported: boolean;
   actor_instances_supported: boolean;
@@ -77,6 +83,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let shipSupported = false;
   let shipStatusSupported = false;
   let runtimeLogsSupported = false;
+  let invocationLogsSupported = false;
+  let functionMetricsSupported = false;
+  let deploymentsSupported = false;
   let statefulActorsSupported = false;
   let inspectSupported = false;
   let actorInstancesSupported = false;
@@ -115,6 +124,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     shipSupported = supportsShip();
     shipStatusSupported = supportsShipStatus();
     runtimeLogsSupported = supportsRuntimeLogs();
+    invocationLogsSupported = supportsInvocationLogs();
+    functionMetricsSupported = supportsFunctionMetrics();
+    deploymentsSupported = supportsDeployments();
     statefulActorsSupported = supportsStatefulActors();
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
@@ -167,6 +179,27 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: runtimeLogsSupported
         ? "logs <function> supports --since, --last, and --json"
         : "logs --help did not advertise <function> usage with --since, --last, and --json",
+    });
+    checks.push({
+      name: "Function invocation logs",
+      ok: invocationLogsSupported,
+      detail: invocationLogsSupported
+        ? "logs <function> supports --type runtime and invocations"
+        : "logs --help did not advertise both runtime and invocations log streams",
+    });
+    checks.push({
+      name: "Function metrics",
+      ok: functionMetricsSupported,
+      detail: functionMetricsSupported
+        ? "metrics <function> supports --since, --errors, and --json"
+        : "metrics --help did not advertise <function> usage with --since, --errors, and --json",
+    });
+    checks.push({
+      name: "Deployment history",
+      ok: deploymentsSupported,
+      detail: deploymentsSupported
+        ? "deployments <function> reports failure reasons and supports --json"
+        : "deployments --help did not advertise <function> usage, failure reasons, and --json",
     });
     checks.push({
       name: "Stateful actors supported",
@@ -358,6 +391,15 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (runtimeLogsSupported) {
       nextSteps.push("Read deployed-function runtime logs with: telnyx-edge logs <function-name> --since 10m --last 200");
     }
+    if (invocationLogsSupported) {
+      nextSteps.push("Read HTTP invocation records with: telnyx-edge logs <function-name> --type invocations --since 10m --last 200");
+    }
+    if (functionMetricsSupported) {
+      nextSteps.push("Summarize function traffic and resources with: telnyx-edge metrics <function-name> --since 24h");
+    }
+    if (deploymentsSupported) {
+      nextSteps.push("Review per-ship outcomes with: telnyx-edge deployments <function-name>");
+    }
     if (resetFuncSupported) {
       nextSteps.push(`Recover a failed deployment with: telnyx-edge reset-func <function-name>${resetFuncNoninteractiveConfirmationSupported ? " --yes" : ""}`);
     }
@@ -385,6 +427,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
       !runtimeLogsSupported && "runtime logs",
+      !invocationLogsSupported && "invocation logs",
+      !functionMetricsSupported && "function metrics",
+      !deploymentsSupported && "deployment history",
       !resetFuncSupported && "reset-func",
       resetFuncSupported && !resetFuncNoninteractiveConfirmationSupported && "reset-func --yes",
       !noninteractiveConfirmationSupported && "destructive-command --yes",
@@ -415,6 +460,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     ship_supported: shipSupported,
     ship_status_supported: shipStatusSupported,
     runtime_logs_supported: runtimeLogsSupported,
+    invocation_logs_supported: invocationLogsSupported,
+    function_metrics_supported: functionMetricsSupported,
+    deployments_supported: deploymentsSupported,
     stateful_actors_supported: statefulActorsSupported,
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
