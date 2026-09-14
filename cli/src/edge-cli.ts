@@ -97,6 +97,40 @@ export function supportsRuntimeLogs(): boolean {
   }
 }
 
+/** Detect the v0.5.2 HTTP-invocation log stream without inferring it from runtime logs. */
+export function supportsInvocationLogs(): boolean {
+  try {
+    const out = runEdge(["logs", "--help"]);
+    return /\blogs\s+<function>(?:\s|\[|$)/i.test(out) &&
+      /--type\b[^\r\n]*(?:\bruntime\b[^\r\n]*\binvocations\b|\binvocations\b[^\r\n]*\bruntime\b)/i.test(out) &&
+      ["since", "last"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the v0.5.2 function-metrics command and every released query view. */
+export function supportsFunctionMetrics(): boolean {
+  try {
+    const out = runEdge(["metrics", "--help"]);
+    return /\bmetrics\s+<function>(?:\s|\[|$)/i.test(out) &&
+      ["since", "errors", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the v0.5.2 deployment-history view, including failure reasons. */
+export function supportsDeployments(): boolean {
+  try {
+    const out = runEdge(["deployments", "--help"]);
+    return /\bdeployments\s+<function>(?:\s|\[|$)/i.test(out) && /--json\b/i.test(out) &&
+      /\bfail(?:ed|ure)?\b/i.test(out) && /\breason\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect non-interactive confirmation from a destructive command's own help. */
 export function supportsNonInteractiveConfirmation(): boolean {
   try {

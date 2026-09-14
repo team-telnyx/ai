@@ -369,7 +369,7 @@ describe("Verify discovery parity", () => {
   });
 });
 
-describe("Edge Compute v0.5.1 guide regression", () => {
+describe("Edge Compute v0.5.2 guide regression", () => {
   const guide = readFileSync(join(GUIDES_DIR, "edge-compute.md"), "utf-8");
 
   it("distinguishes released runtime logs from ship-failure logs", () => {
@@ -392,10 +392,13 @@ describe("Edge Compute v0.5.1 guide regression", () => {
     assert.match(guide, /never pipe blindly into a populated production database/);
   });
 
-  it("does not advertise post-v0.5.1 metrics, deployments, or invocation-log flags", () => {
-    assert.doesNotMatch(guide, /telnyx-edge metrics\b/);
-    assert.doesNotMatch(guide, /telnyx-edge deployments\b/);
-    assert.doesNotMatch(guide, /telnyx-edge logs[^\n]*--type\b/);
+  it("documents released metrics, deployment history, and invocation logs", () => {
+    assert.match(guide, /### Observability and deployment history \(v0\.5\.2\)/);
+    assert.match(guide, /telnyx-edge metrics my-function --since 24h/);
+    assert.match(guide, /telnyx-edge metrics my-function --errors --json/);
+    assert.match(guide, /telnyx-edge logs my-function --type invocations --since 10m --last 200/);
+    assert.match(guide, /telnyx-edge deployments my-function --json/);
+    assert.match(guide, /build failure has no revision and cannot be a rollback target/);
   });
 });
 
