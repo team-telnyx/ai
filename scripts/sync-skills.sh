@@ -18,7 +18,7 @@ SKILLS_SRC="$REPO_ROOT/skills"
 PLUGIN_PATTERNS=(
   "telnyx-whatsapp|telnyx-whatsapp-|0"
   "telnyx-voice|telnyx-voice-,telnyx-ai-outbound-voice|0"
-  "telnyx-messaging|telnyx-messaging-|0"
+  "telnyx-messaging|telnyx-messaging-,telnyx-sms-marketing-pipeline|0"
   "telnyx-tts|telnyx-tts-|0"
   "telnyx-stt|telnyx-stt-|0"
   "telnyx-verify|telnyx-verify-|0"
