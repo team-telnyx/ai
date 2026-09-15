@@ -44,20 +44,16 @@ telnyx-agent edge-doctor --json
 ```
 
 ## Function names
-
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
 
 ## Quick Start
-
 Use one of the repository-aware handoff commands below for a complete clone, build, secrets, deploy, and inspect sequence. The expanded manual flows show exactly what each helper emits.
 ### Classic Node lockfile prerequisite
-
 Before shipping a classic Node function whose `package.json` declares dependencies, ensure the function directory contains either `package-lock.json` or `npm-shrinkwrap.json`. These are the accepted npm lockfile forms; without one, `telnyx-edge ship` fails before upload.
 
 Run `npm install` in the function directory to create `package-lock.json`. The MCP manual flow below already does this before building and shipping.
 
 ## Secure MCP server handoff
-
 The TypeScript MCP example requires two distinct secrets:
 
 - `TELNYX_API_KEY`: credential used by MCP tools for upstream Telnyx API calls
@@ -119,7 +115,6 @@ curl -X POST "https://<your-edge-endpoint>/" \
 Health-check endpoints remain unauthenticated for platform probes; MCP traffic requires the bearer token.
 
 ## Secure webhook handoff
-
 The JavaScript webhook example supports HMAC-SHA256 verification through `WEBHOOK_SECRET`. Production ingress should set it and configure the producer with the same key. Sign the exact request bytes and send `x-webhook-signature: sha256=<hex>`.
 
 ```bash
@@ -191,8 +186,18 @@ telnyx-edge delete-func my-function --yes
 ```
 
 `delete-func` is irreversible. Use `--yes` (`-y`) in scripts, agents, and CI to skip the interactive confirmation; see [Non-interactive destructive commands](#non-interactive-destructive-commands) for the full list.
+### Observability and deployment history (v0.5.2)
+`metrics <function>` summarizes recent request counts, HTTP status rates, latency, CPU, and memory. Use `--errors` for the current HTTP-error view and `--json` for the raw aggregate.
+`logs <function> --type invocations` reads one platform-emitted record per HTTP request served. This is traffic visibility, even when the function writes no runtime output; `--type runtime` remains the default for application stdout/stderr.
+`deployments <function>` lists recent ships, including each failed ship's stage and reason. It is history, not a rollback command; a build failure has no revision and cannot be a rollback target.
+```bash
+telnyx-edge metrics my-function --since 24h
+telnyx-edge metrics my-function --errors --json
+telnyx-edge logs my-function --type invocations --since 10m --last 200
+telnyx-edge deployments my-function --json
+```
 ### Runtime logs (v0.5.1)
-`logs <function>` reads runtime output from a deployed function, unlike `ship status <function> --logs`, which only adds logs associated with a failed ship. It reads a historical window; lines can arrive a few seconds after the function writes them.
+`logs <function>` reads runtime output from a deployed function, unlike `ship status <function> --logs`, which only adds ship-failure logs, not deployed-function runtime output. It reads a historical window; lines can arrive a few seconds after the function writes them.
 ```bash
 telnyx-edge logs my-function --since 10m --last 200; telnyx-edge logs my-function --json
 ```
@@ -208,7 +213,6 @@ telnyx-edge domains delete api.example.com --yes
 ```
 DNS propagation can delay verification; retry `verify` before certificate upload. `domains list` reports verification and certificate status.
 ### Revisions and rollback
-
 Every successful ship creates an immutable revision.
 
 ```bash
@@ -218,7 +222,6 @@ telnyx-edge rollback my-function <revision-id>
 
 Rollback retargets traffic to a prior healthy revision without rebuilding or re-uploading it.
 ### Secrets and Telnyx bindings
-
 ```bash
 telnyx-edge secrets add NAME "$VALUE"
 telnyx-edge secrets list
@@ -266,7 +269,6 @@ const mcpToken: string = await env.SECRETS.get("MCP_TOKEN");
 
 `binding` is the code-facing handle; `name` is the secret-store key. `types` covers all declared actor, Telnyx, secret, KV, SQL database, and Cloud Storage bindings, runs offline without authentication, and should be rerun whenever the manifest changes.
 ### Rate limiter bindings
-
 Declare each fixed-window limiter in `func.toml` or `telnyx.toml`. `limit` is the allowed call count and `period` is the window in seconds:
 
 ```toml
@@ -293,7 +295,6 @@ if (!success) return new Response("Too many requests", { status: 429 });
 
 The runtime handle is canonicalized to uppercase with hyphens replaced by underscores (`api-limit` becomes `env.API_LIMIT`). `namespace_id` is optional and must be a positive integer string; functions using the same value share a counter pool, so reuse it only when cross-function limiting is intentional.
 ### Non-interactive destructive commands
-
 Destructive commands prompt in a terminal and deliberately fail rather than hang when stdin is not a terminal. Scripts, agents, and CI must pass `--yes` (`-y`) to `delete-func`, `reset-func`, `domains delete`, `secrets delete`, `bindings delete`, `actors delete`, `storage sqldb delete`, `storage kv delete`, and `storage kv key delete`. Piping the output of `yes` is not accepted.
 
 ```bash
@@ -305,7 +306,6 @@ telnyx-edge storage sqldb delete "$SQLDB_ID" --yes
 
 For a whole shell or CI job, `TELNYX_EDGE_SKIP_CONFIRMATIONS=1` has the same effect as `--yes`. For a persistent local preference, use `telnyx-edge config set skip_confirmations true` (undo with `false`). Neither setting implies `--force`, which remains per invocation.
 ### Persistent KV storage
-
 ```bash
 # Namespace lifecycle
 telnyx-edge storage kv create --name my-data
