@@ -22,7 +22,7 @@ This is **authenticated account funding**: every call carries your Telnyx API ke
 | Complete checkout | `POST https://api.telnyx.com/v2/checkout_sessions/{checkout_id}/complete` |
 | Cancel checkout | `POST https://api.telnyx.com/v2/checkout_sessions/{checkout_id}/cancel` |
 
-Every request needs `Authorization: Bearer <key>` and `API-Version: 2026-04-17`. Every `POST` needs a fresh `Idempotency-Key`. Checkouts cannot be updated (`POST /v2/checkout_sessions/{id}` returns `400 checkout_not_updatable`); create a new one instead.
+Every request needs `Authorization: Bearer <key>` and `API-Version: 2026-04-17`. Every `POST` needs an `Idempotency-Key`: one per logical operation (create, complete, cancel), generated up front and re-used if the same request must be re-sent. Checkouts cannot be updated (`POST /v2/checkout_sessions/{id}` returns `400 checkout_not_updatable`); create a new one instead.
 
 ## How the flow works
 
@@ -30,7 +30,7 @@ Every request needs `Authorization: Bearer <key>` and `API-Version: 2026-04-17`.
 2. You pick a handler and pay it: `com.telnyx.mpp.stripe` (handler ID `stripe_shared_payment_token`) with a Link Shared Payment Token, or `com.telnyx.mpp.tempo` (handler ID `tempo_usdc_mpp`) by signing the handler's MPP challenge with `mppx`.
 3. You `POST` the credential to `/complete` exactly once. Telnyx returns HTTP `200`, `status: "completed"`, and an `order` whose `id` is the Telnyx transaction for the credit.
 
-Do not send `account_id` — Telnyx derives the account from your API key. Per-payment amount limits apply and may change; error responses state the current values.
+Do not send `account_id` — Telnyx derives the account from your API key. Per-payment amount limits apply and may change; an amount outside them is rejected with a generic `400 invalid_request`.
 
 ## Quick Start
 
@@ -38,6 +38,9 @@ Do not send `account_id` — Telnyx derives the account from your API key. Per-p
 export TELNYX_API_KEY='KEYxxxxx'
 export ACP_AMOUNT_CENTS='1200'     # $12.00
 export ACP_BASE_URL='https://api.telnyx.com'
+export ACP_CREATE_KEY="$(node -e 'console.log(crypto.randomUUID())')"     # one key per logical operation, keep for support
+export ACP_COMPLETE_KEY="$(node -e 'console.log(crypto.randomUUID())')"
+export ACP_CANCEL_KEY="$(node -e 'console.log(crypto.randomUUID())')"
 
 # Step 1: Create the checkout (expect HTTP 201, status ready_for_payment)
 umask 077
@@ -46,7 +49,7 @@ curl -sS --output "$CHECKOUT" --write-out '%{http_code}\n' \
   -X POST "$ACP_BASE_URL/v2/checkout_sessions" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H 'API-Version: 2026-04-17' \
-  -H "Idempotency-Key: $(node -e 'console.log(crypto.randomUUID())')" \
+  -H "Idempotency-Key: $ACP_CREATE_KEY" \
   -H 'Content-Type: application/json' \
   --data "{\"line_items\":[{\"id\":\"account_credit_usd\",\"unit_amount\":$ACP_AMOUNT_CENTS}],\"currency\":\"usd\",\"capabilities\":{}}"
 export ACP_CHECKOUT_ID="$(jq -r '.id' "$CHECKOUT")"
@@ -85,7 +88,7 @@ jq '{payment_data: {handler_id: "stripe_shared_payment_token",
 curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H 'API-Version: 2026-04-17' \
-  -H "Idempotency-Key: $(node -e 'console.log(crypto.randomUUID())')" \
+  -H "Idempotency-Key: $ACP_COMPLETE_KEY" \
   -H 'Content-Type: application/json' \
   --data-binary "@$COMPLETE_BODY"
 ```
@@ -97,20 +100,26 @@ curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" 
 TEMPO_CHALLENGE="$(mktemp /tmp/telnyx-acp-tempo-challenge.XXXXXX)"
 TEMPO_CREDENTIAL="$(mktemp /tmp/telnyx-acp-tempo-credential.XXXXXX)"
 jq -r '.capabilities.payment.handlers[] | select(.name=="com.telnyx.mpp.tempo") | .config.challenge' "$CHECKOUT" > "$TEMPO_CHALLENGE"
-# Validate, then sign with mppx (signing authorizes the transfer — once per checkout)
+# Parse-check the challenge (does not check funds or expiry), then sign with mppx and complete
+# immediately: the signed credential is only valid for ~25s. Signing authorizes the transfer — once
+# per checkout, never re-sign on failure. MPPX_PRIVATE_KEY, if set, overrides --account.
 npx --yes mppx@0.6.28 sign --network mainnet --dry-run --challenge "$(cat "$TEMPO_CHALLENGE")"
-npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
-  --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization' > "$TEMPO_CREDENTIAL"
 COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
-jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
-        instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
-  "$TEMPO_CREDENTIAL" > "$COMPLETE_BODY"
-curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H 'API-Version: 2026-04-17' \
-  -H "Idempotency-Key: $(node -e 'console.log(crypto.randomUUID())')" \
-  -H 'Content-Type: application/json' \
-  --data-binary "@$COMPLETE_BODY"
+npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
+  --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization // empty' > "$TEMPO_CREDENTIAL"
+if grep -q '^Payment ' "$TEMPO_CREDENTIAL"; then
+  jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
+          instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
+    "$TEMPO_CREDENTIAL" > "$COMPLETE_BODY"
+  curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" \
+    -H 'API-Version: 2026-04-17' \
+    -H "Idempotency-Key: $ACP_COMPLETE_KEY" \
+    -H 'Content-Type: application/json' \
+    --data-binary "@$COMPLETE_BODY"
+else
+  echo 'no credential; stop and read the error. Do not re-sign.'
+fi
 ```
 
 ## API Reference
@@ -182,7 +191,7 @@ const checkout = await resp.json(); // status 201, checkout.status === "ready_fo
 | `payment_data.handler_id` | string | Yes | `stripe_shared_payment_token` or `tempo_usdc_mpp` |
 | `payment_data.instrument` | object | Yes | Link: `{"type":"card","credential":{"type":"spt","token":"spt_..."}}`. Tempo: `{"type":"tempo_usdc","credential":{"type":"mpp_payment","token":"Payment ..."}}` |
 
-Returns HTTP `200` with `status: "completed"` and an `order` (`id`, `checkout_session_id`, `status`, `line_items`, `totals`). `order.id` is the Telnyx transaction ID. HTTP `202` means the provider outcome is not yet known: retrieve the checkout, do not resubmit.
+Returns HTTP `200` with `status: "completed"` and an `order` (`id`, `checkout_session_id`, `status`, `line_items`, `totals`). `order.id` is the Telnyx transaction ID. HTTP `202` (or a retrieved `complete_in_progress`) means the provider outcome is not yet known and the payment may have succeeded: retrieve the checkout, never resubmit or re-sign, and contact Telnyx Support if it stays unresolved.
 
 ### Retrieve and cancel
 
@@ -214,8 +223,8 @@ Errors use the ACP shape `{"type","code","message"}`.
 | `403` | `acp_unavailable` / `forbidden` | ACP not available for this account, or rejected by policy | Contact Telnyx Support |
 | `404` | `checkout_not_found` | Unknown checkout or wrong account | Check the ID and key |
 | `405` | `checkout_not_cancelable` | Already completed or cancelled | Nothing to do |
-| `422` | `checkout_not_payable` | Expired, cancelled, or already complete | Create a new checkout |
-| `422` | `idempotency_conflict` | Key reused with a different body | Use a new key |
+| `422` | `checkout_not_payable` | Expired, cancelled, or already complete | Before paying: start a new checkout. After a submitted completion: retrieve it and check the payment source first |
+| `422` | `idempotency_conflict` | Request conflicts with committed state (before payment, usually a key reused with a different body) | Do not retry with a new key; retrieve the checkout and contact Support if unresolved |
 
 ## Safety notes
 
