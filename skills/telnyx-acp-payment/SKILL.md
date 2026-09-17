@@ -325,7 +325,7 @@ jq '{status, order: {id: .order.id, checkout_session_id: .order.checkout_session
 
 `COMPLETE_STATUS` must be `200` and `matches_checkout` must be `true`.
 
-`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit. Save both. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
+`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit; it is not retrievable through the API key, so save it for Support. Verification is the retrieved checkout, the payment source, and the balance, below. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
 
 HTTP `202`, or a retrieved status of `complete_in_progress`, means Telnyx could not confirm the payment provider's outcome. The payment may have succeeded. Retrieving the checkout shows updates but does not reconcile it, and it can stay unresolved until Telnyx investigates. Do not submit the completion again, do not sign again, and do not create a replacement checkout. Retrieve the checkout every 5 seconds for up to a minute; if it is still unresolved, save the identifiers below and contact Telnyx Support.
 
@@ -344,15 +344,6 @@ curl -sS "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID" \
 | `completed` | Paid and credited. `order` is present |
 | `canceled` | Cancelled before payment |
 
-### Find the transaction in Telnyx
-
-```sh
-curl -sS "$ACP_BASE_URL/v2/payment/crypto_transactions/<order-id>" \
-  -H "Authorization: Bearer $TELNYX_API_KEY"
-```
-
-Despite the path name, this endpoint lists every machine payment, including Link card payments. Check that its `id` matches `order.id`, that `status` is `settled`, and that the amount matches your checkout. The public response does not include the on-chain transaction hash. The list endpoint `GET /v2/payment/crypto_transactions` shows recent machine payments if you lost the order ID.
-
 ### Check your Telnyx balance
 
 ```sh
@@ -370,7 +361,7 @@ For Link, retrieve the spend request without the token:
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" --format json
 ```
 
-A completed Link payment shows `status: "succeeded"` and a successful payment outcome. For Tempo, confirm the transfer in your wallet tooling or a Tempo block explorer using the transaction hash your wallet reports. Telnyx does not expose that hash; if you need it correlated, give Support the `order.id`.
+A completed Link payment shows `status: "succeeded"` and a successful payment outcome. For Tempo, confirm the transfer in your wallet tooling or a Tempo block explorer using the transaction hash your wallet reports. Telnyx does not expose that hash through the API key; if you need it correlated, give Support the `order.id`.
 
 ## Cancel a checkout you will not pay
 
@@ -441,7 +432,7 @@ The checkout does not exist or belongs to a different account.
 
 ### Link or Tempo shows success, but your balance did not change
 
-Do not pay again right away. Retrieve the checkout and the Telnyx transaction, check the balance, then check the Link spend request or Tempo transaction. If the credit still does not appear, contact Telnyx Support with the saved identifiers.
+Do not pay again right away. Retrieve the checkout, check the balance, then check the Link spend request or Tempo transaction. If the credit still does not appear, contact Telnyx Support with the saved identifiers, including `order.id`.
 
 ### You lost the response or do not know whether payment completed
 

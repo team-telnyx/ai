@@ -73,7 +73,7 @@ npx --yes @stripe/link-cli@0.16.0 spend-request create \
   --credential-type shared_payment_token \
   --network-id "$LINK_NETWORK_ID" \
   --amount "$ACP_AMOUNT_CENTS" --currency usd \
-  --context 'Add USD credit to my Telnyx account via an ACP checkout.' \
+  --context 'Authorize one card payment to add the specified USD credit to my Telnyx account through an ACP checkout using Stripe Link.' \
   --request-approval --format json
 export LINK_SPEND_REQUEST_ID='<lsrq-id>'
 
@@ -105,9 +105,11 @@ jq -r '.capabilities.payment.handlers[] | select(.name=="com.telnyx.mpp.tempo") 
 # per checkout, never re-sign on failure. MPPX_PRIVATE_KEY, if set, overrides --account.
 npx --yes mppx@0.6.28 sign --network mainnet --dry-run --challenge "$(cat "$TEMPO_CHALLENGE")"
 COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
-npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
-  --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization // empty' > "$TEMPO_CREDENTIAL"
-if grep -q '^Payment ' "$TEMPO_CREDENTIAL"; then
+if [ -n "${MPPX_PRIVATE_KEY:-}" ]; then
+  echo 'STOP: MPPX_PRIVATE_KEY is set; mppx would sign with it instead of the named wallet. Unset it or confirm that is the wallet you approved.'
+elif npx --yes mppx@0.6.28 sign --account my-telnyx-payer --network mainnet --format json \
+       --challenge "$(cat "$TEMPO_CHALLENGE")" | jq -r '.authorization // empty' > "$TEMPO_CREDENTIAL" \
+  && grep -q '^Payment ' "$TEMPO_CREDENTIAL"; then
   jq -Rs '{payment_data: {handler_id: "tempo_usdc_mpp",
           instrument: {type: "tempo_usdc", credential: {type: "mpp_payment", token: (. | rtrimstr("\n"))}}}}' \
     "$TEMPO_CREDENTIAL" > "$COMPLETE_BODY"
@@ -144,12 +146,13 @@ import os
 import uuid
 import requests
 
+create_key = str(uuid.uuid4())  # keep it: re-send with the same key after a lost response, and give it to Support
 resp = requests.post(
     "https://api.telnyx.com/v2/checkout_sessions",
     headers={
         "Authorization": f"Bearer {os.environ['TELNYX_API_KEY']}",
         "API-Version": "2026-04-17",
-        "Idempotency-Key": str(uuid.uuid4()),
+        "Idempotency-Key": create_key,
     },
     json={
         "line_items": [{"id": "account_credit_usd", "unit_amount": 1200}],
@@ -165,12 +168,13 @@ handlers = {h["name"]: h for h in checkout["capabilities"]["payment"]["handlers"
 **TypeScript** (create):
 
 ```typescript
+const createKey = crypto.randomUUID(); // keep it: re-send with the same key after a lost response, and give it to Support
 const resp = await fetch("https://api.telnyx.com/v2/checkout_sessions", {
   method: "POST",
   headers: {
     Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
     "API-Version": "2026-04-17",
-    "Idempotency-Key": crypto.randomUUID(),
+    "Idempotency-Key": createKey,
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -202,14 +206,16 @@ Returns HTTP `200` with `status: "completed"` and an `order` (`id`, `checkout_se
 ## Verify the credit
 
 ```bash
-# The order ID is the Telnyx transaction
-curl -sS "https://api.telnyx.com/v2/payment/crypto_transactions/<order-id>" \
-  -H "Authorization: Bearer $TELNYX_API_KEY"
+# Retrieve the checkout: status must be "completed" with an order bound to it
+curl -sS "https://api.telnyx.com/v2/checkout_sessions/$ACP_CHECKOUT_ID" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" -H 'API-Version: 2026-04-17'
 
-# Check the balance
+# Check the balance (corroboration: it can lag, and other activity changes the delta)
 curl -sS 'https://api.telnyx.com/v2/balance' \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
+
+Then confirm the payment on its own side: the Link spend request shows `succeeded`, or your Tempo wallet shows the transfer. `order.id` is the Telnyx transaction reference; it is not retrievable through the API key, so keep it for Support.
 
 ## Error Handling
 
