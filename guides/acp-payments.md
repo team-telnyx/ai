@@ -77,20 +77,25 @@ npx --yes @stripe/link-cli@0.16.0 spend-request create \
   --request-approval --format json
 export LINK_SPEND_REQUEST_ID='<lsrq-id>'
 
-# Retrieve the approved token into a private file and complete once
+# Retrieve the token into a private file; complete once, only when an spt_ token is present
+# (a spend request still pending_approval has no token — wait and retrieve again)
 SPEND="$(mktemp /tmp/telnyx-acp-spend.XXXXXX)"
 COMPLETE_BODY="$(mktemp /tmp/telnyx-acp-complete.XXXXXX)"
 npx --yes @stripe/link-cli@0.16.0 spend-request retrieve "$LINK_SPEND_REQUEST_ID" \
   --include shared_payment_token --format json > "$SPEND"
-jq '{payment_data: {handler_id: "stripe_shared_payment_token",
-     instrument: {type: "card", credential: {type: "spt", token: .shared_payment_token.id}}}}' \
-  "$SPEND" > "$COMPLETE_BODY"
-curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H 'API-Version: 2026-04-17' \
-  -H "Idempotency-Key: $ACP_COMPLETE_KEY" \
-  -H 'Content-Type: application/json' \
-  --data-binary "@$COMPLETE_BODY"
+if jq -e '.shared_payment_token.id | strings | startswith("spt_")' "$SPEND" > /dev/null; then
+  jq '{payment_data: {handler_id: "stripe_shared_payment_token",
+       instrument: {type: "card", credential: {type: "spt", token: .shared_payment_token.id}}}}' \
+    "$SPEND" > "$COMPLETE_BODY"
+  curl -sS -X POST "$ACP_BASE_URL/v2/checkout_sessions/$ACP_CHECKOUT_ID/complete" \
+    -H "Authorization: Bearer $TELNYX_API_KEY" \
+    -H 'API-Version: 2026-04-17' \
+    -H "Idempotency-Key: $ACP_COMPLETE_KEY" \
+    -H 'Content-Type: application/json' \
+    --data-binary "@$COMPLETE_BODY"
+else
+  echo 'no Shared Payment Token yet; approve the spend request in Link, then retrieve again. Do not complete.'
+fi
 ```
 
 ### Pay with Tempo USDC
