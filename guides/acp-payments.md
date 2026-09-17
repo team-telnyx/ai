@@ -220,7 +220,7 @@ curl -sS 'https://api.telnyx.com/v2/balance' \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
-Then confirm the payment on its own side: the Link spend request shows `succeeded`, or your Tempo wallet shows the transfer. `order.id` is the Telnyx transaction reference; it is not retrievable through the API key, so keep it for Support.
+Then confirm the payment on its own side: the Link spend request shows `succeeded`, or your Tempo wallet shows the transfer. `order.id` is the Telnyx transaction reference. Retrieving the checkout returns it again if the completion response was lost; the transaction-detail endpoint behind it is not available to API-key authentication, so keep the ID for Support.
 
 ## Error Handling
 

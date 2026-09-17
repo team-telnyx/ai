@@ -325,7 +325,7 @@ jq '{status, order: {id: .order.id, checkout_session_id: .order.checkout_session
 
 `COMPLETE_STATUS` must be `200` and `matches_checkout` must be `true`.
 
-`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit; it is not retrievable through the API key, so save it for Support. Verification is the retrieved checkout, the payment source, and the balance, below. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
+`order.checkout_session_id` must equal `ACP_CHECKOUT_ID`. `order.id` is the Telnyx transaction ID for the credit. Save it for Support: the checkout retrieval below returns it again if you lose this response, but the transaction-detail endpoint behind it is not available to API-key authentication. Verification is the retrieved checkout, the payment source, and the balance, below. The checkout `status` of `completed` is the success signal; `order.status` is `created` on a successful completion, and its line item shows `status: "fulfilled"`.
 
 HTTP `202`, or a retrieved status of `complete_in_progress`, means Telnyx could not confirm the payment provider's outcome. The payment may have succeeded. Retrieving the checkout shows updates but does not reconcile it, and it can stay unresolved until Telnyx investigates. Do not submit the completion again, do not sign again, and do not create a replacement checkout. Retrieve the checkout every 5 seconds for up to a minute; if it is still unresolved, save the identifiers below and contact Telnyx Support.
 
