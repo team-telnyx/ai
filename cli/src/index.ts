@@ -122,6 +122,14 @@ import {
   triggerAiAssistantTestRunCommand,
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
+import {
+  addAiConversationMessageCommand,
+  createAiConversationCommand,
+  deleteAiConversationCommand,
+  getAiConversationCommand,
+  listAiConversationsCommand,
+  updateAiConversationCommand,
+} from "./commands/ai-conversations.ts";
 import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
 import {
   disableSimCardCommand,
@@ -283,6 +291,12 @@ Commands:
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
   enhance-ai-assistant-instructions Generate improved assistant instructions without applying them (Go CLI v0.30+; raw response)
+  create-ai-conversation Create an AI conversation for assistant messages
+  get-ai-conversation Retrieve one AI conversation by ID
+  list-ai-conversations List AI conversations with optional filters
+  update-ai-conversation Update AI conversation metadata
+  add-ai-conversation-message Add a message to an AI conversation
+  delete-ai-conversation Delete an AI conversation by ID (requires --confirm)
   search-ai-collection Search or list RAG documents in an AI collection
   web-search        Search the web and return structured, LLM-ready results
   web-contents      Retrieve clean content for up to 20 URLs
@@ -478,6 +492,23 @@ Messaging Profile Flags:
   --page-size <n>        Results per page (list-messaging-profiles)
   --max-items <n>        Maximum list items; -1 means unlimited (list-messaging-profiles)
   --confirm              Required safety confirmation (delete-messaging-profile)
+
+AI Conversation Flags:
+  --id / --conversation-id <id> AI conversation ID (get, update, add message, delete — required)
+  --name <text>          Conversation name (create; add message) or generated filter (list)
+  --metadata <json>      Conversation or message metadata object (create, update, add message)
+  --created-at <filter>  Generated creation timestamp filter (list)
+  --last-message-at <filter> Generated last-message timestamp filter (list)
+  --limit <n>            Maximum conversations returned (list)
+  --order <filter>       Generated PostgREST ordering expression (list)
+  --role <role>          Message role (add-ai-conversation-message — required)
+  --content <text>       Message content (add-ai-conversation-message; defaults to empty)
+  --sent-at <value>      Message sent-at value (add-ai-conversation-message)
+  --tool-call-id <id>    Tool call ID for a tool response message (add-ai-conversation-message)
+  --tool-call <json>     JSON array of tool calls (add-ai-conversation-message)
+  --tool-choice <json>   JSON tool-choice value (add-ai-conversation-message)
+  --idempotency-key <key> Safe create or add-message retry key
+  --confirm              Required safety confirmation (delete-ai-conversation; never forwarded)
 
 Fax Action Flags:
   --id <fax-id>          Fax ID (fax-status, fax-cancel, fax-refresh; required)
@@ -1043,6 +1074,12 @@ Examples:
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
   telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
   telnyx-agent enhance-ai-assistant-instructions --assistant-id <assistant-id> --enhancement-prompt "Make escalation rules explicit"
+  telnyx-agent create-ai-conversation --name "Ada support" --metadata '{"assistant_id":"<assistant-id>"}' --json
+  telnyx-agent get-ai-conversation --id <conversation-id> --json
+  telnyx-agent list-ai-conversations --limit 25 --json
+  telnyx-agent update-ai-conversation --id <conversation-id> --metadata '{"ai_disabled":true}' --json
+  telnyx-agent add-ai-conversation-message --id <conversation-id> --role user --content "Hello" --json
+  telnyx-agent delete-ai-conversation --id <conversation-id> --confirm --json
   telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
   telnyx-agent web-search --query "latest WebRTC developments" --count 10 --freshness week --json
   telnyx-agent web-contents --url https://example.com --format markdown --json
@@ -1175,6 +1212,12 @@ const COMMANDS: Record<string, (
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
   "enhance-ai-assistant-instructions": enhanceAiAssistantInstructionsCommand,
+  "create-ai-conversation": createAiConversationCommand,
+  "get-ai-conversation": getAiConversationCommand,
+  "list-ai-conversations": listAiConversationsCommand,
+  "update-ai-conversation": updateAiConversationCommand,
+  "add-ai-conversation-message": addAiConversationMessageCommand,
+  "delete-ai-conversation": deleteAiConversationCommand,
   "search-ai-collection": searchAiCollectionCommand,
   "chat-ai-assistant": chatAiAssistantCommand,
   "send-ai-assistant-sms": sendAiAssistantSmsCommand,
@@ -1231,14 +1274,14 @@ const KNOWN_FLAGS = new Set<string>([
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
-  "json", "language", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
+  "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
   "max-attempts", "max-items", "max-participants", "max-retries", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
   "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "outbound-voice-profile-id",
+  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
@@ -1247,7 +1290,7 @@ const KNOWN_FLAGS = new Set<string>([
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
-  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode",
+  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
@@ -1257,7 +1300,7 @@ const KNOWN_FLAGS = new Set<string>([
   "temperature", "template-id", "template-language", "template-name", "template-variables",
   "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
   "timeout-millis", "timeout-secs", "to", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
-  "top-p", "tracking-settings", "transaction-type", "transcription", "transcription-language",
+  "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
