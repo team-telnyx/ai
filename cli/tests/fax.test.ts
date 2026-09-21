@@ -1,5 +1,5 @@
 /**
- * Canonical mock-binary tests for telnyx-agent fax-send.
+ * Canonical mock-binary tests for telnyx-agent fax commands.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -56,6 +56,34 @@ if (command[0] === "faxes" && command[1] === "create") {
       updated_at: "2026-07-20T00:01:00Z",
       media_url: "https://api.example.test/faxes/fax-123.pdf"
     }
+  }));
+} else if (command[0] === "faxes" && command[1] === "list") {
+  console.log(JSON.stringify({
+    data: [
+      {
+        id: "fax-inbound-1",
+        record_type: "fax",
+        direction: "inbound",
+        status: "received",
+        connection_id: "conn-123",
+        from: "+131****0000",
+        to: "+131****0001",
+        page_count: 2,
+        created_at: "2026-08-02T00:00:00Z"
+      },
+      {
+        id: "fax-other-connection",
+        record_type: "fax",
+        direction: "inbound",
+        status: "received",
+        connection_id: "conn-other",
+        from: "+131****0000",
+        to: "+131****0001",
+        page_count: 1,
+        created_at: "2026-08-02T00:00:00Z"
+      }
+    ],
+    meta: { page_number: 2, page_size: 25, total_pages: 1, total_results: 2 }
   }));
 } else if (command[0] === "faxes:actions" && command[1] === "cancel") {
   console.log(JSON.stringify({ data: { result: "success" } }));
@@ -175,6 +203,60 @@ describe("fax-send command", () => {
       "--preview-format", "pdf",
       "--format", "json",
     ]);
+  });
+
+  it("lists faxes through the exact generated command and presents a stable collection", () => {
+    const fake = setupFakeTelnyx();
+    const output = runCli(
+      [
+        "list-faxes",
+        "--created-at", '{"gte":"2026-08-01T00:00:00Z","lt":"2026-08-03T00:00:00Z"}',
+        "--direction", "inbound",
+        "--from", "+131****0000",
+        "--to", "+131****0001",
+        "--page-number", "2",
+        "--page-size", "25",
+        "--max-items", "1",
+        "--json",
+      ],
+      fake.env,
+    );
+
+    assert.deepEqual(JSON.parse(output), {
+      count: 1,
+      faxes: [{
+        id: "fax-inbound-1",
+        record_type: "fax",
+        direction: "inbound",
+        status: "received",
+        connection_id: "conn-123",
+        from: "+131****0000",
+        to: "+131****0001",
+        page_count: 2,
+        created_at: "2026-08-02T00:00:00Z",
+      }],
+      meta: { page_number: 2, page_size: 25, total_pages: 1, total_results: 2 },
+    });
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "faxes", "list",
+      "--filter.created-at", '{"gte":"2026-08-01T00:00:00Z","lt":"2026-08-03T00:00:00Z"}',
+      "--filter.direction", '{"eq":"inbound"}',
+      "--filter.from", '{"eq":"+131****0000"}',
+      "--filter.to", '{"eq":"+131****0001"}',
+      "--page-number", "2",
+      "--page-size", "25",
+      "--max-items", "1",
+      "--format", "raw",
+    ]]);
+  });
+
+  it("prints useful human-readable fax discovery output", () => {
+    const fake = setupFakeTelnyx();
+    const output = runCli(["list-faxes"], fake.env);
+
+    assert.match(output, /Faxes retrieved!/);
+    assert.match(output, /Count\s+2/);
+    assert.match(output, /fax-inbound-1 — inbound · received · \+131\*\*\*\*0000 · \+131\*\*\*\*0001 · 2026-08-02T00:00:00Z/);
   });
 
   it("forwards explicit false values for every fax boolean in equals form", () => {
@@ -347,8 +429,12 @@ describe("fax-send command", () => {
   it("is wired into help and capabilities", () => {
     const help = runCli(["help"]);
     assert.match(help, /fax-send\s+Send a fax/);
+    assert.match(help, /list-faxes\s+Discover inbound and outbound faxes/);
     assert.match(help, /Fax Action Flags:/);
     assert.match(help, /--connection-id <id>/);
+    assert.match(help, /--created-at <json>\s+Fax creation range/);
+    assert.match(help, /--direction <value>\s+Fax direction filter/);
+    assert.match(help, /--page-number \/ --page-size Positive pagination values \(list-faxes\)/);
     assert.match(help, /fax-status\s+Retrieve the latest status/);
     assert.match(help, /fax-cancel\s+Cancel an outbound fax/);
     assert.match(help, /fax-refresh\s+Refresh an expired media URL/);
@@ -356,10 +442,10 @@ describe("fax-send command", () => {
 
     const capabilities = JSON.parse(runCli(["capabilities", "--json"]));
     const faxCapability = capabilities.api_capabilities["📠 Fax"][0];
-    for (const action of ["send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"]) {
+    for (const action of ["list_faxes", "send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"]) {
       assert.ok(faxCapability.actions.includes(action), `fax capabilities should include ${action}`);
     }
-    for (const command of ["fax-send", "fax-status", "fax-cancel", "fax-refresh"]) {
+    for (const command of ["fax-send", "list-faxes", "fax-status", "fax-cancel", "fax-refresh"]) {
       assert.ok(
         capabilities.composite_commands.some(
           (entry: { name: string }) => entry.name === `telnyx-agent ${command}`,
