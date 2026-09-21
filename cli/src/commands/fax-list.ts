@@ -31,11 +31,14 @@ export async function listFaxesCommand(flags: Flags): Promise<void> {
   }
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
-  addMaxItemsFlag(args, flags, jsonOutput);
+  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
 
   try {
     const envelope = asRecord(await telnyxCli(args, { format: "raw" }));
-    const faxes = objectArray(envelope.data);
+    const returnedFaxes = objectArray(envelope.data);
+    const faxes = maxItems === undefined || maxItems === -1
+      ? returnedFaxes
+      : returnedFaxes.slice(0, maxItems);
 
     presentFaxList({ count: faxes.length, faxes, meta: asRecord(envelope.meta) }, jsonOutput);
   } catch (error) {
@@ -108,15 +111,16 @@ function addPositiveIntegerFlag(
   args.push(`--${source}`, raw);
 }
 
-function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): void {
+function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number | undefined {
   const raw = flags["max-items"];
-  if (raw === undefined) return;
+  if (raw === undefined) return undefined;
   if (typeof raw !== "string") fail("--max-items must be -1 or a non-negative safe integer", jsonOutput);
   const parsed = Number(raw);
   if (!/^(?:-1|\d+)$/.test(raw) || !Number.isSafeInteger(parsed)) {
     fail("--max-items must be -1 or a non-negative safe integer", jsonOutput);
   }
   args.push("--max-items", raw);
+  return parsed;
 }
 
 function optionalStringFlag(flags: Flags, key: string, jsonOutput: boolean): string | undefined {

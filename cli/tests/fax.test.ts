@@ -223,7 +223,7 @@ describe("fax-send command", () => {
     );
 
     assert.deepEqual(JSON.parse(output), {
-      count: 2,
+      count: 1,
       faxes: [{
         id: "fax-inbound-1",
         record_type: "fax",
@@ -233,16 +233,6 @@ describe("fax-send command", () => {
         from: "+131****0000",
         to: "+131****0001",
         page_count: 2,
-        created_at: "2026-08-02T00:00:00Z",
-      }, {
-        id: "fax-other-connection",
-        record_type: "fax",
-        direction: "inbound",
-        status: "received",
-        connection_id: "conn-other",
-        from: "+131****0000",
-        to: "+131****0001",
-        page_count: 1,
         created_at: "2026-08-02T00:00:00Z",
       }],
       meta: { page_number: 2, page_size: 25, total_pages: 1, total_results: 2 },
