@@ -37,16 +37,20 @@ export async function listDocumentsCommand(flags: Flags): Promise<void> {
 
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
-  addMaxItemsFlag(args, flags, jsonOutput);
+  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
   const sort = stringValue(flags, "sort");
   if (sort !== undefined) args.push("--sort", sort);
 
   try {
     const response = await telnyxCli(args, { format: "raw" });
     const envelope = asRecord(response);
+    const returnedDocuments = dataRecords(response);
+    const documents = maxItems === undefined || maxItems === -1
+      ? returnedDocuments
+      : returnedDocuments.slice(0, maxItems);
     const result: DocumentListResult = {
-      count: dataRecords(response).length,
-      documents: dataRecords(response),
+      count: documents.length,
+      documents,
       meta: asRecord(envelope.meta),
     };
     if (jsonOutput) {
@@ -127,10 +131,9 @@ export async function uploadDocumentCommand(flags: Flags): Promise<void> {
   };
 
   try {
-    // `--document` is the generated command's body-root flag. Supplying its
-    // JSON object remains compatible with both generated CLIs that expose only
-    // this root flag and newer releases that additionally expose inner flags.
-    const response = await telnyxCli(["documents", "upload", "--document", JSON.stringify(document)]);
+    // The generated CLI accepts request bodies as YAML/JSON on stdin. Keep
+    // Base64 file bytes and signed URL query tokens out of the process argv.
+    const response = await telnyxCli(["documents", "upload"], { stdin: JSON.stringify(document) });
     const uploaded = responseDataRecord(response);
     const result: DocumentUploadResult = {
       document_id: stringFrom(uploaded.id),
@@ -148,8 +151,8 @@ export async function uploadDocumentCommand(flags: Flags): Promise<void> {
     });
   } catch (err) {
     // The Go CLI can include request-validation context in stderr. Never allow
-    // a local file's encoded bytes or --file-base64 value to reach our output.
-    fail(errorMessage(err, fileContents), jsonOutput);
+    // upload source (including signed URLs) to reach our output.
+    fail(errorMessage(err, [fileContents, url]), jsonOutput);
   }
 }
 
@@ -222,11 +225,12 @@ function addPositiveIntegerFlag(args: string[], flags: Flags, name: string, json
   args.push(`--${name}`, value);
 }
 
-function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): void {
+function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number | undefined {
   const value = stringValue(flags, "max-items");
-  if (value === undefined) return;
+  if (value === undefined) return undefined;
   if (!/^-?\d+$/.test(value) || Number(value) < -1) failWith("--max-items must be -1 or a non-negative integer", jsonOutput);
   args.push("--max-items", value);
+  return Number(value);
 }
 
 function dataRecords(response: unknown): JsonRecord[] {
@@ -253,13 +257,16 @@ function stringFrom(value: unknown): string {
   return typeof value === "string" ? value : value === undefined || value === null ? "" : String(value);
 }
 
-function errorMessage(err: unknown, sensitiveValue?: string): string {
+function errorMessage(err: unknown, sensitiveValues: Array<string | undefined> = []): string {
   const message = err instanceof TelnyxCLIError
     ? err.stderr || err.message
     : err instanceof Error
       ? err.message
       : String(err);
-  return sensitiveValue ? message.split(sensitiveValue).join("[REDACTED]") : message;
+  return sensitiveValues.reduce<string>(
+    (redacted, value) => value ? redacted.split(value).join("[REDACTED]") : redacted,
+    message,
+  );
 }
 
 function fail(message: string, jsonOutput: boolean): never {

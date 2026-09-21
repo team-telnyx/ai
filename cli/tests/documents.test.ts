@@ -24,13 +24,17 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
 
 if (args[0] === "documents" && args[1] === "list") {
-  console.log(JSON.stringify({ data: [{ id: "doc-list-1", filename: "loa.pdf", customer_reference: "migration-2026" }], meta: { page_number: 2, total_results: 1 } }));
+  console.log(JSON.stringify({ data: [
+    { id: "doc-list-1", filename: "loa.pdf", customer_reference: "migration-2026" },
+    { id: "doc-list-2", filename: "invoice.pdf", customer_reference: "migration-2026" }
+  ], meta: { page_number: 2, total_results: 2 } }));
 } else if (args[0] === "documents" && args[1] === "retrieve") {
   console.log(JSON.stringify({ data: { id: flag("--id"), filename: "invoice.pdf", customer_reference: "migration-2026" } }));
 } else if (args[0] === "documents" && args[1] === "upload") {
-  const document = JSON.parse(flag("--document"));
+  const argvDocument = flag("--document");
+  const document = JSON.parse(argvDocument === undefined ? fs.readFileSync(0, "utf8") : argvDocument);
   if (${JSON.stringify(failUpload)}) {
-    process.stderr.write("upload rejected: " + (document.file || "no-local-file"));
+    process.stderr.write("upload rejected: " + (document.file || document.url || "no-upload-source"));
     process.exit(9);
   }
   console.log(JSON.stringify({ data: { id: "doc-upload-1", filename: document.filename || "fetched.pdf", customer_reference: document.customer_reference } }));
@@ -82,13 +86,13 @@ describe("document actions", () => {
       "--created-before", "2026-09-01T00:00:00Z",
       "--page-number", "2",
       "--page-size", "25",
-      "--max-items", "10",
+      "--max-items", "1",
       "--sort", "-created_at",
     ], fake.env) as { count: number; documents: Array<{ id: string }>; meta: { total_results: number } };
 
     assert.equal(output.count, 1);
     assert.equal(output.documents[0].id, "doc-list-1");
-    assert.equal(output.meta.total_results, 1);
+    assert.equal(output.meta.total_results, 2);
     assert.deepEqual(loggedArgs(fake.logPath), [[
       "documents", "list",
       "--filter", JSON.stringify({
@@ -96,7 +100,7 @@ describe("document actions", () => {
         customer_reference: { eq: "migration-2026" },
         created_at: { gt: "2026-08-01T00:00:00Z", lt: "2026-09-01T00:00:00Z" },
       }),
-      "--page-number", "2", "--page-size", "25", "--max-items", "10", "--sort", "-created_at", "--format", "raw",
+      "--page-number", "2", "--page-size", "25", "--max-items", "1", "--sort", "-created_at", "--format", "raw",
     ]]);
   });
 
@@ -127,7 +131,6 @@ describe("document actions", () => {
     });
     assert.deepEqual(loggedArgs(fake.logPath), [[
       "documents", "upload",
-      "--document", JSON.stringify({ customer_reference: "migration-2026", filename: "loa.pdf", url }),
       "--format", "json",
     ]]);
   });
@@ -143,7 +146,7 @@ describe("document actions", () => {
     assert.doesNotMatch(result.stdout, /base64-secret-file-content/);
     assert.doesNotMatch(result.stdout, new RegExp(contents));
     assert.deepEqual(loggedArgs(fake.logPath), [[
-      "documents", "upload", "--document", JSON.stringify({ filename: "invoice.pdf", file: contents }), "--format", "json",
+      "documents", "upload", "--format", "json",
     ]]);
   });
 
@@ -160,7 +163,7 @@ describe("document actions", () => {
     assert.doesNotMatch(result.stdout, new RegExp(encoded));
     assert.doesNotMatch(result.stdout, new RegExp(filePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.deepEqual(loggedArgs(fake.logPath), [[
-      "documents", "upload", "--document", JSON.stringify({ filename: "private-loa.pdf", file: encoded }), "--format", "json",
+      "documents", "upload", "--format", "json",
     ]]);
   });
 
@@ -173,6 +176,17 @@ describe("document actions", () => {
 
     assert.equal(result.status, 1);
     assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(contents));
+    assert.match(`${result.stdout}${result.stderr}`, /\[REDACTED\]/);
+  });
+
+  it("redacts a signed URL if the generated CLI echoes it in an upload failure", () => {
+    const fake = setupFakeTelnyx(true);
+    const url = "https://files.example.test/loa.pdf?signature=private-url-token";
+    const result = runAgent(["upload-document", "--url", url, "--json"], fake.env);
+
+    assert.equal(result.status, 1);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, /private-url-token/);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(`${result.stdout}${result.stderr}`, /\[REDACTED\]/);
   });
 
