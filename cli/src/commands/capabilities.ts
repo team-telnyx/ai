@@ -90,7 +90,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "x402 Crypto Payments", description: "Fund account with USDC on Base blockchain via x402 protocol", actions: ["get_payment_quote", "submit_payment"] },
   ],
   "🔄 Porting": [
-    { name: "Number Porting", description: "Check portability, create and manage port-in orders, track requirements and documents", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "activate_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_porting_requirements"] },
+    { name: "Number Porting", description: "Check portability, create and manage port-in orders, upload/discover documents, and track requirements", actions: ["check_portability", "list_porting_orders", "create_porting_order", "get_porting_order", "update_porting_order", "submit_porting_order", "cancel_porting_order", "activate_porting_order", "list_porting_phone_numbers", "attach_porting_document", "list_porting_documents", "list_documents", "get_document", "upload_document", "list_porting_requirements"] },
     { name: "Port-Out", description: "List and inspect Port-Out activity, authorize or reject orders, and create or list comments", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes", "update_portout_status", "create_portout_comment", "list_portout_comments"] },
   ],
   "💬 WhatsApp": [
@@ -176,6 +176,9 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent activate-porting-order", description: "Activate all numbers in a US FastPort order after explicit --confirm acknowledgement (irreversible)" },
   { name: "telnyx-agent attach-porting-document", description: "Attach an existing Telnyx document resource to a porting order" },
   { name: "telnyx-agent list-porting-documents", description: "List documents attached to a porting order with type filters and pagination" },
+  { name: "telnyx-agent list-documents", description: "List uploaded documents with metadata filters and pagination" },
+  { name: "telnyx-agent get-document", description: "Retrieve one uploaded document by ID" },
+  { name: "telnyx-agent upload-document", description: "Upload from a public URL, Base64 content, or local file; link it to a service within 30 minutes" },
   { name: "telnyx-agent list-portout-orders", description: "List Port-Out orders with generated filters and pagination" },
   { name: "telnyx-agent get-portout-order", description: "Retrieve one Port-Out order by ID" },
   { name: "telnyx-agent list-portout-rejection-codes", description: "List rejection codes eligible for a Port-Out order" },
