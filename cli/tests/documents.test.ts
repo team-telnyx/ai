@@ -24,10 +24,29 @@ fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n"
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
 
 if (args[0] === "documents" && args[1] === "list") {
-  console.log(JSON.stringify({ data: [
-    { id: "doc-list-1", filename: "loa.pdf", customer_reference: "migration-2026" },
-    { id: "doc-list-2", filename: "invoice.pdf", customer_reference: "migration-2026" }
-  ], meta: { page_number: 2, total_results: 2 } }));
+  if (process.env.TELNYX_FAKE_SCENARIO === "document-pages") {
+    const requestedPage = Number(flag("--page-number") || "1");
+    const pages = {
+      1: [
+        { id: "doc-list-1", filename: "one.pdf" },
+        { id: "doc-list-2", filename: "two.pdf" }
+      ],
+      2: [
+        { id: "doc-list-3", filename: "three.pdf" },
+        { id: "doc-list-4", filename: "four.pdf" }
+      ],
+      3: [{ id: "doc-list-5", filename: "five.pdf" }]
+    };
+    console.log(JSON.stringify({
+      data: pages[requestedPage] || [],
+      meta: { page_number: requestedPage, page_size: 2, total_pages: 3, total_results: 5 }
+    }));
+  } else {
+    console.log(JSON.stringify({ data: [
+      { id: "doc-list-1", filename: "loa.pdf", customer_reference: "migration-2026" },
+      { id: "doc-list-2", filename: "invoice.pdf", customer_reference: "migration-2026" }
+    ], meta: { page_number: 2, total_results: 2 } }));
+  }
 } else if (args[0] === "documents" && args[1] === "retrieve") {
   console.log(JSON.stringify({ data: { id: flag("--id"), filename: "invoice.pdf", customer_reference: "migration-2026" } }));
 } else if (args[0] === "documents" && args[1] === "upload") {
@@ -69,6 +88,11 @@ function loggedArgs(logPath: string): string[][] {
   return contents.trimEnd().split("\n").map((line) => JSON.parse(line) as string[]);
 }
 
+function flagValue(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
 function runJson(args: string[], env: NodeJS.ProcessEnv): unknown {
   const result = runAgent([...args, "--json"], env);
   assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
@@ -100,8 +124,60 @@ describe("document actions", () => {
         customer_reference: { in: ["migration-2026"] },
         created_at: { gt: "2026-08-01T00:00:00Z", lt: "2026-09-01T00:00:00Z" },
       }),
-      "--page-number", "2", "--page-size", "25", "--max-items", "1", "--sort", "-created_at", "--format", "raw",
+      "--page-number", "2", "--page-size", "25", "--sort", "-created_at", "--format", "raw",
     ]]);
+  });
+
+  it("aggregates raw pages before applying a finite max-items limit", () => {
+    const fake = setupFakeTelnyx();
+    const output = runJson([
+      "list-documents", "--page-size", "2", "--max-items", "3",
+    ], { ...fake.env, TELNYX_FAKE_SCENARIO: "document-pages" }) as {
+      count: number;
+      documents: Array<{ id: string }>;
+      meta: Record<string, unknown>;
+    };
+
+    assert.equal(output.count, 3);
+    assert.deepEqual(output.documents.map((document) => document.id), ["doc-list-1", "doc-list-2", "doc-list-3"]);
+    assert.deepEqual(output.meta, {
+      page_size: 2,
+      total_pages: 3,
+      total_results: 5,
+      starting_page: 1,
+      pages_fetched: 2,
+      returned_results: 3,
+    });
+    assert.deepEqual(loggedArgs(fake.logPath).map((args) => flagValue(args, "--page-number")), [undefined, "2"]);
+    for (const args of loggedArgs(fake.logPath)) assert.equal(args.includes("--max-items"), false);
+  });
+
+  it("treats omitted max-items and -1 as unlimited across all raw pages", () => {
+    for (const limitArgs of [[], ["--max-items", "-1"]]) {
+      const fake = setupFakeTelnyx();
+      const output = runJson([
+        "list-documents", "--page-size", "2", ...limitArgs,
+      ], { ...fake.env, TELNYX_FAKE_SCENARIO: "document-pages" }) as {
+        count: number;
+        documents: Array<{ id: string }>;
+        meta: Record<string, unknown>;
+      };
+
+      assert.equal(output.count, 5);
+      assert.deepEqual(output.documents.map((document) => document.id), [
+        "doc-list-1", "doc-list-2", "doc-list-3", "doc-list-4", "doc-list-5",
+      ]);
+      assert.deepEqual(output.meta, {
+        page_size: 2,
+        total_pages: 3,
+        total_results: 5,
+        starting_page: 1,
+        pages_fetched: 3,
+        returned_results: 5,
+      });
+      assert.deepEqual(loggedArgs(fake.logPath).map((args) => flagValue(args, "--page-number")), [undefined, "2", "3"]);
+      for (const args of loggedArgs(fake.logPath)) assert.equal(args.includes("--max-items"), false);
+    }
   });
 
   it("retrieves one document with the generated retrieve action", () => {

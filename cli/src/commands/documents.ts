@@ -29,6 +29,8 @@ interface DocumentUploadResult extends DocumentResult {
   attachment_window_minutes: 30;
 }
 
+const MAX_DOCUMENT_PAGE_REQUESTS = 1_000;
+
 export async function listDocumentsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
   const args = ["documents", "list"];
@@ -37,22 +39,12 @@ export async function listDocumentsCommand(flags: Flags): Promise<void> {
 
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
-  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
+  const maxItems = parseMaxItems(flags, jsonOutput);
   const sort = stringValue(flags, "sort");
   if (sort !== undefined) args.push("--sort", sort);
 
   try {
-    const response = await telnyxCli(args, { format: "raw" });
-    const envelope = asRecord(response);
-    const returnedDocuments = dataRecords(response);
-    const documents = maxItems === undefined || maxItems === -1
-      ? returnedDocuments
-      : returnedDocuments.slice(0, maxItems);
-    const result: DocumentListResult = {
-      count: documents.length,
-      documents,
-      meta: asRecord(envelope.meta),
-    };
+    const result = await collectDocumentPages(args, maxItems ?? -1);
     if (jsonOutput) {
       outputJson(result);
       return;
@@ -225,12 +217,137 @@ function addPositiveIntegerFlag(args: string[], flags: Flags, name: string, json
   args.push(`--${name}`, value);
 }
 
-function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number | undefined {
+function parseMaxItems(flags: Flags, jsonOutput: boolean): number | undefined {
   const value = stringValue(flags, "max-items");
   if (value === undefined) return undefined;
   if (!/^-?\d+$/.test(value) || Number(value) < -1) failWith("--max-items must be -1 or a non-negative integer", jsonOutput);
-  args.push("--max-items", value);
   return Number(value);
+}
+
+async function collectDocumentPages(baseArgs: string[], maxItems: number): Promise<DocumentListResult> {
+  const documents: JsonRecord[] = [];
+  const seenIds = new Set<string>();
+  const seenPages = new Set<string>();
+  const startingPage = positiveInteger(argumentValue(baseArgs, "--page-number")) ?? 1;
+  let requestedPage = startingPage;
+  let pagesFetched = 0;
+  let stableMeta: JsonRecord = {};
+  let hasContributingPage = false;
+  let args = [...baseArgs];
+
+  if (maxItems === 0) {
+    return {
+      count: 0,
+      documents: [],
+      meta: aggregateDocumentMeta({}, startingPage, 0, 0),
+    };
+  }
+
+  while (true) {
+    if (pagesFetched >= MAX_DOCUMENT_PAGE_REQUESTS) {
+      throw new Error(`document pagination exceeded ${MAX_DOCUMENT_PAGE_REQUESTS} page requests without an end signal`);
+    }
+    const response = await telnyxCli(args, { format: "raw" });
+    const page = { documents: dataRecords(response), meta: asRecord(asRecord(response).meta) };
+    pagesFetched++;
+    if (!hasContributingPage) stableMeta = page.meta;
+    if (page.documents.length === 0) break;
+
+    const authoritativePage = positiveInteger(page.meta.page_number);
+    const signature = JSON.stringify([
+      authoritativePage === undefined ? "content" : `page:${authoritativePage}`,
+      page.documents,
+    ]);
+    if (seenPages.has(signature)) break;
+    seenPages.add(signature);
+
+    let added = 0;
+    for (const document of page.documents) {
+      const id = document.id;
+      if (typeof id === "string" || typeof id === "number") {
+        const identity = String(id);
+        if (seenIds.has(identity)) continue;
+        seenIds.add(identity);
+      }
+      documents.push(document);
+      added++;
+    }
+    if (added === 0) break;
+    if (!hasContributingPage) {
+      stableMeta = page.meta;
+      hasContributingPage = true;
+    }
+    if (maxItems !== -1 && documents.length >= maxItems) break;
+
+    const pageSize = positiveInteger(page.meta.page_size)
+      ?? positiveInteger(argumentValue(baseArgs, "--page-size"));
+    if (pageSize !== undefined && page.documents.length < pageSize) break;
+
+    const responsePage = authoritativePage ?? requestedPage;
+    const totalPages = positiveInteger(page.meta.total_pages)
+      ?? totalPagesFromResults(page.meta.total_results, pageSize);
+    if (totalPages !== undefined && responsePage >= totalPages) break;
+    if (responsePage < requestedPage) break;
+    if (!Number.isSafeInteger(requestedPage + 1)) {
+      throw new Error("document pagination cannot advance beyond the maximum safe page number");
+    }
+    requestedPage++;
+    args = withArgument(baseArgs, "--page-number", String(requestedPage));
+  }
+
+  const limited = maxItems === -1 ? documents : documents.slice(0, maxItems);
+  return {
+    count: limited.length,
+    documents: limited,
+    meta: aggregateDocumentMeta(stableMeta, startingPage, pagesFetched, limited.length),
+  };
+}
+
+function aggregateDocumentMeta(
+  sourceMeta: JsonRecord,
+  startingPage: number,
+  pagesFetched: number,
+  returnedResults: number,
+): JsonRecord {
+  const { page_number: _pageNumber, ...stableMeta } = sourceMeta;
+  return {
+    ...stableMeta,
+    starting_page: startingPage,
+    pages_fetched: pagesFetched,
+    returned_results: returnedResults,
+  };
+}
+
+function argumentValue(args: string[], flag: string): string | undefined {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
+function withArgument(args: string[], flag: string, value: string): string[] {
+  const updated = [...args];
+  const index = updated.indexOf(flag);
+  if (index >= 0) updated.splice(index, 2, flag, value);
+  else updated.push(flag, value);
+  return updated;
+}
+
+function positiveInteger(value: unknown): number | undefined {
+  const number = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d+$/.test(value)
+      ? Number(value)
+      : Number.NaN;
+  return Number.isSafeInteger(number) && number > 0 ? number : undefined;
+}
+
+function totalPagesFromResults(totalResults: unknown, pageSize: number | undefined): number | undefined {
+  if (pageSize === undefined) return undefined;
+  const total = typeof totalResults === "number"
+    ? totalResults
+    : typeof totalResults === "string" && /^\d+$/.test(totalResults)
+      ? Number(totalResults)
+      : Number.NaN;
+  return Number.isSafeInteger(total) && total >= 0 ? Math.ceil(total / pageSize) : undefined;
 }
 
 function dataRecords(response: unknown): JsonRecord[] {
