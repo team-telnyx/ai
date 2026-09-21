@@ -13,6 +13,11 @@ import { verifyCheckCommand } from "./commands/verify-check.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
 import {
+  getDocumentCommand,
+  listDocumentsCommand,
+  uploadDocumentCommand,
+} from "./commands/documents.ts";
+import {
   activatePortingOrderCommand,
   attachPortingDocumentCommand,
   cancelPortingOrderCommand,
@@ -201,6 +206,9 @@ Commands:
   activate-porting-order Activate all numbers in a US FastPort order (irreversible; requires --confirm)
   attach-porting-document Attach an existing Telnyx document to a porting order
   list-porting-documents List documents attached to a porting order
+  list-documents     List uploaded Telnyx documents
+  get-document       Retrieve one uploaded Telnyx document by ID
+  upload-document    Upload a document from a URL, Base64 content, or local file
   list-portout-orders List Port-Out orders with filters and pagination
   get-portout-order Retrieve one Port-Out order by ID
   list-portout-rejection-codes List eligible rejection codes for a Port-Out order
@@ -390,6 +398,21 @@ Porting Order Action Flags:
   --confirm         Required safety acknowledgement (cancel-porting-order, activate-porting-order)
   --document-id     Existing Telnyx document ID (attach-porting-document — required)
   --document-type   loa|invoice|csr|other (attach required; comma-separated list filter)
+
+Document Action Flags:
+  --id <id>         Document ID (get-document — required)
+  --url <url>       Public http(s) URL for Telnyx to fetch (upload-document)
+  --file <path>     Local regular file to Base64-encode for upload (upload-document)
+  --file-base64 <data> Base64 file content (upload-document; requires --filename)
+  --filename <name> Document filename (optional with --file; upload-document)
+  --customer-reference <value> Customer lookup reference (upload-document; list filter)
+  --filename-contains <text> Filename substring filter (list-documents)
+  --created-after / --created-before Created-at ISO 8601 range filters (list-documents)
+  --filter <json>   Raw generated document filter object (list-documents)
+  --page-number / --page-size Positive pagination values (list-documents)
+  --max-items       Maximum list items; -1 means unlimited (list-documents)
+  --sort <value>    Generated document sort value (list-documents)
+                    Uploaded documents must be linked to a service within 30 minutes or are automatically deleted.
 
 Port-Out Action Flags:
   --id <id>         Port-Out order ID (get, update status, create/list comments — required)
@@ -1123,6 +1146,9 @@ const COMMANDS: Record<string, (
   "activate-porting-order": activatePortingOrderCommand,
   "attach-porting-document": attachPortingDocumentCommand,
   "list-porting-documents": listPortingDocumentsCommand,
+  "list-documents": listDocumentsCommand,
+  "get-document": getDocumentCommand,
+  "upload-document": uploadDocumentCommand,
   "list-portout-orders": listPortoutOrdersCommand,
   "get-portout-order": getPortoutOrderCommand,
   "list-portout-rejection-codes": listPortoutRejectionCodesCommand,
@@ -1257,7 +1283,7 @@ const KNOWN_FLAGS = new Set<string>([
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
-  "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-at", "currency", "custom-code",
+  "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
@@ -1265,7 +1291,7 @@ const KNOWN_FLAGS = new Set<string>([
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt",
   "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
-  "file-url", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
+  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
