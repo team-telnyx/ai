@@ -218,10 +218,16 @@ function addPositiveIntegerFlag(args: string[], flags: Flags, name: string, json
 }
 
 function parseMaxItems(flags: Flags, jsonOutput: boolean): number | undefined {
-  const value = stringValue(flags, "max-items");
+  const value = flags["max-items"];
   if (value === undefined) return undefined;
-  if (!/^-?\d+$/.test(value) || Number(value) < -1) failWith("--max-items must be -1 or a non-negative integer", jsonOutput);
-  return Number(value);
+  if (typeof value !== "string") {
+    failWith("--max-items must be -1 or a non-negative safe integer", jsonOutput);
+  }
+  const parsed = Number(value);
+  if (!/^(?:-1|\d+)$/.test(value) || !Number.isSafeInteger(parsed)) {
+    failWith("--max-items must be -1 or a non-negative safe integer", jsonOutput);
+  }
+  return parsed;
 }
 
 async function collectDocumentPages(baseArgs: string[], maxItems: number): Promise<DocumentListResult> {
@@ -233,6 +239,7 @@ async function collectDocumentPages(baseArgs: string[], maxItems: number): Promi
   let pagesFetched = 0;
   let stableMeta: JsonRecord = {};
   let hasContributingPage = false;
+  let knownLastPage: number | undefined;
   let args = [...baseArgs];
 
   if (maxItems === 0) {
@@ -244,8 +251,10 @@ async function collectDocumentPages(baseArgs: string[], maxItems: number): Promi
   }
 
   while (true) {
-    if (pagesFetched >= MAX_DOCUMENT_PAGE_REQUESTS) {
-      throw new Error(`document pagination exceeded ${MAX_DOCUMENT_PAGE_REQUESTS} page requests without an end signal`);
+    // Protect malformed endpoints that emit endless unique full pages without
+    // metadata, but do not truncate an explicitly bounded "unlimited" result.
+    if (pagesFetched >= MAX_DOCUMENT_PAGE_REQUESTS && knownLastPage === undefined) {
+      throw new Error(`document pagination exceeded ${MAX_DOCUMENT_PAGE_REQUESTS} page requests without a declared end`);
     }
     const response = await telnyxCli(args, { format: "raw" });
     const page = { documents: dataRecords(response), meta: asRecord(asRecord(response).meta) };
@@ -286,6 +295,7 @@ async function collectDocumentPages(baseArgs: string[], maxItems: number): Promi
     const responsePage = authoritativePage ?? requestedPage;
     const totalPages = positiveInteger(page.meta.total_pages)
       ?? totalPagesFromResults(page.meta.total_results, pageSize);
+    if (totalPages !== undefined) knownLastPage = totalPages;
     if (totalPages !== undefined && responsePage >= totalPages) break;
     if (responsePage < requestedPage) break;
     if (!Number.isSafeInteger(requestedPage + 1)) {

@@ -70,12 +70,35 @@ if (args[0] === "documents" && args[1] === "list") {
   };
 }
 
-function runAgent(args: string[], env: NodeJS.ProcessEnv): { status: number; stdout: string; stderr: string } {
+function setupFastPaginationFake(totalPages: number): { env: NodeJS.ProcessEnv; logPath: string } {
+  const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-document-pages-"));
+  const binDir = join(tempDir, "bin");
+  const logPath = join(tempDir, "pages.log");
+  const fakeTelnyx = join(binDir, "telnyx");
+  mkdirSync(binDir, { recursive: true });
+  writeFileSync(fakeTelnyx, `#!/bin/sh
+page=1
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "--page-number" ]; then page="$argument"; previous=""; continue; fi
+  previous="$argument"
+done
+printf '%s\\n' "$page" >> "$TELNYX_FAKE_PAGE_LOG"
+printf '{"data":[{"id":"doc-list-%s"}],"meta":{"page_number":%s,"page_size":1,"total_pages":${totalPages},"total_results":${totalPages}}}\\n' "$page" "$page"
+`);
+  chmodSync(fakeTelnyx, 0o755);
+  return {
+    logPath,
+    env: { ...process.env, TELNYX_CLI_PATH: fakeTelnyx, TELNYX_FAKE_PAGE_LOG: logPath },
+  };
+}
+
+function runAgent(args: string[], env: NodeJS.ProcessEnv, timeout = 30_000): { status: number; stdout: string; stderr: string } {
   const result = spawnSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
     cwd: cliRoot,
     encoding: "utf8",
     env,
-    timeout: 30_000,
+    timeout,
   });
   return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
@@ -180,6 +203,25 @@ describe("document actions", () => {
     }
   });
 
+  it("honors known unlimited pagination beyond the unknown-end safety limit", () => {
+    const fake = setupFastPaginationFake(1_001);
+    const result = runAgent([
+      "list-documents", "--page-size", "1", "--max-items", "-1", "--json",
+    ], fake.env, 120_000);
+
+    assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+    const output = JSON.parse(result.stdout) as {
+      count: number;
+      documents: Array<{ id: string }>;
+      meta: { pages_fetched: number };
+    };
+    assert.equal(output.count, 1_001);
+    assert.equal(output.documents[0].id, "doc-list-1");
+    assert.equal(output.documents.at(-1)?.id, "doc-list-1001");
+    assert.equal(output.meta.pages_fetched, 1_001);
+    assert.equal(readFileSync(fake.logPath, "utf8").trimEnd().split("\n").length, 1_001);
+  });
+
   it("retrieves one document with the generated retrieve action", () => {
     const fake = setupFakeTelnyx();
     const output = runJson(["get-document", "--id", "doc-123"], fake.env) as { document_id: string; document: { filename: string } };
@@ -274,6 +316,8 @@ describe("document actions", () => {
       ["upload-document", "--file-base64", "YQ==", "--json"],
       ["get-document", "--json"],
       ["list-documents", "--page-size", "0", "--json"],
+      ["list-documents", "--max-items", "--json"],
+      ["list-documents", "--max-items", "9007199254740992", "--json"],
     ]) {
       const fake = setupFakeTelnyx();
       const result = runAgent(args, fake.env);
