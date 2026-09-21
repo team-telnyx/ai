@@ -180,7 +180,7 @@ function buildDocumentFilter(flags: Flags, jsonOutput: boolean): string | undefi
 
   return JSON.stringify({
     ...(filenameContains ? { filename: { contains: filenameContains } } : {}),
-    ...(customerReference ? { customer_reference: { eq: customerReference } } : {}),
+    ...(customerReference ? { customer_reference: { in: [customerReference] } } : {}),
     ...((createdAfter || createdBefore)
       ? { created_at: { ...(createdAfter ? { gt: createdAfter } : {}), ...(createdBefore ? { lt: createdBefore } : {}) } }
       : {}),

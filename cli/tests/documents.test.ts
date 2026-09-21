@@ -97,7 +97,7 @@ describe("document actions", () => {
       "documents", "list",
       "--filter", JSON.stringify({
         filename: { contains: "loa" },
-        customer_reference: { eq: "migration-2026" },
+        customer_reference: { in: ["migration-2026"] },
         created_at: { gt: "2026-08-01T00:00:00Z", lt: "2026-09-01T00:00:00Z" },
       }),
       "--page-number", "2", "--page-size", "25", "--max-items", "1", "--sort", "-created_at", "--format", "raw",
