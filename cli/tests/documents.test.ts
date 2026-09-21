@@ -316,8 +316,11 @@ describe("document actions", () => {
       ["upload-document", "--file-base64", "YQ==", "--json"],
       ["get-document", "--json"],
       ["list-documents", "--page-size", "0", "--json"],
+      ["list-documents", "--page-size", "9007199254740992", "--json"],
       ["list-documents", "--max-items", "--json"],
       ["list-documents", "--max-items", "9007199254740992", "--json"],
+      ["list-documents", "--filter", "--json"],
+      ["list-documents", "--customer-reference", "", "--json"],
     ]) {
       const fake = setupFakeTelnyx();
       const result = runAgent(args, fake.env);

@@ -40,7 +40,7 @@ export async function listDocumentsCommand(flags: Flags): Promise<void> {
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
   const maxItems = parseMaxItems(flags, jsonOutput);
-  const sort = stringValue(flags, "sort");
+  const sort = optionalString(flags, "sort", jsonOutput);
   if (sort !== undefined) args.push("--sort", sort);
 
   try {
@@ -91,16 +91,18 @@ export async function getDocumentCommand(flags: Flags): Promise<void> {
 
 export async function uploadDocumentCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
-  const url = stringValue(flags, "url");
-  const base64 = stringValue(flags, "file-base64");
-  const filePath = stringValue(flags, "file") ?? stringValue(flags, "file-path");
+  const url = optionalString(flags, "url", jsonOutput);
+  const base64 = optionalString(flags, "file-base64", jsonOutput);
+  const file = optionalString(flags, "file", jsonOutput);
+  const filePathAlias = optionalString(flags, "file-path", jsonOutput);
+  const filePath = file ?? filePathAlias;
   const inputCount = Number(url !== undefined) + Number(base64 !== undefined) + Number(filePath !== undefined);
   if (inputCount !== 1) {
     failWith("Provide exactly one upload source: --url, --file-base64, or --file", jsonOutput);
   }
 
-  const filename = stringValue(flags, "filename");
-  const customerReference = stringValue(flags, "customer-reference");
+  const filename = optionalString(flags, "filename", jsonOutput);
+  const customerReference = optionalString(flags, "customer-reference", jsonOutput);
   let fileContents: string | undefined;
   let requestFilename = filename;
 
@@ -149,11 +151,11 @@ export async function uploadDocumentCommand(flags: Flags): Promise<void> {
 }
 
 function buildDocumentFilter(flags: Flags, jsonOutput: boolean): string | undefined {
-  const rawFilter = stringValue(flags, "filter");
-  const filenameContains = stringValue(flags, "filename-contains");
-  const customerReference = stringValue(flags, "customer-reference");
-  const createdAfter = stringValue(flags, "created-after");
-  const createdBefore = stringValue(flags, "created-before");
+  const rawFilter = optionalString(flags, "filter", jsonOutput);
+  const filenameContains = optionalString(flags, "filename-contains", jsonOutput);
+  const customerReference = optionalString(flags, "customer-reference", jsonOutput);
+  const createdAfter = optionalString(flags, "created-after", jsonOutput);
+  const createdBefore = optionalString(flags, "created-before", jsonOutput);
   const hasFriendlyFilter = Boolean(filenameContains || customerReference || createdAfter || createdBefore);
 
   if (rawFilter !== undefined && hasFriendlyFilter) {
@@ -205,15 +207,18 @@ function validateBase64(value: string, jsonOutput: boolean): void {
 }
 
 function requireDocumentId(flags: Flags, jsonOutput: boolean): string {
-  const id = stringValue(flags, "id");
+  const id = optionalString(flags, "id", jsonOutput);
   if (!id) failWith("--id is required (document ID)", jsonOutput);
   return id;
 }
 
 function addPositiveIntegerFlag(args: string[], flags: Flags, name: string, jsonOutput: boolean): void {
-  const value = stringValue(flags, name);
+  const value = optionalString(flags, name, jsonOutput);
   if (value === undefined) return;
-  if (!/^\d+$/.test(value) || Number(value) < 1) failWith(`--${name} must be a positive integer`, jsonOutput);
+  const parsed = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(parsed) || parsed < 1) {
+    failWith(`--${name} must be a positive safe integer`, jsonOutput);
+  }
   args.push(`--${name}`, value);
 }
 
@@ -375,9 +380,13 @@ function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
 }
 
-function stringValue(flags: Flags, key: string): string | undefined {
+function optionalString(flags: Flags, key: string, jsonOutput: boolean): string | undefined {
   const value = flags[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length === 0) {
+    failWith(`--${key} requires a non-empty value`, jsonOutput);
+  }
+  return value;
 }
 
 function stringFrom(value: unknown): string {
