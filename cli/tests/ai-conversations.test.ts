@@ -27,6 +27,13 @@ if (args[0] === "--version") { console.log("telnyx version 0.27.0"); process.exi
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
 function jsonFlag(name) { const value = flag(name); return value === undefined ? undefined : JSON.parse(value); }
+function jsonFlags(name) {
+  const values = [];
+  for (let index = args.indexOf(name); index >= 0; index = args.indexOf(name, index + 2)) {
+    values.push(JSON.parse(args[index + 1]));
+  }
+  return values;
+}
 if (args[0] !== "ai:conversations") {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
   process.exit(2);
@@ -45,7 +52,7 @@ if (args[0] !== "ai:conversations") {
   console.log(JSON.stringify({ data: {
     id: "message-1", role: flag("--role"), content: flag("--content"), name: flag("--name"),
     metadata: jsonFlag("--metadata"), sent_at: flag("--sent-at"), tool_call_id: flag("--tool-call-id"),
-    tool_calls: jsonFlag("--tool-call"), tool_choice: jsonFlag("--tool-choice")
+    tool_calls: jsonFlags("--tool-call"), tool_choice: jsonFlag("--tool-choice")
   } }));
 } else if (args[1] === "delete") {
   console.log(JSON.stringify({ data: { id: flag("--conversation-id") } }));
@@ -166,7 +173,7 @@ describe("AI conversation lifecycle action commands", () => {
   it("adds messages with useful generated fields and stable JSON", () => {
     const fake = setupFakeTelnyx();
     const metadata = '{"source":"operator"}';
-    const toolCalls = '[{"id":"call-1","type":"function"}]';
+    const toolCalls = '[{"id":"call-1","type":"function"},{"id":"call-2","type":"function"}]';
     const toolChoice = '{"type":"function","function":{"name":"lookup"}}';
     const result = runAgent([
       "add-ai-conversation-message", "--id", "conversation-1", "--role", "assistant", "--content", "Hello",
@@ -179,14 +186,20 @@ describe("AI conversation lifecycle action commands", () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.conversation_id, "conversation-1");
     assert.equal(output.message.id, "message-1");
-    assert.deepEqual(output.message.tool_calls, [{ id: "call-1", type: "function" }]);
+    assert.deepEqual(output.message.tool_calls, [
+      { id: "call-1", type: "function" },
+      { id: "call-2", type: "function" },
+    ]);
     const [args] = loggedArgs(fake.logPath);
     assert.deepEqual(args.slice(0, 2), ["ai:conversations", "add-message"]);
     assertFlag(args, "--conversation-id", "conversation-1");
     assertFlag(args, "--role", "assistant");
     assertFlag(args, "--content", "Hello");
     assertFlag(args, "--metadata", metadata);
-    assertFlag(args, "--tool-call", toolCalls);
+    assert.deepEqual(
+      args.flatMap((arg, index) => arg === "--tool-call" ? [args[index + 1]] : []),
+      ['{"id":"call-1","type":"function"}', '{"id":"call-2","type":"function"}'],
+    );
     assertFlag(args, "--tool-choice", toolChoice);
     assertFlag(args, "--idempotency-key", "retry-message");
   });

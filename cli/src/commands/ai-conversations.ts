@@ -271,12 +271,17 @@ function addJsonArrayFlag(
     if (flags[source] !== undefined) fail(`--${source} must be a JSON array`, jsonOutput);
     return;
   }
+  let parsed: unknown[];
   try {
-    if (!Array.isArray(JSON.parse(value))) throw new Error();
+    const candidate: unknown = JSON.parse(value);
+    if (!Array.isArray(candidate) || candidate.some(
+      (item) => !item || typeof item !== "object" || Array.isArray(item),
+    )) throw new Error();
+    parsed = candidate;
   } catch {
-    fail(`--${source} must be a JSON array`, jsonOutput);
+    fail(`--${source} must be a JSON array of objects`, jsonOutput);
   }
-  args.push(target, value);
+  for (const item of parsed) args.push(target, JSON.stringify(item));
 }
 
 function addJsonValueFlag(
