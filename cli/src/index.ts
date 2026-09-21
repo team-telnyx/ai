@@ -56,6 +56,7 @@ import {
   updateMessagingProfileCommand,
 } from "./commands/messaging-profiles.ts";
 import { faxSendCommand } from "./commands/fax-send.ts";
+import { listFaxesCommand } from "./commands/fax-list.ts";
 import {
   faxCancelCommand,
   faxRefreshCommand,
@@ -229,6 +230,7 @@ Commands:
   update-messaging-profile Update a messaging profile by ID
   delete-messaging-profile Delete a messaging profile by ID (requires --confirm)
   fax-send          Send a fax from a URL or uploaded media file
+  list-faxes        Discover inbound and outbound faxes with filters and pagination
   fax-status        Retrieve the latest status and details for a fax
   fax-cancel        Cancel an outbound fax that is still in progress
   fax-refresh       Refresh an expired media URL for an inbound fax
@@ -510,6 +512,11 @@ AI Conversation Flags:
 
 Fax Action Flags:
   --id <fax-id>          Fax ID (fax-status, fax-cancel, fax-refresh; required)
+  --created-at <json>    Fax creation range, e.g. {"gte":"2026-08-01T00:00:00Z"} (list-faxes)
+  --direction <value>    Fax direction filter, e.g. inbound or outbound (list-faxes)
+  --from / --to <e164>   Exact fax sender or recipient filter (list-faxes)
+  --page-number / --page-size Positive pagination values (list-faxes)
+  --max-items <n>        Maximum faxes returned; -1 means unlimited (list-faxes)
   --connection-id <id>   Fax application connection ID (fax-send, required)
   --from <e164>          Sender number, E.164 (fax-send, required)
   --to <e164|sip-uri>    Destination number or SIP URI (fax-send, required)
@@ -964,6 +971,7 @@ Examples:
   telnyx-agent update-messaging-profile --id <profile-id> --name "Updated SMS" --enabled true --json
   telnyx-agent delete-messaging-profile --id <profile-id> --confirm --json
   telnyx-agent fax-send --connection-id <id> --from +131****0000 --to +131****0001 --media-url https://example.com/document.pdf
+  telnyx-agent list-faxes --direction inbound --created-at '{"gte":"2026-08-01T00:00:00Z"}' --page-size 25 --json
   telnyx-agent fax-status --id <fax-id> --json
   telnyx-agent fax-cancel --id <fax-id> --json
   telnyx-agent fax-refresh --id <fax-id> --json
@@ -1143,6 +1151,7 @@ const COMMANDS: Record<string, (
   "update-messaging-profile": updateMessagingProfileCommand,
   "delete-messaging-profile": deleteMessagingProfileCommand,
   "fax-send": faxSendCommand,
+  "list-faxes": listFaxesCommand,
   "fax-status": faxStatusCommand,
   "fax-cancel": faxCancelCommand,
   "fax-refresh": faxRefreshCommand,
@@ -1250,7 +1259,7 @@ const KNOWN_FLAGS = new Set<string>([
   "content", "content-type", "context", "conversation-id", "conversation-metadata", "count",
   "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-at", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
-  "daily-spend-limit-enabled", "deepfake-detection", "depth", "description",
+  "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",

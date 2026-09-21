@@ -55,7 +55,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Providers", description: "List available speech-to-text providers and service types", actions: ["list_stt_providers"] },
   ],
   "📠 Fax": [
-    { name: "Fax", description: "Send and manage inbound and outbound faxes", actions: ["send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"] },
+    { name: "Fax", description: "Discover, send, and manage inbound and outbound faxes", actions: ["list_faxes", "send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"] },
   ],
   "📡 IoT": [
     { name: "SIM Cards", description: "List, inspect, enable, and disable IoT SIM cards and observe asynchronous actions", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card", "retrieve_sim_card_action", "list_sim_card_actions"] },
@@ -112,6 +112,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent update-messaging-profile", description: "Update one or more fields on a messaging profile" },
   { name: "telnyx-agent delete-messaging-profile", description: "Delete a messaging profile by ID with explicit confirmation" },
   { name: "telnyx-agent fax-send", description: "Send a fax using a fax application connection and a media URL or uploaded media name" },
+  { name: "telnyx-agent list-faxes", description: "Discover inbound and outbound faxes with date, direction, number, and pagination controls" },
   { name: "telnyx-agent fax-status", description: "Retrieve the latest status and useful details for one fax" },
   { name: "telnyx-agent fax-cancel", description: "Cancel an outbound fax that is queued, processed, originated, or sending" },
   { name: "telnyx-agent fax-refresh", description: "Refresh the expired temporary media URL for an inbound fax" },
