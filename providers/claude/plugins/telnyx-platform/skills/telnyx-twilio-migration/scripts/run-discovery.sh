@@ -21,7 +21,7 @@
 #
 # Exit codes:
 #   0 — Discovery complete (scan succeeded; preflight may have warnings)
-#   2 — Invalid arguments (project root doesn't exist, etc.)
+#   2 — Invalid arguments or incomplete usage scan
 
 set -uo pipefail
 
@@ -83,11 +83,12 @@ echo -e "  ${BLUE}INFO${NC}  Scanning source code for Twilio patterns (no API ke
 echo ""
 
 SCAN_OUTPUT="$PROJECT_ROOT/twilio-scan.json"
-bash "$SCRIPT_DIR/scan-twilio-usage.sh" "$PROJECT_ROOT" > "$SCAN_OUTPUT" 2>/dev/null
+bash "$SCRIPT_DIR/scan-twilio-usage.sh" "$PROJECT_ROOT" > "$SCAN_OUTPUT"
 SCAN_EXIT=$?
 
 if [ "$SCAN_EXIT" -ne 0 ]; then
-  echo -e "  ${YELLOW}WARN${NC}  Scanner exited with code $SCAN_EXIT"
+  echo -e "  ${RED}ERROR${NC}  Discovery incomplete: scanner exited with code $SCAN_EXIT. Do not use $SCAN_OUTPUT as a complete inventory." >&2
+  exit 2
 fi
 
 if [ -f "$SCAN_OUTPUT" ] && [ -s "$SCAN_OUTPUT" ]; then
@@ -105,7 +106,8 @@ if [ -f "$SCAN_OUTPUT" ] && [ -s "$SCAN_OUTPUT" ]; then
     echo "  Files:      $FILE_COUNT files with Twilio patterns"
   fi
 else
-  echo -e "  ${YELLOW}WARN${NC}  Scan produced no output — the project may have no Twilio code"
+  echo -e "  ${RED}ERROR${NC}  Discovery incomplete: scanner produced no report." >&2
+  exit 2
 fi
 
 echo ""
@@ -143,7 +145,7 @@ DEEP_SCAN_OUTPUT="$PROJECT_ROOT/twilio-deep-scan.json"
 if command -v python3 &>/dev/null; then
   if [ -f "$SCRIPT_DIR/scan-twilio-deep.py" ]; then
     echo -e "  ${BLUE}INFO${NC}  Running scan-twilio-deep.py..."
-    python3 "$SCRIPT_DIR/scan-twilio-deep.py" "$PROJECT_ROOT" > "$DEEP_SCAN_OUTPUT" 2>/dev/null
+    python3 "$SCRIPT_DIR/scan-twilio-deep.py" "$PROJECT_ROOT" > "$DEEP_SCAN_OUTPUT"
     DEEP_EXIT=$?
     if [ "$DEEP_EXIT" -eq 0 ] && [ -f "$DEEP_SCAN_OUTPUT" ] && [ -s "$DEEP_SCAN_OUTPUT" ]; then
       echo -e "  ${GREEN}PASS${NC}  Deep scan results saved to: $DEEP_SCAN_OUTPUT"
