@@ -1,9 +1,7 @@
 # Edge Compute
-
 Use Telnyx Edge Compute for low-latency HTTP execution, webhook ingress, MCP servers, and small AI-adjacent transforms on Telnyx edge infrastructure.
 
 ## Ownership and repository context
-
 `team-telnyx/ai` is the orchestration and guidance layer. It does **not** implement the Edge Compute lifecycle. The dedicated surfaces are:
 
 - source examples and product documentation: [`team-telnyx/edge-compute`](https://github.com/team-telnyx/edge-compute)
@@ -20,7 +18,6 @@ git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 ```
 
 ## Prerequisites and readiness
-
 1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). SQL databases require CLI v0.3.0 or newer.
 2. Authenticate interactively or with an API key stored by the CLI.
 3. Run the root status diagnostic. Unlike `auth status`, this validates configuration, credentials, and API connectivity.
@@ -167,6 +164,7 @@ telnyx-edge ship
 telnyx-edge inspect my-function
 ```
 
+In v0.5.4, `new-func --from-dir` preserves a source `func.toml` in full, including comments and blocks such as `[[actors]]`, secrets, storage, domains, and build settings, while re-stamping only the new identity; `ship` warns when code references an undeclared actor binding such as `env.ROOM`, so add the matching `[[actors]]` block before that route reaches it.
 `inspect <function>` is the per-function detail view: deployment status, invoke URL, timestamps, and **every binding the deployed function declares**. Binding rows show the `env.<NAME>` handle, kind, target, and status; actor rows also show their owner/reference role. Probe it with `telnyx-edge inspect --help` when supporting multiple CLI releases.
 
 Before resetting a failed function, inspect the latest ship outcome: `ship status <function>` prints one actionable, stage-classified reason, and `--logs` adds the build-log or crash-output snippet when the platform supplied one. These are ship-failure logs, not deployed-function runtime output. A failed function can then be reset to `created` without changing its identity, fixed, and shipped again:
@@ -196,6 +194,8 @@ telnyx-edge metrics my-function --errors --json
 telnyx-edge logs my-function --type invocations --since 10m --last 200
 telnyx-edge deployments my-function --json
 ```
+
+In v0.5.3, `logs <function> --tail` streams newly arriving runtime and invocation records until interrupted (best-effort, not durable history; use `--type` to filter and `--json` for line-delimited objects); `log-export set <function> --endpoint <https-url>` sends runtime and/or invocation logs to an HTTPS OTLP endpoint, `get <function> --json` reads the configuration without headers, and `delete <function> --yes` removes it.
 ### Runtime logs (v0.5.1)
 `logs <function>` reads runtime output from a deployed function, unlike `ship status <function> --logs`, which only adds ship-failure logs, not deployed-function runtime output. It reads a historical window; lines can arrive a few seconds after the function writes them.
 ```bash
@@ -431,7 +431,7 @@ telnyx-edge inspect <function>
 The two inspect commands answer different questions:
 
 - `inspect <function>` shows one function and every declared binding (including actor owner/reference roles).
-- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count.
+- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Current upstream main also adds optional `actors metrics <type> --since 24h` (or `--json`) for request, error-rate, latency, byte, CPU, and memory aggregates; probe it when supporting released CLIs.
 ### v0.2.5 actor-instance support and limitations
 
 v0.2.5 added `actors instances <type>` and the instance count in `actors inspect <type>`. The instance command is intentionally limited:

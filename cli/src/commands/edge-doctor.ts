@@ -10,6 +10,7 @@ import {
   getEdgeHelp,
   getEdgeRootStatus,
   getEdgeVersion,
+  supportsActorMetrics,
   supportsActorInstances,
   supportsApiKeyAuth,
   supportsCustomDomains,
@@ -24,6 +25,8 @@ import {
   supportsResetFunc,
   supportsResetFuncNonInteractiveConfirmation,
   supportsRuntimeLogs,
+  supportsLiveLogTail,
+  supportsLogExport,
   supportsSecretsAdd,
   supportsShip,
   supportsShipStatus,
@@ -49,11 +52,14 @@ interface EdgeDoctorResult {
   ship_status_supported: boolean;
   runtime_logs_supported: boolean;
   invocation_logs_supported: boolean;
+  live_log_tail_supported: boolean;
+  log_export_supported: boolean;
   function_metrics_supported: boolean;
   deployments_supported: boolean;
   stateful_actors_supported: boolean;
   inspect_supported: boolean;
   actor_instances_supported: boolean;
+  actor_metrics_supported: boolean;
   reset_func_supported: boolean;
   reset_func_noninteractive_confirmation_supported: boolean;
   noninteractive_confirmation_supported: boolean;
@@ -84,11 +90,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let shipStatusSupported = false;
   let runtimeLogsSupported = false;
   let invocationLogsSupported = false;
+  let liveLogTailSupported = false;
+  let logExportSupported = false;
   let functionMetricsSupported = false;
   let deploymentsSupported = false;
   let statefulActorsSupported = false;
   let inspectSupported = false;
   let actorInstancesSupported = false;
+  let actorMetricsSupported = false;
   let resetFuncSupported = false;
   let resetFuncNoninteractiveConfirmationSupported = false;
   let noninteractiveConfirmationSupported = false;
@@ -125,11 +134,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     shipStatusSupported = supportsShipStatus();
     runtimeLogsSupported = supportsRuntimeLogs();
     invocationLogsSupported = supportsInvocationLogs();
+    liveLogTailSupported = supportsLiveLogTail();
+    logExportSupported = supportsLogExport();
     functionMetricsSupported = supportsFunctionMetrics();
     deploymentsSupported = supportsDeployments();
     statefulActorsSupported = supportsStatefulActors();
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
+    actorMetricsSupported = supportsActorMetrics();
     resetFuncSupported = supportsResetFunc();
     resetFuncNoninteractiveConfirmationSupported = supportsResetFuncNonInteractiveConfirmation();
     noninteractiveConfirmationSupported = supportsNonInteractiveConfirmation();
@@ -188,6 +200,20 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "logs --help did not advertise both runtime and invocations log streams",
     });
     checks.push({
+      name: "Live log tail",
+      ok: liveLogTailSupported,
+      detail: liveLogTailSupported
+        ? "logs <function> --tail is available"
+        : "logs --help did not advertise <function> usage with --tail",
+    });
+    checks.push({
+      name: "OTLP log export",
+      ok: logExportSupported,
+      detail: logExportSupported
+        ? "log-export set/get/delete supports endpoint, headers, log types, JSON reads, and non-interactive deletion"
+        : "log-export help did not advertise the complete set/get/delete OTLP configuration lifecycle",
+    });
+    checks.push({
       name: "Function metrics",
       ok: functionMetricsSupported,
       detail: functionMetricsSupported
@@ -219,6 +245,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: actorInstancesSupported
         ? "actors instances <type> is available"
         : "actors instances --help capability not detected",
+    });
+    checks.push({
+      name: "Actor metrics supported",
+      ok: actorMetricsSupported,
+      detail: actorMetricsSupported
+        ? "actors metrics <type> supports --since and --json"
+        : "actors metrics --help did not advertise <type> usage with --since and --json",
     });
     checks.push({
       name: "Failed-function reset",
@@ -385,6 +418,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     } else if (statefulActorsSupported) {
       nextSteps.push("Actor scaffolding is available, but this CLI does not expose actors instances; upgrade telnyx-edge for that view.");
     }
+    if (actorMetricsSupported) {
+      nextSteps.push("Summarize actor traffic and resources with: telnyx-edge actors metrics <type> --since 24h");
+    }
     if (shipStatusSupported) {
       nextSteps.push("Diagnose the latest ship before resetting it: telnyx-edge ship status <function-name> --logs");
     }
@@ -393,6 +429,12 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     }
     if (invocationLogsSupported) {
       nextSteps.push("Read HTTP invocation records with: telnyx-edge logs <function-name> --type invocations --since 10m --last 200");
+    }
+    if (liveLogTailSupported) {
+      nextSteps.push("Tail live function logs with: telnyx-edge logs <function-name> --tail");
+    }
+    if (logExportSupported) {
+      nextSteps.push("Export runtime and invocation logs over OTLP with: telnyx-edge log-export set <function-name> --endpoint https://<otlp-endpoint>");
     }
     if (functionMetricsSupported) {
       nextSteps.push("Summarize function traffic and resources with: telnyx-edge metrics <function-name> --since 24h");
@@ -428,6 +470,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !shipStatusSupported && "ship status <function> --logs diagnostics",
       !runtimeLogsSupported && "runtime logs",
       !invocationLogsSupported && "invocation logs",
+      !liveLogTailSupported && "live log tail",
+      !logExportSupported && "OTLP log export",
       !functionMetricsSupported && "function metrics",
       !deploymentsSupported && "deployment history",
       !resetFuncSupported && "reset-func",
@@ -441,6 +485,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlDatabaseExportSupported && "SQL database export",
       !sqlStdinImportSupported && "SQL standard-input import",
       !customDomainsSupported && "custom domains",
+      !actorMetricsSupported && "actor metrics",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
@@ -461,11 +506,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     ship_status_supported: shipStatusSupported,
     runtime_logs_supported: runtimeLogsSupported,
     invocation_logs_supported: invocationLogsSupported,
+    live_log_tail_supported: liveLogTailSupported,
+    log_export_supported: logExportSupported,
     function_metrics_supported: functionMetricsSupported,
     deployments_supported: deploymentsSupported,
     stateful_actors_supported: statefulActorsSupported,
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
+    actor_metrics_supported: actorMetricsSupported,
     reset_func_supported: resetFuncSupported,
     reset_func_noninteractive_confirmation_supported: resetFuncNoninteractiveConfirmationSupported,
     noninteractive_confirmation_supported: noninteractiveConfirmationSupported,

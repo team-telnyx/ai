@@ -109,6 +109,34 @@ export function supportsInvocationLogs(): boolean {
   }
 }
 
+/** Detect the v0.5.3 live log stream directly, rather than inferring it from historical logs. */
+export function supportsLiveLogTail(): boolean {
+  try {
+    const out = runEdge(["logs", "--help"]);
+    return /\blogs\s+<function>(?:\s|\[|$)/i.test(out) && /--tail\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect the complete v0.5.3 OTLP log-export lifecycle from each subcommand's
+ * own help surface. Do not infer configuration support from logs alone.
+ */
+export function supportsLogExport(): boolean {
+  try {
+    const set = runEdge(["log-export", "set", "--help"]);
+    const get = runEdge(["log-export", "get", "--help"]);
+    const remove = runEdge(["log-export", "delete", "--help"]);
+    return /\blog-export\s+set\s+<function>(?:\s|\[|$)/i.test(set) &&
+      ["endpoint", "header", "runtime", "invocations"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(set)) &&
+      /\blog-export\s+get\s+<function>(?:\s|\[|$)/i.test(get) && /--json\b/i.test(get) &&
+      /\blog-export\s+delete\s+<function>(?:\s|\[|$)/i.test(remove) && /--yes\b/i.test(remove);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect the v0.5.2 function-metrics command and every released query view. */
 export function supportsFunctionMetrics(): boolean {
   try {
@@ -292,6 +320,17 @@ export function supportsActorInstances(): boolean {
   try {
     const out = runEdge(["actors", "instances", "--help"]);
     return /\binstances(?:\s+<[^>]+>)?/i.test(out) && /\bactor\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the current-main actor metrics command without treating root metrics as equivalent. */
+export function supportsActorMetrics(): boolean {
+  try {
+    const out = runEdge(["actors", "metrics", "--help"]);
+    return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
   } catch {
     return false;
   }

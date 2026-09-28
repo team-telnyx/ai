@@ -15,6 +15,10 @@ type FakeEdgeOptions = {
   rootStatus?: "pass" | "fail" | "unknown";
   inspect?: boolean;
   actorInstances?: boolean;
+  actorMetrics?: boolean;
+  actorMetricsTypeUsage?: boolean;
+  actorMetricsSince?: boolean;
+  actorMetricsJson?: boolean;
   newFuncFromDir?: boolean;
   secretsAdd?: boolean;
   ship?: boolean;
@@ -27,6 +31,14 @@ type FakeEdgeOptions = {
   invocationLogsType?: boolean;
   invocationLogsRuntime?: boolean;
   invocationLogsInvocations?: boolean;
+  liveLogTail?: boolean;
+  logExport?: boolean;
+  logExportEndpoint?: boolean;
+  logExportHeader?: boolean;
+  logExportRuntime?: boolean;
+  logExportInvocations?: boolean;
+  logExportGetJson?: boolean;
+  logExportDeleteYes?: boolean;
   metrics?: boolean;
   metricsFunctionUsage?: boolean;
   metricsSince?: boolean;
@@ -64,6 +76,10 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const rootStatus = config.rootStatus ?? (auth === "api_key" || auth === "oauth" ? "pass" : "fail");
   const inspect = config.inspect ?? true;
   const actorInstances = config.actorInstances ?? true;
+  const actorMetrics = config.actorMetrics ?? true;
+  const actorMetricsTypeUsage = config.actorMetricsTypeUsage ?? true;
+  const actorMetricsSince = config.actorMetricsSince ?? true;
+  const actorMetricsJson = config.actorMetricsJson ?? true;
   const newFuncFromDir = config.newFuncFromDir ?? true;
   const secretsAdd = config.secretsAdd ?? true;
   const ship = config.ship ?? true;
@@ -76,6 +92,14 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const invocationLogsType = config.invocationLogsType ?? true;
   const invocationLogsRuntime = config.invocationLogsRuntime ?? true;
   const invocationLogsInvocations = config.invocationLogsInvocations ?? true;
+  const liveLogTail = config.liveLogTail ?? true;
+  const logExport = config.logExport ?? true;
+  const logExportEndpoint = config.logExportEndpoint ?? true;
+  const logExportHeader = config.logExportHeader ?? true;
+  const logExportRuntime = config.logExportRuntime ?? true;
+  const logExportInvocations = config.logExportInvocations ?? true;
+  const logExportGetJson = config.logExportGetJson ?? true;
+  const logExportDeleteYes = config.logExportDeleteYes ?? true;
   const metrics = config.metrics ?? true;
   const metricsFunctionUsage = config.metricsFunctionUsage ?? true;
   const metricsSince = config.metricsSince ?? true;
@@ -141,8 +165,32 @@ if (args[0] === 'ship' && args[1] === 'status' && args.includes('--help')) {
   process.exit(0);
 }
 if (args[0] === 'logs' && args.includes('--help')) {
-  console.log(['Read deployed function runtime logs', 'Usage: telnyx-edge logs ${runtimeLogsFunctionUsage ? "<function>" : "[flags]"}', ...(${runtimeLogsSince} ? ['      --since duration  Look back over a historical window'] : []), ...(${runtimeLogsLast} ? ['  -n, --last int  Maximum number of log lines'] : []), ...(${runtimeLogsJson} ? ['      --json  Print JSON output'] : []), ...(${invocationLogsType} ? ['      --type string  Select ' + (${invocationLogsRuntime} ? 'runtime' : '') + (${invocationLogsInvocations} ? ' invocations' : '') + ' logs'] : [])].join('\\n'));
+  console.log(['Read deployed function runtime logs', 'Usage: telnyx-edge logs ${runtimeLogsFunctionUsage ? "<function>" : "[flags]"}', ...(${runtimeLogsSince} ? ['      --since duration  Look back over a historical window'] : []), ...(${runtimeLogsLast} ? ['  -n, --last int  Maximum number of log lines'] : []), ...(${runtimeLogsJson} ? ['      --json  Print JSON output'] : []), ...(${liveLogTail} ? ['      --tail  Stream live logs until interrupted'] : []), ...(${invocationLogsType} ? ['      --type string  Select ' + (${invocationLogsRuntime} ? 'runtime' : '') + (${invocationLogsInvocations} ? ' invocations' : '') + ' logs'] : [])].join('\\n'));
   process.exit(0);
+}
+if (args[0] === 'log-export' && args[1] === 'set' && args.includes('--help')) {
+  if (${logExport}) {
+    console.log(['Configure OTLP log export', 'Usage: telnyx-edge log-export set <function> [flags]', ...(${logExportEndpoint} ? ['      --endpoint string  HTTPS OTLP endpoint'] : []), ...(${logExportHeader} ? ['      --header strings  Header to attach to every export'] : []), ...(${logExportRuntime} ? ['      --runtime  Export runtime logs'] : []), ...(${logExportInvocations} ? ['      --invocations  Export invocation logs'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "log-export"\\n');
+  process.exit(1);
+}
+if (args[0] === 'log-export' && args[1] === 'get' && args.includes('--help')) {
+  if (${logExport}) {
+    console.log(['Show OTLP log-export configuration', 'Usage: telnyx-edge log-export get <function> [flags]', ...(${logExportGetJson} ? ['      --json  Print JSON output'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "log-export"\\n');
+  process.exit(1);
+}
+if (args[0] === 'log-export' && args[1] === 'delete' && args.includes('--help')) {
+  if (${logExport}) {
+    console.log(['Delete OTLP log-export configuration', 'Usage: telnyx-edge log-export delete <function> [flags]', ...(${logExportDeleteYes} ? ['  -y, --yes  Skip the confirmation prompt'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "log-export"\\n');
+  process.exit(1);
 }
 if (args[0] === 'metrics' && args.includes('--help')) {
   if (${metrics}) {
@@ -257,6 +305,14 @@ if (args[0] === 'actors' && args[1] === 'instances' && args.includes('--help')) 
   process.stderr.write('unknown command "instances"\\n');
   process.exit(1);
 }
+if (args[0] === 'actors' && args[1] === 'metrics' && args.includes('--help')) {
+  if (${actorMetrics}) {
+    console.log(['Summarize StatefulActor request and resource metrics', 'Usage: telnyx-edge actors metrics ${actorMetricsTypeUsage ? "<type>" : "[flags]"}', ...(${actorMetricsSince} ? ['      --since duration  Look back over a window'] : []), ...(${actorMetricsJson} ? ['      --json  Print raw aggregate JSON'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "metrics"\\n');
+  process.exit(1);
+}
 if (args.length === 1 && args[0] === '--help') {
   console.log(['Telnyx Edge CLI v0.5.0', '', 'Available Commands:', '  actors      Manage StatefulActor types', '  inspect     Show function details', '  auth        Authentication commands', '  ship        Ship a function', '  storage     Manage storage'].join('\\n'));
   process.exit(0);
@@ -362,11 +418,14 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.ship_status_supported, true);
     assert.equal(data.runtime_logs_supported, true);
     assert.equal(data.invocation_logs_supported, true);
+    assert.equal(data.live_log_tail_supported, true);
+    assert.equal(data.log_export_supported, true);
     assert.equal(data.function_metrics_supported, true);
     assert.equal(data.deployments_supported, true);
     assert.equal(data.stateful_actors_supported, true);
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
+    assert.equal(data.actor_metrics_supported, true);
     assert.equal(data.reset_func_supported, true);
     assert.equal(data.noninteractive_confirmation_supported, true);
     assert.equal(data.types_supported, true);
@@ -430,12 +489,15 @@ describe("CLI — Edge Compute handoff", () => {
       shipStatusLogs: false,
       runtimeLogsSince: false,
       invocationLogsType: false,
+      liveLogTail: false,
+      logExport: false,
       metrics: false,
       deployments: false,
       sqlParam: false,
       sqlParamJson: false,
       sqlDatabaseExport: false,
       sqlStdinImport: false,
+      actorMetrics: false,
       argLog: true,
     });
     const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
@@ -444,6 +506,8 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.ship_status_supported, false);
     assert.equal(data.runtime_logs_supported, false);
     assert.equal(data.invocation_logs_supported, false);
+    assert.equal(data.live_log_tail_supported, false);
+    assert.equal(data.log_export_supported, false);
     assert.equal(data.function_metrics_supported, false);
     assert.equal(data.deployments_supported, false);
     assert.equal(data.reset_func_supported, false);
@@ -455,12 +519,14 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_bound_parameters_supported, false);
     assert.equal(data.sql_database_export_supported, false);
     assert.equal(data.sql_stdin_import_supported, false);
+    assert.equal(data.actor_metrics_supported, false);
     assert.ok(data.next_steps.some((step: string) => step.includes("Optional capabilities not detected")));
     const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
     for (const expected of [
       ["reset-func", "--help"],
       ["ship", "status", "--help"],
       ["logs", "--help"],
+      ["log-export", "set", "--help"],
       ["metrics", "--help"],
       ["deployments", "--help"],
       ["delete-func", "--help"],
@@ -470,6 +536,7 @@ describe("CLI — Edge Compute handoff", () => {
       ["storage", "kv", "key", "--help"],
       ["storage", "sqldb", "execute", "--help"],
       ["storage", "sqldb", "export", "--help"],
+      ["actors", "metrics", "--help"],
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
     }
@@ -514,6 +581,59 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.ready, true, "runtime logs must remain optional for setup handoffs");
       assert.equal(data.runtime_logs_supported, false);
       assert.ok(data.next_steps.some((step: string) => step.includes("runtime logs")));
+    }
+  });
+
+  it("requires complete v0.5.3 live-tail and OTLP export help plus current actor metrics help", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.live_log_tail_supported, true);
+    assert.equal(available.log_export_supported, true);
+    assert.equal(available.actor_metrics_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Live log tail" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "OTLP log export" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Actor metrics supported" && check.ok));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("logs <function-name> --tail")));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("log-export set <function-name> --endpoint https://<otlp-endpoint>")));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("actors metrics <type> --since 24h")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [
+      ["logs", "--help"],
+      ["log-export", "set", "--help"],
+      ["log-export", "get", "--help"],
+      ["log-export", "delete", "--help"],
+      ["actors", "metrics", "--help"],
+    ]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, string, string]> = [
+      [{ liveLogTail: false }, "live_log_tail_supported", "logs <function-name> --tail"],
+      [{ logExport: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportEndpoint: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportHeader: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportRuntime: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportInvocations: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportGetJson: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ logExportDeleteYes: false }, "log_export_supported", "log-export set <function-name>"],
+      [{ actorMetrics: false }, "actor_metrics_supported", "actors metrics <type>"],
+      [{ actorMetricsTypeUsage: false }, "actor_metrics_supported", "actors metrics <type>"],
+      [{ actorMetricsSince: false }, "actor_metrics_supported", "actors metrics <type>"],
+      [{ actorMetricsJson: false }, "actor_metrics_supported", "actors metrics <type>"],
+    ];
+    for (const [config, capability, suggestion] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "freshness capabilities remain optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(!data.next_steps.some((step: string) => step.includes(suggestion)));
     }
   });
 
