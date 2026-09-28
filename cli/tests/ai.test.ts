@@ -213,6 +213,55 @@ describe("AI inference action commands", () => {
     assert.ok(!call.includes("false"), "false must not be emitted as an extra positional argument");
   });
 
+  it("ai-chat forwards exact data-locality argv for strict regional inference", () => {
+    const fake = setupFakeTelnyx("0.32.0");
+    const message = '{"role":"user","content":"Keep this request in-region"}';
+    const result = runCli([
+      "ai-chat",
+      "--message", message,
+      "--region", "eu",
+      "--mode", "strict",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "ai:openai:chat",
+      "create-completion",
+      "--message",
+      message,
+      "--region",
+      "eu",
+      "--mode",
+      "strict",
+      "--format",
+      "json",
+    ]]);
+  });
+
+  it("ai-chat permits preferred mode without a region and forwards it unchanged", () => {
+    const fake = setupFakeTelnyx("0.32.0");
+    const message = '{"role":"user","content":"Use default routing"}';
+    const result = runCli([
+      "ai-chat",
+      "--message", message,
+      "--mode", "preferred",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "ai:openai:chat",
+      "create-completion",
+      "--message",
+      message,
+      "--mode",
+      "preferred",
+      "--format",
+      "json",
+    ]]);
+  });
+
   it("ai-anthropic-message forwards the complete request surface and preserves the full JSON response", () => {
     const fake = setupFakeTelnyx();
     const messages = [
@@ -299,6 +348,86 @@ describe("AI inference action commands", () => {
     assertFlagValue(call, "--top-k", "40");
     assertFlagValue(call, "--top-p", "0.85");
     assert.deepEqual(call.slice(-2), ["--format", "json"]);
+  });
+
+  it("ai-anthropic-message forwards exact data-locality argv for strict regional inference", () => {
+    const fake = setupFakeTelnyx("0.32.0");
+    const message = '{"role":"user","content":"Keep this request in-region"}';
+    const result = runCli([
+      "ai-anthropic-message",
+      "--max-tokens", "64",
+      "--message", message,
+      "--model", "zai-org/GLM-5.2",
+      "--region", "us",
+      "--mode", "strict",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readLoggedArgs(fake.logPath), [[
+      "ai:anthropic:v1",
+      "messages",
+      "--max-tokens",
+      "64",
+      "--message",
+      message,
+      "--model",
+      "zai-org/GLM-5.2",
+      "--region",
+      "us",
+      "--mode",
+      "strict",
+      "--format",
+      "json",
+    ]]);
+  });
+
+  it("validates data-locality mode values and strict region dependency before dispatch", () => {
+    const chatMessage = '{"role":"user","content":"Hello"}';
+    const anthropicMessage = '{"role":"user","content":"Hello"}';
+    const cases: Array<{ args: string[]; expected: RegExp }> = [
+      {
+        args: ["ai-chat", "--message", chatMessage, "--mode", "regional", "--json"],
+        expected: /--mode must be preferred or strict/,
+      },
+      {
+        args: ["ai-chat", "--message", chatMessage, "--mode", "strict", "--json"],
+        expected: /--mode strict requires --region/,
+      },
+      {
+        args: ["ai-anthropic-message", "--max-tokens", "64", "--message", anthropicMessage, "--model", "zai-org/GLM-5.2", "--mode", "regional", "--json"],
+        expected: /--mode must be preferred or strict/,
+      },
+      {
+        args: ["ai-anthropic-message", "--max-tokens", "64", "--message", anthropicMessage, "--model", "zai-org/GLM-5.2", "--mode", "strict", "--json"],
+        expected: /--mode strict requires --region/,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fake = setupFakeTelnyx();
+      const result = runCli(testCase.args, fake.env);
+      assert.notEqual(result.status, 0, `expected ${testCase.args.join(" ")} to fail`);
+      assert.match(JSON.parse(result.stdout).error, testCase.expected);
+      assert.deepEqual(readLoggedArgs(fake.logPath), []);
+    }
+  });
+
+  it("requires Telnyx Go CLI v0.32 only when data-locality flags are used", () => {
+    const cases = [
+      ["ai-chat", "--message", '{"role":"user","content":"Hello"}', "--region", "eu", "--json"],
+      ["ai-anthropic-message", "--max-tokens", "64", "--message", '{"role":"user","content":"Hello"}', "--model", "zai-org/GLM-5.2", "--mode", "preferred", "--json"],
+    ];
+
+    for (const args of cases) {
+      const fake = setupFakeTelnyx("0.31.9");
+      const result = runCli(args, fake.env);
+      assert.notEqual(result.status, 0, `expected ${args.join(" ")} to require v0.32.0`);
+      const error = JSON.parse(result.stdout).error;
+      assert.match(error, /0\.31\.9/);
+      assert.match(error, /requires >= 0\.32\.0/);
+      assert.deepEqual(readLoggedArgs(fake.logPath), []);
+    }
   });
 
   it("ai-anthropic-message rejects Telnyx Go CLI 0.21.0 before dispatch", () => {
@@ -511,6 +640,10 @@ process.exit(9);
     assert.match(help.stdout, /ai-anthropic-message/);
     assert.match(help.stdout, /ai-embed/);
     assert.match(help.stdout, /--message <json>/);
+    assert.match(help.stdout, /--region <region> Data-residency region for Telnyx-hosted models/);
+    assert.match(help.stdout, /--mode <preferred\|strict> Region behavior/);
+    assert.match(help.stdout, /--mode strict requires --region/);
+    assert.match(help.stdout, /data-locality flag requires Telnyx Go CLI v0\.32\.0\+/);
     assert.match(help.stdout, /Anthropic message JSON object \(repeatable, required\)/);
     assert.match(help.stdout, /--max-tokens <n>\s+Maximum number of tokens to generate \(required\)/);
     assert.doesNotMatch(help.stdout, /--stream\s+Request a streaming completion/);
@@ -527,5 +660,8 @@ process.exit(9);
     assert.ok(aiActions.includes("ai_chat"));
     assert.ok(aiActions.includes("ai_anthropic_message"));
     assert.ok(aiActions.includes("ai_embed"));
+    const aiCapabilities = output.api_capabilities["🤖 AI"] as Array<{ name: string; description: string }>;
+    assert.match(aiCapabilities.find((capability) => capability.name === "Chat Completions")!.description, /data-locality.*v0\.32\+/i);
+    assert.match(aiCapabilities.find((capability) => capability.name === "Anthropic Messages")!.description, /data-locality.*v0\.32\+/i);
   });
 });

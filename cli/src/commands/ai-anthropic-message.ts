@@ -8,6 +8,11 @@
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import {
+  AI_INFERENCE_DATA_LOCALITY_MINIMUM_CLI_VERSION,
+  appendDataLocalityFlags,
+  usesDataLocalityFlags,
+} from "./ai-inference-locality.ts";
 
 const VALUE_FLAGS = [
   "api-key-ref",
@@ -54,6 +59,8 @@ export async function aiAnthropicMessageCommand(
   args.push("--model", model);
 
   forwardValueFlags(args, flags, VALUE_FLAGS, jsonOutput);
+  const dataLocalityError = appendDataLocalityFlags(args, flags);
+  if (dataLocalityError) fail(dataLocalityError, jsonOutput);
   for (const name of REPEATABLE_VALUE_FLAGS) {
     const values = occurrences[name] ?? (flags[name] === undefined ? [] : [flags[name]]);
     for (const value of values) {
@@ -70,7 +77,9 @@ export async function aiAnthropicMessageCommand(
     // enforce its own request timeout, plus startup/serialization grace.
     const response = await telnyxCli(args, {
       timeout: childProcessTimeout(flags.timeout),
-      minimumVersion: "0.24.0",
+      minimumVersion: usesDataLocalityFlags(flags)
+        ? AI_INFERENCE_DATA_LOCALITY_MINIMUM_CLI_VERSION
+        : "0.24.0",
     });
 
     if (jsonOutput) {

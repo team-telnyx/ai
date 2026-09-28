@@ -8,6 +8,11 @@
 
 import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { printSuccess, printError, outputJson } from "../utils/output.ts";
+import {
+  AI_INFERENCE_DATA_LOCALITY_MINIMUM_CLI_VERSION,
+  appendDataLocalityFlags,
+  usesDataLocalityFlags,
+} from "./ai-inference-locality.ts";
 
 const VALUE_FLAGS = [
   "api-key-ref",
@@ -56,9 +61,15 @@ export async function aiChatCommand(
 
   forwardValueFlags(args, flags, VALUE_FLAGS);
   forwardBooleanFlags(args, flags, BOOLEAN_FLAGS);
+  const dataLocalityError = appendDataLocalityFlags(args, flags);
+  if (dataLocalityError) fail(dataLocalityError, jsonOutput);
 
   try {
-    const response = await telnyxCli(args);
+    const response = await telnyxCli(args, {
+      minimumVersion: usesDataLocalityFlags(flags)
+        ? AI_INFERENCE_DATA_LOCALITY_MINIMUM_CLI_VERSION
+        : undefined,
+    });
 
     if (jsonOutput) {
       // Preserve the complete OpenAI-compatible response, including tool calls,

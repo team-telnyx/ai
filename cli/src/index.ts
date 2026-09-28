@@ -795,6 +795,9 @@ Numbers Action Flags:
 
 AI Chat Flags:
   --message <json>  Chat message JSON object (repeatable), or an array of message objects (required)
+  --region <region> Data-residency region for Telnyx-hosted models; use your account Data Locality vocabulary
+  --mode <preferred|strict> Region behavior: preferred falls back when needed; strict pins to --region and fails instead
+                    Either data-locality flag requires Telnyx Go CLI v0.32.0+; --mode strict requires --region
   --model           Language model ID (optional; Go CLI default is Meta-Llama-3.1-8B-Instruct)
   --max-tokens      Maximum completion tokens
   --temperature     Sampling temperature
@@ -810,6 +813,9 @@ AI Anthropic Message Flags:
   --message <json>  Anthropic message JSON object (repeatable, required)
   --model <id>      Anthropic-compatible model ID (required)
   --max-tokens <n>  Maximum number of tokens to generate (required)
+  --region <region> Data-residency region for Telnyx-hosted models; use your account Data Locality vocabulary
+  --mode <preferred|strict> Region behavior: preferred falls back when needed; strict pins to --region and fails instead
+                    Either data-locality flag requires Telnyx Go CLI v0.32.0+; --mode strict requires --region
   --api-key-ref <id> Integration-secret identifier for an external provider API key
   --billing-group-id <id> Billing group to associate with the request
   --fallback-config <json> Model fallback configuration
@@ -1311,7 +1317,7 @@ const KNOWN_FLAGS = new Set<string>([
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
-  "muted", "name", "name-contains", "national-destination-code", "network-id",
+  "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
   "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
