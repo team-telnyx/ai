@@ -12,7 +12,7 @@ interface Capability {
 
 const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
-    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "delete_messaging_profile"] },
+    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles, including AI detection of non-standard inbound opt-out requests (Go CLI v0.32+)", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "configure_ai_opt_out_detection", "delete_messaging_profile"] },
   ],
   "📧 Email": [
     { name: "Email", description: "Send or schedule outbound email and reply to or forward messages received by an email inbox", actions: ["send_email", "forward_email", "reply_email", "reply_all_email"] },
@@ -107,9 +107,9 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent email-reply", description: "Reply to the Reply-To or From address of an email inbox message" },
   { name: "telnyx-agent email-reply-all", description: "Reply to all de-duplicated recipients of an email inbox message" },
   { name: "telnyx-agent list-messaging-profiles", description: "List messaging profiles with name filters and pagination" },
-  { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination controls" },
+  { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination and AI opt-out detection controls (Go CLI v0.32+)" },
   { name: "telnyx-agent get-messaging-profile", description: "Retrieve one messaging profile by ID" },
-  { name: "telnyx-agent update-messaging-profile", description: "Update one or more fields on a messaging profile" },
+  { name: "telnyx-agent update-messaging-profile", description: "Update one or more fields on a messaging profile, including AI opt-out detection (Go CLI v0.32+)" },
   { name: "telnyx-agent delete-messaging-profile", description: "Delete a messaging profile by ID with explicit confirmation" },
   { name: "telnyx-agent fax-send", description: "Send a fax using a fax application connection and a media URL or uploaded media name" },
   { name: "telnyx-agent list-faxes", description: "Discover inbound and outbound faxes with date, direction, number, and pagination controls" },

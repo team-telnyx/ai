@@ -495,6 +495,7 @@ Messaging Profile Flags:
   --whitelisted-destinations <codes> Comma-separated ISO alpha-2 destinations or * (create — required; update)
   --whitelisted-destination <code> Repeatable generated-CLI alias for destinations (create, update)
   --ai-assistant-id <id> AI assistant linked to the profile (create, update)
+  --ai-opt-out-detection-enabled <bool> Enable or disable AI detection of non-standard inbound opt-out requests (create, update; requires Telnyx Go CLI v0.32+)
   --alpha-sender <text>  Default alphanumeric sender (create, update)
   --enabled <bool>       Enable or disable the profile (create, update)
   --health-webhook-url <url> Spend-limit health webhook (create only)
@@ -1275,7 +1276,7 @@ const COMMANDS: Record<string, (
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
-  "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
+  "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",

@@ -366,13 +366,65 @@ describe("Messaging profile lifecycle commands", () => {
     assert.deepEqual(destinationIndices.map((index) => args[index + 1]), ["US", "GB"]);
   });
 
+  it("forwards AI opt-out detection true and false through the exact v0.32 generated flags", () => {
+    const createFake = setupFakeTelnyx("0.32.0");
+    runAgent([
+      "create-messaging-profile",
+      "--name", "Consent enabled",
+      "--whitelisted-destinations", "US",
+      "--ai-opt-out-detection-enabled", "true",
+      "--json",
+    ], createFake.env);
+    assert.deepEqual(loggedArgs(createFake.logPath), [
+      ["--version"],
+      [
+        "messaging-profiles", "create", "--name", "Consent enabled", "--whitelisted-destination", "US",
+        "--features.ai-opt-out-detection-enabled=true", "--format", "json",
+      ],
+    ]);
+
+    const updateFake = setupFakeTelnyx("0.32.0");
+    runAgent([
+      "update-messaging-profile",
+      "--id", "mp-1",
+      "--ai-opt-out-detection-enabled", "false",
+      "--json",
+    ], updateFake.env);
+    assert.deepEqual(loggedArgs(updateFake.logPath), [
+      ["--version"],
+      [
+        "messaging-profiles", "update", "--messaging-profile-id", "mp-1",
+        "--features.ai-opt-out-detection-enabled=false", "--format", "json",
+      ],
+    ]);
+  });
+
+  it("requires Go CLI v0.32 before dispatching AI opt-out detection mutations", () => {
+    const commands = [
+      [
+        "create-messaging-profile", "--name", "Consent enabled", "--whitelisted-destinations", "US",
+        "--ai-opt-out-detection-enabled", "true", "--json",
+      ],
+      ["update-messaging-profile", "--id", "mp-1", "--ai-opt-out-detection-enabled", "false", "--json"],
+    ];
+
+    for (const command of commands) {
+      const fake = setupFakeTelnyx("0.31.9");
+      const failure = runAgentFailure(command, fake.env);
+      const error = JSON.parse(failure.stdout) as { error: string };
+      assert.match(error.error, /requires >= 0\.32\.0/);
+      assert.deepEqual(loggedArgs(fake.logPath), [["--version"]]);
+    }
+  });
+
   it("recognizes documented messaging-profile flags without typo warnings", () => {
-    const fake = setupFakeTelnyx();
+    const fake = setupFakeTelnyx("0.32.0");
     const result = runAgentCapture([
       "create-messaging-profile",
       "--name", "Documented flags",
       "--whitelisted-destinations", "US",
       "--ai-assistant-id", "assistant-1",
+      "--ai-opt-out-detection-enabled", "false",
       "--alpha-sender", "TELNYX",
       "--enabled", "true",
       "--health-webhook-url", "https://example.com/health",
@@ -544,6 +596,8 @@ describe("Messaging profile lifecycle commands", () => {
       { args: ["create-messaging-profile", "--name", "Bad destination", "--whitelisted-destinations", "USA", "--json"], expected: /invalid whitelisted destination/ },
       { args: ["update-messaging-profile", "--id", "mp-1", "--json"], expected: /at least one profile field/ },
       { args: ["update-messaging-profile", "--id", "mp-1", "--enabled", "maybe", "--json"], expected: /must be true or false/ },
+      { args: ["create-messaging-profile", "--name", "Bad consent", "--whitelisted-destinations", "US", "--ai-opt-out-detection-enabled", "maybe", "--json"], expected: /--ai-opt-out-detection-enabled must be true or false/ },
+      { args: ["update-messaging-profile", "--id", "mp-1", "--ai-opt-out-detection-enabled", "maybe", "--json"], expected: /--ai-opt-out-detection-enabled must be true or false/ },
       { args: ["get-messaging-profile", "--json"], expected: /--id is required/ },
       { args: ["get-messaging-profile", "--id", "--json"], expected: /--id must be a non-empty string/ },
       { args: ["get-messaging-profile", "--id", "", "--json"], expected: /--id must be a non-empty string/ },
@@ -628,11 +682,13 @@ describe("Messaging profile lifecycle commands", () => {
       "create_messaging_profile",
       "get_messaging_profile",
       "update_messaging_profile",
+      "configure_ai_opt_out_detection",
       "delete_messaging_profile",
     ]) {
       assert.ok(actions.includes(action), `Messaging capabilities should include ${action}`);
     }
     assert.match(help, /delete-messaging-profile.*requires --confirm/);
     assert.match(help, /--ai-assistant-id .*create, update/);
+    assert.match(help, /--ai-opt-out-detection-enabled <bool>.*Go CLI v0\.32\+/);
   });
 });

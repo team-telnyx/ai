@@ -47,6 +47,7 @@ const MUTATION_STRING_FLAGS: Record<ProfileMutation, string[]> = {
 };
 
 const MUTATION_BOOLEAN_FLAGS = [
+  "ai-opt-out-detection-enabled",
   "daily-spend-limit-enabled",
   "enabled",
   "mms-fall-back-to-sms",
@@ -56,6 +57,7 @@ const MUTATION_BOOLEAN_FLAGS = [
 ] as const;
 
 const MUTATION_JSON_FLAGS = ["number-pool-settings", "url-shortener-settings"] as const;
+const AI_OPT_OUT_DETECTION_ENABLED_FLAG = "--features.ai-opt-out-detection-enabled";
 const MAX_PROFILE_PAGE_REQUESTS = 1_000;
 
 export async function listMessagingProfilesCommand(flags: Flags): Promise<void> {
@@ -96,7 +98,9 @@ export async function createMessagingProfileCommand(
   addMutationFlags(args, flags, "create", jsonOutput);
 
   try {
-    const response = await telnyxCli(args);
+    const response = await telnyxCli(args, hasAiOptOutDetectionEnabled(args)
+      ? { minimumVersion: "0.32.0" }
+      : undefined);
     presentProfile("Messaging profile created!", normalizeProfile(response), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -131,9 +135,7 @@ export async function updateMessagingProfileCommand(
   if (mutationCount === 0) fail("at least one profile field must be provided to update", jsonOutput);
 
   try {
-    const response = await telnyxCli(args, args.includes("--ai-assistant-id")
-      ? { minimumVersion: "0.24.0" }
-      : undefined);
+    const response = await telnyxCli(args, minimumMutationCliVersion(args));
     presentProfile("Messaging profile updated!", normalizeProfile(response, id), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -181,7 +183,10 @@ function addMutationFlags(
 
   for (const name of MUTATION_BOOLEAN_FLAGS) {
     if (flags[name] === undefined) continue;
-    args.push(`--${name}=${booleanValue(flags[name], name, jsonOutput)}`);
+    const generatedName = name === "ai-opt-out-detection-enabled"
+      ? AI_OPT_OUT_DETECTION_ENABLED_FLAG
+      : `--${name}`;
+    args.push(`${generatedName}=${booleanValue(flags[name], name, jsonOutput)}`);
     count++;
   }
 
@@ -193,6 +198,16 @@ function addMutationFlags(
   }
 
   return count;
+}
+
+function minimumMutationCliVersion(args: string[]): { minimumVersion: string } | undefined {
+  if (hasAiOptOutDetectionEnabled(args)) return { minimumVersion: "0.32.0" };
+  if (args.includes("--ai-assistant-id")) return { minimumVersion: "0.24.0" };
+  return undefined;
+}
+
+function hasAiOptOutDetectionEnabled(args: string[]): boolean {
+  return args.some((arg) => arg.startsWith(`${AI_OPT_OUT_DETECTION_ENABLED_FLAG}=`));
 }
 
 function validateStringMutation(name: string, value: string, jsonOutput: boolean): void {
