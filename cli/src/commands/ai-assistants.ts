@@ -11,6 +11,7 @@ import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { outputJson, printError, printSuccess } from "../utils/output.ts";
 
 type Flags = Record<string, string | boolean>;
+type Occurrences = Record<string, Array<string | boolean>>;
 type JsonRecord = Record<string, unknown>;
 
 interface AssistantListResult {
@@ -62,6 +63,7 @@ export interface AiAssistantToolTestResult {
 }
 
 const AI_ASSISTANT_INSTRUCTION_ENHANCE_MINIMUM_CLI_VERSION = "0.30.0";
+const AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION = "0.32.0";
 
 export async function listAiAssistantsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -88,7 +90,10 @@ export async function listAiAssistantsCommand(flags: Flags): Promise<void> {
   }
 }
 
-export async function createAiAssistantCommand(flags: Flags): Promise<void> {
+export async function createAiAssistantCommand(
+  flags: Flags,
+  occurrences: Occurrences = {},
+): Promise<void> {
   const jsonOutput = flags.json === true;
   const name = requiredStringFlag(flags, "name", jsonOutput);
   const instructions = requiredStringFlag(flags, "instructions", jsonOutput);
@@ -101,10 +106,15 @@ export async function createAiAssistantCommand(flags: Flags): Promise<void> {
     instructions,
   ];
 
-  addAssistantFields(args, flags, jsonOutput);
+  addAssistantFields(args, flags, jsonOutput, undefined, occurrences);
 
   try {
-    const response = await telnyxCli(args);
+    const response = await telnyxCli(
+      args,
+      usesAiAssistantV032Controls(flags)
+        ? { minimumVersion: AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION }
+        : undefined,
+    );
     presentAssistant("AI assistant created!", normalizeAssistant(response), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -124,13 +134,16 @@ export async function getAiAssistantCommand(flags: Flags): Promise<void> {
   }
 }
 
-export async function updateAiAssistantCommand(flags: Flags): Promise<void> {
+export async function updateAiAssistantCommand(
+  flags: Flags,
+  occurrences: Occurrences = {},
+): Promise<void> {
   const jsonOutput = flags.json === true;
   const assistantId = assistantIdFlag(flags, jsonOutput);
   const args = ["ai:assistants", "update", "--assistant-id", assistantId];
   const requestBody: JsonRecord = {};
 
-  addAssistantFields(args, flags, jsonOutput, requestBody);
+  addAssistantFields(args, flags, jsonOutput, requestBody, occurrences);
   addMappedFlag(args, flags, "name", "--name");
   addMappedFlag(args, flags, "instructions", "--instructions");
   addMappedFlag(args, flags, "version-name", "--version-name");
@@ -141,10 +154,13 @@ export async function updateAiAssistantCommand(flags: Flags): Promise<void> {
   }
 
   try {
-    const response = await telnyxCli(
-      args,
-      Object.keys(requestBody).length > 0 ? { stdin: JSON.stringify(requestBody) } : undefined,
-    );
+    const options: { stdin?: string; minimumVersion?: string } = Object.keys(requestBody).length > 0
+      ? { stdin: JSON.stringify(requestBody) }
+      : {};
+    if (usesAiAssistantV032Controls(flags)) {
+      options.minimumVersion = AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION;
+    }
+    const response = await telnyxCli(args, Object.keys(options).length > 0 ? options : undefined);
     presentAssistant("AI assistant updated!", normalizeAssistant(response, assistantId), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -414,6 +430,7 @@ function addAssistantFields(
   flags: Flags,
   jsonOutput: boolean,
   requestBody?: JsonRecord,
+  occurrences: Occurrences = {},
 ): void {
   addMappedFlag(args, flags, "description", "--description");
   addMappedFlag(args, flags, "model", "--model");
@@ -449,9 +466,33 @@ function addAssistantFields(
     requestBody,
     jsonOutput,
   );
+  addRepeatableJsonObjectOrClearFlag(
+    args,
+    flags,
+    occurrences,
+    "a2a-agent",
+    "--a2a-agent",
+    "clear-a2a-agents",
+    "a2a_agents",
+    requestBody,
+    jsonOutput,
+  );
+  addRequiredStringFlag(
+    args,
+    flags,
+    "fallback-destination",
+    "--telephony-settings.fallback-destination",
+    jsonOutput,
+  );
   addMappedFlag(args, flags, "voice", "--voice-settings.voice");
   addMappedFlag(args, flags, "transcription-model", "--transcription.model");
   addMappedFlag(args, flags, "transcription-language", "--transcription.language");
+}
+
+function usesAiAssistantV032Controls(flags: Flags): boolean {
+  return flags["a2a-agent"] !== undefined
+    || flags["clear-a2a-agents"] !== undefined
+    || flags["fallback-destination"] !== undefined;
 }
 
 function normalizeAssistantList(response: unknown): AssistantListResult {
@@ -535,6 +576,21 @@ function addOptionalStringFlag(
   args.push(target, value);
 }
 
+function addRequiredStringFlag(
+  args: string[],
+  flags: Flags,
+  source: string,
+  target: string,
+  jsonOutput: boolean,
+): void {
+  const value = flags[source];
+  if (value === undefined) return;
+  if (typeof value !== "string" || value.length === 0) {
+    fail(`--${source} requires a non-empty value`, jsonOutput);
+  }
+  args.push(target, value);
+}
+
 function addJsonObjectFlag(
   args: string[],
   flags: Flags,
@@ -551,6 +607,48 @@ function addJsonObjectFlag(
     fail(`--${source} must be a JSON object`, jsonOutput);
   }
   args.push(target, value);
+}
+
+function addRepeatableJsonObjectOrClearFlag(
+  args: string[],
+  flags: Flags,
+  occurrences: Occurrences,
+  source: string,
+  target: string,
+  clearSource: string,
+  bodyField: string,
+  requestBody: JsonRecord | undefined,
+  jsonOutput: boolean,
+): void {
+  const values = occurrences[source] ?? (flags[source] === undefined ? [] : [flags[source]]);
+  const clearValue = flags[clearSource];
+  if (clearValue !== undefined) {
+    if (clearValue !== true) {
+      fail(`--${clearSource} is a boolean flag and does not take a value`, jsonOutput);
+    }
+    if (!requestBody) {
+      fail(`--${clearSource} is only valid for update-ai-assistant`, jsonOutput);
+    }
+    if (values.length > 0) {
+      fail(`--${source} and --${clearSource} cannot be used together`, jsonOutput);
+    }
+    requestBody[bodyField] = [];
+    return;
+  }
+
+  for (const value of values) {
+    if (typeof value !== "string") {
+      fail(`--${source} must be a JSON object`, jsonOutput);
+    }
+    try {
+      const parsed = JSON.parse(value);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    } catch {
+      fail(`--${source} must be a JSON object`, jsonOutput);
+    }
+    // Preserve the supplied JSON exactly for the generated CLI's repeatable flag.
+    args.push(target, value);
+  }
 }
 
 function addCsvOrClearFlag(

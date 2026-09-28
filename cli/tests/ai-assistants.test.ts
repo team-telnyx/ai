@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(options: { captureStdin?: boolean } = {}): {
+function setupFakeTelnyx(options: { captureStdin?: boolean; version?: string } = {}): {
   logPath: string;
   requestLogPath: string;
   env: NodeJS.ProcessEnv;
@@ -30,7 +30,7 @@ function setupFakeTelnyx(options: { captureStdin?: boolean } = {}): {
     `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
-if (args[0] === "--version") { console.log("telnyx version 0.27.0"); process.exit(0); }
+if (args[0] === "--version") { console.log(${JSON.stringify(`telnyx version ${options.version ?? "0.27.0"}`)}); process.exit(0); }
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
 function flags(name) {
@@ -56,8 +56,14 @@ function requestBody() {
   set("--version-name", "version_name");
   const tags = flags("--tag");
   const toolIds = flags("--tool-id");
+  const a2aAgents = flags("--a2a-agent").map((value) => JSON.parse(value));
   if (tags.length > 0) body.tags = tags;
   if (toolIds.length > 0) body.tool_ids = toolIds;
+  if (a2aAgents.length > 0) body.a2a_agents = a2aAgents;
+  const fallbackDestination = flag("--telephony-settings.fallback-destination");
+  if (fallbackDestination !== undefined) {
+    body.telephony_settings = { ...(body.telephony_settings || {}), fallback_destination: fallbackDestination };
+  }
   const promoteToMain = equalsFlag("--promote-to-main");
   if (promoteToMain !== undefined) body.promote_to_main = promoteToMain === "true";
   return body;
@@ -253,6 +259,134 @@ describe("AI assistant lifecycle action commands", () => {
     const [request] = loggedRequests(fake.requestLogPath);
     assert.deepEqual(request.body.tags, ["front-desk", "production"]);
     assert.deepEqual(request.body.tool_ids, ["tool-1", "tool-2"]);
+  });
+
+  it("forwards repeatable A2A JSON objects and the abnormal-end fallback destination exactly on create", () => {
+    const fake = setupFakeTelnyx({ version: "0.32.0" });
+    const billingAgent = '{ "name": "billing", "url": "https://billing.example.com" }';
+    const schedulingAgent = '{"name":"scheduling","url":"https://scheduling.example.com","async":true}';
+    const result = runAgent([
+      "create-ai-assistant",
+      "--name", "Concierge",
+      "--instructions", "Delegate specialist work",
+      "--a2a-agent", billingAgent,
+      "--a2a-agent", schedulingAgent,
+      "--fallback-destination", "sip:support@example.com",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [[
+      "ai:assistants", "create",
+      "--name", "Concierge",
+      "--instructions", "Delegate specialist work",
+      "--a2a-agent", billingAgent,
+      "--a2a-agent", schedulingAgent,
+      "--telephony-settings.fallback-destination", "sip:support@example.com",
+      "--format", "json",
+    ]]);
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body.a2a_agents, [JSON.parse(billingAgent), JSON.parse(schedulingAgent)]);
+    assert.deepEqual(request.body.telephony_settings, { fallback_destination: "sip:support@example.com" });
+  });
+
+  it("updates repeated A2A JSON objects and the abnormal-end fallback destination", () => {
+    const fake = setupFakeTelnyx({ version: "0.32.0" });
+    const billingAgent = '{"name":"billing","url":"https://billing.example.com"}';
+    const schedulingAgent = '{"name":"scheduling","url":"https://scheduling.example.com"}';
+    const result = runAgent([
+      "update-ai-assistant",
+      "--id", "assistant-1",
+      "--a2a-agent", billingAgent,
+      "--a2a-agent", schedulingAgent,
+      "--fallback-destination", "+13125550100",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [[
+      "ai:assistants", "update",
+      "--assistant-id", "assistant-1",
+      "--a2a-agent", billingAgent,
+      "--a2a-agent", schedulingAgent,
+      "--telephony-settings.fallback-destination", "+13125550100",
+      "--format", "json",
+    ]]);
+  });
+
+  it("clears all A2A agents through an explicit update-only flag", () => {
+    const fake = setupFakeTelnyx({ captureStdin: true, version: "0.32.0" });
+    const result = runAgent([
+      "update-ai-assistant",
+      "--id", "assistant-1",
+      "--clear-a2a-agents",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    const [args] = loggedArgs(fake.logPath);
+    assert.equal(args.includes("--a2a-agent"), false);
+    assert.equal(args.includes("--clear-a2a-agents"), false);
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body, { a2a_agents: [] });
+  });
+
+  it("requires Go CLI v0.32 before dispatching each new assistant control", () => {
+    const guardedCases = [
+      [
+        "create-ai-assistant", "--name", "Concierge", "--instructions", "Delegate specialist work",
+        "--a2a-agent", '{"name":"billing","url":"https://billing.example.com"}', "--json",
+      ],
+      [
+        "create-ai-assistant", "--name", "Concierge", "--instructions", "Handle calls",
+        "--fallback-destination", "sip:support@example.com", "--json",
+      ],
+      ["update-ai-assistant", "--id", "assistant-1", "--clear-a2a-agents", "--json"],
+    ];
+
+    for (const args of guardedCases) {
+      const fake = setupFakeTelnyx({ version: "0.31.0" });
+      const result = runAgent(args, fake.env);
+      assert.equal(result.status, 1);
+      assert.match(JSON.parse(result.stdout).error, /requires >= 0\.32\.0/);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+  });
+
+  it("keeps existing assistant fields compatible with Go CLI versions before v0.32", () => {
+    const fake = setupFakeTelnyx({ version: "0.31.0" });
+    const result = runAgent([
+      "create-ai-assistant",
+      "--name", "Concierge",
+      "--instructions", "Help callers",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [[
+      "ai:assistants", "create",
+      "--name", "Concierge",
+      "--instructions", "Help callers",
+      "--format", "json",
+    ]]);
+  });
+
+  it("rejects invalid A2A and fallback controls before dispatch", () => {
+    const invalidCases = [
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--a2a-agent", "[]", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--a2a-agent", "not-json", "--json"],
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--fallback-destination", "--json"],
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--clear-a2a-agents", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--a2a-agent", '{"name":"billing"}', "--clear-a2a-agents", "--json"],
+    ];
+
+    for (const args of invalidCases) {
+      const fake = setupFakeTelnyx();
+      const result = runAgent(args, fake.env);
+      assert.notEqual(result.status, 0, `expected ${args.join(" ")} to fail`);
+      assert.ok(JSON.parse(result.stdout).error);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
   });
 
   it("gets one assistant through ai:assistants retrieve", () => {
@@ -626,16 +760,23 @@ describe("AI assistant lifecycle action commands", () => {
     assert.match(help.stdout, /--confirm\s+Explicitly confirm deletion/);
     assert.match(help.stdout, /--clear-tags\s+Clear all assistant tags/);
     assert.match(help.stdout, /--clear-tool-ids\s+Clear all shared AI tool IDs/);
+    assert.match(help.stdout, /--a2a-agent <json> Repeatable A2A delegation-agent JSON object/);
+    assert.match(help.stdout, /--fallback-destination <destination> Transfer destination for abnormal voice-assistant ends/);
+    assert.match(help.stdout, /--clear-a2a-agents Clear all A2A delegation agents/);
 
-    const actions = capabilities.api_capabilities["🤖 AI"].find(
+    const assistantsCapability = capabilities.api_capabilities["🤖 AI"].find(
       (capability: { name: string }) => capability.name === "Assistants",
-    ).actions;
+    );
+    assert.match(assistantsCapability.description, /A2A delegation agents.*v0\.32/);
+    const actions = assistantsCapability.actions;
     assert.deepEqual(actions, [
       "list_ai_assistants",
       "create_ai_assistant",
       "get_ai_assistant",
       "update_ai_assistant",
       "delete_ai_assistant",
+      "configure_ai_assistant_a2a_agents",
+      "set_ai_assistant_fallback_destination",
       "enhance_ai_assistant_instructions",
       "chat_ai_assistant",
       "send_ai_assistant_sms",

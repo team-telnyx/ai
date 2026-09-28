@@ -105,6 +105,7 @@ export const BOOLEAN_FLAGS = new Set<string>([
   "create",
   "clear-tags",
   "clear-tool-ids",
+  "clear-a2a-agents",
   "stream",
   "submit",
   "disable-cache",
@@ -150,6 +151,7 @@ const VALUE_REJECTING_BOOLEAN_FLAGS = new Set<string>([
   "confirm",
   "clear-tags",
   "clear-tool-ids",
+  "clear-a2a-agents",
   "submit",
 ]);
 

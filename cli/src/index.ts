@@ -848,8 +848,12 @@ AI Assistant Lifecycle Flags:
   --dynamic-variables-webhook-timeout-ms <1-10000> Resolver timeout (create, update)
   --tags <csv>      Comma-separated assistant tags (create, update)
   --tool-ids <csv>  Comma-separated shared AI tool IDs (create, update)
+  --a2a-agent <json> Repeatable A2A delegation-agent JSON object (create, update; Go CLI v0.32+)
+  --fallback-destination <destination> Transfer destination for abnormal voice-assistant ends,
+                         forwarded as --telephony-settings.fallback-destination (create, update; Go CLI v0.32+)
   --clear-tags      Clear all assistant tags (update only; exclusive with --tags)
   --clear-tool-ids  Clear all shared AI tool IDs (update only; exclusive with --tool-ids)
+  --clear-a2a-agents Clear all A2A delegation agents (update only; exclusive with --a2a-agent; Go CLI v0.32+)
   --version-name    Human-readable version name (update only)
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
@@ -1093,6 +1097,7 @@ Examples:
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
   telnyx-agent list-ai-assistants --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
+  telnyx-agent create-ai-assistant --name Concierge --instructions "Delegate specialist work" --a2a-agent '{"name":"billing","url":"https://billing.example.com"}' --fallback-destination sip:support@example.com --json
   telnyx-agent get-ai-assistant --id <assistant-id> --json
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
   telnyx-agent delete-ai-assistant --id <assistant-id> --confirm --json
@@ -1269,7 +1274,7 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "agent-id",
+  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
@@ -1278,7 +1283,7 @@ const KNOWN_FLAGS = new Set<string>([
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id",
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
-  "category", "cause", "cc", "channels", "clear-tags", "clear-tool-ids", "client-state", "code",
+  "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
   "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
@@ -1290,7 +1295,7 @@ const KNOWN_FLAGS = new Set<string>([
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt",
-  "exclude", "exclude-domain", "extension", "fallback-config", "fast-port-eligible", "features",
+  "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
   "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-dir", "from-display-name",
