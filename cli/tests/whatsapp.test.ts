@@ -408,7 +408,7 @@ describe("WhatsApp commands", () => {
     ]);
   });
 
-  it("whatsapp-send defaults to the bundled v0.27 spelling when compatibility probes are inconclusive", () => {
+  it("whatsapp-send defaults to the v0.27 spelling when compatibility probes are inconclusive", () => {
     const fake = setupFakeTelnyx("whatsapp", false, "custom telnyx build");
     runCli([
       "whatsapp-send", "--from", "+155****4567", "--to", "+155****6543",

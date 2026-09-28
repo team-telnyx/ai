@@ -1,8 +1,8 @@
 /**
  * Create a JWT for an existing on-demand telephony credential.
  *
- * The upstream action was added in Telnyx Go CLI v0.30.0. The package remains
- * pinned to v0.27.0, so this command performs a command-scoped version check.
+ * The upstream action was added in Telnyx Go CLI v0.30.0. The bundled v0.32.0
+ * CLI satisfies that requirement; overrides still receive a command-scoped check.
  */
 import {
   IncompatibleTelnyxCLIError,

@@ -7,7 +7,7 @@ states Node.js 18 or newer, the ESM postinstall needs `import.meta.dirname`,
 which is available from Node.js 20.11. On older runtimes installation can finish
 without downloading the vendored Telnyx Go CLI, leaving Go-backed commands to
 require a separately installed compatible `telnyx` on `PATH`. The package's
-platform release pin is Telnyx Go CLI v0.27.0; on supported platforms, a working
+platform release pin is Telnyx Go CLI v0.32.0; on supported platforms, a working
 postinstall downloads that binary when a compatible local copy is unavailable.
 
 ## Quick Start
@@ -102,8 +102,8 @@ capability catalog, not a substitute for this complete router inventory.
 
 Retrieves the generated WireGuard client configuration for an existing peer.
 The generated upstream action is `wireguard-peers retrieve-config --id <peer-id>`
-and first appeared in Telnyx Go CLI v0.30.0. This command checks that version per
-invocation; it does **not** change the package's vendored v0.27.0 binary pin.
+and first appeared in Telnyx Go CLI v0.30.0. The vendored v0.32.0 binary satisfies
+that requirement; each invocation still validates any selected override or PATH binary.
 
 ```bash
 telnyx-agent get-wireguard-peer-config --id <peer-id>
@@ -342,8 +342,8 @@ telnyx-agent enhance-ai-assistant-instructions \
   --enhancement-prompt "Make escalation rules explicit"
 ```
 
-This command requires Telnyx Go CLI v0.30.0 or newer; it does not change the
-package's v0.27.0 vendored platform pin. The upstream response is not treated as
+This command requires Telnyx Go CLI v0.30.0 or newer. The vendored v0.32.0 binary
+satisfies that requirement. The upstream response is not treated as
 JSON or as any particular event-stream schema. The wrapper collects stdout through
 the existing 10 MiB child-process buffer and writes the exact successful body to
 human-readable stdout, including its original whitespace. With `--json`, it returns
@@ -610,8 +610,8 @@ telnyx-agent call-control --call-control-id <id> --action hangup
 ### `telnyx-agent create-telephony-credential-token`
 
 Creates an access-token JWT for an existing on-demand telephony credential.
-This upstream action first appeared in Telnyx Go CLI v0.30.0; it is checked per
-command and does **not** change the package's vendored v0.27.0 binary pin.
+This upstream action first appeared in Telnyx Go CLI v0.30.0. The vendored v0.32.0
+binary satisfies that requirement; each invocation still validates the selected binary.
 
 ```bash
 telnyx-agent create-telephony-credential-token --id <credential-id>
@@ -789,7 +789,7 @@ Use bindings instead of interpolating values into SQL. Placeholder/parameter
 count mismatches are rejected by the API. The SQL text is not restricted to
 `SELECT`: statements may mutate database state. Review the statement and target
 database before execution. This command requires Telnyx Go CLI v0.27.0 or newer;
-it does not change the package's vendored platform pin.
+the vendored v0.32.0 binary satisfies that requirement.
 
 
 ## Authentication
@@ -820,7 +820,7 @@ for each command.
   wrap the generated Telnyx Go CLI, or combine both transports in one workflow.
   Many command families use the Go wrapper; it is not limited to a small number
   of messaging and number operations.
-- **Go CLI dependency** — `scripts/postinstall.ts` pins Telnyx Go CLI v0.27.0.
+- **Go CLI dependency** — `scripts/postinstall.ts` pins Telnyx Go CLI v0.32.0.
   Runtime resolution checks `TELNYX_CLI_PATH`, then the platform-specific binary
   under `vendor/`, then `telnyx` on `PATH`. A PATH fallback is verified with
   `telnyx --version`; missing, incompatible, or command-too-old binaries fail

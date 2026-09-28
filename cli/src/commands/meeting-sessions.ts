@@ -1,10 +1,9 @@
 /**
  * Meeting Bot session lifecycle, live controls, and artifact retrieval.
  *
- * These routes first appear in Telnyx Go CLI v0.27.0. The npm package remains
- * pinned to its current bundled CLI until the separate v0.27 upgrade lands, so
- * every invocation performs a command-scoped compatibility check and reports an
- * actionable upgrade error instead of dispatching an unknown generated command.
+ * These routes first appear in Telnyx Go CLI v0.27.0. The bundled v0.32.0 CLI
+ * satisfies that requirement; every invocation still performs a command-scoped
+ * compatibility check for explicit overrides and PATH fallbacks.
  *
  * Important lifecycle detail: upstream `meeting-sessions delete` ends/cancels a
  * bot session but deliberately retains the session record. It is therefore

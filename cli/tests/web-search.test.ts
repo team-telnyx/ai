@@ -220,7 +220,7 @@ describe("Web intelligence action commands", () => {
     }
   });
 
-  it("clearly rejects the currently bundled v0.24 CLI until the v0.27 dependency lands", () => {
+  it("clearly rejects an explicitly selected pre-v0.27 CLI", () => {
     const fake = setupFakeTelnyx("0.24.0");
     const result = runCli(["web-search", "--query", "test", "--json"], fake.env);
 
