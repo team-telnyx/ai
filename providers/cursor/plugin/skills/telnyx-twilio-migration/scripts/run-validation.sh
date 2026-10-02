@@ -104,6 +104,9 @@ fi
 if [ -z "$STATE_FILE" ] && [ -f "$PROJECT_ROOT/migration-state.json" ]; then
   STATE_FILE="$PROJECT_ROOT/migration-state.json"
 fi
+if [ -z "$SCAN_JSON" ] && [ -f "$PROJECT_ROOT/twilio-scan.json" ]; then
+  SCAN_JSON="$PROJECT_ROOT/twilio-scan.json"
+fi
 
 OVERALL_PASS=true
 RESULTS=""
@@ -134,6 +137,36 @@ else
   echo -e "  ${BLUE}INFO${NC}  Fix the issues above, then re-run this script."
   OVERALL_PASS=false
   RESULTS="${RESULTS}migration:fail,"
+fi
+
+echo ""
+
+# --- Step 5.1b: Telnyx Correctness Linter ---
+# This integration belongs with the source-aware analyzer. Without it the full
+# Phase 5 wrapper can certify a required sender that lacks
+# messaging_profile_id even though the standalone linter would block it.
+echo -e "${BOLD}Step 5.1b: Telnyx Correctness${NC}"
+echo "────────────────────────────────"
+
+CORRECTNESS_ARGS=("$PROJECT_ROOT")
+# Keep the correctness linter in the same hybrid scope as migration
+# validation. An external state file is not discoverable from PROJECT_ROOT.
+[ -n "$STATE_FILE" ] && CORRECTNESS_ARGS+=("--state-file" "$STATE_FILE")
+# Discovery records whether the original app intentionally omitted webhook
+# validation. Preserve that context so the wrapper and standalone linter reach
+# the same verdict instead of upgrading an intentional warning to an issue.
+[ -n "$SCAN_JSON" ] && CORRECTNESS_ARGS+=("--scan-json" "$SCAN_JSON")
+bash "$SCRIPT_DIR/lint-telnyx-correctness.sh" "${CORRECTNESS_ARGS[@]}"
+CORRECTNESS_EXIT=$?
+if [ "$CORRECTNESS_EXIT" -eq 0 ]; then
+  echo ""
+  echo -e "  ${GREEN}PASS${NC}  Correctness checks passed"
+  RESULTS="${RESULTS}correctness:pass,"
+else
+  echo ""
+  echo -e "  ${RED}FAIL${NC}  Correctness checks failed (exit code: $CORRECTNESS_EXIT)"
+  OVERALL_PASS=false
+  RESULTS="${RESULTS}correctness:fail,"
 fi
 
 echo ""
