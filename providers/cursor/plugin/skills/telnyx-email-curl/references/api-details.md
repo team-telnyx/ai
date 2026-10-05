@@ -495,6 +495,21 @@ URL. The envelope can also include top-level `suppressed`.
 | 500 | `10019` (or framework `500`) | Internal server error. Retry safely; use idempotency where supported. |
 | 503 | `10016` | Service/upstream unavailable, including unavailable idempotency protection for a keyed request. Retry safely. |
 
+### Content policy rejections
+
+When outbound content security rejects a message, the refusal is durable and
+customer-safe: a batch/webhook error item carries code `30007` with title
+`Content policy rejection`. The item may include a `decision_id` — an opaque
+token that identifies the review record. Do not retry the same content
+unchanged; the same content will reject again. If the customer believes the
+block is incorrect, contact Telnyx support with the `decision_id`; support
+can adjudicate and, if warranted, correct the policy — the corrected path is
+resend after review, not release of the held message.
+
+| Code | Title | Meaning and action |
+|------|-------|--------------------|
+| `30007` | `Content policy rejection` | Message content matched a content-security rule. Do not resend unchanged; contact support with the `decision_id` for review. |
+
 `ReputationSuspendedError` is non-standard but still uses `errors[]`; each item
 has string code `reputation_suspended`, title (typically `Sending Suspended`),
 and detail. `RecipientSuppressedError` adds `suppressed[]`, whose objects contain
