@@ -5,7 +5,7 @@
  * 1. Create an AI assistant (via telnyx CLI)
  * 2. Search for a phone number (via telnyx CLI)
  * 3. Buy the number (via telnyx CLI)
- * 4. Wire assistant to the number (direct API — TeXML app creation has no CLI equivalent)
+ * 4. Point the number at the assistant's own TeXML app (created with the assistant)
  */
 
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
@@ -18,6 +18,7 @@ interface SetupAiResult {
   assistant_name: string;
   phone_number: string;
   phone_number_id: string;
+  texml_app_id: string;
   test_command: string;
   ready: boolean;
   steps: StepResult[];
@@ -35,6 +36,7 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
   const startTime = Date.now();
 
   let assistantId = "";
+  let texmlAppId = "";
   let phoneNumber = "";
   let phoneNumberId = "";
 
@@ -53,6 +55,7 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       // AI assistants API returns data at the top level or nested under .data
       const assistantData = (assistantRes.data ?? assistantRes) as Record<string, unknown>;
       assistantId = String(assistantData.id);
+      texmlAppId = defaultTexmlAppId(assistantData);
       steps.push({ step: 1, name: "Create AI assistant", status: "completed", resourceId: assistantId, detail: assistantName, elapsedMs: Date.now() - step1Start });
     } catch (err) {
       steps.push({ step: 1, name: "Create AI assistant", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step1Start });
@@ -80,29 +83,22 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       printStep(steps[steps.length - 1], totalSteps);
     }
 
-    // Step 4: Wire assistant to the number (direct API — no CLI equivalent for TeXML apps)
+    // Step 4: Wire assistant to the number
     const step4Start = Date.now();
     try {
-      // Create a TeXML app that routes to the AI assistant
-      const texmlRes = await client.post("/texml_applications", {
-        friendly_name: `AI - ${ts}`,
-        active: true,
-        ai_assistant_id: assistantId,
-        voice_url: `https://api.telnyx.com/v2/ai/assistants/${assistantId}/call`,
-        voice_method: "POST",
-      });
-      const texmlData = texmlRes.data as Record<string, unknown>;
-      const texmlAppId = String(texmlData.id ?? "");
-
-      // Assign the TeXML app to the phone number via CLI
-      if (phoneNumber && texmlAppId) {
-        await telnyxCli([
-          "phone-numbers", "update",
-          "--phone-number-id", phoneNumber,
-          "--connection-id", texmlAppId,
-          "--force",
-        ]);
+      // Telnyx creates a TeXML app with every assistant
+      // (telephony_settings.default_texml_app_id); its voice_url serves the
+      // assistant's TeXML. Read it back if the create response left it out.
+      if (!texmlAppId) {
+        const res = await client.get(`/ai/assistants/${encodeURIComponent(assistantId)}`);
+        texmlAppId = defaultTexmlAppId((res.data ?? res) as Record<string, unknown>);
       }
+      if (!texmlAppId) throw new Error(`Assistant ${assistantId} has no default TeXML app`);
+
+      // Assign the number via REST, like setup-voice (AIF-329: the Go CLI's
+      // `phone-numbers update` doesn't support --force)
+      if (!phoneNumberId) throw new Error("No phone number ID to assign");
+      await client.patch(`/phone_numbers/${phoneNumberId}`, { connection_id: texmlAppId });
       steps.push({ step: 4, name: "Wire assistant to number", status: "completed", detail: `TeXML app: ${texmlAppId}`, elapsedMs: Date.now() - step4Start });
     } catch (err) {
       steps.push({ step: 4, name: "Wire assistant to number", status: "failed", detail: errorMsg(err), elapsedMs: Date.now() - step4Start });
@@ -116,6 +112,7 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       assistant_name: assistantName,
       phone_number: phoneNumber,
       phone_number_id: phoneNumberId,
+      texml_app_id: texmlAppId,
       test_command: testCmd,
       ready: true,
       steps,
@@ -160,4 +157,9 @@ function errorMsg(err: unknown): string {
   if (err instanceof TelnyxCLIError) return err.stderr || err.message;
   if (err instanceof Error) return err.message;
   return String(err);
+}
+
+function defaultTexmlAppId(assistant: Record<string, unknown>): string {
+  const telephony = assistant.telephony_settings as Record<string, unknown> | undefined;
+  return telephony?.default_texml_app_id ? String(telephony.default_texml_app_id) : "";
 }
