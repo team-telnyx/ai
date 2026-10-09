@@ -176,6 +176,51 @@ export async function resolveMessagesWhatsappSubcommand(): Promise<"send-whatsap
 }
 
 /**
+ * Resolve the collection retrieval resource exposed by the locally selected Go
+ * CLI. v0.27-v0.30 used `ai:collections`; v0.31 moved retrieval into
+ * `ai:knowledge:collections` while leaving other collection commands in the
+ * old namespace.
+ *
+ * As with WhatsApp compatibility, command help is authoritative for the binary
+ * that will run the request, including custom builds. These are read-only help
+ * probes. If neither resource advertises the action, use the reported semantic
+ * version when available; an unknown binary conservatively keeps the v0.27
+ * spelling bundled by this package.
+ */
+export async function resolveAiCollectionRetrieveDocumentsResource(minimumVersion?: string): Promise<
+  "ai:collections" | "ai:knowledge:collections"
+> {
+  const binary = await getTelnyxBinary(minimumVersion);
+  const newResource = "ai:knowledge:collections";
+  const oldResource = "ai:collections";
+
+  if (await collectionResourceHasRetrieveDocuments(binary, newResource)) return newResource;
+  if (await collectionResourceHasRetrieveDocuments(binary, oldResource)) return oldResource;
+
+  const version = await telnyxGoCliVersion(binary);
+  if (version && (compareSemanticVersions(version, "0.31.0") ?? -1) >= 0) return newResource;
+  return oldResource;
+}
+
+async function collectionResourceHasRetrieveDocuments(binary: string, resource: string): Promise<boolean> {
+  try {
+    const { stdout, stderr } = await execFileAsync(binary, [resource, "--help"], { timeout: 10000 });
+    return /(?:^|\n)\s*retrieve-documents(?:\s|$)/m.test(`${stdout ?? ""}\n${stderr ?? ""}`);
+  } catch {
+    return false;
+  }
+}
+
+async function telnyxGoCliVersion(binary: string): Promise<string | null> {
+  try {
+    const { stdout, stderr } = await execFileAsync(binary, ["--version"], { timeout: 10000 });
+    return parseTelnyxGoCliVersion(`${stdout ?? ""}${stderr ?? ""}`);
+  } catch (err: any) {
+    return parseTelnyxGoCliVersion(`${err?.stdout ?? ""}${err?.stderr ?? ""}`);
+  }
+}
+
+/**
  * Find the start of JSON in CLI output that may have info messages before it.
  * Looks for the first `{` or `[` that starts valid JSON.
  *
