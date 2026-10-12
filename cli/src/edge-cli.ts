@@ -336,6 +336,52 @@ export function supportsActorMetrics(): boolean {
   }
 }
 
+/** Detect historical StatefulActor logs without mistaking function logs for them. */
+export function supportsActorLogs(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["type", "instance", "since", "last", "json"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the live actor-log stream directly rather than inferring it from history. */
+export function supportsActorLiveLogTail(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) && /--tail\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect v0.5.8 stored-state actor metrics while retaining the earlier metrics probe. */
+export function supportsActorStorageMetrics(): boolean {
+  try {
+    const out = runEdge(["actors", "metrics", "--help"]);
+    return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out)) &&
+      /stored\s+state/i.test(out) && /\b90h\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the complete local umbrella-project development command surface. */
+export function supportsLocalDev(): boolean {
+  try {
+    const out = runEdge(["dev", "--help"]);
+    return /^Usage:\s+\S+\s+dev(?:\s|\[|$)/im.test(out) &&
+      ["from-dir", "port", "no-watch", "generate-only"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
 export type EdgeAuthStatus = {
   authenticated: boolean;
   mode: "api_key" | "oauth" | "none" | "unknown";

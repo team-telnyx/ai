@@ -10,7 +10,10 @@ import {
   getEdgeHelp,
   getEdgeRootStatus,
   getEdgeVersion,
+  supportsActorLiveLogTail,
+  supportsActorLogs,
   supportsActorMetrics,
+  supportsActorStorageMetrics,
   supportsActorInstances,
   supportsApiKeyAuth,
   supportsCustomDomains,
@@ -27,6 +30,7 @@ import {
   supportsRuntimeLogs,
   supportsLiveLogTail,
   supportsLogExport,
+  supportsLocalDev,
   supportsSecretsAdd,
   supportsShip,
   supportsShipStatus,
@@ -60,6 +64,10 @@ interface EdgeDoctorResult {
   inspect_supported: boolean;
   actor_instances_supported: boolean;
   actor_metrics_supported: boolean;
+  actor_logs_supported: boolean;
+  actor_live_log_tail_supported: boolean;
+  actor_storage_metrics_supported: boolean;
+  local_dev_supported: boolean;
   reset_func_supported: boolean;
   reset_func_noninteractive_confirmation_supported: boolean;
   noninteractive_confirmation_supported: boolean;
@@ -98,6 +106,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let inspectSupported = false;
   let actorInstancesSupported = false;
   let actorMetricsSupported = false;
+  let actorLogsSupported = false;
+  let actorLiveLogTailSupported = false;
+  let actorStorageMetricsSupported = false;
+  let localDevSupported = false;
   let resetFuncSupported = false;
   let resetFuncNoninteractiveConfirmationSupported = false;
   let noninteractiveConfirmationSupported = false;
@@ -142,6 +154,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
     actorMetricsSupported = supportsActorMetrics();
+    actorLogsSupported = supportsActorLogs();
+    actorLiveLogTailSupported = supportsActorLiveLogTail();
+    actorStorageMetricsSupported = supportsActorStorageMetrics();
+    localDevSupported = supportsLocalDev();
     resetFuncSupported = supportsResetFunc();
     resetFuncNoninteractiveConfirmationSupported = supportsResetFuncNonInteractiveConfirmation();
     noninteractiveConfirmationSupported = supportsNonInteractiveConfirmation();
@@ -252,6 +268,34 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: actorMetricsSupported
         ? "actors metrics <type> supports --since and --json"
         : "actors metrics --help did not advertise <type> usage with --since and --json",
+    });
+    checks.push({
+      name: "Actor historical logs",
+      ok: actorLogsSupported,
+      detail: actorLogsSupported
+        ? "actors logs <type> supports runtime/invocation filters, instances, history windows, and JSON"
+        : "actors logs --help did not advertise <type> usage with --type, --instance, --since, --last, and --json",
+    });
+    checks.push({
+      name: "Live actor-log tail",
+      ok: actorLiveLogTailSupported,
+      detail: actorLiveLogTailSupported
+        ? "actors logs <type> --tail is available"
+        : "actors logs --help did not advertise <type> usage with --tail",
+    });
+    checks.push({
+      name: "Actor stored-state metrics",
+      ok: actorStorageMetricsSupported,
+      detail: actorStorageMetricsSupported
+        ? "actors metrics <type> identifies stored state and its 90h maximum window"
+        : "actors metrics --help did not identify stored state and a 90h maximum window",
+    });
+    checks.push({
+      name: "Local actor development",
+      ok: localDevSupported,
+      detail: localDevSupported
+        ? "dev supports --from-dir, --port, --no-watch, and --generate-only"
+        : "dev --help did not advertise its usage with --from-dir, --port, --no-watch, and --generate-only",
     });
     checks.push({
       name: "Failed-function reset",
@@ -421,6 +465,18 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (actorMetricsSupported) {
       nextSteps.push("Summarize actor traffic and resources with: telnyx-edge actors metrics <type> --since 24h");
     }
+    if (actorStorageMetricsSupported) {
+      nextSteps.push("Review actor stored-state aggregates (90h maximum) with: telnyx-edge actors metrics <type> --since 24h");
+    }
+    if (actorLogsSupported) {
+      nextSteps.push("Read actor history with: telnyx-edge actors logs <type> --since 10m --last 200");
+    }
+    if (actorLiveLogTailSupported) {
+      nextSteps.push("Tail live actor logs with: telnyx-edge actors logs <type> --tail");
+    }
+    if (localDevSupported) {
+      nextSteps.push("Run an umbrella project locally with: telnyx-edge dev --from-dir ./<project-dir>");
+    }
     if (shipStatusSupported) {
       nextSteps.push("Diagnose the latest ship before resetting it: telnyx-edge ship status <function-name> --logs");
     }
@@ -486,6 +542,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlStdinImportSupported && "SQL standard-input import",
       !customDomainsSupported && "custom domains",
       !actorMetricsSupported && "actor metrics",
+      !actorStorageMetricsSupported && "actor stored-state metrics (90h maximum)",
+      !actorLogsSupported && "actor historical logs",
+      !actorLiveLogTailSupported && "live actor-log tail",
+      !localDevSupported && "local dev",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
@@ -514,6 +574,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
     actor_metrics_supported: actorMetricsSupported,
+    actor_logs_supported: actorLogsSupported,
+    actor_live_log_tail_supported: actorLiveLogTailSupported,
+    actor_storage_metrics_supported: actorStorageMetricsSupported,
+    local_dev_supported: localDevSupported,
     reset_func_supported: resetFuncSupported,
     reset_func_noninteractive_confirmation_supported: resetFuncNoninteractiveConfirmationSupported,
     noninteractive_confirmation_supported: noninteractiveConfirmationSupported,

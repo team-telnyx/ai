@@ -406,6 +406,52 @@ telnyx-edge types
 
 The generated `env.ARCHIVE` is a typed `CloudStorageBucket`. This is a runtime binding/type-generation feature; it is distinct from the `storage kv` control-plane commands.
 
+## Local actor development (v0.5.6)
+`dev` runs an **umbrella project** (a directory containing `telnyx.toml`) locally. It does not support a classic `func.toml`-only project. Docker with **Compose v2.17 or later** is required; the first run pulls roughly 1 GB of runtime images. The function is served on `http://127.0.0.1:8787` by default, and saves reload the changed function or actor runtime.
+
+```bash
+# Run the current umbrella project and watch for changes.
+telnyx-edge dev
+
+# Select a project, publish a different loopback port, then return after booting.
+telnyx-edge dev --from-dir ./my-umbrella-project --port 9000 --no-watch
+
+# Generate the local stack only; do not start Docker Compose.
+telnyx-edge dev --from-dir ./my-umbrella-project --generate-only
+```
+
+Local actor KV, SQL, and alarm state is preserved across runs. Re-run the same `dev` command to restart the stack while retaining state. To stop it, run `docker compose -f .telnyx/dev/compose.yaml down`; to deliberately reset all local state, run:
+
+```bash
+docker compose -f .telnyx/dev/compose.yaml down -v
+```
+
+Only `[[actors]]` (including `ctx.storage` key-value, SQL, and alarms) and function `[env_vars]` are available locally. `[[secrets]]`, `[telnyx]`, `[storage.*]`, `[[ratelimits]]`, and `[network.*]` bindings are not supported by local `dev`; it reports declared unavailable bindings when it starts. Ship and test those bindings against Edge Compute before relying on them.
+
+## Private WireGuard network bindings (v0.5.6)
+Use a network binding to route requests to a private peer through a Telnyx WireGuard interface. Declare the interface ID in the umbrella manifest, then generate types:
+
+```toml
+[network.MY_VPC]
+id = "<wireguard-interface-uuid>"
+```
+
+```bash
+npm install @telnyx/edge-runtime@^0.15.3
+telnyx-edge types
+```
+
+`@telnyx/edge-runtime` must be **0.15.3 or newer** because that release exports `NetworkNamespace`. Type generation produces `env.MY_VPC` as a `NetworkNamespace`; call `env.MY_VPC.fetch()` as you would `fetch()` and the runtime routes the request through the WireGuard tunnel:
+
+```typescript
+import { env } from "@telnyx/edge-runtime";
+
+const response = await env.MY_VPC.fetch("https://private.service.internal/health");
+if (!response.ok) throw new Error(`Private service failed: ${response.status}`);
+```
+
+The WireGuard sidecar is injected on deploy. Network bindings are generated and shipped configuration, not a local-dev feature; `telnyx-edge dev` reports them as unsupported locally.
+
 ## Stateful Actors
 
 Probe actor capabilities directly:
@@ -431,7 +477,28 @@ telnyx-edge inspect <function>
 The two inspect commands answer different questions:
 
 - `inspect <function>` shows one function and every declared binding (including actor owner/reference roles).
-- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Current upstream main also adds optional `actors metrics <type> --since 24h` (or `--json`) for request, error-rate, latency, byte, CPU, and memory aggregates; probe it when supporting released CLIs.
+- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count.
+
+### Actor logs and metrics (v0.5.10)
+`actors logs <type>` reads a historical window of runtime (`console.log`/`error`) and platform-emitted invocation records. Without `--type`, the two streams are interleaved; use `--type runtime` or `--type invocations`, and use `--instance <id>` only with invocation logs.
+
+```bash
+# Historical records: reads a window and exits.
+telnyx-edge actors logs ChatRoom --since 10m --last 200
+telnyx-edge actors logs ChatRoom --type invocations --instance alice
+
+# Live records: stays attached until Ctrl-C.
+telnyx-edge actors logs ChatRoom --tail
+```
+
+`--tail` has no history or replay: `--since` and `--last` are ignored, and `--json` writes one object per line. The CLI reconnects with backoff after the API edge proxy periodically cuts a session, but records emitted during that gap are lost. Use the historical command when completeness matters.
+
+`actors metrics <type>` reports requests, error rate, latency, request/response bytes, CPU, memory, and aggregate stored-state size. Stored state is the total `ctx.storage.sql` size across the type's instances over the selected window; use `actors instances <type>` for each instance's point-in-time size. Actor metrics default to 24h and cap `--since` at **90h** (unlike root function metrics, whose maximum is 168h).
+
+```bash
+telnyx-edge actors metrics ChatRoom --since 24h
+telnyx-edge actors instances ChatRoom
+```
 ### v0.2.5 actor-instance support and limitations
 
 v0.2.5 added `actors instances <type>` and the instance count in `actors inspect <type>`. The instance command is intentionally limited:
