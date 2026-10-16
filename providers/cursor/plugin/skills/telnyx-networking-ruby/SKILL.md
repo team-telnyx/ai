@@ -63,6 +63,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List all clusters
 
+Retrieve a paginated list of clustering tasks and their statuses.
+
 `GET /ai/clusters`
 
 ```ruby
@@ -91,6 +93,8 @@ Returns: `task_id` (string)
 
 ## Fetch a cluster
 
+Fetch the results of a clustering task, including the discovered clusters.
+
 `GET /ai/clusters/{task_id}`
 
 ```ruby
@@ -103,6 +107,8 @@ Returns: `bucket` (string), `clusters` (array[object]), `status` (enum: pending,
 
 ## Delete a cluster
 
+Delete a clustering task and its computed results.
+
 `DELETE /ai/clusters/{task_id}`
 
 ```ruby
@@ -112,6 +118,8 @@ puts(result)
 ```
 
 ## Fetch a cluster visualization
+
+Fetch a visualization image of the clusters computed by a clustering task.
 
 `GET /ai/clusters/{task_id}/graph`
 
@@ -123,7 +131,7 @@ puts(response)
 
 ## List Integrations
 
-List all available integrations.
+Returns the list of third-party integrations available to connect to your AI assistants and workflows.
 
 `GET /ai/integrations`
 
@@ -137,7 +145,7 @@ Returns: `available_tools` (array[string]), `description` (string), `display_nam
 
 ## List User Integrations
 
-List user setup integrations
+Returns the list of integration connections you have set up, linking your account to third-party services.
 
 `GET /ai/integrations/connections`
 
@@ -151,7 +159,7 @@ Returns: `allowed_tools` (array[string]), `id` (string), `integration_id` (strin
 
 ## Get User Integration connection By Id
 
-Get user setup integrations
+Returns the details of a single integration connection by its ID.
 
 `GET /ai/integrations/connections/{user_connection_id}`
 
@@ -177,7 +185,7 @@ puts(result)
 
 ## List Integration By Id
 
-Retrieve integration details
+Returns the details of a single available integration, including its configuration details.
 
 `GET /ai/integrations/{integration_id}`
 
@@ -191,6 +199,8 @@ Returns: `available_tools` (array[string]), `description` (string), `display_nam
 
 ## List all Global IP Allowed Ports
 
+Returns the ports allowed for Global IP traffic, for use when configuring Global IP resources.
+
 `GET /global_ip_allowed_ports`
 
 ```ruby
@@ -202,6 +212,8 @@ puts(global_ip_allowed_ports)
 Returns: `first_port` (integer), `id` (uuid), `last_port` (integer), `name` (string), `protocol_code` (string), `record_type` (string)
 
 ## Global IP Assignment Health Check Metrics
+
+Retrieve health check metrics for your Global IP assignments.
 
 `GET /global_ip_assignment_health`
 
@@ -215,7 +227,7 @@ Returns: `global_ip` (object), `global_ip_assignment` (object), `health` (object
 
 ## List all Global IP assignments
 
-List all Global IP assignments.
+Returns a paginated list of your Global IP assignments, the links between Global IPs and the WireGuard peers that receive their traffic.
 
 `GET /global_ip_assignments`
 
@@ -229,7 +241,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announce
 
 ## Create a Global IP assignment
 
-Create a Global IP assignment.
+Assigns a Global IP to a WireGuard peer so traffic destined for the IP is delivered over that peer's tunnel. Assignment is asynchronous, so the request is accepted and completes in the background.
 
 `POST /global_ip_assignments`
 
@@ -243,9 +255,9 @@ puts(global_ip_assignment)
 
 Returns: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announced` (boolean), `is_connected` (boolean), `is_in_maintenance` (boolean), `record_type` (string), `status` (enum: created, provisioning, provisioned, deleting), `updated_at` (string), `wireguard_peer_id` (uuid)
 
-## Retrieve a Global IP
+## Retrieve a Global IP assignment
 
-Retrieve a Global IP assignment.
+Returns the details of a single Global IP assignment, including the Global IP and WireGuard peer it links.
 
 `GET /global_ip_assignments/{id}`
 
@@ -259,7 +271,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announce
 
 ## Update a Global IP assignment
 
-Update a Global IP assignment.
+Updates the specified Global IP assignment with the provided fields and returns the updated assignment.
 
 `PATCH /global_ip_assignments/{id}`
 
@@ -278,7 +290,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announce
 
 ## Delete a Global IP assignment
 
-Delete a Global IP assignment.
+Deletes the specified Global IP assignment, detaching the Global IP from its WireGuard peer.
 
 `DELETE /global_ip_assignments/{id}`
 
@@ -292,6 +304,8 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `id` (uuid), `is_announce
 
 ## Global IP Assignment Usage Metrics
 
+Retrieve usage metrics for your Global IP assignments.
+
 `GET /global_ip_assignments_usage`
 
 ```ruby
@@ -304,7 +318,7 @@ Returns: `global_ip` (object), `global_ip_assignment` (object), `received` (obje
 
 ## List all Global IP Health check types
 
-List all Global IP Health check types.
+Returns the health check types available for Global IPs, for use when creating Global IP health checks.
 
 `GET /global_ip_health_check_types`
 
@@ -318,7 +332,7 @@ Returns: `health_check_params` (object), `health_check_type` (string), `record_t
 
 ## List all Global IP health checks
 
-List all Global IP health checks.
+Returns a paginated list of the Global IP health checks configured on your account.
 
 `GET /global_ip_health_checks`
 
@@ -332,7 +346,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `health_check_params` (ob
 
 ## Create a Global IP health check
 
-Create a Global IP health check.
+Creates a health check for a Global IP to monitor the health of its assignments. Creation is asynchronous, so the request is accepted and the health check becomes active once provisioning completes.
 
 `POST /global_ip_health_checks`
 
@@ -348,7 +362,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `health_check_params` (ob
 
 ## Retrieve a Global IP health check
 
-Retrieve a Global IP health check.
+Returns the details of a single Global IP health check, including its type and configuration.
 
 `GET /global_ip_health_checks/{id}`
 
@@ -362,7 +376,7 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `health_check_params` (ob
 
 ## Delete a Global IP health check
 
-Delete a Global IP health check.
+Deletes the specified Global IP health check so it no longer monitors the Global IP's assignments.
 
 `DELETE /global_ip_health_checks/{id}`
 
@@ -376,6 +390,8 @@ Returns: `created_at` (string), `global_ip_id` (uuid), `health_check_params` (ob
 
 ## Global IP Latency Metrics
 
+Retrieve latency metrics measured for your Global IPs.
+
 `GET /global_ip_latency`
 
 ```ruby
@@ -387,6 +403,8 @@ puts(global_ip_latency)
 Returns: `global_ip` (object), `mean_latency` (object), `percentile_latency` (object), `prober_location` (object), `timestamp` (date-time)
 
 ## List all Global IP Protocols
+
+Returns the network protocols supported for Global IP traffic, for use when configuring Global IP resources.
 
 `GET /global_ip_protocols`
 
@@ -400,6 +418,8 @@ Returns: `code` (string), `name` (string), `record_type` (string)
 
 ## Global IP Usage Metrics
 
+Retrieve usage metrics for your Global IPs.
+
 `GET /global_ip_usage`
 
 ```ruby
@@ -412,7 +432,7 @@ Returns: `global_ip` (object), `received` (object), `timestamp` (date-time), `tr
 
 ## List all Global IPs
 
-List all Global IPs.
+Returns a paginated list of the Global IPs on your account, including each IP's address and configuration.
 
 `GET /global_ips`
 
@@ -426,7 +446,7 @@ Returns: `created_at` (string), `description` (string), `id` (uuid), `ip_address
 
 ## Create a Global IP
 
-Create a Global IP.
+Requests creation of a new Global IP, a static IP address announced from the Telnyx network. Provisioning is asynchronous, so the request is accepted and the Global IP becomes available once provisioning completes.
 
 `POST /global_ips`
 
@@ -442,7 +462,7 @@ Returns: `created_at` (string), `description` (string), `id` (uuid), `ip_address
 
 ## Retrieve a Global IP
 
-Retrieve a Global IP.
+Returns the details of a single Global IP, including its address and current configuration.
 
 `GET /global_ips/{id}`
 
@@ -456,7 +476,7 @@ Returns: `created_at` (string), `description` (string), `id` (uuid), `ip_address
 
 ## Delete a Global IP
 
-Delete a Global IP.
+Deletes the specified Global IP and releases its address back to Telnyx.
 
 `DELETE /global_ips/{id}`
 
@@ -470,7 +490,7 @@ Returns: `created_at` (string), `description` (string), `id` (uuid), `ip_address
 
 ## List all Networks
 
-List all Networks.
+Returns a paginated list of the private networks on your account, with support for filtering.
 
 `GET /networks`
 
@@ -484,7 +504,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (str
 
 ## Create a Network
 
-Create a new Network.
+Creates a new private network, the container that links your WireGuard interfaces, gateways, and cross connects.
 
 `POST /networks` — Required: `name`
 
@@ -500,7 +520,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (str
 
 ## Retrieve a Network
 
-Retrieve a Network.
+Returns the details of a single network by its identifier.
 
 `GET /networks/{id}`
 
@@ -514,7 +534,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (str
 
 ## Update a Network
 
-Update a Network.
+Updates the specified network's attributes and returns the updated network.
 
 `PATCH /networks/{id}` — Required: `name`
 
@@ -530,7 +550,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (str
 
 ## Delete a Network
 
-Delete a Network.
+Permanently deletes the specified network from your account.
 
 `DELETE /networks/{id}`
 
@@ -544,6 +564,8 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (str
 
 ## Get Default Gateway status.
 
+Returns the status of the default gateway configured on the specified network.
+
 `GET /networks/{id}/default_gateway`
 
 ```ruby
@@ -555,6 +577,8 @@ puts(default_gateway)
 Returns: `created_at` (string), `id` (uuid), `network_id` (uuid), `record_type` (string), `status` (enum: created, provisioning, provisioned, deleting), `updated_at` (string), `wireguard_peer_id` (uuid)
 
 ## Create Default Gateway.
+
+Creates a default gateway on the specified network, directing the network's outbound traffic through the chosen gateway.
 
 `POST /networks/{id}/default_gateway`
 
@@ -570,6 +594,8 @@ Returns: `created_at` (string), `id` (uuid), `network_id` (uuid), `record_type` 
 
 ## Delete Default Gateway.
 
+Removes the default gateway from the specified network.
+
 `DELETE /networks/{id}/default_gateway`
 
 ```ruby
@@ -581,6 +607,8 @@ puts(default_gateway)
 Returns: `created_at` (string), `id` (uuid), `network_id` (uuid), `record_type` (string), `status` (enum: created, provisioning, provisioned, deleting), `updated_at` (string), `wireguard_peer_id` (uuid)
 
 ## List all Interfaces for a Network.
+
+Returns a paginated list of the interfaces attached to the specified network, with support for filtering.
 
 `GET /networks/{id}/network_interfaces`
 
@@ -604,7 +632,7 @@ page = client.private_wireless_gateways.list
 puts(page)
 ```
 
-Returns: `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
+Returns: `address_mode` (enum: static, dynamic), `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
 
 ## Create a Private Wireless Gateway
 
@@ -612,7 +640,7 @@ Asynchronously create a Private Wireless Gateway for SIM cards for a previously 
 
 `POST /private_wireless_gateways` — Required: `network_id`, `name`
 
-Optional: `region_code` (string)
+Optional: `address_mode` (enum: static, dynamic), `region_code` (string)
 
 ```ruby
 private_wireless_gateway = client.private_wireless_gateways.create(
@@ -623,7 +651,7 @@ private_wireless_gateway = client.private_wireless_gateways.create(
 puts(private_wireless_gateway)
 ```
 
-Returns: `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
+Returns: `address_mode` (enum: static, dynamic), `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
 
 ## Get a Private Wireless Gateway
 
@@ -637,11 +665,11 @@ private_wireless_gateway = client.private_wireless_gateways.retrieve("6a09cdc3-8
 puts(private_wireless_gateway)
 ```
 
-Returns: `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
+Returns: `address_mode` (enum: static, dynamic), `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
 
 ## Delete a Private Wireless Gateway
 
-Deletes the Private Wireless Gateway.
+Permanently deletes the specified Private Wireless Gateway from your account.
 
 `DELETE /private_wireless_gateways/{id}`
 
@@ -651,11 +679,11 @@ private_wireless_gateway = client.private_wireless_gateways.delete("6a09cdc3-894
 puts(private_wireless_gateway)
 ```
 
-Returns: `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
+Returns: `address_mode` (enum: static, dynamic), `assigned_resources` (array[object]), `created_at` (string), `id` (uuid), `ip_range` (string), `name` (string), `network_id` (uuid), `record_type` (string), `region_code` (string), `status` (object), `updated_at` (string)
 
 ## List all Public Internet Gateways
 
-List all Public Internet Gateways.
+Returns a paginated list of the public internet gateways on your account, with support for filtering.
 
 `GET /public_internet_gateways`
 
@@ -669,7 +697,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `network_id` (uuid
 
 ## Create a Public Internet Gateway
 
-Create a new Public Internet Gateway.
+Requests creation of a public internet gateway on the specified network, giving the network internet egress. Creation is asynchronous, so the request is accepted and completes in the background.
 
 `POST /public_internet_gateways`
 
@@ -685,7 +713,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `network_id` (uuid
 
 ## Retrieve a Public Internet Gateway
 
-Retrieve a Public Internet Gateway.
+Returns the details of a single public internet gateway by its identifier.
 
 `GET /public_internet_gateways/{id}`
 
@@ -699,7 +727,7 @@ Returns: `created_at` (string), `id` (uuid), `name` (string), `network_id` (uuid
 
 ## Delete a Public Internet Gateway
 
-Delete a Public Internet Gateway.
+Deletes the specified public internet gateway, removing internet egress through it.
 
 `DELETE /public_internet_gateways/{id}`
 
@@ -727,7 +755,7 @@ Returns: `code` (string), `created_at` (string), `name` (string), `record_type` 
 
 ## List all Virtual Cross Connects
 
-List all Virtual Cross Connects.
+Returns a paginated list of the virtual cross connects on your account, with support for filtering.
 
 `GET /virtual_cross_connects`
 
@@ -757,7 +785,7 @@ Returns: `bandwidth_mbps` (number), `bgp_asn` (number), `cloud_provider` (enum: 
 
 ## Retrieve a Virtual Cross Connect
 
-Retrieve a Virtual Cross Connect.
+Returns the details of a single virtual cross connect by its identifier.
 
 `GET /virtual_cross_connects/{id}`
 
@@ -787,7 +815,7 @@ Returns: `bandwidth_mbps` (number), `bgp_asn` (number), `cloud_provider` (enum: 
 
 ## Delete a Virtual Cross Connect
 
-Delete a Virtual Cross Connect.
+Deletes the specified virtual cross connect from your account.
 
 `DELETE /virtual_cross_connects/{id}`
 
@@ -815,7 +843,7 @@ Returns: `available_bandwidth` (array[number]), `cloud_provider` (enum: aws, azu
 
 ## List all WireGuard Interfaces
 
-List all WireGuard Interfaces.
+Returns a paginated list of the WireGuard interfaces on your account, with support for filtering.
 
 `GET /wireguard_interfaces`
 
@@ -845,7 +873,7 @@ Returns: `created_at` (string), `enable_sip_trunking` (boolean), `endpoint` (str
 
 ## Retrieve a WireGuard Interfaces
 
-Retrieve a WireGuard Interfaces.
+Returns the details of a single WireGuard interface by its identifier.
 
 `GET /wireguard_interfaces/{id}`
 
@@ -859,7 +887,7 @@ Returns: `created_at` (string), `enable_sip_trunking` (boolean), `endpoint` (str
 
 ## Delete a WireGuard Interface
 
-Delete a WireGuard Interface.
+Deletes the specified WireGuard interface from its network.
 
 `DELETE /wireguard_interfaces/{id}`
 
@@ -873,7 +901,7 @@ Returns: `created_at` (string), `enable_sip_trunking` (boolean), `endpoint` (str
 
 ## List all WireGuard Peers
 
-List all WireGuard peers.
+Returns a paginated list of your WireGuard peers, with support for filtering.
 
 `GET /wireguard_peers`
 
@@ -903,7 +931,7 @@ Returns: `created_at` (string), `id` (uuid), `last_seen` (string), `private_key`
 
 ## Retrieve the WireGuard Peer
 
-Retrieve the WireGuard peer.
+Returns the details of a single WireGuard peer by its identifier.
 
 `GET /wireguard_peers/{id}`
 
@@ -917,7 +945,7 @@ Returns: `created_at` (string), `id` (uuid), `last_seen` (string), `private_key`
 
 ## Update the WireGuard Peer
 
-Update the WireGuard peer.
+Updates the specified WireGuard peer and returns the updated peer.
 
 `PATCH /wireguard_peers/{id}`
 
@@ -933,7 +961,7 @@ Returns: `created_at` (string), `id` (uuid), `last_seen` (string), `private_key`
 
 ## Delete the WireGuard Peer
 
-Delete the WireGuard peer.
+Deletes the specified WireGuard peer from its interface.
 
 `DELETE /wireguard_peers/{id}`
 

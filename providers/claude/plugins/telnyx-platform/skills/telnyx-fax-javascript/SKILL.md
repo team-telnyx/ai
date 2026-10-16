@@ -148,6 +148,8 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 
 ## View a list of faxes
 
+Retrieve a paginated list of faxes sent or received on your account.
+
 `GET /faxes`
 
 ```javascript
@@ -157,7 +159,7 @@ for await (const fax of client.faxes.list()) {
 }
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Send a fax
 
@@ -178,9 +180,11 @@ const fax = await client.faxes.create({
 console.log(fax.data);
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## View a fax
+
+Returns the details of a single fax, including its current status.
 
 `GET /faxes/{id}`
 
@@ -190,9 +194,11 @@ const fax = await client.faxes.retrieve('182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e');
 console.log(fax.data);
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Delete a fax
+
+Delete a fax resource from your account.
 
 `DELETE /faxes/{id}`
 
@@ -306,7 +312,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.failure_reason` | enum: rejected | Cause of the sending failure |
+| `data.payload.failure_reason` | string | Customer-facing cause of the fax failure. |
+| `data.payload.internal_failure_reason` | string | Internal, more granular cause of the fax failure. |
 | `data.payload.status` | enum: failed | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |

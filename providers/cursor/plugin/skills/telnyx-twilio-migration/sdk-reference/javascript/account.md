@@ -69,6 +69,8 @@ Returns: `alternate_resource_id` (string | null), `change_made_by` (enum: telnyx
 
 ## Get user balance details
 
+Retrieve the current balance, available credit, and credit limit for your account.
+
 `GET /balance`
 
 ```javascript
@@ -127,7 +129,7 @@ Returns: `carrier` (string), `carrier_fee` (string), `cld` (string), `cli` (stri
 
 ## List invoices
 
-Retrieve a paginated list of invoices.
+Returns a paginated list of your invoices, with support for sorting.
 
 `GET /invoices`
 
@@ -186,7 +188,7 @@ Returns: `enabled` (boolean), `id` (string), `invoice_enabled` (boolean), `prefe
 
 ## List User Tags
 
-List all user tags.
+Returns the user tags defined on your account, with support for filtering. Tags help organize resources such as phone numbers.
 
 `GET /user_tags`
 
@@ -199,6 +201,8 @@ console.log(userTags.data);
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
 
 ## Create a stored payment transaction
+
+Create a transaction that charges a stored payment method on the account.
 
 `POST /v2/payment/stored_payment_transactions` — Required: `amount`
 

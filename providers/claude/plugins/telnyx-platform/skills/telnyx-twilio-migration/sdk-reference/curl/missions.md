@@ -51,7 +51,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List missions
 
-List all missions for the organization
+Returns a paginated list of all mission definitions in your organization. Missions describe a goal and the tools, knowledge bases, and MCP servers agents may use to accomplish it.
 
 `GET /ai/missions`
 
@@ -63,7 +63,7 @@ Returns: `created_at` (date-time), `description` (string), `execution_mode` (enu
 
 ## Create mission
 
-Create a new mission definition
+Creates a new mission definition from the provided configuration and returns the created mission. Execute the mission by starting runs against it.
 
 `POST /ai/missions` — Required: `name`
 
@@ -75,7 +75,11 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "my-resource"
+  "name": "Name",
+  "description": "Description",
+  "model": "Model",
+  "instructions": "Instructions",
+  "execution_mode": "external"
 }' \
   "https://api.telnyx.com/v2/ai/missions"
 ```
@@ -84,7 +88,7 @@ Returns: `created_at` (date-time), `description` (string), `execution_mode` (enu
 
 ## List recent events
 
-List recent events across all missions
+Returns a paginated list of recent events across every mission in your organization, optionally filtered by event type. Useful for building activity feeds or monitoring dashboards.
 
 `GET /ai/missions/events`
 
@@ -96,7 +100,7 @@ Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `
 
 ## List recent runs
 
-List recent runs across all missions
+Returns a paginated list of recent runs across every mission in your organization, optionally filtered by run status. Useful for monitoring overall mission activity without querying each mission individually.
 
 `GET /ai/missions/runs`
 
@@ -120,7 +124,7 @@ Returns: `created_at` (date-time), `description` (string), `execution_mode` (enu
 
 ## Update mission
 
-Update a mission definition
+Replaces the specified mission's definition with the provided configuration and returns the updated mission.
 
 `PUT /ai/missions/{mission_id}`
 
@@ -131,6 +135,13 @@ curl \
   -X PUT \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "name": "Name",
+  "description": "Description",
+  "model": "Model",
+  "instructions": "Instructions",
+  "execution_mode": "external"
+}' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}"
 ```
 
@@ -138,7 +149,7 @@ Returns: `created_at` (date-time), `description` (string), `execution_mode` (enu
 
 ## Delete mission
 
-Delete a mission
+Permanently deletes the specified mission definition and returns no content on success.
 
 `DELETE /ai/missions/{mission_id}`
 
@@ -151,7 +162,7 @@ curl \
 
 ## Clone mission
 
-Clone an existing mission
+Creates a copy of the specified mission as a new mission definition, so you can iterate on its configuration without modifying the original.
 
 `POST /ai/missions/{mission_id}/clone`
 
@@ -165,7 +176,7 @@ curl \
 
 ## List knowledge bases
 
-List all knowledge bases for a mission
+Returns the knowledge bases attached to the specified mission. Knowledge bases provide reference content agents can draw on during runs.
 
 `GET /ai/missions/{mission_id}/knowledge-bases`
 
@@ -189,7 +200,7 @@ curl \
 
 ## Get knowledge base
 
-Get a specific knowledge base by ID
+Returns the details of a single knowledge base attached to the specified mission.
 
 `GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
 
@@ -199,7 +210,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mi
 
 ## Update knowledge base
 
-Update a knowledge base definition
+Replaces the definition of the specified knowledge base on this mission.
 
 `PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
 
@@ -213,7 +224,7 @@ curl \
 
 ## Delete knowledge base
 
-Delete a knowledge base from a mission
+Detaches the specified knowledge base from the mission so its content is no longer available to agents in subsequent runs.
 
 `DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}`
 
@@ -226,7 +237,7 @@ curl \
 
 ## List MCP servers
 
-List all MCP servers for a mission
+Returns the MCP servers configured on the specified mission. MCP servers expose external tools and data sources agents can use during runs.
 
 `GET /ai/missions/{mission_id}/mcp-servers`
 
@@ -236,7 +247,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mi
 
 ## Create MCP server
 
-Create a new MCP server for a mission
+Adds an MCP server to the specified mission, making the server's tools available to agents during runs of this mission.
 
 `POST /ai/missions/{mission_id}/mcp-servers`
 
@@ -250,7 +261,7 @@ curl \
 
 ## Get MCP server
 
-Get a specific MCP server by ID
+Returns the configuration of a single MCP server attached to the specified mission.
 
 `GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
 
@@ -260,7 +271,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mi
 
 ## Update MCP server
 
-Update an MCP server definition
+Replaces the configuration of the specified MCP server on this mission.
 
 `PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
 
@@ -274,7 +285,7 @@ curl \
 
 ## Delete MCP server
 
-Delete an MCP server from a mission
+Removes the specified MCP server from the mission, revoking agent access to its tools in subsequent runs.
 
 `DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}`
 
@@ -287,7 +298,7 @@ curl \
 
 ## List runs for mission
 
-List all runs for a specific mission
+Returns a paginated list of runs for the specified mission, optionally filtered by run status, so you can track the mission's execution history over time.
 
 `GET /ai/missions/{mission_id}/runs`
 
@@ -299,7 +310,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## Start a run
 
-Start a new run for a mission
+Starts a new run of the specified mission and returns the created run object. Track its progress through the run detail, plan, and events endpoints.
 
 `POST /ai/missions/{mission_id}/runs`
 
@@ -310,6 +321,14 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "input": {
+    "objective": "Summarize yesterday's failed call attempts"
+  },
+  "metadata": {
+    "requested_by": "docs-example"
+  }
+}' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs"
 ```
 
@@ -317,7 +336,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## Get run details
 
-Get details of a specific run
+Returns the full details of a single run, including its current status. Use this to poll an in-flight run or inspect the outcome of a completed one.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}`
 
@@ -329,7 +348,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## Update run
 
-Update run status and/or result
+Updates a run's status and/or result and returns the updated run object. Typically used by executing agents to report progress or record the final outcome.
 
 `PATCH /ai/missions/{mission_id}/runs/{run_id}`
 
@@ -340,6 +359,10 @@ curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "status": "succeeded",
+  "result_summary": "Processed 24 customer records successfully."
+}' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}"
 ```
 
@@ -347,7 +370,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## Cancel run
 
-Cancel a running or paused run
+Cancels a running or paused run and returns the updated run object. A cancelled run stops executing; start a new run to execute the mission again.
 
 `POST /ai/missions/{mission_id}/runs/{run_id}/cancel`
 
@@ -363,7 +386,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## List events
 
-List events for a run (paginated)
+Returns a paginated list of events logged for the specified run, filterable by event type, plan step, and agent, so you can reconstruct exactly what happened during execution.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}/events`
 
@@ -375,7 +398,7 @@ Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `
 
 ## Log event
 
-Log an event for a run
+Logs a new event against the specified run and returns the created event. Events form the run's audit trail and can reference a plan step or agent.
 
 `POST /ai/missions/{mission_id}/runs/{run_id}/events` — Required: `type`, `summary`
 
@@ -388,7 +411,10 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "type": "status_change",
-  "summary": "Brief task summary"
+  "summary": "Summary",
+  "step_id": "Step Id",
+  "agent_id": "Agent Id",
+  "idempotency_key": "Idempotency Key"
 }' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}/events"
 ```
@@ -397,7 +423,7 @@ Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `
 
 ## Get event details
 
-Get details of a specific event
+Returns the details of a single event logged for the specified run, including its type and payload.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}`
 
@@ -409,7 +435,7 @@ Returns: `agent_id` (string), `event_id` (string), `idempotency_key` (string), `
 
 ## Pause run
 
-Pause a running run
+Pauses a currently running run and returns the updated run object. Execution halts until the run is resumed.
 
 `POST /ai/missions/{mission_id}/runs/{run_id}/pause`
 
@@ -425,7 +451,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## Get plan
 
-Get the plan (all steps) for a run
+Returns the plan for the specified run, including all plan steps and their statuses, so you can see how the mission was decomposed and how far execution has progressed.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}/plan`
 
@@ -437,7 +463,7 @@ Returns: `completed_at` (date-time), `description` (string), `metadata` (object)
 
 ## Create initial plan
 
-Create the initial plan for a run
+Creates the initial plan for the specified run from the provided steps and returns the created plan steps. Progress is subsequently reported by updating individual steps.
 
 `POST /ai/missions/{mission_id}/runs/{run_id}/plan` — Required: `steps`
 
@@ -448,7 +474,12 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "steps": [
-    "Initiate the task"
+    {
+      "step_id": "Step Id",
+      "description": "Description",
+      "sequence": 0,
+      "parent_step_id": "Parent Step Id"
+    }
   ]
 }' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}/plan"
@@ -469,7 +500,12 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "steps": [
-    "Initiate the task"
+    {
+      "step_id": "Step Id",
+      "description": "Description",
+      "sequence": 0,
+      "parent_step_id": "Parent Step Id"
+    }
   ]
 }' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}/plan/steps"
@@ -479,7 +515,7 @@ Returns: `completed_at` (date-time), `description` (string), `metadata` (object)
 
 ## Get step details
 
-Get details of a specific plan step
+Returns the details of a single plan step within a run's plan, including its status.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
 
@@ -491,7 +527,7 @@ Returns: `completed_at` (date-time), `description` (string), `metadata` (object)
 
 ## Update step status
 
-Update the status of a plan step
+Updates the status of a single plan step and returns the updated step. Typically called by the executing agent as it works through the plan.
 
 `PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}`
 
@@ -502,6 +538,9 @@ curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "status": "pending"
+}' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}"
 ```
 
@@ -509,7 +548,7 @@ Returns: `completed_at` (date-time), `description` (string), `metadata` (object)
 
 ## Resume run
 
-Resume a paused run
+Resumes a previously paused run and returns the updated run object, letting execution continue from where it was paused.
 
 `POST /ai/missions/{mission_id}/runs/{run_id}/resume`
 
@@ -525,7 +564,7 @@ Returns: `error` (string), `finished_at` (date-time), `input` (object), `metadat
 
 ## List linked Telnyx agents
 
-List all Telnyx agents linked to a run
+Returns the Telnyx agents currently linked to the specified run. Linked agents participate in executing the run's plan.
 
 `GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents`
 
@@ -547,7 +586,7 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "telnyx_agent_id": "550e8400-e29b-41d4-a716-446655440000"
+  "telnyx_agent_id": "Telnyx Agent Id"
 }' \
   "https://api.telnyx.com/v2/ai/missions/{mission_id}/runs/{run_id}/telnyx-agents"
 ```
@@ -556,7 +595,7 @@ Returns: `created_at` (date-time), `run_id` (string), `telnyx_agent_id` (string)
 
 ## Unlink Telnyx agent
 
-Unlink a Telnyx agent from a run
+Unlinks the specified Telnyx agent from the run so it no longer participates in execution. The run itself and its history are unaffected.
 
 `DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}`
 
@@ -569,7 +608,7 @@ curl \
 
 ## List tools
 
-List all tools for a mission
+Returns the tools configured on the specified mission. Tools define the actions agents may invoke while executing the mission's runs.
 
 `GET /ai/missions/{mission_id}/tools`
 
@@ -579,7 +618,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mi
 
 ## Create tool
 
-Create a new tool for a mission
+Adds a new tool to the specified mission, defining an action agents can invoke during runs of this mission.
 
 `POST /ai/missions/{mission_id}/tools`
 
@@ -593,7 +632,7 @@ curl \
 
 ## Get tool
 
-Get a specific tool by ID
+Returns the definition of a single tool configured on the specified mission.
 
 `GET /ai/missions/{mission_id}/tools/{tool_id}`
 
@@ -603,7 +642,7 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/mi
 
 ## Update tool
 
-Update a tool definition
+Replaces the definition of the specified tool on this mission.
 
 `PUT /ai/missions/{mission_id}/tools/{tool_id}`
 
@@ -617,7 +656,7 @@ curl \
 
 ## Delete tool
 
-Delete a tool from a mission
+Removes the specified tool from the mission so agents can no longer invoke it in subsequent runs.
 
 `DELETE /ai/missions/{mission_id}/tools/{tool_id}`
 
