@@ -177,6 +177,17 @@ TELNYX_TEST_INCLUDE_EXTERNAL=1 npm test
 
 Artifacts are written to `test/.artifacts/`, including raw per-model outputs and a `results.json` summary. External-provider models are reported separately and, if included explicitly, marked as skipped because the plugin intentionally does not register them without provider-specific key support.
 
+### Streamed tool-call arguments
+
+[team-telnyx/ai#248](https://github.com/team-telnyx/ai/issues/248) reported GLM models re-emitting overlapping fragments inside streamed `function.arguments` (a Windows path came back as `...\worker.jsrker.js`: valid JSON, wrong value). The backend no longer does this, and a direct probe guards against it coming back. It needs only `TELNYX_API_KEY` (no `opencode` binary) and streams a tool call with a long Windows path against every Telnyx-hosted text model (the same set the plugin registers):
+
+```bash
+npm run test:stream-args
+TELNYX_TEST_MODEL_MATCH=GLM TELNYX_TEST_RUNS=5 npm run test:stream-args
+```
+
+It exits non-zero if any run returns a `filePath` that differs from the one requested.
+
 ## Troubleshooting
 
 ### `Unknown provider "telnyx"`
