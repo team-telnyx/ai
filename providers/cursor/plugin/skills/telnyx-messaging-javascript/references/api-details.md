@@ -25,6 +25,7 @@
 
 | Field | Type |
 |-------|------|
+| `body` | object |
 | `cc` | array[object] |
 | `completed_at` | date-time |
 | `cost` | object \| null |
@@ -50,7 +51,7 @@
 | `tcr_campaign_registered` | string \| null |
 | `text` | string |
 | `to` | array[object] |
-| `type` | enum: SMS, MMS |
+| `type` | enum: SMS, MMS, RCS |
 | `valid_until` | date-time |
 | `wait_seconds` | float |
 | `webhook_failover_url` | url |
@@ -160,6 +161,7 @@
 | `daily_spend_limit` | string |
 | `daily_spend_limit_enabled` | boolean |
 | `enabled` | boolean |
+| `features` | object \| null |
 | `health_webhook_url` | url |
 | `id` | uuid |
 | `mms_fall_back_to_sms` | boolean |
@@ -335,12 +337,12 @@
 |-------|------|-------------|
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
 | `data.payload.record_type` | enum: message | Identifies the type of the resource. |
 | `data.payload.direction` | enum: outbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, RCS | The type of message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | uuid | The id of the organization the messaging profile belongs to. |
 | `data.payload.to` | array[object] |  |
@@ -377,13 +379,14 @@
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
+| `data.payload.autoresponse_type` | string | Automatic response type triggered by an inbound opt-in, opt-out, or help keyword. |
 | `data.payload.record_type` | enum: message | Identifies the type of the resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | string | Unique identifier for a messaging profile. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
 | `data.payload.num_chars` | integer | The number of characters in the message text |

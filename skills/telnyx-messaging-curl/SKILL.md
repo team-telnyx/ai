@@ -174,7 +174,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -190,9 +190,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -437,7 +437,12 @@ Before using any operation below, read [the optional-parameters section](referen
 | Create an alphanumeric sender ID | HTTP only | `POST /alphanumeric_sender_ids` | Create or provision an additional resource when the core tasks do not cover this flow. | `alphanumeric_sender_id`, `messaging_profile_id` |
 | Retrieve an alphanumeric sender ID | HTTP only | `GET /alphanumeric_sender_ids/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Delete an alphanumeric sender ID | HTTP only | `DELETE /alphanumeric_sender_ids/{id}` | Remove, detach, or clean up an existing resource. | `id` |
+| Send a message using an alphanumeric sender ID | HTTP only | `POST /messages/alphanumeric/sender/id` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `text`, `messaging_profile_id` |
 | Retrieve group MMS messages | HTTP only | `GET /messages/group/{message_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `message_id` |
+| List messaging hosted numbers | HTTP only | `GET /messaging/hosted/numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Regenerate messaging profile secret | HTTP only | `POST /messaging/profiles/{id}/actions/regenerate/secret` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `id` |
+| List alphanumeric sender IDs for a messaging profile | HTTP only | `GET /messaging/profiles/{id}/alphanumeric/sender/ids` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| Get detailed messaging profile metrics | HTTP only | `GET /messaging/profiles/{id}/metrics` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | List messaging hosted numbers | HTTP only | `GET /messaging_hosted_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Retrieve a messaging hosted number | HTTP only | `GET /messaging_hosted_numbers/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Update a messaging hosted number | HTTP only | `PATCH /messaging_hosted_numbers/{id}` | Modify an existing resource without recreating it. | `id` |
