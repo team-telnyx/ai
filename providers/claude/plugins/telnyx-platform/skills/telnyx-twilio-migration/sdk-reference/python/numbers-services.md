@@ -97,7 +97,7 @@ Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `cre
 
 ## Create a dynamic emergency address.
 
-Creates a dynamic emergency address.
+Creates a dynamic emergency address, the validated physical location used when provisioning dynamic emergency endpoints.
 
 `POST /dynamic_emergency_addresses` — Required: `house_number`, `street_name`, `locality`, `administrative_area`, `postal_code`, `country_code`
 
@@ -163,7 +163,7 @@ Returns: `callback_number` (string), `caller_name` (string), `created_at` (strin
 
 ## Create a dynamic emergency endpoint.
 
-Creates a dynamic emergency endpoints.
+Creates a dynamic emergency endpoint, associating a callback number and location with a device for emergency calling.
 
 `POST /dynamic_emergency_endpoints` — Required: `dynamic_emergency_address_id`, `callback_number`, `caller_name`
 
@@ -279,15 +279,15 @@ voicemail = client.phone_numbers.voicemail.retrieve(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ## Create voicemail
 
-Create voicemail settings for a phone number
+Create voicemail settings for a phone number. You can also configure a custom greeting by setting the `greeting` object: use `mode` `custom_greeting` together with a `media_name` that points to an audio file uploaded through the Media Storage API, or `mode` `default` to use the standard system greeting.
 
 `POST /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+Optional: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ```python
 voicemail = client.phone_numbers.voicemail.create(
@@ -296,15 +296,15 @@ voicemail = client.phone_numbers.voicemail.create(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ## Update voicemail
 
-Update voicemail settings for a phone number
+Update voicemail settings for a phone number. You can also configure a custom greeting by setting the `greeting` object: use `mode` `custom_greeting` together with a `media_name` that points to an audio file uploaded through the Media Storage API, or `mode` `default` to use the standard system greeting.
 
 `PATCH /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+Optional: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ```python
 voicemail = client.phone_numbers.voicemail.update(
@@ -313,4 +313,4 @@ voicemail = client.phone_numbers.voicemail.update(
 print(voicemail.data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)

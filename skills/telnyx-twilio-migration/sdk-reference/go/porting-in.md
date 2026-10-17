@@ -85,7 +85,7 @@ Returns: `fast_portable` (boolean), `not_portable_reason` (string), `phone_numbe
 
 ## List all porting events
 
-Returns a list of all porting events.
+Returns a paginated list of porting-related events on your account, such as status changes on porting orders. Supports filtering and is useful for auditing or reconciling webhook deliveries.
 
 `GET /porting/events`
 
@@ -101,7 +101,7 @@ Returns: `available_notification_methods` (array[string]), `event_type` (enum: p
 
 ## Show a porting event
 
-Show a specific porting event.
+Returns the details of a single porting event, including its type and payload.
 
 `GET /porting/events/{id}`
 
@@ -117,7 +117,7 @@ Returns: `available_notification_methods` (array[string]), `event_type` (enum: p
 
 ## Republish a porting event
 
-Republish a specific porting event.
+Republishes the specified porting event, triggering re-delivery of the corresponding webhook to your account.
 
 `POST /porting/events/{id}/republish`
 
@@ -130,7 +130,7 @@ Republish a specific porting event.
 
 ## List LOA configurations
 
-List the LOA configurations.
+Returns a paginated list of your LOA (Letter of Authorization) configurations. LOA configurations customize the company details and branding used on generated LOA documents.
 
 `GET /porting/loa_configurations`
 
@@ -146,7 +146,7 @@ Returns: `address` (object), `company_name` (string), `contact` (object), `creat
 
 ## Create a LOA configuration
 
-Create a LOA configuration.
+Creates a new LOA configuration with your company details and branding for use when generating LOA documents for porting orders.
 
 `POST /porting/loa_configurations`
 
@@ -210,7 +210,7 @@ Preview the LOA template that would be generated without need to create LOA conf
 
 ## Retrieve a LOA configuration
 
-Retrieve a specific LOA configuration.
+Returns the details of a single LOA (Letter of Authorization) configuration by its identifier.
 
 `GET /porting/loa_configurations/{id}`
 
@@ -226,7 +226,7 @@ Returns: `address` (object), `company_name` (string), `contact` (object), `creat
 
 ## Update a LOA configuration
 
-Update a specific LOA configuration.
+Updates the specified LOA configuration with the provided fields and returns the updated configuration.
 
 `PATCH /porting/loa_configurations/{id}`
 
@@ -263,7 +263,7 @@ Returns: `address` (object), `company_name` (string), `contact` (object), `creat
 
 ## Delete a LOA configuration
 
-Delete a specific LOA configuration.
+Permanently deletes the specified LOA configuration so it can no longer be used when generating LOA documents.
 
 `DELETE /porting/loa_configurations/{id}`
 
@@ -276,7 +276,7 @@ Delete a specific LOA configuration.
 
 ## Preview a LOA configuration
 
-Preview a specific LOA configuration.
+Renders a preview of the LOA document produced by this configuration so you can verify company details and branding before using it on porting orders.
 
 `GET /porting/loa_configurations/{id}/preview`
 
@@ -327,7 +327,7 @@ Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (
 
 ## Retrieve a report
 
-Retrieve a specific report generated.
+Returns the details of a previously requested porting report, including its status and parameters.
 
 `GET /porting/reports/{id}`
 
@@ -343,7 +343,7 @@ Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (
 
 ## List available carriers in the UK
 
-List available carriers in the UK.
+Returns the list of UK carriers available for porting, for use when preparing porting orders for UK numbers.
 
 `GET /porting/uk_carriers`
 
@@ -359,7 +359,7 @@ Returns: `alternative_cupids` (array[string]), `created_at` (date-time), `cupid`
 
 ## List all porting orders
 
-Returns a list of your porting order.
+Returns a paginated list of your porting orders. Supports filtering and sorting, and can optionally include the phone numbers attached to each order.
 
 `GET /porting_orders`
 
@@ -371,11 +371,11 @@ Returns a list of your porting order.
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## Create a porting order
 
-Creates a new porting order object.
+Creates a new porting order to bring phone numbers from another carrier to Telnyx. Complete the order's requirements and then confirm it to submit the port.
 
 `POST /porting_orders` — Required: `phone_numbers`
 
@@ -391,7 +391,7 @@ Optional: `customer_group_reference` (string), `customer_reference` (string | nu
 	fmt.Printf("%+v\n", portingOrder.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## List all exception types
 
@@ -459,7 +459,7 @@ Retrieves the details of an existing porting order.
 	fmt.Printf("%+v\n", portingOrder.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## Edit a porting order
 
@@ -481,7 +481,7 @@ Optional: `activation_settings` (object), `customer_group_reference` (string), `
 	fmt.Printf("%+v\n", portingOrder.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## Delete a porting order
 
@@ -514,6 +514,8 @@ Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-deman
 
 ## Cancel a porting order
 
+Requests cancellation of the porting order and returns the updated order.
+
 `POST /porting_orders/{id}/actions/cancel`
 
 ```go
@@ -524,11 +526,11 @@ Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-deman
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## Submit a porting order.
 
-Confirm and submit your porting order.
+Confirms the porting order and submits it for processing. Make sure all required information and documents are attached before confirming.
 
 `POST /porting_orders/{id}/actions/confirm`
 
@@ -540,7 +542,7 @@ Confirm and submit your porting order.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
+Returns: `activation_settings` (object), `additional_steps` (array[string]), `created_at` (date-time), `customer_group_reference` (string | null), `customer_reference` (string | null), `description` (string), `documents` (object), `end_user` (object), `id` (uuid), `messaging` (object), `misc` (object), `old_service_provider_ocn` (string), `parent_support_key` (string | null), `phone_number_configuration` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `phone_numbers` (array[object]), `porting_phone_numbers_count` (integer), `record_type` (string), `requirements` (array[object]), `requirements_met` (boolean), `status` (object), `support_key` (string | null), `updated_at` (date-time), `user_feedback` (object), `user_id` (uuid), `webhook_url` (uri)
 
 ## Share a porting order
 
@@ -584,7 +586,7 @@ Returns: `activate_at` (date-time), `activation_type` (enum: scheduled, on-deman
 
 ## Retrieve a porting activation job
 
-Returns a porting activation job.
+Returns the details of a single activation job for the porting order, including its current status.
 
 `GET /porting_orders/{id}/activation_jobs/{activationJobId}`
 
@@ -744,6 +746,8 @@ Optional: `body` (string)
 Returns: `body` (string), `created_at` (date-time), `id` (uuid), `porting_order_id` (uuid), `record_type` (string), `user_type` (enum: admin, user, system)
 
 ## Download a porting order loa template
+
+Downloads the Letter of Authorization (LOA) template document for this porting order, optionally rendered with a specific LOA configuration.
 
 `GET /porting_orders/{id}/loa_template`
 
@@ -979,11 +983,11 @@ Returns a list of all phone number blocks of a porting order.
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
 
 ## Create a phone number block
 
-Creates a new phone number block.
+Creates a phone number block on the porting order, representing a contiguous range of phone numbers to be ported together.
 
 `POST /porting_orders/{porting_order_id}/phone_number_blocks`
 
@@ -1008,11 +1012,11 @@ Creates a new phone number block.
 	fmt.Printf("%+v\n", phoneNumberBlock.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
 
 ## Delete a phone number block
 
-Deletes a phone number block.
+Deletes the specified phone number block from the porting order.
 
 `DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}`
 
@@ -1030,7 +1034,7 @@ Deletes a phone number block.
 	fmt.Printf("%+v\n", phoneNumberBlock.Data)
 ```
 
-Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
+Returns: `activation_ranges` (array[object]), `country_code` (string), `created_at` (date-time), `id` (uuid), `phone_number_range` (object), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `record_type` (string), `updated_at` (date-time)
 
 ## List all phone number extensions
 
@@ -1054,7 +1058,7 @@ Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extensi
 
 ## Create a phone number extension
 
-Creates a new phone number extension.
+Creates a phone number extension on the porting order, mapping extension ranges to one of the order's phone numbers.
 
 `POST /porting_orders/{porting_order_id}/phone_number_extensions`
 
@@ -1084,7 +1088,7 @@ Returns: `activation_ranges` (array[object]), `created_at` (date-time), `extensi
 
 ## Delete a phone number extension
 
-Deletes a phone number extension.
+Deletes the specified phone number extension from the porting order.
 
 `DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}`
 
@@ -1118,4 +1122,4 @@ Returns a list of your porting phone numbers.
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `activation_status` (enum: New, Pending, Conflict, Cancel Pending, Failed, Concurred, Activate RDY, Disconnect Pending, Concurrence Sent, Old, Sending, Active, Cancelled), `phone_number` (string), `phone_number_type` (enum: landline, local, mobile, national, shared_cost, toll_free), `portability_status` (enum: pending, confirmed, provisional), `porting_order_id` (uuid), `porting_order_status` (enum: draft, in-process, submitted, exception, foc-date-confirmed, cancel-pending, ported, cancelled), `record_type` (string), `requirements_status` (enum: requirement-info-pending, requirement-info-under-review, requirement-info-exception, approved), `support_key` (string)
+Returns: `activation_status` (enum: New, Pending, Conflict, Cancel Pending, Failed, Concurred, Activate RDY, Disconnect Pending, Concurrence Sent, Old, Sending, Active, Cancelled), `phone_number` (string), `phone_number_type` (enum: landline, local, mobile, multipurpose, national, other, shared_cost, toll_free), `portability_status` (enum: pending, confirmed, provisional), `porting_order_id` (uuid), `porting_order_status` (enum: draft, in-process, submitted, exception, foc-date-confirmed, cancel-pending, ported, cancelled), `record_type` (string), `requirements_status` (enum: requirement-info-pending, requirement-info-under-review, requirement-info-exception, approved), `support_key` (string)

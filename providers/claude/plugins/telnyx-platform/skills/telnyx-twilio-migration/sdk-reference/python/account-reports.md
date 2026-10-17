@@ -67,6 +67,8 @@ Returns: `call_leg_id` (string), `call_session_id` (string), `event_timestamp` (
 
 ## Create a ledger billing group report
 
+Create a ledger billing group report, which aggregates ledger activity by billing group.
+
 `POST /ledger_billing_group_reports`
 
 Optional: `month` (integer), `year` (integer)
@@ -82,6 +84,8 @@ print(ledger_billing_group_report.data)
 Returns: `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (enum: ledger_billing_group_report), `report_url` (uri), `status` (enum: pending, complete, failed, deleted), `updated_at` (date-time)
 
 ## Get a ledger billing group report
+
+Retrieve the details and status of a previously created ledger billing group report.
 
 `GET /ledger_billing_group_reports/{id}`
 
@@ -264,7 +268,7 @@ Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at`
 
 ## Get an MDR usage report
 
-Fetch single MDR usage report by id.
+Returns a single MDR (Message Detail Record) usage report by its identifier, including its parameters and current status.
 
 `GET /legacy/reporting/usage_reports/messaging/{id}`
 
@@ -307,7 +311,7 @@ Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date
 
 ## Submit telco data usage report
 
-Submit a new telco data usage report
+Submits a new telco data (number lookup) usage report request. The report is generated asynchronously; retrieve it by its identifier once ready.
 
 `POST /legacy/reporting/usage_reports/number_lookup`
 
@@ -379,7 +383,7 @@ Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at`
 
 ## Get a CDR usage report
 
-Fetch single cdr usage report by id.
+Returns a single CDR (Call Detail Record) usage report by its identifier, including its parameters and current status.
 
 `GET /legacy/reporting/usage_reports/voice/{id}`
 
@@ -409,6 +413,8 @@ Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at`
 
 ## List CSV downloads
 
+Returns CSV export jobs created for account phone numbers, including each export's current status and pagination metadata.
+
 `GET /phone_numbers/csv_downloads`
 
 ```python
@@ -421,6 +427,8 @@ Returns: `id` (string), `record_type` (string), `status` (enum: pending, complet
 
 ## Create a CSV download
 
+Starts generation of a CSV export for phone numbers matching the supplied filters. The `csv_format` parameter selects the output format, and the response contains the resulting download record.
+
 `POST /phone_numbers/csv_downloads`
 
 ```python
@@ -431,6 +439,8 @@ print(csv_download.data)
 Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
 
 ## Retrieve a CSV download
+
+Returns the current status and download details for the CSV export identified by `id`.
 
 `GET /phone_numbers/csv_downloads/{id}`
 
@@ -524,7 +534,7 @@ Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections`
 
 ## Delete MDR Usage Report
 
-Delete messaging usage report by id
+Permanently deletes the specified messaging usage report by its identifier.
 
 `DELETE /reports/mdr_usage_reports/{id}`
 
@@ -539,6 +549,8 @@ Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections`
 
 ## Fetch all Mdr records
 
+Returns message detail records (MDRs) matching the provided criteria, such as date range, direction, status, and message type.
+
 `GET /reports/mdrs`
 
 ```python
@@ -550,7 +562,7 @@ Returns: `cld` (string), `cli` (string), `cost` (string), `created_at` (date-tim
 
 ## Fetches all Wdr records
 
-Fetch all Wdr records
+Returns wireless detail records (WDRs) matching the provided criteria, such as date range, SIM card, IMSI, or phone number, with pagination and sorting.
 
 `GET /reports/wdrs`
 
@@ -667,7 +679,7 @@ Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` 
 
 ## Get a Wireless Detail Record (WDR) Report
 
-Returns one specific WDR report
+Returns a single Wireless Detail Record (WDR) report by its identifier, including its parameters and current status.
 
 `GET /wireless/detail_records_reports/{id}`
 
@@ -682,7 +694,7 @@ Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` 
 
 ## Delete a Wireless Detail Record (WDR) Report
 
-Deletes one specific WDR report.
+Permanently deletes the specified Wireless Detail Record (WDR) report.
 
 `DELETE /wireless/detail_records_reports/{id}`
 

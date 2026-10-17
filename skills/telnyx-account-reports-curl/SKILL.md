@@ -75,6 +75,8 @@ Returns: `call_leg_id` (string), `call_session_id` (string), `event_timestamp` (
 
 ## Create a ledger billing group report
 
+Create a ledger billing group report, which aggregates ledger activity by billing group.
+
 `POST /ledger_billing_group_reports`
 
 Optional: `month` (integer), `year` (integer)
@@ -94,6 +96,8 @@ curl \
 Returns: `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (enum: ledger_billing_group_report), `report_url` (uri), `status` (enum: pending, complete, failed, deleted), `updated_at` (date-time)
 
 ## Get a ledger billing group report
+
+Retrieve the details and status of a previously created ledger billing group report.
 
 `GET /ledger_billing_group_reports/{id}`
 
@@ -267,7 +271,7 @@ Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at`
 
 ## Get an MDR usage report
 
-Fetch single MDR usage report by id.
+Returns a single MDR (Message Detail Record) usage report by its identifier, including its parameters and current status.
 
 `GET /legacy/reporting/usage_reports/messaging/{id}`
 
@@ -306,7 +310,7 @@ Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date
 
 ## Submit telco data usage report
 
-Submit a new telco data usage report
+Submits a new telco data (number lookup) usage report request. The report is generated asynchronously; retrieve it by its identifier once ready.
 
 `POST /legacy/reporting/usage_reports/number_lookup`
 
@@ -375,7 +379,7 @@ Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at`
 
 ## Get a CDR usage report
 
-Fetch single cdr usage report by id.
+Returns a single CDR (Call Detail Record) usage report by its identifier, including its parameters and current status.
 
 `GET /legacy/reporting/usage_reports/voice/{id}`
 
@@ -400,7 +404,306 @@ curl \
 
 Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
 
+## Get all MDR detailed report requests
+
+Retrieves all MDR detailed report requests for the authenticated user
+
+`GET /legacy_reporting/batch_detail_records/messaging`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/messaging"
+```
+
+Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+
+## Create a new MDR detailed report request
+
+Creates a new MDR detailed report request with the specified filters
+
+`POST /legacy_reporting/batch_detail_records/messaging` — Required: `start_time`, `end_time`
+
+Optional: `connections` (array[integer]), `directions` (array[integer]), `filters` (array[object]), `include_message_body` (boolean), `managed_accounts` (array[string]), `profiles` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `timezone` (string)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "start_time": "2024-02-01T00:00:00Z",
+  "end_time": "2024-02-12T23:59:59Z"
+}' \
+  "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/messaging"
+```
+
+Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+
+## Get a specific MDR detailed report request
+
+Retrieves a specific MDR detailed report request by ID
+
+`GET /legacy_reporting/batch_detail_records/messaging/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/messaging/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+
+## Delete a MDR detailed report request
+
+Deletes a specific MDR detailed report request by ID
+
+`DELETE /legacy_reporting/batch_detail_records/messaging/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/messaging/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `connections` (array[integer]), `created_at` (date-time), `directions` (array[string]), `end_date` (date-time), `filters` (array[object]), `id` (uuid), `profiles` (array[string]), `record_type` (string), `record_types` (array[string]), `report_name` (string), `report_url` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED), `updated_at` (date-time)
+
+## Get all CDR report requests
+
+Retrieves all CDR report requests for the authenticated user
+
+`GET /legacy_reporting/batch_detail_records/voice`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/voice"
+```
+
+Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+
+## Create a new CDR report request
+
+Creates a new CDR report request with the specified filters
+
+`POST /legacy_reporting/batch_detail_records/voice` — Required: `start_time`, `end_time`
+
+Optional: `call_types` (array[integer]), `connections` (array[integer]), `fields` (array[string]), `filters` (array[object]), `include_all_metadata` (boolean), `managed_accounts` (array[string]), `record_types` (array[integer]), `report_name` (string), `select_all_managed_accounts` (boolean), `source` (string), `timezone` (string)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "start_time": "2024-02-01T00:00:00Z",
+  "end_time": "2024-02-12T23:59:59Z"
+}' \
+  "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/voice"
+```
+
+Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+
+## Get available CDR report fields
+
+Retrieves all available fields that can be used in CDR reports
+
+`GET /legacy_reporting/batch_detail_records/voice/fields`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/voice/fields"
+```
+
+Returns: `Billing` (array[string]), `Interaction Data` (array[string]), `Number Information` (array[string]), `Telephony Data` (array[string])
+
+## Get a specific CDR report request
+
+Retrieves a specific CDR report request by ID
+
+`GET /legacy_reporting/batch_detail_records/voice/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/voice/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+
+## Delete a CDR report request
+
+Deletes a specific CDR report request by ID
+
+`DELETE /legacy_reporting/batch_detail_records/voice/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy_reporting/batch_detail_records/voice/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `call_types` (array[integer]), `connections` (array[integer]), `created_at` (string), `end_time` (string), `filters` (array[object]), `id` (string), `managed_accounts` (array[string]), `record_type` (string), `record_types` (array[integer]), `report_name` (string), `report_url` (string), `retry` (int32), `source` (string), `start_time` (string), `status` (int32), `timezone` (string), `updated_at` (string)
+
+## List MDR usage reports
+
+Fetch all previous requests for MDR usage reports.
+
+`GET /legacy_reporting/usage_reports/messaging`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/messaging"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Create a new legacy usage V2 MDR report request
+
+Creates a new legacy usage V2 MDR report request with the specified filters
+
+`POST /legacy_reporting/usage_reports/messaging`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/messaging"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Get an MDR usage report
+
+Returns a single MDR (Message Detail Record) usage report by its identifier, including its parameters and current status.
+
+`GET /legacy_reporting/usage_reports/messaging/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/messaging/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Delete a V2 legacy usage MDR report request
+
+Deletes a specific V2 legacy usage MDR report request by ID
+
+`DELETE /legacy_reporting/usage_reports/messaging/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/messaging/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `profiles` (array[string]), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## List telco data usage reports
+
+Retrieve a paginated list of telco data usage reports
+
+`GET /legacy_reporting/usage_reports/number_lookup`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/number_lookup"
+```
+
+Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+
+## Submit telco data usage report
+
+Submits a new telco data (number lookup) usage report request. The report is generated asynchronously; retrieve it by its identifier once ready.
+
+`POST /legacy_reporting/usage_reports/number_lookup`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/number_lookup"
+```
+
+Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+
+## Get telco data usage report by ID
+
+Retrieve a specific telco data usage report by its ID
+
+`GET /legacy_reporting/usage_reports/number_lookup/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/number_lookup/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `aggregation_type` (string), `created_at` (date-time), `end_date` (date), `id` (uuid), `managed_accounts` (array[string]), `record_type` (string), `report_url` (string), `result` (array[object]), `start_date` (date), `status` (string), `updated_at` (date-time)
+
+## Delete telco data usage report
+
+Delete a specific telco data usage report by its ID
+
+`DELETE /legacy_reporting/usage_reports/number_lookup/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/number_lookup/550e8400-e29b-41d4-a716-446655440000"
+```
+
+## List CDR usage reports
+
+Fetch all previous requests for cdr usage reports.
+
+`GET /legacy_reporting/usage_reports/voice`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/voice"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Create a new legacy usage V2 CDR report request
+
+Creates a new legacy usage V2 CDR report request with the specified filters
+
+`POST /legacy_reporting/usage_reports/voice`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/voice"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Get a CDR usage report
+
+Returns a single CDR (Call Detail Record) usage report by its identifier, including its parameters and current status.
+
+`GET /legacy_reporting/usage_reports/voice/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/voice/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
+## Delete a V2 legacy usage CDR report request
+
+Deletes a specific V2 legacy usage CDR report request by ID
+
+`DELETE /legacy_reporting/usage_reports/voice/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy_reporting/usage_reports/voice/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `aggregation_type` (int32), `connections` (array[string]), `created_at` (date-time), `end_time` (date-time), `id` (uuid), `product_breakdown` (int32), `record_type` (string), `report_url` (string), `result` (object), `start_time` (date-time), `status` (int32), `updated_at` (date-time)
+
 ## List CSV downloads
+
+Returns CSV export jobs created for account phone numbers, including each export's current status and pagination metadata.
 
 `GET /phone_numbers/csv_downloads`
 
@@ -411,6 +714,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone
 Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
 
 ## Create a CSV download
+
+Starts generation of a CSV export for phone numbers matching the supplied filters. The `csv_format` parameter selects the output format, and the response contains the resulting download record.
 
 `POST /phone_numbers/csv_downloads`
 
@@ -425,6 +730,8 @@ curl \
 Returns: `id` (string), `record_type` (string), `status` (enum: pending, complete, failed, expired), `url` (string)
 
 ## Retrieve a CSV download
+
+Returns the current status and download details for the CSV export identified by `id`.
 
 `GET /phone_numbers/csv_downloads/{id}`
 
@@ -500,7 +807,7 @@ Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections`
 
 ## Delete MDR Usage Report
 
-Delete messaging usage report by id
+Permanently deletes the specified messaging usage report by its identifier.
 
 `DELETE /reports/mdr_usage_reports/{id}`
 
@@ -515,6 +822,8 @@ Returns: `aggregation_type` (enum: NO_AGGREGATION, PROFILE, TAGS), `connections`
 
 ## Fetch all Mdr records
 
+Returns message detail records (MDRs) matching the provided criteria, such as date range, direction, status, and message type.
+
 `GET /reports/mdrs`
 
 ```bash
@@ -525,7 +834,7 @@ Returns: `cld` (string), `cli` (string), `cost` (string), `created_at` (date-tim
 
 ## Fetches all Wdr records
 
-Fetch all Wdr records
+Returns wireless detail records (WDRs) matching the provided criteria, such as date range, SIM card, IMSI, or phone number, with pagination and sorting.
 
 `GET /reports/wdrs`
 
@@ -599,6 +908,63 @@ Returns: `product` (string), `product_dimensions` (array[string]), `product_metr
 
 Returns the WDR Reports that match the given parameters.
 
+`GET /wireless/detail/records/reports`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless/detail/records/reports"
+```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
+## Create a Wireless Detail Records (WDRs) Report
+
+Asynchronously create a report containing Wireless Detail Records (WDRs) for the SIM cards that consumed wireless data in the given time period.
+
+`POST /wireless/detail/records/reports`
+
+Optional: `end_time` (string), `start_time` (string)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/wireless/detail/records/reports"
+```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
+## Get a Wireless Detail Record (WDR) Report
+
+Returns a single Wireless Detail Record (WDR) report by its identifier, including its parameters and current status.
+
+`GET /wireless/detail/records/reports/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/wireless/detail/records/reports/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
+```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
+## Delete a Wireless Detail Record (WDR) Report
+
+Permanently deletes the specified Wireless Detail Record (WDR) report.
+
+`DELETE /wireless/detail/records/reports/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/wireless/detail/records/reports/6a09cdc3-8948-47f0-aa62-74ac943d6c58"
+```
+
+Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` (string), `report_url` (string), `start_time` (string), `status` (enum: pending, complete, failed, deleted), `updated_at` (string)
+
+## Get all Wireless Detail Records (WDRs) Reports
+
+Returns the WDR Reports that match the given parameters.
+
 `GET /wireless/detail_records_reports`
 
 ```bash
@@ -627,7 +993,7 @@ Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` 
 
 ## Get a Wireless Detail Record (WDR) Report
 
-Returns one specific WDR report
+Returns a single Wireless Detail Record (WDR) report by its identifier, including its parameters and current status.
 
 `GET /wireless/detail_records_reports/{id}`
 
@@ -639,7 +1005,7 @@ Returns: `created_at` (string), `end_time` (string), `id` (uuid), `record_type` 
 
 ## Delete a Wireless Detail Record (WDR) Report
 
-Deletes one specific WDR report.
+Permanently deletes the specified Wireless Detail Record (WDR) report.
 
 `DELETE /wireless/detail_records_reports/{id}`
 

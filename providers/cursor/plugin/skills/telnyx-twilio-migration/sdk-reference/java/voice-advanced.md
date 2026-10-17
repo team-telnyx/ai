@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -79,7 +79,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Update client state
 
-Updates client state
+Updates the client state associated with the call. Client state is an opaque value echoed back in subsequent webhooks for the call, letting you correlate events with your application's state.
 
 `PUT /calls/{call_control_id}/actions/client_state_update` — Required: `client_state`
 
@@ -126,6 +126,25 @@ import com.telnyx.sdk.models.calls.actions.ActionStopConversationRelayParams;
 import com.telnyx.sdk.models.calls.actions.ActionStopConversationRelayResponse;
 
 ActionStopConversationRelayResponse response = client.calls().actions().stopConversationRelay("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ");
+```
+
+Returns: `result` (string)
+
+## Process a payment
+
+Collect payment details from the caller using DTMF and either charge or tokenize the payment method through a configured Pay connector. Pay pauses active call recordings while sensitive payment details are collected. When `payment_token` is supplied, the DTMF collection steps are skipped and the existing token is sent to the connector.
+
+`POST /calls/{call_control_id}/actions/pay`
+
+Optional: `amount` (number), `client_state` (string), `command_id` (string), `connector_name` (string), `currency` (enum: USD, usd), `description` (string), `inter_digit_timeout_millis` (int32), `language` (string), `max_attempts` (int32), `metadata` (object), `min_postal_code_length` (integer), `parameters` (object), `payment_method` (enum: credit-card, ach-debit), `payment_token` (string), `postal_code` (object), `prompts` (object), `service_level` (string), `timeout_millis` (int32), `transaction_type` (enum: charge, tokenize), `valid_card_types` (array[string]), `voice` (string)
+
+```java
+import com.telnyx.sdk.models.calls.actions.ActionPayParams;
+
+ActionPayParams params = ActionPayParams.builder()
+    .connectorName("Default")
+    .build();
+var response = client.calls().actions().pay("call_control_id", params);
 ```
 
 Returns: `result` (string)
@@ -197,6 +216,8 @@ Returns: `result` (string)
 
 ## Noise Suppression Start (BETA)
 
+Start noise suppression on an active call to reduce background noise. This feature is currently in beta.
+
 `POST /calls/{call_control_id}/actions/suppression_start`
 
 Optional: `client_state` (string), `command_id` (string), `direction` (enum: inbound, outbound, both), `noise_suppression_engine` (enum: Denoiser, DeepFilterNet, Krisp, AiCoustics, aic_l_quail, aic_l_rook, aic_s_quail, aic_s_rook, quail_voice_focus_s, quail_voice_focus_xs), `noise_suppression_engine_config` (object)
@@ -211,6 +232,8 @@ ActionStartNoiseSuppressionResponse response = client.calls().actions().startNoi
 Returns: `result` (string)
 
 ## Noise Suppression Stop (BETA)
+
+Stop noise suppression previously started on an active call. This feature is currently in beta.
 
 `POST /calls/{call_control_id}/actions/suppression_stop`
 
@@ -287,12 +310,16 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 
 | Event | Description |
 |-------|-------------|
+| `callConversationCreated` | Call Conversation Created. Emitted when a conversation is created for a call, including when an AI assistant starts automatically after an `answer` command with `assistant.id` or a `dial` command with `assistant.id`, or through `ai_assistant_start` or `gather_using_ai`. Read `data.payload.conversation_id` and correlate it with `data.payload.call_control_id` |
 | `callConversationEnded` | Call Conversation Ended |
 | `callConversationInsightsGenerated` | Call Conversation Insights Generated |
+| `callConversationStartFailed` | Call Conversation Start Failed. Emitted when an AI assistant requested with an `answer` or `dial` command (`assistant.id`) could not be started after the call was answered, for example because the assistant ID does not exist. No conversation is created, so neither `call.conversation.created` nor `call.conversation.ended` is sent for this attempt |
 | `callDtmfReceived` | Call Dtmf Received |
 | `callMachineDetectionEnded` | Call Machine Detection Ended |
 | `callMachineGreetingEnded` | Call Machine Greeting Ended |
+| `callMachinePremiumCallScreeningDetected` | Call Machine Premium Call Screening Detected. This webhook is sent when `answering_machine_detection=premium_ios_call_screening_detection` detects an Apple Call Screening tone. Premium AMD is then restarted on the screened call; expect another `call.machine.premium.detection.ended` webhook with the post-screening classification |
 | `callMachinePremiumDetectionEnded` | Call Machine Premium Detection Ended |
+| `callMachinePremiumDetectionStarted` | Call Machine Premium Detection Started |
 | `callMachinePremiumGreetingEnded` | Call Machine Premium Greeting Ended |
 | `callReferCompleted` | Call Refer Completed |
 | `callReferFailed` | Call Refer Failed |
@@ -302,6 +329,25 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `callSiprecStopped` | Call Siprec Stopped |
 
 ### Webhook payload fields
+
+**`callConversationCreated`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.conversation.created | The type of event being delivered. |
+| `data.id` | uuid | Unique identifier for the event. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.created_at` | date-time | Timestamp when the event was created in the system. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call leg. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session (group of related call legs). |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.client_state` | string | Base64-encoded state received from a command. |
+| `data.payload.conversation_id` | uuid | Unique identifier of the conversation created for this call. |
+| `data.payload.from` | string | The caller's number or identifier. |
+| `data.payload.to` | string | The callee's number or SIP address. |
+| `data.payload.calling_party_type` | enum: pstn, sip | The type of calling party connection. |
 
 **`callConversationEnded`**
 
@@ -322,6 +368,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.conversation_id` | string | ID unique to the conversation or insight group generated for the call. |
 | `data.payload.duration_sec` | integer | Duration of the conversation in seconds. |
 | `data.payload.reason` | string \| null | Reason the conversation ended. |
+| `data.payload.messages` | array[object] | The conversation transcript, in order. |
 | `data.payload.from` | string | The caller's number or identifier. |
 | `data.payload.to` | string | The callee's number or SIP address. |
 | `data.payload.llm_model` | string | The large language model used during the conversation. |
@@ -346,6 +393,26 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.calling_party_type` | enum: pstn, sip | The type of calling party connection. |
 | `data.payload.insight_group_id` | string | ID that is unique to the insight group being generated for the call. |
 | `data.payload.results` | array[object] | Array of insight results being generated for the call. |
+
+**`callConversationStartFailed`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.conversation.start_failed | The type of event being delivered. |
+| `data.id` | uuid | Unique identifier for the event. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.created_at` | date-time | Timestamp when the event was created in the system. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call leg. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session (group of related call legs). |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.client_state` | string | Base64-encoded state received from a command. |
+| `data.payload.from` | string | The caller's number or identifier. |
+| `data.payload.to` | string | The callee's number or SIP address. |
+| `data.payload.calling_party_type` | enum: pstn, sip | The type of calling party connection. |
+| `data.payload.assistant_id` | string | Identifier of the AI assistant that failed to start. |
+| `data.payload.reason` | enum: invalid_request, service_error | Why the conversation could not be started. |
 
 **`callDtmfReceived`**
 
@@ -398,6 +465,23 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 | `data.payload.result` | enum: beep_detected, ended, not_sure | Answering machine greeting ended result. |
 
+**`callMachinePremiumCallScreeningDetected`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.machine.premium.call_screening.detected | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+| `data.payload.result` | enum: screening | Apple Call Screening detection result. |
+
 **`callMachinePremiumDetectionEnded`**
 
 | Field | Type | Description |
@@ -415,6 +499,22 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
 | `data.payload.result` | enum: human_residence, human_business, machine, silence, fax_detected, not_sure | Premium Answering Machine Detection result. |
 
+**`callMachinePremiumDetectionStarted`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data.record_type` | enum: event | Identifies the type of the resource. |
+| `data.event_type` | enum: call.machine.premium.detection.started | The type of event being delivered. |
+| `data.id` | uuid | Identifies the type of resource. |
+| `data.occurred_at` | date-time | ISO 8601 datetime of when the event occurred. |
+| `data.payload.call_control_id` | string | Call ID used to issue commands via Call Control API. |
+| `data.payload.connection_id` | string | Call Control App ID (formerly Telnyx connection ID) used in the call. |
+| `data.payload.call_leg_id` | string | ID that is unique to the call and can be used to correlate webhook events. |
+| `data.payload.call_session_id` | string | ID that is unique to the call session and can be used to correlate webhook events. |
+| `data.payload.client_state` | string | State received from a command. |
+| `data.payload.from` | string | Number or SIP URI placing the call. |
+| `data.payload.to` | string | Destination number or SIP URI of the call. |
+
 **`callMachinePremiumGreetingEnded`**
 
 | Field | Type | Description |
@@ -430,7 +530,7 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.client_state` | string | State received from a command. |
 | `data.payload.from` | string | Number or SIP URI placing the call. |
 | `data.payload.to` | string | Destination number or SIP URI of the call. |
-| `data.payload.result` | enum: beep_detected, no_beep_detected | Premium Answering Machine Greeting Ended result. |
+| `data.payload.result` | enum: beep_detected, no_beep_detected, prompt_ended | Premium Answering Machine Greeting Ended result. |
 
 **`callReferCompleted`**
 

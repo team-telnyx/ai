@@ -92,7 +92,7 @@ Returns: `already_ported` (boolean), `authorized_name` (string), `carrier_name` 
 
 ## List all port-out events
 
-Returns a list of all port-out events.
+Returns a paginated list of port-out events on your account, such as status changes on port-out requests, with support for filtering.
 
 `GET /portouts/events`
 
@@ -108,7 +108,7 @@ Returns: `available_notification_methods` (array[string]), `created_at` (date-ti
 
 ## Show a port-out event
 
-Show a specific port-out event.
+Returns the details of a single port-out event, including its type and payload.
 
 `GET /portouts/events/{id}`
 
@@ -124,7 +124,7 @@ Returns: `available_notification_methods` (array[string]), `created_at` (date-ti
 
 ## Republish a port-out event
 
-Republish a specific port-out event.
+Republishes the specified port-out event, triggering re-delivery of the corresponding webhook to your account.
 
 `POST /portouts/events/{id}/republish`
 
@@ -194,7 +194,7 @@ Returns: `created_at` (date-time), `document_id` (uuid), `id` (uuid), `params` (
 
 ## Retrieve a report
 
-Retrieve a specific report generated.
+Returns the details of a previously requested port-out report, including its status and parameters.
 
 `GET /portouts/reports/{id}`
 
@@ -242,7 +242,7 @@ Returns: `body` (string), `created_at` (string), `id` (string), `portout_id` (st
 
 ## Create a comment on a portout request
 
-Creates a comment on a portout request.
+Creates a comment on the specified port-out request and returns the created comment.
 
 `POST /portouts/{id}/comments`
 
@@ -302,7 +302,7 @@ Returns: `created_at` (string), `document_id` (uuid), `id` (uuid), `portout_id` 
 
 ## Update Status
 
-Authorize or reject portout request
+Updates the status of the specified port-out request, using the status path segment to authorize or reject the port-out.
 
 `PATCH /portouts/{id}/{status}` — Required: `reason`
 

@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -123,7 +123,7 @@ Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance
 
 ## Update a managed account
 
-Update a single managed account.
+Updates the specified managed account's attributes and returns the updated account.
 
 `PATCH /managed_accounts/{id}`
 
@@ -217,7 +217,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Get organization user
 
-Returns a user in your organization.
+Returns the details of a user in your organization, optionally including the groups the user belongs to.
 
 `GET /organizations/users/{id}`
 
@@ -232,7 +232,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Delete organization user
 
-Deletes a user in your organization.
+Removes the specified user from your organization and returns the result of the removal.
 
 `POST /organizations/users/{id}/actions/remove`
 
