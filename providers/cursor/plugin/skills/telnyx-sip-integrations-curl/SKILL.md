@@ -71,7 +71,7 @@ Returns the information about custom storage credentials.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Create a custom storage credential
 
@@ -87,7 +87,7 @@ curl \
   "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Update a stored credential
 
@@ -103,7 +103,7 @@ curl \
   "https://api.telnyx.com/v2/custom_storage_credentials/{connection_id}"
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Delete a stored credential
 
@@ -148,7 +148,7 @@ Returns: `connection_id` (string), `conversation_profile_id` (string), `environm
 
 ## Update stored Dialogflow Connection
 
-Updates a stored Dialogflow Connection.
+Updates the stored Dialogflow connection for the specified connection and returns the updated configuration.
 
 `PUT /dialogflow_connections/{connection_id}`
 
@@ -164,7 +164,7 @@ Returns: `connection_id` (string), `conversation_profile_id` (string), `environm
 
 ## Delete stored Dialogflow Connection
 
-Deletes a stored Dialogflow Connection.
+Deletes the stored Dialogflow connection for the specified connection.
 
 `DELETE /dialogflow_connections/{connection_id}`
 
@@ -322,6 +322,8 @@ Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` 
 
 ## Update a location's static emergency address
 
+Update the static emergency address assigned to a specific location of an external connection.
+
 `PATCH /external_connections/{id}/locations/{location_id}` — Required: `static_emergency_address_id`
 
 ```bash
@@ -330,7 +332,7 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "static_emergency_address_id": "550e8400-e29b-41d4-a716-446655440000"
+  "static_emergency_address_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }' \
   "https://api.telnyx.com/v2/external_connections/550e8400-e29b-41d4-a716-446655440000/locations/{location_id}"
 ```
@@ -374,6 +376,9 @@ curl \
   -X PATCH \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "location_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}' \
   "https://api.telnyx.com/v2/external_connections/1293384261075731499/phone_numbers/1234567889"
 ```
 
@@ -496,7 +501,7 @@ Returns: `available_usages` (array[string]), `error_code` (string), `error_messa
 
 ## List uploaded media
 
-Returns a list of stored media files.
+Returns a list of the media files stored on your account, with support for filtering.
 
 `GET /media`
 
@@ -540,7 +545,7 @@ Returns: `content_type` (string), `created_at` (string), `expires_at` (string), 
 
 ## Update stored media
 
-Updates a stored media file.
+Updates the specified stored media file and returns the updated resource.
 
 `PUT /media/{media_name}`
 
@@ -559,7 +564,7 @@ Returns: `content_type` (string), `created_at` (string), `expires_at` (string), 
 
 ## Deletes stored media
 
-Deletes a stored media file.
+Permanently deletes the specified media file from storage.
 
 `DELETE /media/{media_name}`
 
@@ -572,7 +577,7 @@ curl \
 
 ## Download stored media
 
-Downloads a stored media file.
+Downloads the raw content of the specified stored media file.
 
 `GET /media/{media_name}/download`
 
@@ -637,7 +642,7 @@ Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `recor
 
 ## List all call recordings
 
-Returns a list of your call recordings.
+Returns a paginated list of your call recordings, with support for filtering to locate specific recordings.
 
 `GET /recordings`
 
@@ -677,7 +682,7 @@ Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (
 
 ## Delete a call recording
 
-Permanently deletes a call recording.
+Permanently deletes the specified call recording and returns the deleted recording resource. The media is removed and can no longer be downloaded.
 
 `DELETE /recordings/{recording_id}`
 
@@ -736,7 +741,7 @@ Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name
 
 ## Delete a SIPREC connector
 
-Deletes a stored SIPREC connector.
+Deletes the stored SIPREC connector with the specified connector name.
 
 `DELETE /siprec_connectors/{connector_name}`
 

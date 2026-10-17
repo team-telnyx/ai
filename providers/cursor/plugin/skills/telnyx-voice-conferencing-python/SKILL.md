@@ -66,7 +66,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Enqueue call
 
-Put the call in a queue.
+Places the call into a queue, where it waits until it is removed or bridged to another leg. Queue behavior is configured through the request body.
 
 `POST /calls/{call_control_id}/actions/enqueue` — Required: `queue_name`
 
@@ -84,7 +84,7 @@ Returns: `result` (string)
 
 ## Remove call from a queue
 
-Removes the call from a queue.
+Removes the call from the queue it is currently waiting in. The call remains active and can be directed with further call commands.
 
 `POST /calls/{call_control_id}/actions/leave_queue`
 
@@ -133,7 +133,7 @@ Returns: `connection_id` (string), `created_at` (string), `end_reason` (enum: al
 
 ## List conference participants
 
-Lists conference participants
+Returns a paginated list of participants in the specified conference, with support for filtering.
 
 `GET /conferences/{conference_id}/participants`
 
@@ -149,7 +149,7 @@ Returns: `call_control_id` (string), `call_leg_id` (string), `conference` (objec
 
 ## Retrieve a conference
 
-Retrieve an existing conference
+Returns the details of an existing conference, including its current status.
 
 `GET /conferences/{id}`
 
@@ -288,7 +288,7 @@ Returns: `result` (string)
 
 ## Conference recording pause
 
-Pause conference recording.
+Pauses the active recording of the specified conference. Resume it later with the record_resume action.
 
 `POST /conferences/{id}/actions/record_pause`
 
@@ -305,7 +305,7 @@ Returns: `result` (string)
 
 ## Conference recording resume
 
-Resume conference recording.
+Resumes a previously paused recording of the specified conference, continuing capture from the point it was paused.
 
 `POST /conferences/{id}/actions/record_resume`
 
@@ -517,7 +517,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Create a queue
 
-Create a new call queue.
+Creates a new call queue with the provided configuration and returns the created queue.
 
 `POST /queues` — Required: `queue_name`
 
@@ -534,7 +534,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Retrieve a call queue
 
-Retrieve an existing call queue
+Returns the details of an existing call queue, including its current configuration.
 
 `GET /queues/{queue_name}`
 
@@ -565,7 +565,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Delete a queue
 
-Delete an existing call queue.
+Permanently deletes the specified call queue from your account.
 
 `DELETE /queues/{queue_name}`
 
