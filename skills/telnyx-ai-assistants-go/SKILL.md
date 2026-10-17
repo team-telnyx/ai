@@ -101,7 +101,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `Tags` | array[string] | No | Tags associated with the assistant. |
 | `Model` | string | No | ID of the model to use when `external_llm` is not set. |
 | `Tools` | array[object] | No | Deprecated for new integrations. |
-| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +28 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	assistant, err := client.AI.Assistants.New(context.Background(), telnyx.AIAssistantNewParams{
@@ -121,7 +121,7 @@ Primary response fields:
 - `assistant.Model`
 - `assistant.Instructions`
 - `assistant.CreatedAt`
-- `assistant.ConversationFlow`
+- `assistant.A2aAgents`
 
 ### Chat with an assistant
 
@@ -135,6 +135,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | `ConversationId` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
 | `AssistantId` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `Name` | string | No | The optional display name of the user sending the message |
+| `Stream` | boolean | No | When true, the response is streamed as Server-Sent Events (`... |
 
 ```go
 	response, err := client.AI.Assistants.Chat(
@@ -169,7 +170,7 @@ Test creation is the main validation path for production assistant behavior befo
 | `Description` | string | No | Optional detailed description of what this test evaluates an... |
 | `TelnyxConversationChannel` | object | No | The communication channel through which the test will be con... |
 | `MaxDurationSeconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
-| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	assistantTest, err := client.AI.Assistants.Tests.New(context.Background(), telnyx.AIAssistantTestNewParams{
@@ -234,9 +235,9 @@ Primary response fields:
 - `assistant.ID`
 - `assistant.Name`
 - `assistant.CreatedAt`
+- `assistant.A2aAgents`
+- `assistant.AvatarSettings`
 - `assistant.ConversationFlow`
-- `assistant.Description`
-- `assistant.DynamicVariables`
 
 ### Update an assistant
 
@@ -250,7 +251,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `Tags` | array[string] | No | Tags associated with the assistant. |
 | `Name` | string | No |  |
 | `Model` | string | No | ID of the model to use when `external_llm` is not set. |
-| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	assistant, err := client.AI.Assistants.Update(
@@ -268,9 +269,9 @@ Primary response fields:
 - `assistant.ID`
 - `assistant.Name`
 - `assistant.CreatedAt`
+- `assistant.A2aAgents`
+- `assistant.AvatarSettings`
 - `assistant.ConversationFlow`
-- `assistant.Description`
-- `assistant.DynamicVariables`
 
 ### List assistants
 
@@ -293,9 +294,40 @@ Primary item fields:
 - `ID`
 - `Name`
 - `CreatedAt`
+- `A2aAgents`
+- `AvatarSettings`
 - `ConversationFlow`
-- `Description`
-- `DynamicVariables`
+
+### List deleted assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.AI.Assistants.Deleted.List()` — `GET /ai/assistants/deleted`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `Page[number]` | integer | No | Page number to retrieve (1-based). |
+| `Page[size]` | integer | No | Number of items to return per page. |
+
+```go
+	deleted, err := client.AI.Assistants.Deleted.List(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", deleted.Data)
+```
+
+Response wrapper:
+- items: `deleted.data`
+- pagination: `deleted.meta`
+
+Primary item fields:
+- `ID`
+- `Name`
+- `CreatedAt`
+- `A2aAgents`
+- `AvatarSettings`
+- `ConversationFlow`
 
 ### Import assistants from external provider
 
@@ -308,6 +340,7 @@ Import existing assistants from an external provider instead of creating from sc
 | `Provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
 | `ApiKeyRef` | string | Yes | Integration secret pointer that refers to the API key for th... |
 | `ImportIds` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `Idempotency-Key` | string | No | Optional opaque, unquoted key for safely retrying the same l... |
 
 ```go
 	assistantsList, err := client.AI.Assistants.Imports(context.Background(), telnyx.AIAssistantImportsParams{
@@ -327,9 +360,9 @@ Primary item fields:
 - `ID`
 - `Name`
 - `CreatedAt`
+- `A2aAgents`
+- `AvatarSettings`
 - `ConversationFlow`
-- `Description`
-- `DynamicVariables`
 
 ### Get All Tags
 
@@ -401,43 +434,6 @@ Response wrapper:
 Primary item fields:
 - `Data`
 
-### Get test suite run history
-
-Fetch the current state before updating, deleting, or making control-flow decisions.
-
-`client.AI.Assistants.Tests.TestSuites.Runs.List()` — `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `SuiteName` | string | Yes | Name of the suite. |
-| `TestSuiteRunId` | string (UUID) | No | Filter runs by specific suite execution batch ID |
-| `Status` | string | No | Filter runs by execution status (pending, running, completed... |
-| `Page` | object | No | Consolidated page parameter (deepObject style). |
-
-```go
-	page, err := client.AI.Assistants.Tests.TestSuites.Runs.List(
-		context.Background(),
-		"suite_name",
-		telnyx.AIAssistantTestTestSuiteRunListParams{},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Response wrapper:
-- items: `page.data`
-- pagination: `page.meta`
-
-Primary item fields:
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CompletedAt`
-- `ConversationID`
-- `ConversationInsightsID`
-
 ---
 
 ## Additional Operations
@@ -447,6 +443,7 @@ Before using any operation below, read [the optional-parameters section](referen
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
+| Get test suite run history | `client.AI.Assistants.Tests.TestSuites.Runs.List()` | `GET /ai/assistants/tests/test-suites/{suite_name}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `SuiteName` |
 | Trigger test suite execution | `client.AI.Assistants.Tests.TestSuites.Runs.Trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `SuiteName` |
 | Get assistant test by ID | `client.AI.Assistants.Tests.Get()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `TestId` |
 | Update an assistant test | `client.AI.Assistants.Tests.Update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `TestId` |
@@ -460,8 +457,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Update Canary Deploy | `client.AI.Assistants.CanaryDeploys.Update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `AssistantId` |
 | Delete Canary Deploy | `client.AI.Assistants.CanaryDeploys.Delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `AssistantId` |
 | Assistant Sms Chat | `client.AI.Assistants.SendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `From`, `To`, `AssistantId` |
+| Assistant WhatsApp Chat | `client.AI.Assistants.Whatsapp()` | `POST /ai/assistants/{assistant_id}/chat/whatsapp` | Create or provision an additional resource when the core tasks do not cover this flow. | `From`, `To`, `Content`, `AssistantId` |
 | Clone Assistant | `client.AI.Assistants.Clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `AssistantId` |
+| Get a deleted assistant | `client.AI.Assistants.Deleted.Get()` | `GET /ai/assistants/{assistant_id}/deleted` | Fetch the current state before updating, deleting, or making control-flow decisions. | `AssistantId` |
 | Enhance Assistant Instructions | `client.AI.Assistants.Instructions.Enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `AssistantId` |
+| Restore an assistant | `client.AI.Assistants.Restore()` | `POST /ai/assistants/{assistant_id}/restore` | Create or provision an additional resource when the core tasks do not cover this flow. | `AssistantId` |
 | List scheduled events | `client.AI.Assistants.ScheduledEvents.List()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `AssistantId` |
 | Create a scheduled event | `client.AI.Assistants.ScheduledEvents.New()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `TelnyxConversationChannel`, `TelnyxEndUserTarget`, `TelnyxAgentTarget`, `ScheduledAtFixedDatetime`, +1 more |
 | Get a scheduled event | `client.AI.Assistants.ScheduledEvents.Get()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `AssistantId`, `EventId` |
