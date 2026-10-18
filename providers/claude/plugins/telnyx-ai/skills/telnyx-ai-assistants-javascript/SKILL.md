@@ -91,7 +91,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | No | Deprecated for new integrations. |
-| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +28 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const assistant = await client.ai.assistants.create({
@@ -109,7 +109,7 @@ Primary response fields:
 - `assistant.model`
 - `assistant.instructions`
 - `assistant.createdAt`
-- `assistant.conversationFlow`
+- `assistant.a2aAgents`
 
 ### Chat with an assistant
 
@@ -123,6 +123,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
 | `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
+| `stream` | boolean | No | When true, the response is streamed as Server-Sent Events (`... |
 
 ```javascript
 const response = await client.ai.assistants.chat('assistant_id', {
@@ -151,7 +152,7 @@ Test creation is the main validation path for production assistant behavior befo
 | `description` | string | No | Optional detailed description of what this test evaluates an... |
 | `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
 | `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
-| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const assistantTest = await client.ai.assistants.tests.create({
@@ -206,9 +207,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### Update an assistant
 
@@ -222,7 +223,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
-| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const assistant = await client.ai.assistants.update('550e8400-e29b-41d4-a716-446655440000');
@@ -234,9 +235,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### List assistants
 
@@ -257,9 +258,39 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
+
+### List deleted assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.deleted.list()` — `GET /ai/assistants/deleted`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number to retrieve (1-based). |
+| `page[size]` | integer | No | Number of items to return per page. |
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const response of client.ai.assistants.deleted.list()) {
+  console.log(response);
+}
+```
+
+Response wrapper:
+- items: `response.data`
+- pagination: `response.meta`
+
+Primary item fields:
+- `id`
+- `name`
+- `createdAt`
+- `a2aAgents`
+- `avatarSettings`
+- `conversationFlow`
 
 ### Import assistants from external provider
 
@@ -272,6 +303,7 @@ Import existing assistants from an external provider instead of creating from sc
 | `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
 | `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
 | `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `Idempotency-Key` | string | No | Optional opaque, unquoted key for safely retrying the same l... |
 
 ```javascript
 const assistantsList = await client.ai.assistants.imports({
@@ -289,9 +321,9 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
 
 ### Get All Tags
 
@@ -358,38 +390,6 @@ Response wrapper:
 Primary item fields:
 - `data`
 
-### Get test suite run history
-
-Fetch the current state before updating, deleting, or making control-flow decisions.
-
-`client.ai.assistants.tests.testSuites.runs.list()` — `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `suite_name` | string | Yes | Name of the suite. |
-| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
-| `status` | string | No | Filter runs by execution status (pending, running, completed... |
-| `page` | object | No | Consolidated page parameter (deepObject style). |
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const testRunResponse of client.ai.assistants.tests.testSuites.runs.list('suite_name')) {
-  console.log(testRunResponse.run_id);
-}
-```
-
-Response wrapper:
-- items: `testRunResponse.data`
-- pagination: `testRunResponse.meta`
-
-Primary item fields:
-- `status`
-- `createdAt`
-- `updatedAt`
-- `completedAt`
-- `conversationId`
-- `conversationInsightsId`
-
 ---
 
 ## Additional Operations
@@ -399,6 +399,7 @@ Before using any operation below, read [the optional-parameters section](referen
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
+| Get test suite run history | `client.ai.assistants.tests.testSuites.runs.list()` | `GET /ai/assistants/tests/test-suites/{suite_name}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `suite_name` |
 | Trigger test suite execution | `client.ai.assistants.tests.testSuites.runs.trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
 | Get assistant test by ID | `client.ai.assistants.tests.retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
 | Update an assistant test | `client.ai.assistants.tests.update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
@@ -412,8 +413,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Update Canary Deploy | `client.ai.assistants.canaryDeploys.update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
 | Delete Canary Deploy | `client.ai.assistants.canaryDeploys.delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
 | Assistant Sms Chat | `client.ai.assistants.sendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Assistant WhatsApp Chat | `client.ai.assistants.whatsapp()` | `POST /ai/assistants/{assistant_id}/chat/whatsapp` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `content`, `assistant_id` |
 | Clone Assistant | `client.ai.assistants.clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Get a deleted assistant | `client.ai.assistants.deleted.get()` | `GET /ai/assistants/{assistant_id}/deleted` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Enhance Assistant Instructions | `client.ai.assistants.instructions.enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Restore an assistant | `client.ai.assistants.restore()` | `POST /ai/assistants/{assistant_id}/restore` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
 | List scheduled events | `client.ai.assistants.scheduledEvents.list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Create a scheduled event | `client.ai.assistants.scheduledEvents.create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
 | Get a scheduled event | `client.ai.assistants.scheduledEvents.retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |

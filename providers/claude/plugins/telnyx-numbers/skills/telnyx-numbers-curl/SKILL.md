@@ -398,6 +398,9 @@ Before using any operation below, read [the optional-parameters section](referen
 | Deletes all numbers associated with a phone number block | HTTP only | `POST /phone_number_blocks/jobs/delete_phone_number_block` | Create or provision an additional resource when the core tasks do not cover this flow. | `phone_number_block_id` |
 | Retrieves a phone number blocks job | HTTP only | `GET /phone_number_blocks/jobs/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | List sub number orders | HTTP only | `GET /sub_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a sub number orders report | HTTP only | `POST /sub_number_orders/report` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a sub number orders report | HTTP only | `GET /sub_number_orders/report/{report_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `report_id` |
+| Download a sub number orders report | HTTP only | `GET /sub_number_orders/report/{report_id}/download` | Fetch the current state before updating, deleting, or making control-flow decisions. | `report_id` |
 | Retrieve a sub number order | HTTP only | `GET /sub_number_orders/{sub_number_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `sub_number_order_id` |
 | Update a sub number order's requirements | HTTP only | `PATCH /sub_number_orders/{sub_number_order_id}` | Modify an existing resource without recreating it. | `sub_number_order_id` |
 | Cancel a sub number order | HTTP only | `PATCH /sub_number_orders/{sub_number_order_id}/cancel` | Modify an existing resource without recreating it. | `sub_number_order_id` |

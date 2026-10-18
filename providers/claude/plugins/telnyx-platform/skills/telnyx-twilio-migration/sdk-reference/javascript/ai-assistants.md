@@ -78,7 +78,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | No | Deprecated for new integrations. |
-| ... | | | +23 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +28 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 const assistant = await client.ai.assistants.create({
@@ -96,7 +96,7 @@ Primary response fields:
 - `assistant.model`
 - `assistant.instructions`
 - `assistant.createdAt`
-- `assistant.conversationFlow`
+- `assistant.a2aAgents`
 
 ### Chat with an assistant
 
@@ -110,6 +110,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
 | `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
+| `stream` | boolean | No | When true, the response is streamed as Server-Sent Events (`... |
 
 ```javascript
 const response = await client.ai.assistants.chat('assistant_id', {
@@ -138,7 +139,7 @@ Test creation is the main validation path for production assistant behavior befo
 | `description` | string | No | Optional detailed description of what this test evaluates an... |
 | `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
 | `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
-| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +2 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 const assistantTest = await client.ai.assistants.tests.create({
@@ -193,9 +194,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### Update an assistant
 
@@ -209,7 +210,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
-| ... | | | +27 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +31 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```javascript
 const assistant = await client.ai.assistants.update('550e8400-e29b-41d4-a716-446655440000');
@@ -221,9 +222,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### List assistants
 
@@ -244,9 +245,39 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
+
+### List deleted assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai.assistants.deleted.list()` — `GET /ai/assistants/deleted`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number to retrieve (1-based). |
+| `page[size]` | integer | No | Number of items to return per page. |
+
+```javascript
+// Automatically fetches more pages as needed.
+for await (const response of client.ai.assistants.deleted.list()) {
+  console.log(response);
+}
+```
+
+Response wrapper:
+- items: `response.data`
+- pagination: `response.meta`
+
+Primary item fields:
+- `id`
+- `name`
+- `createdAt`
+- `a2aAgents`
+- `avatarSettings`
+- `conversationFlow`
 
 ### Import assistants from external provider
 
@@ -259,6 +290,7 @@ Import existing assistants from an external provider instead of creating from sc
 | `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
 | `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
 | `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `Idempotency-Key` | string | No | Optional opaque, unquoted key for safely retrying the same l... |
 
 ```javascript
 const assistantsList = await client.ai.assistants.imports({
@@ -276,9 +308,9 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
 
 ### Get All Tags
 
@@ -345,38 +377,6 @@ Response wrapper:
 Primary item fields:
 - `data`
 
-### Get test suite run history
-
-Fetch the current state before updating, deleting, or making control-flow decisions.
-
-`client.ai.assistants.tests.testSuites.runs.list()` — `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `suite_name` | string | Yes | Name of the suite. |
-| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
-| `status` | string | No | Filter runs by execution status (pending, running, completed... |
-| `page` | object | No | Consolidated page parameter (deepObject style). |
-
-```javascript
-// Automatically fetches more pages as needed.
-for await (const testRunResponse of client.ai.assistants.tests.testSuites.runs.list('suite_name')) {
-  console.log(testRunResponse.run_id);
-}
-```
-
-Response wrapper:
-- items: `testRunResponse.data`
-- pagination: `testRunResponse.meta`
-
-Primary item fields:
-- `status`
-- `createdAt`
-- `updatedAt`
-- `completedAt`
-- `conversationId`
-- `conversationInsightsId`
-
 ---
 
 ## Additional Operations
@@ -386,6 +386,7 @@ Before using any operation below, read the Optional Parameters section below and
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
+| Get test suite run history | `client.ai.assistants.tests.testSuites.runs.list()` | `GET /ai/assistants/tests/test-suites/{suite_name}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `suite_name` |
 | Trigger test suite execution | `client.ai.assistants.tests.testSuites.runs.trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
 | Get assistant test by ID | `client.ai.assistants.tests.retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
 | Update an assistant test | `client.ai.assistants.tests.update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
@@ -399,8 +400,11 @@ Before using any operation below, read the Optional Parameters section below and
 | Update Canary Deploy | `client.ai.assistants.canaryDeploys.update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
 | Delete Canary Deploy | `client.ai.assistants.canaryDeploys.delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
 | Assistant Sms Chat | `client.ai.assistants.sendSMS()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Assistant WhatsApp Chat | `client.ai.assistants.whatsapp()` | `POST /ai/assistants/{assistant_id}/chat/whatsapp` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `content`, `assistant_id` |
 | Clone Assistant | `client.ai.assistants.clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Get a deleted assistant | `client.ai.assistants.deleted.get()` | `GET /ai/assistants/{assistant_id}/deleted` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Enhance Assistant Instructions | `client.ai.assistants.instructions.enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Restore an assistant | `client.ai.assistants.restore()` | `POST /ai/assistants/{assistant_id}/restore` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
 | List scheduled events | `client.ai.assistants.scheduledEvents.list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Create a scheduled event | `client.ai.assistants.scheduledEvents.create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
 | Get a scheduled event | `client.ai.assistants.scheduledEvents.retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |
@@ -443,6 +447,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `model` | string | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | Deprecated for new integrations. |
 | `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `a2a_agents` | array[object] | A2A agents this assistant can delegate to. |
 | `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
@@ -450,6 +455,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
+| `avatar_settings` | object | **Beta:** Optional avatar configuration for supported realtime browser conver... |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |
@@ -465,13 +471,17 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `observability_settings` | object |  |
 | `tags` | array[string] | Tags associated with the assistant. |
 | `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `delegation_settings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `websocket_settings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Import assistants from external provider — `client.ai.assistants.imports()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `import_ids` | array[string] | Optional list of assistant IDs to import from the external provider. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Create a new assistant test — `client.ai.assistants.tests.create()`
 
@@ -481,12 +491,14 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `telnyx_conversation_channel` | object | The communication channel through which the test will be conducted. |
 | `max_duration_seconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
 | `test_suite` | string | Optional test suite name to group related tests together. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Trigger test suite execution — `client.ai.assistants.tests.testSuites.runs.trigger()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `destination_version_id` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update an assistant test — `client.ai.assistants.tests.update()`
 
@@ -506,6 +518,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `destination_version_id` | string (UUID) | Optional assistant version ID to use for this test run. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update an assistant — `client.ai.assistants.update()`
 
@@ -516,6 +529,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
 | `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `a2a_agents` | array[object] | A2A agents this assistant can delegate to. |
 | `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
@@ -523,6 +537,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
+| `avatar_settings` | object | **Beta:** Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |
@@ -539,6 +554,8 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `tags` | array[string] | Tags associated with the assistant. |
 | `version_name` | string | Human-readable name for the assistant version. |
 | `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `delegation_settings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `websocket_settings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 | `promote_to_main` | boolean | Indicates whether the assistant should be promoted to the main version. |
 
@@ -547,6 +564,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `rules` | array[object] |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update Canary Deploy — `client.ai.assistants.canaryDeploys.update()`
 
@@ -554,11 +572,12 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 |-----------|------|-------------|
 | `rules` | array[object] |  |
 
-### Assistant Chat (BETA) — `client.ai.assistants.chat()`
+### Assistant Chat — `client.ai.assistants.chat()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | string | The optional display name of the user sending the message |
+| `stream` | boolean | When true, the response is streamed as Server-Sent Events (`text/event-stream... |
 
 ### Assistant Sms Chat — `client.ai.assistants.sendSMS()`
 
@@ -567,6 +586,20 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `text` | string |  |
 | `conversation_metadata` | object |  |
 | `should_create_conversation` | boolean |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
+
+### Assistant WhatsApp Chat — `client.ai.assistants.whatsapp()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `conversation_metadata` | object | Metadata stored on the conversation. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
+
+### Clone Assistant — `client.ai.assistants.clone()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Enhance Assistant Instructions — `client.ai.assistants.instructions.enhance()`
 
@@ -586,6 +619,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `retry_interval_secs` | integer |  |
 | `call_settings` | object | Per-call telephony overrides applied when a scheduled phone-call event
 dispat... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Test Assistant Tool — `client.ai.assistants.tools.test()`
 
@@ -603,6 +637,7 @@ dispat... |
 | `instructions` | string | System instructions for the assistant. |
 | `tools` | array[object] | Deprecated for new integrations. |
 | `mcp_servers` | array[object] | MCP servers attached to the assistant. |
+| `a2a_agents` | array[object] | A2A agents this assistant can delegate to. |
 | `tool_ids` | array[string] | IDs of shared tools to attach to the assistant. |
 | `description` | string |  |
 | `greeting` | string | Text that the assistant will use to start the conversation. |
@@ -610,6 +645,7 @@ dispat... |
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
+| `avatar_settings` | object | **Beta:** Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |
@@ -626,6 +662,8 @@ dispat... |
 | `tags` | array[string] | Tags associated with the assistant. |
 | `version_name` | string | Human-readable name for the assistant version. |
 | `post_conversation_settings` | object | Configuration for post-conversation processing. |
+| `delegation_settings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `websocket_settings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `conversation_flow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Create MCP Server — `client.ai.mcpServers.create()`
@@ -634,6 +672,7 @@ dispat... |
 |-----------|------|-------------|
 | `api_key_ref` | string |  |
 | `allowed_tools` | array[string] |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update MCP Server — `client.ai.mcpServers.update()`
 
@@ -656,8 +695,12 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `pay` | object |  |
 | `client_side_tool` | object |  |
+| `update_dynamic_variables` | object | Configuration for an update_dynamic_variables tool. |
+| `vision` | object |  |
 | `timeout_ms` | integer |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update Tool — `client.ai.tools.update()`
 
@@ -670,5 +713,8 @@ dispat... |
 | `handoff` | object |  |
 | `invite` | object |  |
 | `webhook` | object |  |
+| `pay` | object |  |
 | `client_side_tool` | object |  |
+| `update_dynamic_variables` | object | Configuration for an update_dynamic_variables tool. |
+| `vision` | object |  |
 | `timeout_ms` | integer |  |
