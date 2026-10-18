@@ -52,6 +52,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Send an RCS message
 
+Queues an outbound RCS message through the selected RCS agent. Check recipient capabilities before sending features that require RCS support.
+
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
 
 Optional: `mms_fallback` (object), `sms_fallback` (object), `type` (enum: RCS), `webhook_url` (url)
@@ -85,6 +87,8 @@ Returns: `url` (string)
 
 ## List all RCS agents
 
+Returns RCS agents available to the authenticated account.
+
 `GET /messaging/rcs/agents`
 
 ```ruby
@@ -97,6 +101,8 @@ Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `
 
 ## Retrieve an RCS agent
 
+Returns the configuration and current state of the specified RCS agent.
+
 `GET /messaging/rcs/agents/{id}`
 
 ```ruby
@@ -108,6 +114,8 @@ puts(rcs_agent_response)
 Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Modify an RCS agent
+
+Updates the supplied configuration fields on the specified RCS agent.
 
 `PATCH /messaging/rcs/agents/{id}`
 
@@ -123,6 +131,8 @@ Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `
 
 ## Check RCS capabilities (batch)
 
+Returns RCS capability information for multiple recipients in one request.
+
 `POST /messaging/rcs/bulk_capabilities` — Required: `agent_id`, `phone_numbers`
 
 ```ruby
@@ -134,6 +144,8 @@ puts(response)
 Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
 
 ## Check RCS capabilities
+
+Returns the RCS features supported by the specified recipient for the selected agent.
 
 `GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
 
@@ -161,6 +173,8 @@ Returns: `agent_id` (string), `phone_number` (string), `record_type` (enum: rcs.
 
 ## List messaging hosted number orders
 
+Returns hosted-messaging orders for the authenticated account. Apply the documented filters and pagination parameters to narrow the result set.
+
 `GET /messaging_hosted_number_orders`
 
 ```ruby
@@ -172,6 +186,8 @@ puts(page)
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Create a messaging hosted number order
+
+Creates an order to enable Telnyx messaging on phone numbers whose voice service remains with another carrier.
 
 `POST /messaging_hosted_number_orders`
 
@@ -187,6 +203,8 @@ Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (a
 
 ## Check hosted messaging eligibility
 
+Checks whether the supplied phone numbers are eligible for hosted messaging before an order is created.
+
 `POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
 
 ```ruby
@@ -198,6 +216,8 @@ puts(response)
 Returns: `phone_numbers` (array[object])
 
 ## Retrieve a messaging hosted number order
+
+Returns the current state, phone numbers, and required actions for the specified hosted-messaging order.
 
 `GET /messaging_hosted_number_orders/{id}`
 
@@ -224,6 +244,8 @@ puts(messaging_hosted_number_order)
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Upload hosted number document
+
+Uploads a supporting document to the specified hosted-messaging order.
 
 `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
 
@@ -271,6 +293,8 @@ puts(response)
 Returns: `error` (string), `phone_number` (string), `type` (enum: sms, call), `verification_code_id` (uuid)
 
 ## Delete a messaging hosted number
+
+Removes the specified hosted number from Telnyx messaging management.
 
 `DELETE /messaging_hosted_numbers/{id}`
 
@@ -416,6 +440,8 @@ puts(response)
 Returns: `records` (array[object]), `total_records` (integer)
 
 ## List messaging URL domains
+
+Returns the URL domains available to the authenticated account for message URL shortening.
 
 `GET /messaging_url_domains`
 

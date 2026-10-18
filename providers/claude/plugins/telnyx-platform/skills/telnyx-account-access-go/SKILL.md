@@ -76,6 +76,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List all Access IP Addresses
 
+Retrieve a paginated list of access IP addresses configured on your account.
+
 `GET /access_ip_address`
 
 ```go
@@ -89,6 +91,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
 
 ## Create new Access IP Address
+
+Create a new access IP address entry on your account.
 
 `POST /access_ip_address` — Required: `ip_address`
 
@@ -108,6 +112,8 @@ Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_ad
 
 ## Retrieve an access IP address
 
+Retrieve the details of a specific access IP address.
+
 `GET /access_ip_address/{access_ip_address_id}`
 
 ```go
@@ -121,6 +127,8 @@ Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_ad
 Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_address` (string), `source` (string), `status` (enum: pending, added), `updated_at` (date-time), `user_id` (string)
 
 ## Delete access IP address
+
+Delete an access IP address entry from your account.
 
 `DELETE /access_ip_address/{access_ip_address_id}`
 
@@ -136,7 +144,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (string), `ip_ad
 
 ## List all addresses
 
-Returns a list of your addresses.
+Returns a paginated list of the addresses on your account, with support for filtering and sorting.
 
 `GET /addresses`
 
@@ -152,7 +160,7 @@ Returns: `address_book` (boolean), `administrative_area` (string), `borough` (st
 
 ## Creates an address
 
-Creates an address.
+Creates a new address on your account from the provided details, for use with services that require a physical address such as emergency calling and regulatory compliance.
 
 `POST /addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
 
@@ -215,7 +223,7 @@ Returns: `address_book` (boolean), `administrative_area` (string), `borough` (st
 
 ## Deletes an address
 
-Deletes an existing address.
+Permanently deletes the specified address from your account.
 
 `DELETE /addresses/{id}`
 
@@ -230,6 +238,8 @@ Deletes an existing address.
 Returns: `address_book` (boolean), `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (string), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string), `validate_address` (boolean)
 
 ## Accepts this address suggestion as a new emergency address for Operator Connect and finishes the uploads of the numbers associated with it to Microsoft.
+
+Accept the validated address suggestion for this address, replacing the original values, and finish uploading the numbers associated with it to Microsoft for Operator Connect.
 
 `POST /addresses/{id}/actions/accept_suggestions`
 
@@ -267,7 +277,7 @@ Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time
 
 ## Creates an authentication provider
 
-Creates an authentication provider.
+Creates a new authentication provider for single sign-on, configured from the provided identity provider details, and returns the created resource.
 
 `POST /authentication_providers` — Required: `name`, `short_name`, `settings`
 
@@ -357,6 +367,8 @@ Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time
 
 ## List all billing groups
 
+Retrieve a paginated list of billing groups on your account.
+
 `GET /billing_groups`
 
 ```go
@@ -370,6 +382,8 @@ Returns: `activated_at` (date-time), `active` (boolean), `created_at` (date-time
 Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
 
 ## Create a billing group
+
+Create a new billing group, which can be used to organize resources for billing purposes.
 
 `POST /billing_groups`
 
@@ -389,6 +403,8 @@ Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name`
 
 ## Get a billing group
 
+Retrieve the details of a specific billing group.
+
 `GET /billing_groups/{id}`
 
 ```go
@@ -402,6 +418,8 @@ Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name`
 Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
 
 ## Update a billing group
+
+Update the properties of an existing billing group.
 
 `PATCH /billing_groups/{id}`
 
@@ -424,6 +442,8 @@ Optional: `name` (string)
 Returns: `created_at` (date-time), `deleted_at` (date-time), `id` (uuid), `name` (string), `organization_id` (uuid), `record_type` (enum: billing_group), `updated_at` (date-time)
 
 ## Delete a billing group
+
+Delete a billing group from your account.
 
 `DELETE /billing_groups/{id}`
 
