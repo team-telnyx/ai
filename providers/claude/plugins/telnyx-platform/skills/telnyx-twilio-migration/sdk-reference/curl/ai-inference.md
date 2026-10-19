@@ -77,7 +77,7 @@ Returns: `duration` (number), `segments` (array[object]), `text` (string), `word
 
 `POST /ai/chat/completions` — Required: `messages`
 
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `seed` (integer), `stop` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
+Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer | null), `min_p` (number), `mode` (enum: preferred, strict), `model` (string), `n` (number), `presence_penalty` (number), `reasoning_effort` (enum: none, minimal, low, medium, high, xhigh, max), `region` (enum: USA, EU, AUS, UAE), `response_format` (object), `seed` (integer), `service_tier` (string), `stop` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
 
 ```bash
 curl \
@@ -113,7 +113,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Create a conversation
 
-Create a new AI Conversation.
+Creates a new AI conversation, the container for messages exchanged with an assistant, and returns the created conversation.
 
 `POST /ai/conversations`
 
@@ -124,6 +124,9 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "name": "my-resource"
+}' \
   "https://api.telnyx.com/v2/ai/conversations"
 ```
 
@@ -143,7 +146,7 @@ Returns: `record_count` (integer)
 
 ## Get Insight Template Groups
 
-Get all insight groups
+Returns a paginated list of your insight template groups. Groups organize related insight templates that are applied together when analyzing conversations.
 
 `GET /ai/conversations/insight-groups`
 
@@ -155,7 +158,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Create Insight Template Group
 
-Create a new insight group
+Creates a new insight template group for organizing related insight templates, and returns the created group.
 
 `POST /ai/conversations/insight-groups` — Required: `name`
 
@@ -167,7 +170,9 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "name": "my-resource"
+  "name": "Name",
+  "description": "Description",
+  "webhook": ""
 }' \
   "https://api.telnyx.com/v2/ai/conversations/insight-groups"
 ```
@@ -176,7 +181,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Get Insight Template Group
 
-Get insight group by ID
+Returns the details of a single insight template group, including the insight templates assigned to it.
 
 `GET /ai/conversations/insight-groups/{group_id}`
 
@@ -188,7 +193,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Update Insight Template Group
 
-Update an insight template group
+Updates the specified insight template group and returns the updated group.
 
 `PUT /ai/conversations/insight-groups/{group_id}`
 
@@ -199,6 +204,11 @@ curl \
   -X PUT \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "name": "Name",
+  "description": "Description",
+  "webhook": "Webhook"
+}' \
   "https://api.telnyx.com/v2/ai/conversations/insight-groups/{group_id}"
 ```
 
@@ -206,7 +216,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Delete Insight Template Group
 
-Delete insight group by ID
+Permanently deletes the specified insight template group by its ID.
 
 `DELETE /ai/conversations/insight-groups/{group_id}`
 
@@ -219,7 +229,7 @@ curl \
 
 ## Assign Insight Template To Group
 
-Assign an insight to a group
+Assigns the specified insight template to the specified insight template group.
 
 `POST /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign`
 
@@ -233,7 +243,7 @@ curl \
 
 ## Unassign Insight Template From Group
 
-Remove an insight from a group
+Removes the specified insight template from the specified group. The insight template itself is not deleted.
 
 `DELETE /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/unassign`
 
@@ -246,7 +256,7 @@ curl \
 
 ## Get Insight Templates
 
-Get all insights
+Returns a paginated list of your insight templates. Insight templates define analyses that run over AI conversations to extract structured findings.
 
 `GET /ai/conversations/insights`
 
@@ -258,7 +268,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Create Insight Template
 
-Create a new insight
+Creates a new insight template defining an analysis to run over conversations, and returns the created template.
 
 `POST /ai/conversations/insights` — Required: `instructions`, `name`
 
@@ -270,8 +280,10 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "instructions": "You are a helpful assistant.",
-  "name": "my-resource"
+  "instructions": "Instructions",
+  "name": "Name",
+  "webhook": "",
+  "json_schema": "string"
 }' \
   "https://api.telnyx.com/v2/ai/conversations/insights"
 ```
@@ -280,7 +292,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Get Insight Template
 
-Get insight by ID
+Returns the details of a single insight template by its ID, including its configuration.
 
 `GET /ai/conversations/insights/{insight_id}`
 
@@ -292,7 +304,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Update Insight Template
 
-Update an insight template
+Updates the specified insight template and returns the updated template.
 
 `PUT /ai/conversations/insights/{insight_id}`
 
@@ -303,6 +315,12 @@ curl \
   -X PUT \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "instructions": "Instructions",
+  "name": "Name",
+  "webhook": "Webhook",
+  "json_schema": "string"
+}' \
   "https://api.telnyx.com/v2/ai/conversations/insights/{insight_id}"
 ```
 
@@ -310,7 +328,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Delete Insight Template
 
-Delete insight by ID
+Permanently deletes the specified insight template by its ID.
 
 `DELETE /ai/conversations/insights/{insight_id}`
 
@@ -346,6 +364,11 @@ curl \
   -X PUT \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "metadata": {
+    "ai_disabled": "true"
+  }
+}' \
   "https://api.telnyx.com/v2/ai/conversations/550e8400-e29b-41d4-a716-446655440000"
 ```
 
@@ -390,7 +413,13 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "role": "user"
+  "role": "Role",
+  "content": "",
+  "name": "Name",
+  "tool_choice": "string",
+  "tool_calls": [],
+  "tool_call_id": "Tool Call Id",
+  "sent_at": "2024-01-23T18:10:02.574Z"
 }' \
   "https://api.telnyx.com/v2/ai/conversations/550e8400-e29b-41d4-a716-446655440000/message"
 ```
@@ -405,7 +434,7 @@ Retrieve messages for a specific conversation, including tool calls made by the 
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/conversations/550e8400-e29b-41d4-a716-446655440000/messages"
 ```
 
-Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
+Returns: `created_at` (date-time), `metadata` (object), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
 
 ## Get Tasks by Status
 
@@ -439,7 +468,11 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "bucket_name": "my-bucket"
+  "bucket_name": "Bucket Name",
+  "document_chunk_size": 1024,
+  "document_chunk_overlap_size": 512,
+  "embedding_model": "intfloat/multilingual-e5-large",
+  "loader": "default"
 }' \
   "https://api.telnyx.com/v2/ai/embeddings"
 ```
@@ -448,7 +481,7 @@ Returns: `created_at` (string), `finished_at` (string | null), `status` (string)
 
 ## List embedded buckets
 
-Get all embedding buckets for a user.
+Returns the list of storage buckets that have been embedded for your account, for use with similarity search.
 
 `GET /ai/embeddings/buckets`
 
@@ -497,8 +530,9 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "bucket_name": "my-bucket",
-  "query": "What is Telnyx?"
+  "bucket_name": "Bucket Name",
+  "query": "Query",
+  "num_of_docs": 3
 }' \
   "https://api.telnyx.com/v2/ai/embeddings/similarity-search"
 ```
@@ -517,8 +551,8 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "url": "https://example.com/resource",
-  "bucket_name": "my-bucket"
+  "url": "URL",
+  "bucket_name": "Bucket Name"
 }' \
   "https://api.telnyx.com/v2/ai/embeddings/url"
 ```
@@ -556,7 +590,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Create a fine tuning job
 
-Create a new fine tuning job.
+Creates a new fine-tuning job that trains a model on the provided dataset, and returns the created job.
 
 `POST /ai/fine_tuning/jobs` — Required: `model`, `training_file`
 
@@ -569,7 +603,11 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "model": "openai/gpt-4o",
-  "training_file": "training-data.jsonl"
+  "training_file": "training-data.jsonl",
+  "suffix": "string",
+  "hyperparameters": {
+    "n_epochs": 3
+  }
 }' \
   "https://api.telnyx.com/v2/ai/fine_tuning/jobs"
 ```
@@ -578,7 +616,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Get a fine tuning job
 
-Retrieve a fine tuning job by `job_id`.
+Returns the details of a single fine-tuning job by its job_id, including its current status.
 
 `GET /ai/fine_tuning/jobs/{job_id}`
 
@@ -590,7 +628,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Cancel a fine tuning job
 
-Cancel a fine tuning job.
+Cancels the specified in-progress fine-tuning job and returns the updated job.
 
 `POST /ai/fine_tuning/jobs/{job_id}/cancel`
 
@@ -614,7 +652,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/models"
 ```
 
-Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
+Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -707,12 +745,72 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "bucket": "my-bucket",
-  "filename": "data.csv"
+  "filename": "data.csv",
+  "system_prompt": "string"
 }' \
   "https://api.telnyx.com/v2/ai/summarize"
 ```
 
 Returns: `summary` (string)
+
+## Get all Speech to Text batch report requests
+
+Retrieves all Speech to Text batch report requests for the authenticated user
+
+`GET /legacy/reporting/batch/detail/records/speech/to/text`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy/reporting/batch/detail/records/speech/to/text"
+```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
+## Create a new Speech to Text batch report request
+
+Creates a new Speech to Text batch report request with the specified filters
+
+`POST /legacy/reporting/batch/detail/records/speech/to/text` — Required: `start_date`, `end_date`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "start_date": "2020-07-01T00:00:00-06:00",
+  "end_date": "2020-07-01T00:00:00-06:00"
+}' \
+  "https://api.telnyx.com/v2/legacy/reporting/batch/detail/records/speech/to/text"
+```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
+## Get a specific Speech to Text batch report request
+
+Retrieves a specific Speech to Text batch report request by ID
+
+`GET /legacy/reporting/batch/detail/records/speech/to/text/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy/reporting/batch/detail/records/speech/to/text/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
+
+## Delete a Speech to Text batch report request
+
+Deletes a specific Speech to Text batch report request by ID
+
+`DELETE /legacy/reporting/batch/detail/records/speech/to/text/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/legacy/reporting/batch/detail/records/speech/to/text/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `created_at` (date-time), `download_link` (string), `end_date` (date-time), `id` (string), `record_type` (string), `start_date` (date-time), `status` (enum: PENDING, COMPLETE, FAILED, EXPIRED)
 
 ## Get all Speech to Text batch report requests
 
@@ -785,14 +883,26 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legac
 
 Returns: `data` (object)
 
+## Get speech to text usage report
+
+Generate and fetch speech to text usage report synchronously. This endpoint will both generate and fetch the speech to text report over a specified time period.
+
+`GET /legacy_reporting/usage_reports/speech_to_text`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/legacy_reporting/usage_reports/speech_to_text?start_date=2020-07-02T00:00:00-06:00&end_date=2020-07-01T00:00:00-06:00"
+```
+
+Returns: `data` (object)
+
 ## Speech to text over WebSocket
 
-Open a WebSocket connection to stream audio and receive transcriptions in real-time. Authentication is provided via the standard `Authorization: Bearer ` header. Supported engines: `Azure`, `Deepgram`, `Google`, `Telnyx`, `xAI`, `Speechmatics`, `Soniox`, `Parakeet`.
+Open a WebSocket connection to stream audio and receive transcriptions in real-time. Authentication is provided via the standard `Authorization: Bearer ` header. Supported engines: `Azure`, `Deepgram`, `Google`, `Telnyx`, `xAI`, `Speechmatics`, `Soniox`, `Parakeet`, `Humain`, `Reson8`, `Cohere`.
 
 `GET /speech-to-text/transcription`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/speech-to-text/transcription?transcription_engine=Telnyx&input_format=mp3&language=en-US&interim_results=True&endpointing=500&redact=pci&keyterm=Telnyx&keywords=Telnyx,SIP,WebRTC"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/speech-to-text/transcription?transcription_engine=Telnyx&input_format=mp3&sample_rate=16000&language=en-US&interim_results=True&endpointing=500&redact=pci&keyterm=Telnyx&keywords=Telnyx,SIP,WebRTC"
 ```
 
 ## Stream text to speech over WebSocket
@@ -811,13 +921,82 @@ Generate synthesized speech audio from text input. Returns audio in the requeste
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble, xai), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `humain` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, resemble, xai, humain, soniox), `resemble` (object), `soniox` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
 
 ```bash
 curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
+  -d '{
+  "voice": "string",
+  "text": "string",
+  "provider": "aws",
+  "language": "string",
+  "text_type": "text",
+  "output_type": "binary_output",
+  "disable_cache": false,
+  "aws": {
+    "language_code": "string",
+    "text_type": "text",
+    "lexicon_names": [
+      "string"
+    ],
+    "output_format": "string",
+    "sample_rate": "string"
+  },
+  "telnyx": {
+    "voice_speed": 1.0,
+    "response_format": "mp3",
+    "sampling_rate": 24000,
+    "volume": 1.0,
+    "emotion": "neutral"
+  },
+  "azure": {
+    "language_code": "en-US",
+    "output_format": "audio-24khz-160kbitrate-mono-mp3",
+    "text_type": "text",
+    "api_key": "string",
+    "region": "string",
+    "deployment_id": "string",
+    "effect": "string",
+    "gender": "string"
+  },
+  "elevenlabs": {
+    "language_code": "string",
+    "api_key": "string"
+  },
+  "minimax": {
+    "speed": 0,
+    "vol": 0,
+    "pitch": 0,
+    "response_format": "string",
+    "language_boost": "string"
+  },
+  "resemble": {
+    "api_key": "string",
+    "precision": "string",
+    "sample_rate": "string",
+    "format": "string"
+  },
+  "xai": {
+    "voice_id": "eve",
+    "language": "auto",
+    "output_format": "mp3",
+    "sample_rate": 24000
+  },
+  "humain": {
+    "voice_id": "sara-en",
+    "ttfb_eagerness": 0
+  },
+  "soniox": {
+    "voice_id": "Emma",
+    "model_id": "tts-rt-v2",
+    "language": "en",
+    "speed": 1.0,
+    "audio_format": "mp3"
+  }
+}' \
   "https://api.telnyx.com/v2/text-to-speech/speech"
 ```
 

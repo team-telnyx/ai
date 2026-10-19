@@ -83,6 +83,89 @@ OAuth 2.0 authorization endpoint for the authorization code flow
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth/authorize?scope=admin"
 ```
 
+## List OAuth clients
+
+Retrieve a paginated list of OAuth clients for the authenticated user
+
+`GET /oauth/clients`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth/clients"
+```
+
+Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+
+## Create OAuth client
+
+Creates a new OAuth client on your account for authenticating third-party integrations, and returns the created client.
+
+`POST /oauth/clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
+
+Optional: `logo_uri` (uri), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "name": "My OAuth client",
+  "allowed_scopes": [
+    "admin"
+  ],
+  "client_type": "public",
+  "allowed_grant_types": [
+    "client_credentials"
+  ]
+}' \
+  "https://api.telnyx.com/v2/oauth/clients"
+```
+
+Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+
+## Get OAuth client
+
+Returns the details of a single OAuth client on your account by its ID.
+
+`GET /oauth/clients/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth/clients/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+
+## Update OAuth client
+
+Updates the specified OAuth client's configuration and returns the updated client.
+
+`PUT /oauth/clients/{id}`
+
+Optional: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri)
+
+```bash
+curl \
+  -X PUT \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  "https://api.telnyx.com/v2/oauth/clients/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string]), `client_id` (string), `client_secret` (string | null), `client_type` (enum: public, confidential), `created_at` (date-time), `logo_uri` (uri), `name` (string), `org_id` (string), `policy_uri` (uri), `record_type` (enum: oauth_client), `redirect_uris` (array[string]), `require_pkce` (boolean), `tos_uri` (uri), `updated_at` (date-time), `user_id` (string)
+
+## Delete OAuth client
+
+Permanently deletes the specified OAuth client from your account.
+
+`DELETE /oauth/clients/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/oauth/clients/550e8400-e29b-41d4-a716-446655440000"
+```
+
 ## Get OAuth consent token
 
 Retrieve details about an OAuth consent token
@@ -95,9 +178,21 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth
 
 Returns: `client_id` (string), `logo_uri` (uri), `name` (string), `policy_uri` (uri), `redirect_uri` (uri), `requested_scopes` (array[object]), `tos_uri` (uri), `verified` (boolean)
 
+## List OAuth grants
+
+Retrieve a paginated list of OAuth grants for the authenticated user
+
+`GET /oauth/grants`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth/grants"
+```
+
+Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+
 ## Create OAuth grant
 
-Create an OAuth authorization grant
+Creates an OAuth authorization grant and returns the grant response for completing the authorization flow.
 
 `POST /oauth/grants` — Required: `allowed`, `consent_token`
 
@@ -107,13 +202,40 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "allowed": true,
+  "allowed": false,
   "consent_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.example"
 }' \
   "https://api.telnyx.com/v2/oauth/grants"
 ```
 
 Returns: `redirect_uri` (uri)
+
+## Get OAuth grant
+
+Returns the details of a single OAuth grant on your account by its ID.
+
+`GET /oauth/grants/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/oauth/grants/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
+
+## Revoke OAuth grant
+
+Revokes the specified OAuth grant, withdrawing the access previously granted to the client.
+
+`DELETE /oauth/grants/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/oauth/grants/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used_at` (date-time), `record_type` (enum: oauth_grant), `scopes` (array[string])
 
 ## Token introspection
 
@@ -199,7 +321,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Create OAuth client
 
-Create a new OAuth client
+Creates a new OAuth client on your account for authenticating third-party integrations, and returns the created client.
 
 `POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
 
@@ -227,7 +349,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Get OAuth client
 
-Retrieve a single OAuth client by ID
+Returns the details of a single OAuth client on your account by its ID.
 
 `GET /oauth_clients/{id}`
 
@@ -239,7 +361,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Update OAuth client
 
-Update an existing OAuth client
+Updates the specified OAuth client's configuration and returns the updated client.
 
 `PUT /oauth_clients/{id}`
 
@@ -257,7 +379,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Delete OAuth client
 
-Delete an OAuth client
+Permanently deletes the specified OAuth client from your account.
 
 `DELETE /oauth_clients/{id}`
 
@@ -282,7 +404,7 @@ Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used
 
 ## Get OAuth grant
 
-Retrieve a single OAuth grant by ID
+Returns the details of a single OAuth grant on your account by its ID.
 
 `GET /oauth_grants/{id}`
 
@@ -294,7 +416,7 @@ Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used
 
 ## Revoke OAuth grant
 
-Revoke an OAuth grant
+Revokes the specified OAuth grant, withdrawing the access previously granted to the client.
 
 `DELETE /oauth_grants/{id}`
 
