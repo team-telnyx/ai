@@ -48,6 +48,12 @@ if (args[0] === "phone-numbers" && args[1] === "list") {
     carrier: { name: "Example Mobile", type: "mobile" },
     caller_name: { caller_name: "EXAMPLE" }
   } }));
+} else if (args[0] === "phone-numbers" && args[1] === "retrieve") {
+  console.log(JSON.stringify({ data: { id: flag("--id"), phone_number: "+131****0000", status: "active", connection_id: "conn-1" } }));
+} else if (args[0] === "phone-numbers" && args[1] === "update") {
+  console.log(JSON.stringify({ data: { id: flag("--phone-number-id"), phone_number: "+131****0000", status: "active", connection_id: flag("--connection-id") || "conn-1", tags: JSON.parse(flag("--tag") || "[]") } }));
+} else if (args[0] === "phone-numbers" && args[1] === "delete") {
+  console.log(JSON.stringify({ data: { id: flag("--id"), phone_number: "+131****0000", status: "deleted" } }));
 } else {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
   process.exit(2);
@@ -238,17 +244,100 @@ describe("Numbers action commands", () => {
     assert.deepEqual(loggedArgs(fake.logPath), []);
   });
 
-  it("advertises all four commands in help and capabilities", () => {
+  it("retrieves an owned number and preserves the generated response envelope", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent(["phone-number", "--action", "retrieve", "--id", "pn-1", "--json"], fake.env);
+
+    assert.deepEqual(JSON.parse(output), {
+      data: { id: "pn-1", phone_number: "+131****0000", status: "active", connection_id: "conn-1" },
+    });
+    const human = runAgent(["phone-number", "--action", "retrieve", "--id", "pn-1"], fake.env);
+    assert.match(human, /Phone number retrieved!/);
+    assert.match(human, /\+131\*\*\*\*0000/);
+
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["phone-numbers", "retrieve"]);
+    assertFlag(args, "--id", "pn-1");
+    assertFlag(args, "--format", "json");
+  });
+
+  it("updates supported owned-number fields with generated update flags", () => {
+    const fake = setupFakeTelnyx();
+    const output = runAgent([
+      "phone-number", "--action", "update", "--id", "pn-1",
+      "--connection-id", "conn-2", "--billing-group-id", "bg-1",
+      "--customer-reference", "customer-ref", "--external-pin", "1234",
+      "--address-id", "addr-1", "--tags", "support,voice", "--json",
+    ], fake.env);
+
+    const result = JSON.parse(output);
+    assert.equal(result.data.id, "pn-1");
+    assert.deepEqual(result.data.tags, ["support", "voice"]);
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["phone-numbers", "update"]);
+    assertFlag(args, "--phone-number-id", "pn-1");
+    assertFlag(args, "--connection-id", "conn-2");
+    assertFlag(args, "--billing-group-id", "bg-1");
+    assertFlag(args, "--customer-reference", "customer-ref");
+    assertFlag(args, "--external-pin", "1234");
+    assertFlag(args, "--address-id", "addr-1");
+    assertFlag(args, "--tag", JSON.stringify(["support", "voice"]));
+    assert.ok(!args.includes("--tags"));
+  });
+
+  it("requires a bare confirmation to release a number and never forwards it", () => {
+    for (const confirmation of [[], ["--confirm", "true"], ["--confirm", "false"]]) {
+      const fake = setupFakeTelnyx();
+      assert.throws(() => runAgent([
+        "phone-number", "--action", "delete", "--id", "pn-1", ...confirmation, "--json",
+      ], fake.env));
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+
+    const fake = setupFakeTelnyx();
+    const output = runAgent([
+      "phone-number", "--action", "delete", "--id", "pn-1", "--confirm", "--json",
+    ], fake.env);
+    assert.equal(JSON.parse(output).data.status, "deleted");
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["phone-numbers", "delete"]);
+    assertFlag(args, "--id", "pn-1");
+    assert.ok(!args.includes("--confirm"));
+  });
+
+  it("validates lifecycle actions, IDs, tags, and unavailable generated update fields before invoking telnyx", () => {
+    const invalidInvocations = [
+      ["phone-number", "--id", "pn-1", "--json"],
+      ["phone-number", "--action", "replace", "--id", "pn-1", "--json"],
+      ["phone-number", "--action", "retrieve", "--id", "", "--json"],
+      ["phone-number", "--action", "update", "--id", "pn-1", "--json"],
+      ["phone-number", "--action", "update", "--id", "pn-1", "--tags", "one,,two", "--json"],
+      ["phone-number", "--action", "update", "--id", "pn-1", "--emergency-address-id", "ea-1", "--json"],
+      ["phone-number", "--action", "update", "--id", "pn-1", "--status", "active", "--json"],
+      ["phone-number", "--action", "update", "--id", "pn-1", "--usage-payment-method", "pay-per-minute", "--json"],
+    ];
+    for (const invocation of invalidInvocations) {
+      const fake = setupFakeTelnyx();
+      assert.throws(() => runAgent(invocation, fake.env));
+      assert.deepEqual(loggedArgs(fake.logPath), [], invocation.join(" "));
+    }
+  });
+
+  it("advertises all five commands in help and capabilities", () => {
     const help = runAgent(["help"]);
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"]));
 
-    for (const command of ["list-phone-numbers", "search-phone-numbers", "buy-phone-number", "lookup-number"]) {
+    for (const command of ["list-phone-numbers", "phone-number", "search-phone-numbers", "buy-phone-number", "lookup-number"]) {
       assert.match(help, new RegExp(command));
       assert.ok(
         capabilities.composite_commands.some((entry: { name: string }) => entry.name === `telnyx-agent ${command}`),
         `capabilities should advertise ${command}`,
       );
     }
+    assert.ok(capabilities.api_capabilities["🔢 Numbers"][0].actions.includes("retrieve_phone_number"));
+    assert.ok(capabilities.api_capabilities["🔢 Numbers"][0].actions.includes("update_phone_number"));
+    assert.ok(capabilities.api_capabilities["🔢 Numbers"][0].actions.includes("release_phone_number"));
+    assert.match(help, /phone-number --action delete .* --confirm/);
     assert.match(help, /carrier\|caller-name \(lookup, required\)/);
     assert.match(help, /lookup-number .* --type carrier --json/);
     assert.match(help, /lookup-number .* --type caller-name --json/);

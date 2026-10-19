@@ -33,7 +33,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Meeting Sessions", description: "Create, inspect, and end Meeting Bot sessions; control chat and speech; retrieve transcripts, recordings, summaries, and action items (requires Telnyx Go CLI v0.27+)", actions: ["create_meeting_session", "list_meeting_sessions", "get_meeting_session", "end_meeting_session", "send_meeting_chat", "speak_in_meeting", "stop_meeting_speaking", "get_meeting_transcript", "get_meeting_recordings", "create_meeting_artifact", "list_meeting_artifacts", "get_meeting_artifact"] },
   ],
   "🔢 Numbers": [
-    { name: "Phone Numbers", description: "Search, buy, and manage phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number"] },
+    { name: "Phone Numbers", description: "Search, buy, retrieve, update, and release phone numbers", actions: ["list_phone_numbers", "search_phone_numbers", "buy_phone_number", "retrieve_phone_number", "update_phone_number", "release_phone_number"] },
   ],
   "🤖 AI": [
     { name: "Chat Completions", description: "LLM inference via Telnyx AI with optional data-locality region and preferred/strict routing controls (Go CLI v0.32+ when used; executable with telnyx-agent ai-chat)", actions: ["ai_chat"] },
@@ -242,6 +242,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent mute-room-participants", description: "Mute selected participants in a room session" },
   { name: "telnyx-agent unmute-room-participants", description: "Unmute selected participants in a room session" },
   { name: "telnyx-agent list-phone-numbers", description: "List account-owned phone numbers with core filters and pagination" },
+  { name: "telnyx-agent phone-number", description: "Retrieve, update, or release one owned phone number; release requires bare --confirm" },
   { name: "telnyx-agent search-phone-numbers", description: "Search available phone numbers by country, type, features, location, or number pattern" },
   { name: "telnyx-agent buy-phone-number", description: "Purchase one phone number and optionally assign its connection or messaging profile" },
   { name: "telnyx-agent lookup-number", description: "Look up carrier or caller-name information for an E.164 phone number" },
