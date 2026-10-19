@@ -1,10 +1,10 @@
 /**
- * Telnyx API client — ONLY for operations with no CLI equivalent.
+ * Telnyx API client for composite flows and operations without a suitable CLI path.
  *
- * The following 9 operations have no `telnyx` CLI command and must use direct API calls:
+ * The following operations use direct API calls (some from composite setup flows):
  * 1. POST /texml_applications (setup-ai)
- * 2. POST /sim_card_groups (setup-iot)
- * 3. PATCH /sim_cards/:id (setup-iot)
+ * 2. POST /sim_card_groups (setup-iot; exposed independently through sim-card-group)
+ * 3. PATCH /sim_cards/:id (setup-iot; exposed independently through sim-card-assign)
  * 4. POST /networks (setup-wireguard)
  * 5. POST /wireguard_interfaces (setup-wireguard)
  * 6. POST /wireguard_peers (setup-wireguard)

@@ -3,9 +3,9 @@
  *
  * Steps:
  * 1. List existing SIM cards (via telnyx CLI)
- * 2. Create a SIM card group (direct API — no CLI equivalent)
+ * 2. Create a SIM card group (direct API within this composite flow; sim-card-group also exposes the CLI path)
  * 3. Activate first available SIM (via telnyx CLI)
- * 4. Assign SIM to group (direct API — no CLI equivalent)
+ * 4. Assign SIM to group (direct API within this composite flow; sim-card-assign also exposes the CLI path)
  */
 
 import { TelnyxClient, TelnyxAPIError } from "../client.ts";
@@ -83,7 +83,7 @@ export async function setupIotCommand(flags: Record<string, string | boolean>): 
     simId = String(availableSim.id);
     simIccid = String(availableSim.iccid ?? "");
 
-    // Step 2: Create SIM card group (direct API — no CLI equivalent)
+    // Step 2: Create SIM card group via the existing direct API composite flow.
     const step2Start = Date.now();
     const ts = new Date().toISOString().slice(0, 19).replace("T", " ");
     groupName = `Agent IoT Group - ${ts}`;
@@ -116,7 +116,7 @@ export async function setupIotCommand(flags: Record<string, string | boolean>): 
     }
     if (!jsonOutput) printStep(steps[steps.length - 1], totalSteps);
 
-    // Step 4: Assign SIM to group (direct API — no CLI equivalent)
+    // Step 4: Assign SIM to group via the existing direct API composite flow.
     const step4Start = Date.now();
     try {
       await client.patch(`/sim_cards/${simId}`, { sim_card_group_id: groupId });

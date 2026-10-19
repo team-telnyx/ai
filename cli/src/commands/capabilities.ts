@@ -59,7 +59,8 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Fax", description: "Discover, send, and manage inbound and outbound faxes", actions: ["list_faxes", "send_fax", "check_fax_status", "cancel_fax", "refresh_fax_media_url"] },
   ],
   "📡 IoT": [
-    { name: "SIM Cards", description: "List, inspect, enable, and disable IoT SIM cards and observe asynchronous actions", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card", "retrieve_sim_card_action", "list_sim_card_actions"] },
+    { name: "SIM Cards", description: "List, inspect, enable, disable, and assign IoT SIM cards to groups; observe asynchronous actions", actions: ["list_sim_cards", "retrieve_sim_card", "enable_sim_card", "disable_sim_card", "assign_sim_card_to_group", "retrieve_sim_card_action", "list_sim_card_actions"] },
+    { name: "SIM Card Groups", description: "Create, retrieve, update, list, and delete IoT SIM card groups", actions: ["create_sim_card_group", "retrieve_sim_card_group", "update_sim_card_group", "list_sim_card_groups", "delete_sim_card_group"] },
   ],
   "🗄️ Storage": [
     { name: "SQL Databases", description: "Run parameterized SQL against a Telnyx Storage SQL database", actions: ["run_storage_sql_query"] },
@@ -125,6 +126,8 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-voice", description: "Zero to voice: creates SIP connection, buys number, assigns it" },
   { name: "telnyx-agent create-telephony-credential-token", description: "Create a JWT for an on-demand telephony credential (Go CLI v0.30+; output is sensitive and requires --json)" },
   { name: "telnyx-agent setup-iot", description: "Zero to IoT: lists SIMs, creates group, activates SIM" },
+  { name: "telnyx-agent sim-card-group", description: "Create, retrieve, update, list, or delete a SIM card group with --action" },
+  { name: "telnyx-agent sim-card-assign", description: "Assign a SIM card to a SIM card group" },
   { name: "telnyx-agent list-sim-cards", description: "List IoT SIM cards with filters and pagination" },
   { name: "telnyx-agent retrieve-sim-card", description: "Retrieve one IoT SIM card by ID" },
   { name: "telnyx-agent enable-sim-card", description: "Request asynchronous enablement of an IoT SIM card" },
