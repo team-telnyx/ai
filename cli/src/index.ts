@@ -151,6 +151,10 @@ import {
 } from "./commands/ai-assistant-scheduled-events.ts";
 import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
 import {
+  assignSimCardCommand,
+  simCardGroupCommand,
+} from "./commands/sim-card-groups.ts";
+import {
   disableSimCardCommand,
   enableSimCardCommand,
   listSimCardActionsCommand,
@@ -198,6 +202,8 @@ Commands:
   setup-sms         Zero to SMS: create profile, buy number, assign it
   setup-voice       Zero to voice: create Call Control App, buy number, assign it
   setup-iot         Zero to IoT: list SIMs, create group, activate SIM
+  sim-card-group    Create, retrieve, update, list, or delete IoT SIM card groups
+  sim-card-assign   Assign an IoT SIM card to a SIM card group
   list-sim-cards    List IoT SIM cards with filters and pagination
   retrieve-sim-card Retrieve one IoT SIM card by ID
   enable-sim-card   Enable an IoT SIM card (asynchronous action)
@@ -973,6 +979,16 @@ AI Assistant Execution Flags:
   --dynamic-variables <json> Dynamic variables object (tool test)
 
 IoT SIM Action Flags:
+  --action <action> SIM card group action: create, retrieve, update, list, or delete
+  --name <name>     SIM card group name (create; optional for update)
+  --data-limit-amount <n> Positive group data limit amount (create, update)
+  --data-limit-unit <MB|GB> Group data limit unit (create, update)
+  --filter-name <name> Filter SIM card groups by name (list)
+  --filter-private-wireless-gateway-id <id> Filter groups by gateway (list)
+  --filter-wireless-blocklist-id <id> Filter groups by wireless blocklist (list)
+  --max-items <n>   Maximum returned SIM card groups; -1 means unlimited (list)
+  --include-iccids <bool> Include group ICCIDs (retrieve)
+  --confirm          Required, bare acknowledgement for sim-card-group --action delete
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
   --iccid           Partial ICCID filter (list-sim-cards)
   --msisdn          MSISDN filter (list-sim-cards)
@@ -1336,6 +1352,8 @@ const COMMANDS: Record<string, (
   "get-ai-assistant-test-run": getAiAssistantTestRunCommand,
   "list-ai-assistant-test-runs": listAiAssistantTestRunsCommand,
   "test-ai-assistant-tool": testAiAssistantToolCommand,
+  "sim-card-group": simCardGroupCommand,
+  "sim-card-assign": assignSimCardCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -1369,21 +1387,21 @@ const KNOWN_FLAGS = new Set<string>([
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
   "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code",
-  "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
+  "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit", "data-limit-amount", "data-limit-unit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
-  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
+  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-name", "filter-private-wireless-gateway-id", "filter-sim-card-group-id", "filter-wireless-blocklist-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
-  "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
+  "include-iccids", "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
   "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
