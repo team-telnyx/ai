@@ -283,6 +283,22 @@ export function supportsSqlStdinImport(): boolean {
   }
 }
 
+/** Detect the v0.5.12 local SQL workflow from each command's own help surface. */
+export function supportsLocalSqlWorkflow(): boolean {
+  const hasFlags = (args: string[], flags: string[]): boolean => {
+    try {
+      const out = runEdge(args);
+      return flags.every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+    } catch {
+      return false;
+    }
+  };
+  const execute = hasFlags(["storage", "sqldb", "execute", "--help"], ["local", "persist-to"]);
+  const migrationsList = hasFlags(["storage", "sqldb", "migrations", "list", "--help"], ["local"]);
+  const migrationsApply = hasFlags(["storage", "sqldb", "migrations", "apply", "--help"], ["local"]);
+  return execute && migrationsList && migrationsApply;
+}
+
 /**
  * Detect the complete custom-domain workflow from its own help surfaces. The
  * root command must advertise every lifecycle step, certificate upload must

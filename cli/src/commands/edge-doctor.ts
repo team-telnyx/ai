@@ -31,6 +31,7 @@ import {
   supportsLiveLogTail,
   supportsLogExport,
   supportsLocalDev,
+  supportsLocalSqlWorkflow,
   supportsSecretsAdd,
   supportsShip,
   supportsShipStatus,
@@ -78,6 +79,7 @@ interface EdgeDoctorResult {
   sql_bound_parameters_supported: boolean;
   sql_database_export_supported: boolean;
   sql_stdin_import_supported: boolean;
+  local_sql_workflow_supported: boolean;
   custom_domains_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
@@ -120,6 +122,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlBoundParametersSupported = false;
   let sqlDatabaseExportSupported = false;
   let sqlStdinImportSupported = false;
+  let localSqlWorkflowSupported = false;
   let customDomainsSupported = false;
 
   try {
@@ -168,6 +171,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlBoundParametersSupported = supportsSqlBoundParameters();
     sqlDatabaseExportSupported = supportsSqlDatabaseExport();
     sqlStdinImportSupported = supportsSqlStdinImport();
+    localSqlWorkflowSupported = supportsLocalSqlWorkflow();
     customDomainsSupported = supportsCustomDomains();
 
     checks.push({
@@ -364,6 +368,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "storage sqldb execute --help did not advertise --file - standard-input input",
     });
     checks.push({
+      name: "Local SQL workflow",
+      ok: localSqlWorkflowSupported,
+      detail: localSqlWorkflowSupported
+        ? "execute supports --local/--persist-to and migrations list/apply support --local"
+        : "SQL help did not advertise execute --local/--persist-to and migrations list/apply --local",
+    });
+    checks.push({
       name: "Custom domains",
       ok: customDomainsSupported,
       detail: customDomainsSupported
@@ -519,6 +530,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlDatabaseExportSupported && sqlStdinImportSupported) {
       nextSteps.push("Copy SQL data only to an empty/disposable destination (imports can partially modify it on failure): telnyx-edge storage sqldb export <source-database> --remote --output - | telnyx-edge storage sqldb execute <destination-database> --remote --file -");
     }
+    if (localSqlWorkflowSupported) {
+      nextSteps.push("Run local SQL with Docker (separate from deployed data): telnyx-edge storage sqldb execute <database> --local --command \"SELECT 1\"");
+    }
     if (customDomainsSupported) {
       nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
     }
@@ -540,6 +554,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
       !sqlDatabaseExportSupported && "SQL database export",
       !sqlStdinImportSupported && "SQL standard-input import",
+      !localSqlWorkflowSupported && "local SQL workflow",
       !customDomainsSupported && "custom domains",
       !actorMetricsSupported && "actor metrics",
       !actorStorageMetricsSupported && "actor stored-state metrics (90h maximum)",
@@ -588,6 +603,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_bound_parameters_supported: sqlBoundParametersSupported,
     sql_database_export_supported: sqlDatabaseExportSupported,
     sql_stdin_import_supported: sqlStdinImportSupported,
+    local_sql_workflow_supported: localSqlWorkflowSupported,
     custom_domains_supported: customDomainsSupported,
     checks,
     next_steps: nextSteps,

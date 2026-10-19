@@ -76,6 +76,10 @@ type FakeEdgeOptions = {
   sqlDatabaseExportNoSchema?: boolean;
   sqlDatabaseExportStdout?: boolean;
   sqlStdinImport?: boolean;
+  sqlLocalExecute?: boolean;
+  sqlLocalPersistTo?: boolean;
+  sqlMigrationsListLocal?: boolean;
+  sqlMigrationsApplyLocal?: boolean;
   customDomainCommands?: Array<"add" | "verify" | "list" | "delete" | "cert">;
   customDomainCertUpload?: boolean;
   customDomainCertFlag?: boolean;
@@ -151,6 +155,10 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const sqlDatabaseExportNoSchema = config.sqlDatabaseExportNoSchema ?? true;
   const sqlDatabaseExportStdout = config.sqlDatabaseExportStdout ?? true;
   const sqlStdinImport = config.sqlStdinImport ?? true;
+  const sqlLocalExecute = config.sqlLocalExecute ?? true;
+  const sqlLocalPersistTo = config.sqlLocalPersistTo ?? true;
+  const sqlMigrationsListLocal = config.sqlMigrationsListLocal ?? true;
+  const sqlMigrationsApplyLocal = config.sqlMigrationsApplyLocal ?? true;
   const customDomainCommands = config.customDomainCommands ?? ["add", "verify", "list", "delete", "cert"];
   const customDomainCertUpload = config.customDomainCertUpload ?? true;
   const customDomainCertFlag = config.customDomainCertFlag ?? true;
@@ -286,11 +294,27 @@ if (args[0] === 'storage' && args[1] === 'kv' && args.includes('--help')) {
 }
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'execute' && args.includes('--help')) {
   if (${sqlDatabases}) {
-    console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlStdinImport} ? ['Use --file - for standard input'] : []), ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
+    console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlLocalExecute} ? ['--local  Run against a local database file'] : []), ...(${sqlLocalPersistTo} ? ['--persist-to string  Directory holding local databases'] : []), ...(${sqlStdinImport} ? ['Use --file - for standard input'] : []), ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
     process.exit(0);
   }
   console.log('Usage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote --command string');
   process.exit(0);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'migrations' && args[3] === 'list' && args.includes('--help')) {
+  if (${sqlDatabases}) {
+    console.log(['List applied and pending migrations', 'Usage: telnyx-edge storage sqldb migrations list <database> [flags]', ...(${sqlMigrationsListLocal} ? ['--local  Read applied state from a local database'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "migrations"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'migrations' && args[3] === 'apply' && args.includes('--help')) {
+  if (${sqlDatabases}) {
+    console.log(['Apply pending migrations in order', 'Usage: telnyx-edge storage sqldb migrations apply <database> [flags]', ...(${sqlMigrationsApplyLocal} ? ['--local  Apply against a local database'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "migrations"\\n');
+  process.exit(1);
 }
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'export' && args.includes('--help')) {
   if (${sqlDatabaseExport}) {
@@ -483,6 +507,7 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_bound_parameters_supported, true);
     assert.equal(data.sql_database_export_supported, true);
     assert.equal(data.sql_stdin_import_supported, true);
+    assert.equal(data.local_sql_workflow_supported, true);
     assert.equal(data.custom_domains_supported, true);
   });
 
@@ -545,6 +570,7 @@ describe("CLI — Edge Compute handoff", () => {
       sqlParamJson: false,
       sqlDatabaseExport: false,
       sqlStdinImport: false,
+      sqlLocalExecute: false,
       actorMetrics: false,
       actorLogs: false,
       localDev: false,
@@ -569,6 +595,7 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_bound_parameters_supported, false);
     assert.equal(data.sql_database_export_supported, false);
     assert.equal(data.sql_stdin_import_supported, false);
+    assert.equal(data.local_sql_workflow_supported, false);
     assert.equal(data.actor_metrics_supported, false);
     assert.equal(data.actor_logs_supported, false);
     assert.equal(data.actor_live_log_tail_supported, false);
@@ -590,6 +617,8 @@ describe("CLI — Edge Compute handoff", () => {
       ["storage", "kv", "key", "--help"],
       ["storage", "sqldb", "execute", "--help"],
       ["storage", "sqldb", "export", "--help"],
+      ["storage", "sqldb", "migrations", "list", "--help"],
+      ["storage", "sqldb", "migrations", "apply", "--help"],
       ["actors", "metrics", "--help"],
       ["actors", "logs", "--help"],
       ["dev", "--help"],
@@ -825,6 +854,40 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.sql_databases_supported, true, "the existing SQL compatibility field is unchanged");
       assert.equal(data.sql_bound_parameters_supported, false);
       assert.ok(data.next_steps.some((step: string) => step.includes("SQL --param/--param-json bindings")));
+    }
+  });
+
+  it("requires complete v0.5.12 local SQL help without changing core handoff readiness", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.local_sql_workflow_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Local SQL workflow" && check.ok));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("storage sqldb execute <database> --local --command")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line: string) => JSON.parse(line));
+    for (const expected of [
+      ["storage", "sqldb", "execute", "--help"],
+      ["storage", "sqldb", "migrations", "list", "--help"],
+      ["storage", "sqldb", "migrations", "apply", "--help"],
+    ]) {
+      assert.ok(calls.some((args: string[]) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, string]> = [
+      [{ sqlLocalExecute: false }, "--local"],
+      [{ sqlLocalPersistTo: false }, "--persist-to"],
+      [{ sqlMigrationsListLocal: false }, "migrations list"],
+      [{ sqlMigrationsApplyLocal: false }, "migrations apply"],
+    ];
+    for (const [config, missing] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "local SQL remains optional for setup handoffs");
+      assert.equal(data.local_sql_workflow_supported, false, `missing ${missing} must not report local SQL support`);
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("Optional capabilities not detected") && step.includes("local SQL workflow")));
     }
   });
 

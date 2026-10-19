@@ -1,6 +1,5 @@
 # Edge Compute
 Use Telnyx Edge Compute for low-latency HTTP execution, webhook ingress, MCP servers, and small AI-adjacent transforms on Telnyx edge infrastructure.
-
 ## Ownership and repository context
 `team-telnyx/ai` is the orchestration and guidance layer. It does **not** implement the Edge Compute lifecycle. The dedicated surfaces are:
 
@@ -11,17 +10,14 @@ Use Telnyx Edge Compute for low-latency HTTP execution, webhook ingress, MCP ser
 Commands such as `ship`, `inspect`, `reset-func`, secrets, bindings, storage, revisions, rollback, and actors belong to `telnyx-edge`.
 
 The example paths in this guide, such as `examples/ts/mcp-server`, are paths **inside an `edge-compute` checkout**. They do not exist in a normal `team-telnyx/ai` checkout. Clone the source repository first, or use the repository-aware `telnyx-agent setup-edge-*` output.
-
 ```bash
 git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 # Source examples are under ./edge-compute/examples/
 ```
-
 ## Prerequisites and readiness
 1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). SQL databases require CLI v0.3.0 or newer.
 2. Authenticate interactively or with an API key stored by the CLI.
 3. Run the root status diagnostic. Unlike `auth status`, this validates configuration, credentials, and API connectivity.
-
 ```bash
 telnyx-edge --version
 # Interactive OAuth
@@ -33,23 +29,18 @@ telnyx-edge auth api-key set "$TELNYX_API_KEY"
 telnyx-edge auth status
 telnyx-edge status
 ```
-
 `telnyx-agent edge-doctor --json` reports readiness only when all three conditions hold: `telnyx-edge` is installed, `auth status` is positively recognized as authenticated, and root `telnyx-edge status` reports that all checks passed. It probes command help surfaces instead of inferring capabilities from a version number.
-
 ```bash
 telnyx-agent edge-doctor --json
 ```
-
 ## Function names
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
-
 ## Quick Start
 Use one of the repository-aware handoff commands below for a complete clone, build, secrets, deploy, and inspect sequence. The expanded manual flows show exactly what each helper emits.
 ### Classic Node lockfile prerequisite
 Before shipping a classic Node function whose `package.json` declares dependencies, ensure the function directory contains either `package-lock.json` or `npm-shrinkwrap.json`. These are the accepted npm lockfile forms; without one, `telnyx-edge ship` fails before upload.
 
 Run `npm install` in the function directory to create `package-lock.json`. The MCP manual flow below already does this before building and shipping.
-
 ## Secure MCP server handoff
 The TypeScript MCP example requires two distinct secrets:
 
@@ -59,13 +50,10 @@ The TypeScript MCP example requires two distinct secrets:
 Do not use the Telnyx API key as the inbound endpoint bearer token. Do not commit either value. The example rejects MCP requests when `SHARED_SECRET` is absent.
 
 The helper emits `source_repo`, `source_path`, capability booleans, and an executable clone/build/secret/ship/inspect flow:
-
 ```bash
 telnyx-agent setup-edge-mcp --name my-mcp-server --json
 ```
-
 Equivalent manual flow:
-
 ```bash
 export TELNYX_API_KEY='***'
 export SHARED_SECRET="$(openssl rand -hex 32)"
@@ -82,7 +70,6 @@ telnyx-edge secrets add SHARED_SECRET "$SHARED_SECRET"
 telnyx-edge ship
 telnyx-edge inspect my-mcp-server
 ```
-
 Configure the MCP client with the inspected invoke URL and the **shared secret**, not the Telnyx API key:
 
 ```json
@@ -97,9 +84,7 @@ Configure the MCP client with the inspected invoke URL and the **shared secret**
   }
 }
 ```
-
 A correctly quoted smoke test looks like this (reuse the `SHARED_SECRET` exported above):
-
 ```bash
 EDGE_MCP_TOKEN="$SHARED_SECRET"
 curl -X POST "https://<your-edge-endpoint>/" \
@@ -108,18 +93,13 @@ curl -X POST "https://<your-edge-endpoint>/" \
   -H "Authorization: Bearer $EDGE_MCP_TOKEN" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}'
 ```
-
 Health-check endpoints remain unauthenticated for platform probes; MCP traffic requires the bearer token.
-
 ## Secure webhook handoff
 The JavaScript webhook example supports HMAC-SHA256 verification through `WEBHOOK_SECRET`. Production ingress should set it and configure the producer with the same key. Sign the exact request bytes and send `x-webhook-signature: sha256=<hex>`.
-
 ```bash
 telnyx-agent setup-edge-webhook --name my-webhook --json
 ```
-
 Equivalent manual flow:
-
 ```bash
 export WEBHOOK_SECRET="$(openssl rand -hex 32)"
 EDGE_COMPUTE_SRC="$(mktemp -d)/edge-compute"
@@ -132,9 +112,7 @@ telnyx-edge secrets add WEBHOOK_SECRET "$WEBHOOK_SECRET"
 telnyx-edge ship
 telnyx-edge inspect my-webhook
 ```
-
 Signed test request:
-
 ```bash
 PAYLOAD='{"event":"message.received","id":"evt_123"}'
 SIGNATURE="sha256=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | cut -d' ' -f2)"
@@ -143,12 +121,9 @@ curl -X POST "https://<your-edge-endpoint>/" \
   -H "x-webhook-signature: $SIGNATURE" \
   -d "$PAYLOAD"
 ```
-
 Do not put `WEBHOOK_SECRET` in the request body or an Authorization header unless your own handler explicitly defines that separate protocol. Its purpose in this example is HMAC verification.
-
 ## API Reference
 ### List, create, deploy, inspect, and recover
-
 ```bash
 # List deployed functions. Use --page and --page-size for larger accounts.
 telnyx-edge list
@@ -163,26 +138,21 @@ cd my-function
 telnyx-edge ship
 telnyx-edge inspect my-function
 ```
-
 In v0.5.4, `new-func --from-dir` preserves a source `func.toml` in full, including comments and blocks such as `[[actors]]`, secrets, storage, domains, and build settings, while re-stamping only the new identity; `ship` warns when code references an undeclared actor binding such as `env.ROOM`, so add the matching `[[actors]]` block before that route reaches it.
 `inspect <function>` is the per-function detail view: deployment status, invoke URL, timestamps, and **every binding the deployed function declares**. Binding rows show the `env.<NAME>` handle, kind, target, and status; actor rows also show their owner/reference role. Probe it with `telnyx-edge inspect --help` when supporting multiple CLI releases.
 
 Before resetting a failed function, inspect the latest ship outcome: `ship status <function>` prints one actionable, stage-classified reason, and `--logs` adds the build-log or crash-output snippet when the platform supplied one. These are ship-failure logs, not deployed-function runtime output. A failed function can then be reset to `created` without changing its identity, fixed, and shipped again:
-
 ```bash
 telnyx-edge ship status my-function --logs
 telnyx-edge reset-func my-function --yes
 telnyx-edge ship --from-dir=./my-function
 ```
-
 `reset-func` applies to failed states, not healthy deployments. Teardown is asynchronous.
 
 Delete a function when it is no longer needed:
-
 ```bash
 telnyx-edge delete-func my-function --yes
 ```
-
 `delete-func` is irreversible. Use `--yes` (`-y`) in scripts, agents, and CI to skip the interactive confirmation; see [Non-interactive destructive commands](#non-interactive-destructive-commands) for the full list.
 ### Observability and deployment history (v0.5.2)
 `metrics <function>` summarizes recent request counts, HTTP status rates, latency, CPU, and memory. Use `--errors` for the current HTTP-error view and `--json` for the raw aggregate.
@@ -194,7 +164,6 @@ telnyx-edge metrics my-function --errors --json
 telnyx-edge logs my-function --type invocations --since 10m --last 200
 telnyx-edge deployments my-function --json
 ```
-
 In v0.5.3, `logs <function> --tail` streams newly arriving runtime and invocation records until interrupted (best-effort, not durable history; use `--type` to filter and `--json` for line-delimited objects); `log-export set <function> --endpoint <https-url>` sends runtime and/or invocation logs to an HTTPS OTLP endpoint, `get <function> --json` reads the configuration without headers, and `delete <function> --yes` removes it.
 ### Runtime logs (v0.5.1)
 `logs <function>` reads runtime output from a deployed function, unlike `ship status <function> --logs`, which only adds ship-failure logs, not deployed-function runtime output. It reads a historical window; lines can arrive a few seconds after the function writes them.
@@ -214,12 +183,10 @@ telnyx-edge domains delete api.example.com --yes
 DNS propagation can delay verification; retry `verify` before certificate upload. `domains list` reports verification and certificate status.
 ### Revisions and rollback
 Every successful ship creates an immutable revision.
-
 ```bash
 telnyx-edge revisions list my-function
 telnyx-edge rollback my-function <revision-id>
 ```
-
 Rollback retargets traffic to a prior healthy revision without rebuilding or re-uploading it.
 ### Secrets and Telnyx bindings
 ```bash
@@ -233,7 +200,6 @@ telnyx-edge bindings validate
 telnyx-edge bindings update
 telnyx-edge bindings delete --yes
 ```
-
 Use secrets for confidential values. Telnyx bindings provide managed Telnyx API access without hardcoding credentials in function source. The commands above manage the account resources; declare the handles a function uses in `func.toml` or `telnyx.toml`:
 
 ```toml
@@ -244,20 +210,16 @@ binding = "TELNYX_CLIENT"
 binding = "MCP_TOKEN"
 name = "SHARED_SECRET"
 ```
-
 The secret must already exist under its store name (`telnyx-edge secrets add SHARED_SECRET "$SHARED_SECRET"`). Install the current runtime and Telnyx client, then generate declarations:
-
 ```bash
 npm install @telnyx/edge-runtime@latest telnyx
 telnyx-edge types
 ```
-
 ```text
 ✓ Generated binding types for 2 binding(s) at telnyx-env.d.ts
     env.TELNYX_CLIENT → Telnyx (from "telnyx")
     env.SECRETS.get("MCP_TOKEN")
 ```
-
 The generated `telnyx-env.d.ts` types `env.TELNYX_CLIENT` as the Telnyx client and narrows `env.SECRETS.get(...)` to the declared secret handles:
 
 ```typescript
@@ -266,7 +228,6 @@ import { env } from "@telnyx/edge-runtime";
 const balance = await env.TELNYX_CLIENT.balance.retrieve();
 const mcpToken: string = await env.SECRETS.get("MCP_TOKEN");
 ```
-
 `binding` is the code-facing handle; `name` is the secret-store key. `types` covers all declared actor, Telnyx, secret, KV, SQL database, and Cloud Storage bindings, runs offline without authentication, and should be rerun whenever the manifest changes.
 ### Rate limiter bindings
 Declare each fixed-window limiter in `func.toml` or `telnyx.toml`. `limit` is the allowed call count and `period` is the window in seconds:
@@ -278,30 +239,24 @@ namespace_id = "1001"
 limit = 100
 period = 60
 ```
-
 Install `@telnyx/edge-runtime` **0.9.2 or newer**, then regenerate declarations. `telnyx-edge types` emits the binding as a runtime `RateLimiter`:
-
 ```bash
 npm install @telnyx/edge-runtime@latest
 telnyx-edge types
 ```
-
 ```typescript
 import { env } from "@telnyx/edge-runtime";
 
 const { success } = await env.API_LIMIT.limit({ key: clientId });
 if (!success) return new Response("Too many requests", { status: 429 });
 ```
-
 The runtime handle is canonicalized to uppercase with hyphens replaced by underscores (`api-limit` becomes `env.API_LIMIT`). `namespace_id` is optional and must be a positive integer string; functions using the same value share a counter pool, so reuse it only when cross-function limiting is intentional.
 ### Non-interactive destructive commands
 Destructive commands prompt in a terminal and deliberately fail rather than hang when stdin is not a terminal. Scripts, agents, and CI must pass `--yes` (`-y`) to `delete-func`, `reset-func`, `domains delete`, `secrets delete`, `bindings delete`, `actors delete`, `storage sqldb delete`, `storage kv delete`, and `storage kv key delete`. Piping the output of `yes` is not accepted.
-
 ```bash
 telnyx-edge delete-func my-function --yes
 telnyx-edge storage sqldb delete "$SQLDB_ID" --yes
 ```
-
 `--yes` only waives the CLI's local intent check. On SQL database and KV namespace deletion, `--force` (`-f`) separately tells the API to override its "still bound/in use" precondition; it does **not** confirm intent. To do both in CI, pass both flags, for example `telnyx-edge storage sqldb delete "$SQLDB_ID" --yes --force`. Functions that still bind the deleted resource are not deleted and will break.
 
 For a whole shell or CI job, `TELNYX_EDGE_SKIP_CONFIRMATIONS=1` has the same effect as `--yes`. For a persistent local preference, use `telnyx-edge config set skip_confirmations true` (undo with `false`). Neither setting implies `--force`, which remains per invocation.
@@ -320,69 +275,62 @@ telnyx-edge storage kv key get <namespace-id> greeting
 telnyx-edge storage kv key list <namespace-id> --prefix config/
 telnyx-edge storage kv key delete <namespace-id> greeting --yes
 ```
-
 Declare a runtime binding in `telnyx.toml` or supported classic project manifests, then regenerate TypeScript declarations:
 
 ```toml
 [storage.kv.CACHE]
 id = "<namespace-uuid>"
 ```
-
 Then run `telnyx-edge types`: it generates `telnyx-env.d.ts` with KV handles typed as `KvNamespace`. Rerun it whenever binding declarations change.
-### SQL databases (v0.3.0; bound parameters v0.4.1)
-
-A SQL database is an account-scoped SQLite database. It exists independently of functions and can be shared by every function that binds its UUID.
-
+### SQL databases (v0.3.0; bound parameters v0.4.1; local workflows v0.5.12)
+A remote SQL database is account-scoped SQLite, independent of functions and shareable by every function that binds its UUID.
 ```bash
 # Lifecycle: copy the UUID printed by create into SQLDB_ID.
 telnyx-edge storage sqldb create --name my-app-db
 SQLDB_ID="<uuid-from-create>"
-telnyx-edge storage sqldb list
-telnyx-edge storage sqldb get "$SQLDB_ID"
-
+telnyx-edge storage sqldb list; telnyx-edge storage sqldb get "$SQLDB_ID"
 # In a script/CI teardown, confirmation must be explicit.
 telnyx-edge storage sqldb delete "$SQLDB_ID" --yes
 ```
-
 Wait until `storage sqldb get` reports `provision_ok` before using a new database. There is no server to size or per-database deployment.
 
-Run SQL directly with `--remote` and **exactly one** of `--command`/`-c` or `--file`/`-f`. Add `--json` when a machine-readable result is needed:
-
+Every `execute`, `migrations list`, and `migrations apply` command requires exactly one target: `--remote` for the deployed database or `--local` for a separate local database file. Local mode never reads, creates, or changes deployed data; no deployed database or account access is required. It uses the deployed SQL engine in a short-lived actor-runtime container, so Docker must be running and pulls the image on first use. `--persist-to <dir>` changes the local database directory.
 ```bash
-telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
-  --command "CREATE TABLE links (id INTEGER PRIMARY KEY, url TEXT NOT NULL)"
+# Remote SQL: exactly one of --command/-c or --file/-f; add --json for machine-readable results.
+telnyx-edge storage sqldb execute "$SQLDB_ID" --remote --command "CREATE TABLE links (id INTEGER PRIMARY KEY, url TEXT NOT NULL)"
 telnyx-edge storage sqldb execute "$SQLDB_ID" --remote -f ./schema.sql
-telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
-  -c "SELECT id, url FROM links ORDER BY id" --json
+telnyx-edge storage sqldb execute "$SQLDB_ID" --remote -c "SELECT id, url FROM links ORDER BY id" --json
 # Bind untrusted values instead of interpolating them into SQL.
-telnyx-edge storage sqldb execute "$SQLDB_ID" --remote \
-  -c "SELECT id, url FROM links WHERE url = ? AND id > ?" --param "https://example.com" --param-json 42
+telnyx-edge storage sqldb execute "$SQLDB_ID" --remote -c "SELECT id, url FROM links WHERE url = ? AND id > ?" --param "https://example.com" --param-json 42
+# Local SQL uses a database file on this machine, not the deployed database.
+telnyx-edge storage sqldb execute DB --local --command "CREATE TABLE links (id INTEGER PRIMARY KEY, url TEXT NOT NULL)"
+telnyx-edge storage sqldb execute DB --local --persist-to ./tmp/sql --command "SELECT id, url FROM links"
 ```
+Do not combine `--command` and `--file`, and do not omit both. `--param` (binds a string) and `--param-json` (binds a JSON number, boolean, or null) are repeatable, fill `?` placeholders left to right in flag order, must match the placeholder count, and only work with `--command`. Prefer bindings over interpolating outside values into SQL.
 
-Do not combine `--command` and `--file`, and do not omit both. `--param` (binds a string) and `--param-json` (binds a JSON number, boolean, or null) are repeatable and fill `?` placeholders left to right in flag order; the count must match the placeholders exactly, and they only work with `--command`. Prefer bindings over interpolating outside values into SQL. Versioned migrations are created locally, then listed or applied against the remote database. Applied migrations are recorded in the database, so `apply` is safe to rerun and applies only pending files in numeric order.
-
+Versioned migrations are created locally, then listed or applied against either target. Applied migrations are recorded in that target, so `apply` is safe to rerun and applies only pending files in numeric order.
 ```bash
 telnyx-edge storage sqldb migrations create "$SQLDB_ID" add-links-table
 # Edit the generated numbered .sql file under migrations/$SQLDB_ID/.
 telnyx-edge storage sqldb migrations list "$SQLDB_ID" --remote
 telnyx-edge storage sqldb migrations apply "$SQLDB_ID" --remote
+telnyx-edge storage sqldb migrations list DB --local
+telnyx-edge storage sqldb migrations apply DB --local
 ```
+Local databases default to `.telnyx/sqldb/`, which is git-ignored and persists between runs. A `[storage.sqldb]` binding name or ID in `telnyx.toml` selects the same default local file that `telnyx-edge dev` exposes as `env.<BINDING>`; another name creates a local-only database. `--persist-to` data is separate and not visible to `dev`. `docker compose -f .telnyx/dev/compose.yaml down -v` does **not** delete `.telnyx/sqldb`; stop the stack, then deliberately reset local SQL with `rm -rf .telnyx/sqldb` (or remove the chosen `--persist-to` directory).
 Bind the database in `func.toml` or `telnyx.toml`, using the real UUID, and regenerate declarations:
 
 ```toml
 [storage.sqldb.DB]
 id = "<uuid>"
 ```
-
 ```bash
 npm install @telnyx/edge-runtime@latest
 telnyx-edge types
 ```
-
 `env.DB` is generated as `SqlDatabase` and requires `@telnyx/edge-runtime` **0.9.0 or newer**. Keep the runtime current rather than pinning it to an older CLI-era version.
 
 Do not confuse shared account SQLDB with actor-local SQL. `[storage.sqldb.DB]` exposes one account database as `env.DB` to any functions that bind the same UUID. `ctx.storage.sql` belongs to one StatefulActor instance, is reached only inside that actor, and has no `storage sqldb execute` or migration CLI surface.
-
 ### SQL export and standard-input import (v0.5.1)
 Export creates SQL data for backup or a deliberate copy; it is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. Import executes schema and data statements, can partially modify the destination on failure, and is not a transactional restore. Use an empty/disposable destination, or review the SQL and back up the target first; never pipe blindly into a populated production database. Protect the output, verify the destination before importing, and do not combine `--no-data` with `--no-schema`.
 ```bash
@@ -398,17 +346,13 @@ CLI v0.2.4 added `[storage.cloudstorage.<name>]` manifest bindings and `CloudSto
 bucket_name = "my-archive"
 region = "us-east-1"
 ```
-
 ```bash
 npm install @telnyx/edge-runtime@latest @aws-sdk/client-s3
 telnyx-edge types
 ```
-
 The generated `env.ARCHIVE` is a typed `CloudStorageBucket`. This is a runtime binding/type-generation feature; it is distinct from the `storage kv` control-plane commands.
-
 ## Local actor development (v0.5.6)
 `dev` runs an **umbrella project** (a directory containing `telnyx.toml`) locally. It does not support a classic `func.toml`-only project. Docker with **Compose v2.17 or later** is required; the first run pulls roughly 1 GB of runtime images. The function is served on `http://127.0.0.1:8787` by default, and saves reload the changed function or actor runtime.
-
 ```bash
 # Run the current umbrella project and watch for changes.
 telnyx-edge dev
@@ -419,15 +363,9 @@ telnyx-edge dev --from-dir ./my-umbrella-project --port 9000 --no-watch
 # Generate the local stack only; do not start Docker Compose.
 telnyx-edge dev --from-dir ./my-umbrella-project --generate-only
 ```
+Local actor KV, actor-local SQL, and alarm state is preserved across runs. Re-run the same `dev` command to restart the stack while retaining it; `docker compose -f .telnyx/dev/compose.yaml down -v` resets that stack state. Bound `[storage.sqldb]` files are separate shared local SQL state: they survive `down -v` and require the deliberate `.telnyx/sqldb` (or `--persist-to`) deletion described above.
 
-Local actor KV, SQL, and alarm state is preserved across runs. Re-run the same `dev` command to restart the stack while retaining state. To stop it, run `docker compose -f .telnyx/dev/compose.yaml down`; to deliberately reset all local state, run:
-
-```bash
-docker compose -f .telnyx/dev/compose.yaml down -v
-```
-
-Only `[[actors]]` (including `ctx.storage` key-value, SQL, and alarms) and function `[env_vars]` are available locally. `[[secrets]]`, `[telnyx]`, `[storage.*]`, `[[ratelimits]]`, and `[network.*]` bindings are not supported by local `dev`; it reports declared unavailable bindings when it starts. Ship and test those bindings against Edge Compute before relying on them.
-
+Local `dev` supports `[[actors]]` (including `ctx.storage` key-value, SQL, and alarms), function `[env_vars]`, and `[storage.sqldb]` bindings. `[[secrets]]`, `[telnyx]`, other `[storage.*]`, `[[ratelimits]]`, and `[network.*]` bindings are unavailable locally; `dev` reports declared unavailable bindings at startup. Ship and test them against Edge Compute before relying on them.
 ## Private WireGuard network bindings (v0.5.6)
 Use a network binding to route requests to a private peer through a Telnyx WireGuard interface. Declare the interface ID in the umbrella manifest, then generate types:
 
@@ -435,12 +373,10 @@ Use a network binding to route requests to a private peer through a Telnyx WireG
 [network.MY_VPC]
 id = "<wireguard-interface-uuid>"
 ```
-
 ```bash
 npm install @telnyx/edge-runtime@^0.15.3
 telnyx-edge types
 ```
-
 `@telnyx/edge-runtime` must be **0.15.3 or newer** because that release exports `NetworkNamespace`. Type generation produces `env.MY_VPC` as a `NetworkNamespace`; call `env.MY_VPC.fetch()` as you would `fetch()` and the runtime routes the request through the WireGuard tunnel:
 
 ```typescript
@@ -449,21 +385,16 @@ import { env } from "@telnyx/edge-runtime";
 const response = await env.MY_VPC.fetch("https://private.service.internal/health");
 if (!response.ok) throw new Error(`Private service failed: ${response.status}`);
 ```
-
 The WireGuard sidecar is injected on deploy. Network bindings are generated and shipped configuration, not a local-dev feature; `telnyx-edge dev` reports them as unsupported locally.
-
 ## Stateful Actors
 
 Probe actor capabilities directly:
-
 ```bash
 telnyx-edge new-func --help
 telnyx-edge actors --help
 telnyx-edge actors instances --help
 ```
-
 Scaffold and inspect actors:
-
 ```bash
 telnyx-edge new-func --actor --language=ts --name=my-actor
 
@@ -473,15 +404,12 @@ telnyx-edge actors instances <type>
 telnyx-edge actors delete <type> --yes
 telnyx-edge inspect <function>
 ```
-
 The two inspect commands answer different questions:
 
 - `inspect <function>` shows one function and every declared binding (including actor owner/reference roles).
 - `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count.
-
-### Actor logs and metrics (v0.5.10)
+### Released actor logs and metrics (v0.5.10)
 `actors logs <type>` reads a historical window of runtime (`console.log`/`error`) and platform-emitted invocation records. Without `--type`, the two streams are interleaved; use `--type runtime` or `--type invocations`, and use `--instance <id>` only with invocation logs.
-
 ```bash
 # Historical records: reads a window and exits.
 telnyx-edge actors logs ChatRoom --since 10m --last 200
@@ -490,11 +418,9 @@ telnyx-edge actors logs ChatRoom --type invocations --instance alice
 # Live records: stays attached until Ctrl-C.
 telnyx-edge actors logs ChatRoom --tail
 ```
-
 `--tail` has no history or replay: `--since` and `--last` are ignored, and `--json` writes one object per line. The CLI reconnects with backoff after the API edge proxy periodically cuts a session, but records emitted during that gap are lost. Use the historical command when completeness matters.
 
 `actors metrics <type>` reports requests, error rate, latency, request/response bytes, CPU, memory, and aggregate stored-state size. Stored state is the total `ctx.storage.sql` size across the type's instances over the selected window; use `actors instances <type>` for each instance's point-in-time size. Actor metrics default to 24h and cap `--since` at **90h** (unlike root function metrics, whose maximum is 168h).
-
 ```bash
 telnyx-edge actors metrics ChatRoom --since 24h
 telnyx-edge actors instances ChatRoom
@@ -511,7 +437,6 @@ v0.2.5 added `actors instances <type>` and the instance count in `actors inspect
 - an instance count may display as `unknown` when the best-effort state-store count cannot be loaded
 
 Do not treat `actors instances` as a database dump, state-value inspection API, health monitor, or complete inventory when the reported total exceeds the displayed rows.
-
 ## Calling an application-protected Edge endpoint
 
 Authentication is defined by the deployed function. Use an endpoint-specific credential, not automatically a Telnyx management API key:
@@ -529,7 +454,6 @@ const response = await fetch("https://<your-edge-endpoint>/", {
 if (!response.ok) throw new Error(`Edge request failed: ${response.status}`);
 console.log(await response.json());
 ```
-
 If the function does not implement authentication, an Authorization header does not make it secure. Add and verify bearer-token or signature logic in the function, and use HTTPS.
 
 Python equivalent:
@@ -547,7 +471,6 @@ response = requests.post(
 response.raise_for_status()
 print(response.json())
 ```
-
 ## Practical end-to-end test
 
 1. Install and authenticate `telnyx-edge`.
@@ -558,7 +481,6 @@ print(response.json())
 6. Ship, then use `inspect` to obtain and verify deployment details.
 7. Exercise the endpoint with its application-level bearer token or HMAC signature.
 8. Connect the stable HTTP/MCP boundary to the AI orchestration layer.
-
 ## Source of truth
 
 - Edge docs: https://developers.telnyx.com/docs/edge-compute
