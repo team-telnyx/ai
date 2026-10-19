@@ -123,6 +123,7 @@ import { aiAnthropicMessageCommand } from "./commands/ai-anthropic-message.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
   chatAiAssistantCommand,
+  cloneAiAssistantCommand,
   createAiAssistantCommand,
   deleteAiAssistantCommand,
   enhanceAiAssistantInstructionsCommand,
@@ -130,11 +131,20 @@ import {
   getAiAssistantCommand,
   listAiAssistantTestRunsCommand,
   listAiAssistantsCommand,
+  restoreAiAssistantCommand,
   sendAiAssistantSmsCommand,
   testAiAssistantToolCommand,
   triggerAiAssistantTestRunCommand,
   updateAiAssistantCommand,
+  whatsappAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
+import {
+  getAiMemoryOperationCommand,
+  getAiMemorySummaryCommand,
+  ingestAiMemoryCommand,
+  recallAiMemoryCommand,
+  rememberAiMemoryCommand,
+} from "./commands/ai-memory.ts";
 import {
   addAiConversationMessageCommand,
   createAiConversationCommand,
@@ -318,6 +328,9 @@ Commands:
   get-ai-assistant  Retrieve an AI assistant by ID
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
+  ai-assistant-clone Clone an assistant without telephony or messaging settings (Go CLI v0.33+)
+  ai-assistant-restore Restore a soft-deleted AI assistant (Go CLI v0.33+)
+  ai-assistant-whatsapp Start a business-initiated AI assistant WhatsApp conversation (Go CLI v0.33+)
   create-ai-assistant-scheduled-event Schedule a future AI assistant phone call or SMS
   get-ai-assistant-scheduled-event Retrieve one AI assistant scheduled event
   list-ai-assistant-scheduled-events List and filter an assistant's scheduled events
@@ -341,6 +354,11 @@ Commands:
   get-ai-assistant-test-run Retrieve one AI assistant test run
   list-ai-assistant-test-runs List execution history for an AI assistant test
   test-ai-assistant-tool Execute a webhook tool in an AI assistant context
+  ai-memory-ingest Ingest a session into a profile's AI memory (Go CLI v0.33+)
+  ai-memory-remember Store a distilled fact in a profile's AI memory (Go CLI v0.33+)
+  ai-memory-recall Recall ranked facts from a profile's AI memory (Go CLI v0.33+)
+  ai-memory-operation Retrieve an asynchronous AI memory operation (Go CLI v0.33+)
+  ai-memory-summary Retrieve a profile's precomputed AI memory summary (Go CLI v0.33+)
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -895,6 +913,14 @@ AI Assistant Lifecycle Flags:
   --version-name    Human-readable version name (update only)
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
+  --idempotency-key <key> Non-empty request idempotency key (clone and WhatsApp)
+
+AI Assistant Clone, Restore, and WhatsApp Flags (requires Telnyx Go CLI v0.33+):
+  --assistant-id <id> Assistant ID (required; --id alias accepted)
+  --content <text>  Assistant WhatsApp instruction, including any template values (WhatsApp required)
+  --from / --to     WhatsApp sender and customer target (WhatsApp required)
+  --conversation-metadata <json> WhatsApp conversation metadata object
+  --idempotency-key <key> Idempotency key for clone or WhatsApp requests
 
 AI Assistant Instruction Enhancement Flags (requires Telnyx Go CLI v0.30+):
   --assistant-id <id> Assistant ID to inspect and enhance (required)
@@ -971,6 +997,16 @@ AI Assistant Execution Flags:
   --tool-id <id>    Shared webhook tool ID (tool test required)
   --arguments <json> Webhook tool arguments object
   --dynamic-variables <json> Dynamic variables object (tool test)
+
+AI Memory Flags (requires Telnyx Go CLI v0.33+):
+  --namespace <name> Memory namespace (all AI memory commands — required)
+  --profile-id <id> Profile identifier (ingest, remember, recall, and summary — required)
+  --body <json>     Non-empty JSON object session body (ingest — required)
+  --session-id <id> Optional session identifier (ingest; no whitespace, /, \\, #, ?, or %)
+  --text <text>     Distilled fact text (remember — required)
+  --query <text>    Question used to rank memories (recall — required)
+  --top-k <n>       Positive maximum number of recalled memories
+  --operation-id <id> Asynchronous memory operation ID (operation — required)
 
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
@@ -1318,6 +1354,9 @@ const COMMANDS: Record<string, (
   "get-ai-assistant": getAiAssistantCommand,
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
+  "ai-assistant-clone": cloneAiAssistantCommand,
+  "ai-assistant-restore": restoreAiAssistantCommand,
+  "ai-assistant-whatsapp": whatsappAiAssistantCommand,
   "create-ai-assistant-scheduled-event": createAiAssistantScheduledEventCommand,
   "get-ai-assistant-scheduled-event": getAiAssistantScheduledEventCommand,
   "list-ai-assistant-scheduled-events": listAiAssistantScheduledEventsCommand,
@@ -1336,6 +1375,11 @@ const COMMANDS: Record<string, (
   "get-ai-assistant-test-run": getAiAssistantTestRunCommand,
   "list-ai-assistant-test-runs": listAiAssistantTestRunsCommand,
   "test-ai-assistant-tool": testAiAssistantToolCommand,
+  "ai-memory-ingest": ingestAiMemoryCommand,
+  "ai-memory-remember": rememberAiMemoryCommand,
+  "ai-memory-recall": recallAiMemoryCommand,
+  "ai-memory-operation": getAiMemoryOperationCommand,
+  "ai-memory-summary": getAiMemorySummaryCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -1389,20 +1433,20 @@ const KNOWN_FLAGS = new Set<string>([
   "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
-  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
+  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn", "namespace",
   "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
+  "on-hold", "operation-id", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
-  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
+  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-id", "profile-name", "promote-to-main", "prompts", "provider", "quality",
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
-  "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
+  "scheduled-at", "send-at", "service-level", "service-tier", "service-type", "session-id",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
