@@ -68,7 +68,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Number Lookup", description: "Carrier and caller ID lookups", actions: ["lookup_number"] },
   ],
   "✅ Verify": [
-    { name: "Phone Verification", description: "Send and verify phone codes (2FA)", actions: ["verify_phone", "verify_code", "create_verify_profile"] },
+    { name: "Phone Verification", description: "Create, retrieve, list, configure, and delete Verify profiles; send and verify phone codes (2FA)", actions: ["verify_phone", "verify_code", "create_verify_profile", "get_verify_profile", "list_verify_profiles", "update_verify_profile", "delete_verify_profile"] },
     { name: "Verification Send", description: "Trigger a verification via SMS, call, flashcall, or WhatsApp", actions: ["send_verification_sms", "send_verification_call", "send_verification_flashcall", "send_verification_whatsapp"] },
     { name: "Verification Check", description: "Submit a code for verification or check verification status", actions: ["verify_code", "check_verification_status"] },
   ],
@@ -169,6 +169,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-edge-mcp", description: "Concrete MCP-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
   { name: "telnyx-agent setup-edge-webhook", description: "Concrete webhook-on-Edge handoff: points to the real example and deploy command via telnyx-edge" },
   { name: "telnyx-agent setup-verify", description: "Zero to verification: creates a verify profile (no number bought — OTPs use Telnyx's managed pool) — outputs test command" },
+  { name: "telnyx-agent verify-profile", description: "Retrieve, list, update, or delete Verify profiles and channel configuration" },
   { name: "telnyx-agent verify-send", description: "Trigger a verification via SMS, call, flashcall, or WhatsApp — returns verification ID" },
   { name: "telnyx-agent verify-check", description: "Submit a code for verification (--code) or retrieve the current verification status" },
   { name: "telnyx-agent setup-10dlc", description: "Zero to A2P: creates 10DLC brand, campaign, optional number assignment" },
