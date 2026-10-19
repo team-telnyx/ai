@@ -121,10 +121,11 @@ describe("verify-profile lifecycle command", () => {
     ]]);
   });
 
-  it("updates explicit scalar, JSON object, decimal, boolean, and webhook settings with exact argv", () => {
+  it("updates explicit scalar, language, JSON object, decimal, boolean, and webhook settings with exact argv", () => {
     const fake = setupFakeTelnyx();
     const output = runAgent([
       "verify-profile", "--action", "update", "--verify-profile-id", "vp-1", "--name", "Renamed Verify",
+      "--language", "pt-BR",
       "--sms", '{ "code_length": 6 }', "--call", '{"app_name":"Acme"}',
       "--whatsapp", '{"template_id":"template-1"}', "--daily-spend-limit", "25.50",
       "--daily-spend-limit-enabled", "false", "--webhook-url", "https://example.com/verify",
@@ -136,7 +137,7 @@ describe("verify-profile lifecycle command", () => {
     assert.equal(result.verify_profile.name, "Renamed Verify");
     assert.deepEqual(result.verify_profile.sms, { code_length: 6 });
     assert.deepEqual(loggedArgs(fake.logPath), [[
-      "verify-profiles", "update", "--verify-profile-id", "vp-1", "--name", "Renamed Verify",
+      "verify-profiles", "update", "--verify-profile-id", "vp-1", "--name", "Renamed Verify", "--language", "pt-BR",
       "--sms", '{"code_length":6}', "--call", '{"app_name":"Acme"}',
       "--whatsapp", '{"template_id":"template-1"}', "--daily-spend-limit", "25.50",
       "--daily-spend-limit-enabled=false", "--webhook-url", "https://example.com/verify",
@@ -173,6 +174,7 @@ describe("verify-profile lifecycle command", () => {
       { args: ["verify-profile", "--action", "retrieve", "--id", "vp-1", "--verify-profile-id", "vp-2", "--json"], expected: /must match/ },
       { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--sms", "[]", "--json"], expected: /--sms must be a JSON object/ },
       { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--call", "nope", "--json"], expected: /--call must be a JSON object/ },
+      { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--language", "", "--json"], expected: /--language must be a non-empty string/ },
       { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--daily-spend-limit", "-1", "--json"], expected: /non-negative decimal/ },
       { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--daily-spend-limit-enabled", "maybe", "--json"], expected: /must be true or false/ },
       { args: ["verify-profile", "--action", "update", "--id", "vp-1", "--webhook-url", "ftp://example.com", "--json"], expected: /must be an http\(s\) URL/ },
@@ -193,18 +195,21 @@ describe("verify-profile lifecycle command", () => {
   it("registers verify-profile in help, capabilities, and known flags", () => {
     const help = runAgent(["help"], process.env);
     assert.match(help, /verify-profile\s+Retrieve, list, update, or delete a Verify profile/);
+    assert.match(help, /--language\s+Verify profile language \(verify-profile update\)/);
     assert.match(help, /Bare safety acknowledgement \(verify-profile delete/);
 
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"], process.env));
     assert.ok(capabilities.composite_commands.some((entry: { name: string }) => entry.name === "telnyx-agent verify-profile"));
-    const actions = capabilities.api_capabilities["✅ Verify"][0].actions;
+    const phoneVerification = capabilities.api_capabilities["✅ Verify"][0];
+    assert.match(phoneVerification.description, /language/);
+    const actions = phoneVerification.actions;
     for (const action of ["get_verify_profile", "list_verify_profiles", "update_verify_profile", "delete_verify_profile"]) {
       assert.ok(actions.includes(action));
     }
 
     const fake = setupFakeTelnyx();
     const result = spawnSync(process.execPath, [...cliRuntimeArgs, cliBin,
-      "verify-profile", "--action", "update", "--id", "vp-1", "--sms", "{}", "--json",
+      "verify-profile", "--action", "update", "--id", "vp-1", "--language", "ja", "--json",
     ], { cwd: cliRoot, encoding: "utf8", env: fake.env, timeout: 30_000 });
     assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
     assert.doesNotMatch(result.stderr, /Ignoring unrecognized flag/);

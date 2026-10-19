@@ -372,6 +372,7 @@ Verify Flags:
   --extension       Extension for the call leg (verify-send, optional; only with --method call)
   --verification-id Verification ID to check (verify-check, required)
   --code            Code to submit for verification (verify-check, optional; if omitted, status is retrieved)
+  --language        Verify profile language (verify-profile update)
   --sms / --call / --whatsapp JSON object channel configuration (verify-profile update)
   --daily-spend-limit Non-negative USD decimal (verify-profile update)
   --daily-spend-limit-enabled <bool> Enforce daily spend limit (verify-profile update)

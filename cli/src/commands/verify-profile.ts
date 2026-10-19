@@ -102,6 +102,14 @@ async function updateProfile(flags: Flags, jsonOutput: boolean): Promise<void> {
     mutations++;
   }
 
+  // The generated CLI accepts an unconstrained language string, so preserve
+  // its validation surface while rejecting only a missing or empty value.
+  const language = optionalString(flags, "language", jsonOutput);
+  if (language !== undefined) {
+    args.push("--language", language);
+    mutations++;
+  }
+
   for (const setting of JSON_SETTINGS) {
     const value = optionalString(flags, setting, jsonOutput);
     if (value === undefined) continue;
@@ -191,7 +199,7 @@ function unsupportedFlags(flags: Flags, action: VerifyProfileAction): string[] {
   if (action === "retrieve") ["id", "verify-profile-id"].forEach((flag) => accepted.add(flag));
   if (action === "list") ["name", "filter", "page-number", "page-size", "max-items"].forEach((flag) => accepted.add(flag));
   if (action === "update") [
-    "id", "verify-profile-id", "name", "sms", "call", "whatsapp", "daily-spend-limit",
+    "id", "verify-profile-id", "name", "language", "sms", "call", "whatsapp", "daily-spend-limit",
     "daily-spend-limit-enabled", "webhook-url", "webhook-failover-url",
   ].forEach((flag) => accepted.add(flag));
   if (action === "delete") ["id", "verify-profile-id", "confirm"].forEach((flag) => accepted.add(flag));
