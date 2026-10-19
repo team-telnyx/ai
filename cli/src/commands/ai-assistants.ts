@@ -64,6 +64,7 @@ export interface AiAssistantToolTestResult {
 
 const AI_ASSISTANT_INSTRUCTION_ENHANCE_MINIMUM_CLI_VERSION = "0.30.0";
 const AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION = "0.32.0";
+const AI_ASSISTANT_ACTIONS_MINIMUM_CLI_VERSION = "0.33.0";
 
 export async function listAiAssistantsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -219,6 +220,71 @@ export async function deleteAiAssistantCommand(flags: Flags): Promise<void> {
       outputJson(result);
     } else {
       printSuccess("AI assistant deleted!", { "Assistant ID": result.assistant_id });
+    }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Clone an assistant without copying its telephony or messaging settings. */
+export async function cloneAiAssistantCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const args = ["ai:assistants", "clone", "--assistant-id", assistantId];
+  addIdempotencyKeyFlag(args, flags, jsonOutput);
+
+  try {
+    const response = await telnyxCli(args, { minimumVersion: AI_ASSISTANT_ACTIONS_MINIMUM_CLI_VERSION });
+    presentAssistant("AI assistant cloned!", normalizeAssistant(response), jsonOutput);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Restore an assistant that was soft-deleted to the Recently Deleted list. */
+export async function restoreAiAssistantCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+
+  try {
+    const response = await telnyxCli([
+      "ai:assistants", "restore", "--assistant-id", assistantId,
+    ], { minimumVersion: AI_ASSISTANT_ACTIONS_MINIMUM_CLI_VERSION });
+    presentAssistant("AI assistant restored!", normalizeAssistant(response, assistantId), jsonOutput);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Start a business-initiated WhatsApp assistant conversation. */
+export async function whatsappAiAssistantCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const content = requiredStringFlag(flags, "content", jsonOutput);
+  const from = requiredStringFlag(flags, "from", jsonOutput);
+  const to = requiredStringFlag(flags, "to", jsonOutput);
+  const args = [
+    "ai:assistants", "whatsapp",
+    "--assistant-id", assistantId,
+    "--content", content,
+    "--from", from,
+    "--to", to,
+  ];
+  addJsonObjectFlag(args, flags, "conversation-metadata", "--conversation-metadata", jsonOutput);
+  addIdempotencyKeyFlag(args, flags, jsonOutput);
+
+  try {
+    const response = await telnyxCli(args, { minimumVersion: AI_ASSISTANT_ACTIONS_MINIMUM_CLI_VERSION });
+    const whatsapp = responseDataRecord(response);
+    if (jsonOutput) {
+      outputJson({ assistant_id: assistantId, whatsapp });
+    } else {
+      printSuccess("AI assistant WhatsApp conversation started!", {
+        "Assistant ID": assistantId,
+        From: from,
+        To: to,
+        "Conversation ID": stringValue(whatsapp.conversation_id) || "(not returned)",
+      });
     }
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -607,6 +673,11 @@ function addJsonObjectFlag(
     fail(`--${source} must be a JSON object`, jsonOutput);
   }
   args.push(target, value);
+}
+
+function addIdempotencyKeyFlag(args: string[], flags: Flags, jsonOutput: boolean): void {
+  if (flags["idempotency-key"] === undefined) return;
+  args.push("--idempotency-key", requiredStringFlag(flags, "idempotency-key", jsonOutput));
 }
 
 function addRepeatableJsonObjectOrClearFlag(
