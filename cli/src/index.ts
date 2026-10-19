@@ -10,6 +10,7 @@ import { setupWireguardCommand } from "./commands/setup-wireguard.ts";
 import { setupVerifyCommand } from "./commands/setup-verify.ts";
 import { verifySendCommand } from "./commands/verify-send.ts";
 import { verifyCheckCommand } from "./commands/verify-check.ts";
+import { verifyProfileCommand } from "./commands/verify-profile.ts";
 import { setup10dlcCommand } from "./commands/setup-10dlc.ts";
 import { setupPortingCommand } from "./commands/setup-porting.ts";
 import {
@@ -208,6 +209,7 @@ Commands:
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
   get-wireguard-peer-config Retrieve the WireGuard client configuration for a peer
   setup-verify      Zero to verification: create profile (no number bought)
+  verify-profile    Retrieve, list, update, or delete a Verify profile
   verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
   verify-check      Verify a code or check verification status
   setup-10dlc       Zero to A2P: create brand, campaign, assign number
@@ -360,14 +362,24 @@ Setup-specific Flags:
   --destinations    Whitelisted destination countries for verify (setup-verify, default: US)
 
 Verify Flags:
+  --action          Verify profile action: retrieve, list, update, or delete
+  --id              Verify profile ID (verify-profile retrieve, update, delete)
   --phone-number    E.164 number to verify (verify-send, required)
-  --verify-profile-id Verify profile ID (verify-send, required)
+  --verify-profile-id Verify profile ID (verify-send; verify-profile ID alias)
   --method          Verification channel (verify-send, required): sms, call, flashcall, whatsapp
   --custom-code     Self-generated code to send (verify-send, optional; not used with flashcall)
   --timeout-secs    Verification timeout in seconds (verify-send, optional)
   --extension       Extension for the call leg (verify-send, optional; only with --method call)
   --verification-id Verification ID to check (verify-check, required)
   --code            Code to submit for verification (verify-check, optional; if omitted, status is retrieved)
+  --language        Verify profile language (verify-profile update)
+  --sms / --call / --whatsapp JSON object channel configuration (verify-profile update)
+  --daily-spend-limit Non-negative USD decimal (verify-profile update)
+  --daily-spend-limit-enabled <bool> Enforce daily spend limit (verify-profile update)
+  --webhook-url / --webhook-failover-url HTTP(S) webhook destination (verify-profile update)
+  --filter          JSON object list filter (verify-profile list; cannot combine with --name)
+  --page-number / --page-size / --max-items List pagination controls (verify-profile list)
+  --confirm         Bare safety acknowledgement (verify-profile delete; required and never forwarded)
   --phone           Contact phone for brand (setup-10dlc, required)
   --email           Contact email for brand (setup-10dlc, required)
   --brand-name      Brand display name (setup-10dlc)
@@ -1209,6 +1221,7 @@ const COMMANDS: Record<string, (
   "setup-wireguard": setupWireguardCommand,
   "get-wireguard-peer-config": getWireguardPeerConfigCommand,
   "setup-verify": setupVerifyCommand,
+  "verify-profile": verifyProfileCommand,
   "verify-send": verifySendCommand,
   "verify-check": verifyCheckCommand,
   "setup-10dlc": setup10dlcCommand,
@@ -1360,7 +1373,7 @@ const KNOWN_FLAGS = new Set<string>([
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
-  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
+  "bundle-id", "call", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
@@ -1404,7 +1417,7 @@ const KNOWN_FLAGS = new Set<string>([
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
-  "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
+  "smart-encoding", "sms", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
@@ -1416,7 +1429,7 @@ const KNOWN_FLAGS = new Set<string>([
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
-  "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
+  "webhook-urls", "website", "whatsapp", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
 ]);
 

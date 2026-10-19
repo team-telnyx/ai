@@ -138,6 +138,7 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
     "ai-opt-out-detection-enabled", "daily-spend-limit-enabled", "enabled", "mms-fall-back-to-sms",
     "mms-transcoding", "mobile-only", "smart-encoding",
   ])],
+  ["verify-profile", new Set(["daily-spend-limit-enabled"])],
   ["update-portout-status", new Set(["host-messaging"])],
 ]);
 
