@@ -386,6 +386,9 @@ Before using any operation below, read the Optional Parameters section below and
 | Deletes all numbers associated with a phone number block | HTTP only | `POST /phone_number_blocks/jobs/delete_phone_number_block` | Create or provision an additional resource when the core tasks do not cover this flow. | `phone_number_block_id` |
 | Retrieves a phone number blocks job | HTTP only | `GET /phone_number_blocks/jobs/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | List sub number orders | HTTP only | `GET /sub_number_orders` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Create a sub number orders report | HTTP only | `POST /sub_number_orders/report` | Create or provision an additional resource when the core tasks do not cover this flow. | None |
+| Retrieve a sub number orders report | HTTP only | `GET /sub_number_orders/report/{report_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `report_id` |
+| Download a sub number orders report | HTTP only | `GET /sub_number_orders/report/{report_id}/download` | Fetch the current state before updating, deleting, or making control-flow decisions. | `report_id` |
 | Retrieve a sub number order | HTTP only | `GET /sub_number_orders/{sub_number_order_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `sub_number_order_id` |
 | Update a sub number order's requirements | HTTP only | `PATCH /sub_number_orders/{sub_number_order_id}` | Modify an existing resource without recreating it. | `sub_number_order_id` |
 | Cancel a sub number order | HTTP only | `PATCH /sub_number_orders/{sub_number_order_id}/cancel` | Modify an existing resource without recreating it. | `sub_number_order_id` |
@@ -507,6 +510,17 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `customer_reference` | string | A customer reference string for customer look ups. |
 | `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
 | `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
+
+### Create a sub number orders report
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | enum (pending, success, failure) | Filter by order status |
+| `country_code` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `created_at_gt` | string (date-time) | Filter for orders created after this date |
+| `created_at_lt` | string (date-time) | Filter for orders created before this date |
+| `order_request_id` | string (UUID) | Filter by specific order request ID |
+| `customer_reference` | string | Filter by customer reference |
 
 ### Update a sub number order's requirements
 

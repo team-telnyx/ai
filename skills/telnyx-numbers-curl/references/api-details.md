@@ -264,6 +264,7 @@
 | `is_block_sub_number_order` | boolean |
 | `order_request_id` | uuid |
 | `phone_number_type` | enum: local, toll_free, mobile, national, shared_cost, landline |
+| `phone_numbers` | array[object] |
 | `phone_numbers_count` | integer |
 | `record_type` | string |
 | `regulatory_requirements` | array[object] |
@@ -272,7 +273,7 @@
 | `updated_at` | date-time |
 | `user_id` | uuid |
 
-**Returned by:** Create a sub number orders report, Retrieve a sub number orders report
+**Returned by:** Create a sub number orders report, Retrieve a sub number orders report, Create a sub number orders report, Retrieve a sub number orders report
 
 | Field | Type |
 |-------|------|
@@ -386,6 +387,17 @@
 | `created_at` | string (date-time) | An ISO 8901 datetime string denoting when the numbers reservation was created. |
 | `updated_at` | string (date-time) | An ISO 8901 datetime string for when the number reservation was updated. |
 
+### Create a sub number orders report
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | enum (pending, success, failure) | Filter by order status |
+| `country_code` | string (ISO 3166-1 alpha-2) | Filter by country code |
+| `created_at_gt` | string (date-time) | Filter for orders created after this date |
+| `created_at_lt` | string (date-time) | Filter for orders created before this date |
+| `order_request_id` | string (UUID) | Filter by specific order request ID |
+| `customer_reference` | string | Filter by customer reference |
+
 ### Update a sub number order's requirements
 
 | Parameter | Type | Description |
@@ -409,7 +421,7 @@
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | string | The type of event being sent |
+| `data.event_type` | enum: number_order.complete | The type of event being sent |
 | `data.id` | uuid | Unique identifier for the event |
 | `data.occurred_at` | date-time | ISO 8601 timestamp of when the event occurred |
 | `data.payload.id` | uuid |  |

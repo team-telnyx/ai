@@ -261,6 +261,7 @@
 | `is_block_sub_number_order` | boolean |
 | `order_request_id` | uuid |
 | `phone_number_type` | enum: local, toll_free, mobile, national, shared_cost, landline |
+| `phone_numbers` | array[object] |
 | `phone_numbers_count` | integer |
 | `record_type` | string |
 | `regulatory_requirements` | array[object] |
@@ -281,13 +282,25 @@
 | `updated_at` | date-time |
 | `user_id` | uuid |
 
+**Returned by:** Create a sub number orders report, Retrieve a sub number orders report, Create a sub number orders report, Retrieve a sub number orders report
+
+| Field | Type |
+|-------|------|
+| `created_at` | date-time |
+| `filters` | object |
+| `id` | uuid |
+| `order_type` | string |
+| `status` | enum: pending, success, failed, expired |
+| `updated_at` | date-time |
+| `user_id` | uuid |
+
 ## Webhook Payload Fields
 
 ### `numberOrderStatusUpdate`
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | string | The type of event being sent |
+| `data.event_type` | enum: number_order.complete | The type of event being sent |
 | `data.id` | uuid | Unique identifier for the event |
 | `data.occurred_at` | date-time | ISO 8601 timestamp of when the event occurred |
 | `data.payload.id` | uuid |  |
