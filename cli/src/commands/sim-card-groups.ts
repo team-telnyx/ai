@@ -98,10 +98,11 @@ async function listGroups(flags: Flags, jsonOutput: boolean): Promise<void> {
   addMappedFlag(args, flags, "filter-wireless-blocklist-id", "--filter-wireless-blocklist-id", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-number", jsonOutput);
   addPositiveIntegerFlag(args, flags, "page-size", jsonOutput);
+  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
 
   try {
     const response = await telnyxCli(args, { format: "raw" });
-    const result = normalizeGroupList(response);
+    const result = normalizeGroupList(response, maxItems);
     if (jsonOutput) outputJson(result);
     else presentGroupList(result);
   } catch (err) {
@@ -152,13 +153,16 @@ async function runSingleGroup(
   }
 }
 
-function normalizeGroupList(response: unknown): GroupListResult {
+function normalizeGroupList(response: unknown, maxItems: number): GroupListResult {
   const envelope = asRecord(response);
-  const groups = Array.isArray(envelope.data)
+  const returnedGroups = Array.isArray(envelope.data)
     ? envelope.data.filter(
       (item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item),
     )
     : [];
+  // Raw format preserves the response envelope but bypasses the generated
+  // CLI iterator's max-items truncation, so apply the same bound locally.
+  const groups = maxItems >= 0 ? returnedGroups.slice(0, maxItems) : returnedGroups;
   return { count: groups.length, sim_card_groups: groups, meta: asRecord(envelope.meta) };
 }
 
@@ -231,6 +235,17 @@ function addPositiveIntegerFlag(args: string[], flags: Flags, source: string, js
   if (value === undefined) return;
   if (!/^\d+$/.test(value) || Number(value) < 1) fail(`--${source} must be a positive integer`, jsonOutput);
   args.push(`--${source}`, value);
+}
+
+function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number {
+  const value = optionalString(flags, "max-items", jsonOutput);
+  if (value === undefined) return -1;
+  const parsed = Number(value);
+  if (!/^(?:-1|\d+)$/.test(value) || !Number.isSafeInteger(parsed)) {
+    fail("--max-items must be -1 or a non-negative safe integer", jsonOutput);
+  }
+  args.push("--max-items", value);
+  return parsed;
 }
 
 function responseData(response: unknown): JsonRecord {

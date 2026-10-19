@@ -986,6 +986,7 @@ IoT SIM Action Flags:
   --filter-name <name> Filter SIM card groups by name (list)
   --filter-private-wireless-gateway-id <id> Filter groups by gateway (list)
   --filter-wireless-blocklist-id <id> Filter groups by wireless blocklist (list)
+  --max-items <n>   Maximum returned SIM card groups; -1 means unlimited (list)
   --include-iccids <bool> Include group ICCIDs (retrieve)
   --confirm          Required, bare acknowledgement for sim-card-group --action delete
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required

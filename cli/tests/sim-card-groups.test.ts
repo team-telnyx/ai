@@ -23,7 +23,7 @@ const args = process.argv.slice(2);
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
 function flag(name) { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; }
 if (args[0] === "sim-card-groups" && args[1] === "list") {
-  console.log(JSON.stringify({ data: [{ id: "group-1", name: "Fleet", data_limit: { amount: "2", unit: "GB" } }], meta: { page_number: 2, page_size: 10, total_results: 1 } }));
+  console.log(JSON.stringify({ data: [{ id: "group-1", name: "Fleet", data_limit: { amount: "2", unit: "GB" } }, { id: "group-2", name: "Fleet West" }, { id: "group-3", name: "Fleet East" }], meta: { page_number: 2, page_size: 10, total_results: 3 } }));
 } else if (args[0] === "sim-card-groups" && args[1] === "delete") {
   console.log(JSON.stringify({ data: { id: flag("--id"), deleted_at: "2026-10-19T12:00:00Z" } }));
 } else if (args[0] === "sim-card-groups") {
@@ -102,9 +102,13 @@ describe("SIM card group commands", () => {
       "sim-card-group", "--action", "list", "--filter-name", "Fleet", "--filter-private-wireless-gateway-id", "gateway-1", "--filter-wireless-blocklist-id", "blocklist-1", "--page-number", "2", "--page-size", "10", "--json",
     ], fake.env);
     assert.deepEqual(JSON.parse(output), {
-      count: 1,
-      sim_card_groups: [{ id: "group-1", name: "Fleet", data_limit: { amount: "2", unit: "GB" } }],
-      meta: { page_number: 2, page_size: 10, total_results: 1 },
+      count: 3,
+      sim_card_groups: [
+        { id: "group-1", name: "Fleet", data_limit: { amount: "2", unit: "GB" } },
+        { id: "group-2", name: "Fleet West" },
+        { id: "group-3", name: "Fleet East" },
+      ],
+      meta: { page_number: 2, page_size: 10, total_results: 3 },
     });
     const [args] = loggedArgs(fake.logPath);
     assert.deepEqual(args.slice(0, 2), ["sim-card-groups", "list"]);
@@ -114,6 +118,37 @@ describe("SIM card group commands", () => {
     assertFlag(args, "--page-number", "2");
     assertFlag(args, "--page-size", "10");
     assertFlag(args, "--format", "raw");
+  });
+
+  it("enforces max-items locally for raw list JSON and human output", () => {
+    const fake = setupFakeTelnyx();
+    const limited = JSON.parse(runAgent(["sim-card-group", "--action", "list", "--max-items", "2", "--json"], fake.env));
+    assert.deepEqual(limited.sim_card_groups.map((group: { id: string }) => group.id), ["group-1", "group-2"]);
+    assert.equal(limited.count, 2);
+
+    const empty = JSON.parse(runAgent(["sim-card-group", "--action", "list", "--max-items", "0", "--json"], fake.env));
+    assert.deepEqual(empty.sim_card_groups, []);
+    assert.equal(empty.count, 0);
+
+    const unlimited = JSON.parse(runAgent(["sim-card-group", "--action", "list", "--max-items", "-1", "--json"], fake.env));
+    assert.deepEqual(unlimited.sim_card_groups.map((group: { id: string }) => group.id), ["group-1", "group-2", "group-3"]);
+    assert.equal(unlimited.count, 3);
+
+    const humanOutput = runAgent(["sim-card-group", "--action", "list", "--max-items", "1"], fake.env);
+    assert.match(humanOutput, /Count\s+1/);
+    assert.match(humanOutput, /group-1/);
+    assert.doesNotMatch(humanOutput, /group-2|group-3/);
+
+    const calls = loggedArgs(fake.logPath);
+    assert.equal(calls.length, 4);
+    for (const args of calls) {
+      assert.deepEqual(args.slice(0, 2), ["sim-card-groups", "list"]);
+      assertFlag(args, "--format", "raw");
+    }
+    assertFlag(calls[0], "--max-items", "2");
+    assertFlag(calls[1], "--max-items", "0");
+    assertFlag(calls[2], "--max-items", "-1");
+    assertFlag(calls[3], "--max-items", "1");
   });
 
   it("requires bare confirmation for deletion and never forwards it", () => {
@@ -149,6 +184,7 @@ describe("SIM card group commands", () => {
       ["sim-card-group", "--json"],
       ["sim-card-group", "--action", "update", "--id", "group-1", "--json"],
       ["sim-card-group", "--action", "create", "--name", "Fleet", "--data-limit-amount", "2", "--json"],
+      ["sim-card-group", "--action", "list", "--max-items", "-2", "--json"],
       ["sim-card-assign", "--sim-card-id", "sim-1", "--json"],
     ]) {
       const result = runAgentResult(args, fake.env);
@@ -164,6 +200,7 @@ describe("SIM card group commands", () => {
     const capabilities = JSON.parse(runAgent(["capabilities", "--json"], fake.env));
     assert.match(help, /sim-card-group/);
     assert.match(help, /sim-card-assign/);
+    assert.match(help, /Maximum returned SIM card groups; -1 means unlimited/);
     const names = capabilities.composite_commands.map((entry: { name: string }) => entry.name);
     assert.ok(names.includes("telnyx-agent sim-card-group"));
     assert.ok(names.includes("telnyx-agent sim-card-assign"));
