@@ -32,6 +32,28 @@ interface LookupNumberResult {
   caller_name: unknown;
 }
 
+type PhoneNumberAction = "retrieve" | "update" | "delete";
+
+const PHONE_NUMBER_ACTIONS: readonly PhoneNumberAction[] = ["retrieve", "update", "delete"];
+
+// These are the mutation fields exposed by the checked-in Telnyx Go CLI's
+// `phone-numbers update` command. In particular, the generated command does
+// not currently accept emergency-address-id, status, or usage-payment-method;
+// do not silently pass those unsupported fields through to a destructive CLI.
+const PHONE_NUMBER_UPDATE_STRING_FLAGS = [
+  "connection-id",
+  "billing-group-id",
+  "customer-reference",
+  "external-pin",
+  "address-id",
+] as const;
+
+const UNSUPPORTED_PHONE_NUMBER_UPDATE_FLAGS = [
+  "emergency-address-id",
+  "status",
+  "usage-payment-method",
+] as const;
+
 export async function listPhoneNumbersCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
   const args = ["phone-numbers", "list"];
@@ -189,6 +211,146 @@ export async function lookupNumberCommand(flags: Flags): Promise<void> {
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
   }
+}
+
+/** Retrieve, update, or release one phone number already owned by the account. */
+export async function phoneNumberCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const action = requiredPhoneNumberAction(flags, jsonOutput);
+  const id = requiredPhoneNumberId(flags, jsonOutput);
+
+  if (action === "delete") {
+    if (flags.confirm !== true) {
+      fail("releasing a phone number is destructive; pass a bare --confirm to continue", jsonOutput);
+    }
+    await releasePhoneNumber(id, jsonOutput);
+    return;
+  }
+
+  if (action === "retrieve") {
+    await retrievePhoneNumber(id, jsonOutput);
+    return;
+  }
+
+  await updatePhoneNumber(id, flags, jsonOutput);
+}
+
+async function retrievePhoneNumber(id: string, jsonOutput: boolean): Promise<void> {
+  try {
+    const response = await telnyxCli(["phone-numbers", "retrieve", "--id", id]);
+    if (jsonOutput) {
+      outputJson(response);
+      return;
+    }
+    presentPhoneNumber("Phone number retrieved!", phoneNumberData(response), id);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+async function updatePhoneNumber(id: string, flags: Flags, jsonOutput: boolean): Promise<void> {
+  for (const name of UNSUPPORTED_PHONE_NUMBER_UPDATE_FLAGS) {
+    if (flags[name] !== undefined) {
+      fail(`--${name} is not supported by the installed Telnyx Go CLI for phone-number updates`, jsonOutput);
+    }
+  }
+
+  const args = ["phone-numbers", "update", "--phone-number-id", id];
+  let mutationCount = 0;
+  for (const name of PHONE_NUMBER_UPDATE_STRING_FLAGS) {
+    const value = optionalNonEmptyFlag(flags, name, jsonOutput);
+    if (value === undefined) continue;
+    args.push(`--${name}`, value);
+    mutationCount++;
+  }
+
+  const tags = csvValues(flags, "tags", jsonOutput);
+  if (tags !== undefined) {
+    // The generated Go CLI models --tag as []string, which receives JSON array
+    // syntax (not a comma-separated scalar) from its generic flag parser.
+    args.push("--tag", JSON.stringify(tags));
+    mutationCount++;
+  }
+
+  if (mutationCount === 0) {
+    fail("at least one supported update field is required", jsonOutput);
+  }
+
+  try {
+    const response = await telnyxCli(args);
+    if (jsonOutput) {
+      outputJson(response);
+      return;
+    }
+    presentPhoneNumber("Phone number updated!", phoneNumberData(response), id);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+async function releasePhoneNumber(id: string, jsonOutput: boolean): Promise<void> {
+  try {
+    const response = await telnyxCli(["phone-numbers", "delete", "--id", id]);
+    if (jsonOutput) {
+      outputJson(response);
+      return;
+    }
+    const number = phoneNumberData(response);
+    printSuccess("Phone number released!", {
+      "Phone Number ID": stringValue(number.id) || id,
+      "Phone Number": stringValue(number.phone_number) || "(not returned)",
+      Released: true,
+    });
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+function requiredPhoneNumberAction(flags: Flags, jsonOutput: boolean): PhoneNumberAction {
+  const action = stringFlag(flags, "action");
+  if (!action || !PHONE_NUMBER_ACTIONS.includes(action as PhoneNumberAction)) {
+    fail(`--action is required and must be one of: ${PHONE_NUMBER_ACTIONS.join(", ")}`, jsonOutput);
+  }
+  return action as PhoneNumberAction;
+}
+
+function requiredPhoneNumberId(flags: Flags, jsonOutput: boolean): string {
+  const id = optionalNonEmptyFlag(flags, "id", jsonOutput);
+  if (id === undefined) fail("--id is required and must be a non-empty phone number ID", jsonOutput);
+  return id;
+}
+
+function optionalNonEmptyFlag(flags: Flags, key: string, jsonOutput: boolean): string | undefined {
+  if (flags[key] === undefined) return undefined;
+  const value = flags[key];
+  if (typeof value !== "string" || value.trim() === "" || /[\r\n\0]/.test(value)) {
+    fail(`--${key} must be a non-empty single-line value`, jsonOutput);
+  }
+  return value;
+}
+
+function csvValues(flags: Flags, key: string, jsonOutput: boolean): string[] | undefined {
+  if (flags[key] === undefined) return undefined;
+  const value = optionalNonEmptyFlag(flags, key, jsonOutput)!;
+  const values = value.split(",").map((item) => item.trim());
+  if (values.some((item) => item === "")) {
+    fail(`--${key} must be a comma-separated list with no empty values`, jsonOutput);
+  }
+  return values;
+}
+
+function phoneNumberData(response: unknown): JsonRecord {
+  const envelope = asRecord(response);
+  return asRecord(envelope.data ?? response);
+}
+
+function presentPhoneNumber(title: string, number: JsonRecord, fallbackId: string): void {
+  printSuccess(title, {
+    "Phone Number ID": stringValue(number.id) || fallbackId,
+    "Phone Number": stringValue(number.phone_number) || "(not returned)",
+    Status: stringValue(number.status) || "(not returned)",
+    "Connection ID": stringValue(number.connection_id) || "(not returned)",
+  });
 }
 
 function normalizeNumberList(response: unknown): NumberListResult {

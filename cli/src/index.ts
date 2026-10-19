@@ -116,6 +116,7 @@ import {
   buyPhoneNumberCommand,
   listPhoneNumbersCommand,
   lookupNumberCommand,
+  phoneNumberCommand,
   searchPhoneNumbersCommand,
 } from "./commands/numbers.ts";
 import { aiChatCommand } from "./commands/ai-chat.ts";
@@ -307,6 +308,7 @@ Commands:
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
   list-phone-numbers List phone numbers owned by the account
+  phone-number      Retrieve, update, or release one owned phone number
   search-phone-numbers Search available phone numbers to purchase
   buy-phone-number  Purchase/order one phone number
   lookup-number     Look up carrier and caller-name information
@@ -798,6 +800,8 @@ STT-providers Flags:
   --service-type    Filter providers by service type (optional)
 
 Numbers Action Flags:
+  --action          retrieve|update|delete (phone-number, required)
+  --id              Owned phone-number ID (phone-number, required)
   --phone-number    Phone number filter, number to buy, or E.164 number to look up
   --country         ISO alpha-2 country code (list, search; search default: US)
   --status          Owned-number status filter (list-phone-numbers)
@@ -823,6 +827,10 @@ Numbers Action Flags:
   --customer-reference Customer reference filter (list) or value (buy)
   --bundle-id       Bundle for the ordered number (buy-phone-number)
   --requirement-group-id Requirement group for the ordered number (buy-phone-number)
+  --address-id / --connection-id / --billing-group-id / --customer-reference / --external-pin
+                   Mutable owned-number values (phone-number --action update)
+  --tags <csv>      Comma-separated owned-number tags (phone-number --action update)
+  --confirm         Bare safety acknowledgement (phone-number --action delete; required, never forwarded)
 
 AI Chat Flags:
   --message <json>  Chat message JSON object (repeatable), or an array of message objects (required)
@@ -1152,6 +1160,9 @@ Examples:
   telnyx-agent stt-providers --json
   telnyx-agent stt-providers --provider telnyx --service-type transcription --json
   telnyx-agent list-phone-numbers --status active --page-size 50 --json
+  telnyx-agent phone-number --action retrieve --id <phone-number-id> --json
+  telnyx-agent phone-number --action update --id <phone-number-id> --connection-id <connection-id> --tags support,voice --json
+  telnyx-agent phone-number --action delete --id <phone-number-id> --confirm --json
   telnyx-agent search-phone-numbers --country US --area-code 312 --features sms,voice --limit 5 --json
   telnyx-agent buy-phone-number --phone-number +131****0000 --messaging-profile-id <id> --json
   telnyx-agent lookup-number --phone-number +131****0000 --type carrier --json
@@ -1307,6 +1318,7 @@ const COMMANDS: Record<string, (
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
   "list-phone-numbers": listPhoneNumbersCommand,
+  "phone-number": phoneNumberCommand,
   "search-phone-numbers": searchPhoneNumbersCommand,
   "buy-phone-number": buyPhoneNumberCommand,
   "lookup-number": lookupNumberCommand,
@@ -1354,7 +1366,7 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
+  "about", "action", "action-type", "active", "actor", "address-id", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
@@ -1374,7 +1386,7 @@ const KNOWN_FLAGS = new Set<string>([
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id", "external-pin",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
   "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
@@ -1413,7 +1425,7 @@ const KNOWN_FLAGS = new Set<string>([
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
-  "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "support-key", "usage-payment-method", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
