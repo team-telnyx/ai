@@ -182,6 +182,7 @@ import {
 import { storageSqlQueryCommand } from "./commands/storage-sql.ts";
 import { getWireguardPeerConfigCommand } from "./commands/wireguard-peers.ts";
 import { createTelephonyCredentialTokenCommand } from "./commands/telephony-credentials.ts";
+import { sipRegistrationStatusCommand } from "./commands/sip-registration-status.ts";
 import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
 // Version is read lazily so that `--version` works without loading any command modules.
@@ -265,6 +266,7 @@ Commands:
   call-control      Call Control actions (answer, hangup, transfer, dtmf, record, speak, ...)
   call-pay          Securely collect or tokenize payment details on an active call
   create-telephony-credential-token Create a JWT for an on-demand telephony credential
+  sip-registration-status Retrieve live SIP credential or UAC registration status (Go CLI v0.33+)
   call-status       Get the status of a call by call-control-id
   create-call-queue Create a call queue for Call Control enqueue actions
   list-call-queues  List provisioned call queues
@@ -707,6 +709,10 @@ Call Pay Flags:
 Telephony Credential Token Flags:
   --id <credential-id>           Existing on-demand telephony credential ID (create-telephony-credential-token — required)
                                 Requires Telnyx Go CLI v0.30.0+. The JWT is sensitive and is emitted only with --json.
+SIP Registration Status Flags (requires Telnyx Go CLI v0.33+):
+  --credential-type <type>       Required: uac_external_credential, telephony_credential, or sip_credential_connection
+  --connection-id <id>           Required only for uac_external_credential
+  --username <sip-username>      Required only for telephony_credential or sip_credential_connection
 Post-call Recording Discovery Flags:
   --id <id>                     Recording or recording-transcription ID (get commands — required)
   --call-control-id             Exact Call Control ID filter (list-call-recordings)
@@ -1265,6 +1271,7 @@ const COMMANDS: Record<string, (
   "call-control": callControlCommand,
   "call-pay": callPayCommand,
   "create-telephony-credential-token": createTelephonyCredentialTokenCommand,
+  "sip-registration-status": sipRegistrationStatusCommand,
   "call-status": callStatusCommand,
   "create-call-queue": createCallQueueCommand,
   "list-call-queues": listCallQueuesCommand,
@@ -1364,7 +1371,7 @@ const KNOWN_FLAGS = new Set<string>([
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
-  "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
+  "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id", "credential-type",
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
@@ -1417,7 +1424,7 @@ const KNOWN_FLAGS = new Set<string>([
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
-  "whitelisted-destinations",
+  "whitelisted-destinations", "username",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an
