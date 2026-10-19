@@ -181,6 +181,11 @@ import {
 } from "./commands/web-search.ts";
 import { storageSqlQueryCommand } from "./commands/storage-sql.ts";
 import { getWireguardPeerConfigCommand } from "./commands/wireguard-peers.ts";
+import {
+  networkCommand,
+  wireguardInterfaceCommand,
+  wireguardPeerCommand,
+} from "./commands/networking.ts";
 import { createTelephonyCredentialTokenCommand } from "./commands/telephony-credentials.ts";
 import { parseFlags, isBooleanFlag } from "./utils/output.ts";
 
@@ -206,6 +211,9 @@ Commands:
   list-sim-card-actions List asynchronous SIM card actions with filters and pagination
   setup-ai          Zero to AI: create assistant, buy number, wire them together
   setup-wireguard   Zero to VPN: create network, WireGuard interface, peer
+  network           Manage private networks (--action create|retrieve|update|list|delete|list-interfaces)
+  wireguard-interface Manage WireGuard interfaces (--action create|retrieve|list|delete)
+  wireguard-peer    Manage WireGuard peers (--action create|retrieve|update|list|delete)
   get-wireguard-peer-config Retrieve the WireGuard client configuration for a peer
   setup-verify      Zero to verification: create profile (no number bought)
   verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
@@ -356,6 +364,13 @@ Setup-specific Flags:
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
   --id <peer-id>    WireGuard peer ID (get-wireguard-peer-config — required); configuration is sensitive and emitted only with --json
+  --action <name>   Network and WireGuard lifecycle action (see network, wireguard-interface, wireguard-peer)
+  --name <name>     Required network or WireGuard-interface name for create/update actions
+  --region-code <code> Required WireGuard interface deployment region for create
+  --wireguard-interface-id <id> WireGuard interface ID (wireguard-peer create/list)
+  --public-key <key> Optional WireGuard peer public key (wireguard-peer create/update)
+  --status / --type Interface filters (network --action list-interfaces)
+  --confirm         Bare safety acknowledgement required for network, WireGuard-interface, and WireGuard-peer delete actions; never forwarded
   --profile-name    Custom verify profile name (setup-verify)
   --destinations    Whitelisted destination countries for verify (setup-verify, default: US)
 
@@ -1207,6 +1222,9 @@ const COMMANDS: Record<string, (
   "setup-iot": setupIotCommand,
   "setup-ai": setupAiCommand,
   "setup-wireguard": setupWireguardCommand,
+  network: networkCommand,
+  "wireguard-interface": wireguardInterfaceCommand,
+  "wireguard-peer": wireguardPeerCommand,
   "get-wireguard-peer-config": getWireguardPeerConfigCommand,
   "setup-verify": setupVerifyCommand,
   "verify-send": verifySendCommand,
@@ -1397,7 +1415,7 @@ const KNOWN_FLAGS = new Set<string>([
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
-  "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
+  "query", "queue-name", "reaction", "reason", "record", "recording-id", "region", "region-code",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
@@ -1413,11 +1431,11 @@ const KNOWN_FLAGS = new Set<string>([
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
-  "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "public-key", "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
-  "whitelisted-destinations",
+  "whitelisted-destinations", "wireguard-interface-id",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an
