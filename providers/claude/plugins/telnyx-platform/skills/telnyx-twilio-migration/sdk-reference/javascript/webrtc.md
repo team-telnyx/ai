@@ -54,6 +54,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List mobile push credentials
 
+Returns a paginated list of the mobile push credentials on your account, with support for filtering.
+
 `GET /mobile_push_credentials`
 
 ```javascript
@@ -66,6 +68,8 @@ for await (const pushCredential of client.mobilePushCredentials.list()) {
 Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
 
 ## Creates a new mobile push credential
+
+Creates a new mobile push credential for delivering push notifications to iOS or Android apps, and returns the created credential.
 
 `POST /mobile_push_credentials` — Required: `type`, `certificate`, `private_key`, `alias`
 
@@ -114,7 +118,7 @@ await client.mobilePushCredentials.delete('0ccc7b76-4df3-4bca-a05a-3da1ecc389f0'
 
 ## List all credentials
 
-List all On-demand Credentials.
+Returns a paginated list of the on-demand telephony credentials on your account, with support for filtering.
 
 `GET /telephony_credentials`
 
@@ -129,7 +133,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Create a credential
 
-Create a credential.
+Creates a new on-demand telephony credential for the specified connection. The credential can then be used to generate access tokens for SIP or WebRTC clients.
 
 `POST /telephony_credentials` — Required: `connection_id`
 
@@ -161,7 +165,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Update a credential
 
-Update an existing credential.
+Updates the specified telephony credential and returns the updated credential.
 
 `PATCH /telephony_credentials/{id}`
 
@@ -177,7 +181,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Delete a credential
 
-Delete an existing credential.
+Permanently deletes the specified telephony credential, revoking any access it provided.
 
 `DELETE /telephony_credentials/{id}`
 

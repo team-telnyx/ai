@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -74,31 +74,6 @@ AudioTranscribeResponse response = client.ai().audio().transcribe(params);
 
 Returns: `duration` (number), `segments` (array[object]), `text` (string), `words` (array[object])
 
-## Create a chat completion
-
-**Deprecated**: Use `POST /v2/ai/openai/chat/completions` instead. Chat with a language model. This endpoint is consistent with the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) and may be used with the OpenAI JS or Python SDK.
-
-`POST /ai/chat/completions` — Required: `messages`
-
-Optional: `api_key_ref` (string), `best_of` (integer), `early_stopping` (boolean), `enable_thinking` (boolean), `frequency_penalty` (number), `guided_choice` (array[string]), `guided_json` (object), `guided_regex` (string), `length_penalty` (number), `logprobs` (boolean), `max_tokens` (integer), `min_p` (number), `model` (string), `n` (number), `presence_penalty` (number), `response_format` (object), `seed` (integer), `stop` (object), `stream` (boolean), `temperature` (number), `tool_choice` (enum: none, auto, required), `tools` (array[object]), `top_logprobs` (integer), `top_p` (number), `use_beam_search` (boolean)
-
-```java
-import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionParams;
-import com.telnyx.sdk.models.ai.chat.ChatCreateCompletionResponse;
-
-ChatCreateCompletionParams params = ChatCreateCompletionParams.builder()
-    .addMessage(ChatCreateCompletionParams.Message.builder()
-        .content("You are a friendly chatbot.")
-        .role(ChatCreateCompletionParams.Message.Role.SYSTEM)
-        .build())
-    .addMessage(ChatCreateCompletionParams.Message.builder()
-        .content("Hello, world!")
-        .role(ChatCreateCompletionParams.Message.Role.USER)
-        .build())
-    .build();
-ChatCreateCompletionResponse response = client.ai().chat().createCompletion(params);
-```
-
 ## List conversations
 
 Retrieve a list of all AI conversations configured by the user. Supports [PostgREST-style query parameters](https://postgrest.org/en/stable/api.html#horizontal-filtering-rows) for filtering. Examples are included for the standard metadata fields, but you can filter on any field in the metadata JSON object.
@@ -116,7 +91,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Create a conversation
 
-Create a new AI Conversation.
+Creates a new AI conversation, the container for messages exchanged with an assistant, and returns the created conversation.
 
 `POST /ai/conversations`
 
@@ -138,17 +113,14 @@ Aggregate conversation insights by specified fields
 `GET /ai/conversations/conversation-insights/aggregates`
 
 ```java
-import com.telnyx.sdk.models.ai.conversations.conversationinsights.ConversationInsightAggregateParams;
-import com.telnyx.sdk.models.ai.conversations.conversationinsights.ConversationInsightAggregateResponse;
-
-ConversationInsightAggregateResponse response = client.ai().conversations().conversationInsights().aggregate();
+var response = client.ai().conversations().conversationInsights().retrieveAggregates();
 ```
 
 Returns: `record_count` (integer)
 
 ## Get Insight Template Groups
 
-Get all insight groups
+Returns a paginated list of your insight template groups. Groups organize related insight templates that are applied together when analyzing conversations.
 
 `GET /ai/conversations/insight-groups`
 
@@ -163,7 +135,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Create Insight Template Group
 
-Create a new insight group
+Creates a new insight template group for organizing related insight templates, and returns the created group.
 
 `POST /ai/conversations/insight-groups` — Required: `name`
 
@@ -183,7 +155,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Get Insight Template Group
 
-Get insight group by ID
+Returns the details of a single insight template group, including the insight templates assigned to it.
 
 `GET /ai/conversations/insight-groups/{group_id}`
 
@@ -198,7 +170,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Update Insight Template Group
 
-Update an insight template group
+Updates the specified insight template group and returns the updated group.
 
 `PUT /ai/conversations/insight-groups/{group_id}`
 
@@ -215,7 +187,7 @@ Returns: `created_at` (date-time), `description` (string), `id` (uuid), `insight
 
 ## Delete Insight Template Group
 
-Delete insight group by ID
+Permanently deletes the specified insight template group by its ID.
 
 `DELETE /ai/conversations/insight-groups/{group_id}`
 
@@ -227,7 +199,7 @@ client.ai().conversations().insightGroups().delete("182bd5e5-6e1a-4fe4-a799-aa6d
 
 ## Assign Insight Template To Group
 
-Assign an insight to a group
+Assigns the specified insight template to the specified insight template group.
 
 `POST /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign`
 
@@ -243,7 +215,7 @@ client.ai().conversations().insightGroups().insights().assign(params);
 
 ## Unassign Insight Template From Group
 
-Remove an insight from a group
+Removes the specified insight template from the specified group. The insight template itself is not deleted.
 
 `DELETE /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/unassign`
 
@@ -259,7 +231,7 @@ client.ai().conversations().insightGroups().insights().deleteUnassign(params);
 
 ## Get Insight Templates
 
-Get all insights
+Returns a paginated list of your insight templates. Insight templates define analyses that run over AI conversations to extract structured findings.
 
 `GET /ai/conversations/insights`
 
@@ -274,7 +246,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Create Insight Template
 
-Create a new insight
+Creates a new insight template defining an analysis to run over conversations, and returns the created template.
 
 `POST /ai/conversations/insights` — Required: `instructions`, `name`
 
@@ -295,7 +267,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Get Insight Template
 
-Get insight by ID
+Returns the details of a single insight template by its ID, including its configuration.
 
 `GET /ai/conversations/insights/{insight_id}`
 
@@ -310,7 +282,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Update Insight Template
 
-Update an insight template
+Updates the specified insight template and returns the updated template.
 
 `PUT /ai/conversations/insights/{insight_id}`
 
@@ -327,7 +299,7 @@ Returns: `created_at` (date-time), `id` (uuid), `insight_type` (enum: custom, de
 
 ## Delete Insight Template
 
-Delete insight by ID
+Permanently deletes the specified insight template by its ID.
 
 `DELETE /ai/conversations/insights/{insight_id}`
 
@@ -427,7 +399,7 @@ import com.telnyx.sdk.models.ai.conversations.messages.MessageListParams;
 MessageListPage page = client.ai().conversations().messages().list("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (date-time), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
+Returns: `created_at` (date-time), `metadata` (object), `role` (enum: user, assistant, tool), `sent_at` (date-time), `text` (string), `tool_calls` (array[object])
 
 ## Get Tasks by Status
 
@@ -472,7 +444,7 @@ Returns: `created_at` (string), `finished_at` (string | null), `status` (string)
 
 ## List embedded buckets
 
-Get all embedding buckets for a user.
+Returns the list of storage buckets that have been embedded for your account, for use with similarity search.
 
 `GET /ai/embeddings/buckets`
 
@@ -589,7 +561,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Create a fine tuning job
 
-Create a new fine tuning job.
+Creates a new fine-tuning job that trains a model on the provided dataset, and returns the created job.
 
 `POST /ai/fine_tuning/jobs` — Required: `model`, `training_file`
 
@@ -610,7 +582,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Get a fine tuning job
 
-Retrieve a fine tuning job by `job_id`.
+Returns the details of a single fine-tuning job by its job_id, including its current status.
 
 `GET /ai/fine_tuning/jobs/{job_id}`
 
@@ -625,7 +597,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 
 ## Cancel a fine tuning job
 
-Cancel a fine tuning job.
+Cancels the specified in-progress fine-tuning job and returns the updated job.
 
 `POST /ai/fine_tuning/jobs/{job_id}/cancel`
 
@@ -637,21 +609,6 @@ FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().cancel("550e8400-e
 ```
 
 Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Get available models
-
-**Deprecated**: Use `GET /v2/ai/openai/models` instead. Returns the same `ModelsResponse` payload as the OpenAI-compatible endpoint — open-source LLMs hosted on Telnyx (e.g. `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.1-FP8`, `MiniMaxAI/MiniMax-M2.7`), embedding models, and fine-tuned models — kept around for backwards compatibility.
-
-`GET /ai/models`
-
-```java
-import com.telnyx.sdk.models.ai.AiRetrieveModelsParams;
-import com.telnyx.sdk.models.ai.AiRetrieveModelsResponse;
-
-AiRetrieveModelsResponse response = client.ai().retrieveModels();
-```
-
-Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -688,24 +645,6 @@ EmbeddingListEmbeddingModelsResponse response = client.ai().openai().embeddings(
 ```
 
 Returns: `created` (integer), `id` (string), `object` (string), `owned_by` (string)
-
-## Create a response
-
-**Deprecated**: Use `POST /v2/ai/openai/responses` instead. This endpoint is compatible with the [OpenAI Responses API](https://developers.openai.com/api/reference/responses/overview) and may be used with the OpenAI JS or Python SDK. Response id parameter is not supported at the moment. Use the `conversation` parameter with a Telnyx Conversation ID to leverage persistent conversations.
-
-`POST /ai/responses`
-
-```java
-import com.telnyx.sdk.core.JsonValue;
-import com.telnyx.sdk.models.ai.AiCreateResponseDeprecatedParams;
-import com.telnyx.sdk.models.ai.AiCreateResponseDeprecatedResponse;
-
-AiCreateResponseDeprecatedParams.Body params = AiCreateResponseDeprecatedParams.Body.builder()
-    .putAdditionalProperty("model", JsonValue.from("bar"))
-    .putAdditionalProperty("input", JsonValue.from("bar"))
-    .build();
-AiCreateResponseDeprecatedResponse response = client.ai().createResponseDeprecated(params);
-```
 
 ## Summarize file content
 
@@ -819,7 +758,7 @@ Generate synthesized speech audio from text input. Returns audio in the requeste
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, rime, resemble, xai), `resemble` (object), `rime` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
+Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `humain` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, resemble, xai, humain, soniox), `resemble` (object), `soniox` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
 
 ```java
 import com.telnyx.sdk.models.texttospeech.TextToSpeechGenerateParams;
