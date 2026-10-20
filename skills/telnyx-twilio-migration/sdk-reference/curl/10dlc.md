@@ -287,7 +287,7 @@ Primary response fields:
 - `.data.campaignId`
 - `.data.createdAt`
 - `.data.failureReasons`
-- `.data.phoneNumber`
+- `.data.nonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -371,15 +371,18 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Brand SMS OTP Status by Brand ID | HTTP only | `GET /10dlc/brand/{brandId}/smsOtp` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
 | Trigger Brand SMS OTP | HTTP only | `POST /10dlc/brand/{brandId}/smsOtp` | Create or provision an additional resource when the core tasks do not cover this flow. | `pinSms`, `successSms`, `brandId` |
 | Verify Brand SMS OTP | HTTP only | `PUT /10dlc/brand/{brandId}/smsOtp` | Modify an existing resource without recreating it. | `otpPin`, `brandId` |
+| Get Brand Feedback By Id | HTTP only | `GET /10dlc/brand_feedback/{brandId}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `brandId` |
 | List Campaigns | HTTP only | `GET /10dlc/campaign` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Accept Shared Campaign | HTTP only | `POST /10dlc/campaign/acceptSharing/{campaignId}` | Create or provision an additional resource when the core tasks do not cover this flow. | `campaignId` |
 | Get Campaign Cost | HTTP only | `GET /10dlc/campaign/usecase/cost` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Get Campaign Cost | HTTP only | `GET /10dlc/campaign/usecase_cost` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Update campaign | HTTP only | `PUT /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
 | Deactivate campaign | HTTP only | `DELETE /10dlc/campaign/{campaignId}` | Inspect the current state of an existing campaign registration. | `campaignId` |
 | Submit campaign appeal for manual review | HTTP only | `POST /10dlc/campaign/{campaignId}/appeal` | Create or provision an additional resource when the core tasks do not cover this flow. | `appeal_reason`, `campaignId` |
 | Get Campaign Mno Metadata | HTTP only | `GET /10dlc/campaign/{campaignId}/mnoMetadata` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | Get campaign operation status | HTTP only | `GET /10dlc/campaign/{campaignId}/operationStatus` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | Get OSR campaign attributes | HTTP only | `GET /10dlc/campaign/{campaignId}/osr/attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
+| Get OSR campaign attributes | HTTP only | `GET /10dlc/campaign/{campaignId}/osr_attributes` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | Get Sharing Status | HTTP only | `GET /10dlc/campaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
 | List shared partner campaigns | HTTP only | `GET /10dlc/partnerCampaign/sharedByMe` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Sharing Status | HTTP only | `GET /10dlc/partnerCampaign/{campaignId}/sharing` | Fetch the current state before updating, deleting, or making control-flow decisions. | `campaignId` |
@@ -390,7 +393,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | HTTP only | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
 | List phone number campaigns | HTTP only | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | HTTP only | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
-| Create New Phone Number Campaign | HTTP only | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Update Phone Number Campaign | HTTP only | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
 | Delete Phone Number Campaign | HTTP only | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
 
 ---

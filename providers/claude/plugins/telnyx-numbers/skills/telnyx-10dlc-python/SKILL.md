@@ -307,7 +307,7 @@ Primary response fields:
 - `phone_number_campaign.campaign_id`
 - `phone_number_campaign.created_at`
 - `phone_number_campaign.failure_reasons`
-- `phone_number_campaign.phone_number`
+- `phone_number_campaign.non_tmobile_number_mapping_status`
 
 ### Get campaign
 
@@ -418,7 +418,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get Phone Number Status | `client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `task_id` |
 | List phone number campaigns | `client.messaging_10dlc.phone_number_campaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phone_number` |
-| Create New Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
+| Update Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
 | Delete Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phone_number` |
 
 ---

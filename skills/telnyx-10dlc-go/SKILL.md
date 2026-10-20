@@ -338,7 +338,7 @@ Primary response fields:
 - `phoneNumberCampaign.CampaignID`
 - `phoneNumberCampaign.CreatedAt`
 - `phoneNumberCampaign.FailureReasons`
-- `phoneNumberCampaign.PhoneNumber`
+- `phoneNumberCampaign.NonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -453,7 +453,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get Phone Number Status | `client.Messaging10dlc.PhoneNumberAssignmentByProfile.ListPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `TaskId` |
 | List phone number campaigns | `client.Messaging10dlc.PhoneNumberCampaigns.List()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Get()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `PhoneNumber` |
-| Create New Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `PhoneNumber`, `CampaignId`, `PhoneNumber` |
+| Update Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `PhoneNumber`, `CampaignId`, `PhoneNumber` |
 | Delete Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `PhoneNumber` |
 
 ---

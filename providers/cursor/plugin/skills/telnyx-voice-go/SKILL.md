@@ -111,7 +111,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
@@ -178,7 +178,7 @@ Common post-answer control path with downstream webhook implications.
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Transfer(
@@ -282,6 +282,7 @@ End a live call from your webhook-driven control flow.
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `CustomHeaders` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Hangup(
@@ -338,7 +339,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `Cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `CallControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
