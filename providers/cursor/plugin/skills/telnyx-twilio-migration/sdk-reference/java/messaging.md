@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -22,6 +22,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -35,12 +37,26 @@ or authentication errors (401). Always handle errors in production code:
 ```java
 import com.telnyx.sdk.models.messages.MessageSendParams;
 import com.telnyx.sdk.models.messages.MessageSendResponse;
-MessageSendParams params = MessageSendParams.builder()
-    .to("+18445550001")
-    .from("+18005550101")
-    .text("Hello from Telnyx!")
-    .build();
-MessageSendResponse response = client.messages().send(params);
+import com.telnyx.sdk.errors.TelnyxServiceException;
+
+try {
+    MessageSendParams params = MessageSendParams.builder()
+        .to("+18445550001")
+        .from("+18005550101")
+        .text("Hello from Telnyx!")
+        .build();
+    MessageSendResponse response = client.messages().send(params);
+} catch (TelnyxServiceException e) {
+    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
+    if (e.statusCode() == 422) {
+        System.err.println("Validation error — check required fields and formats");
+    } else if (e.statusCode() == 429) {
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
+        Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
+    }
+    throw e; // Re-throw: a failed request must never look like success to the caller
+}
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -82,7 +98,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `messagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `mediaUrls` | array[string] | No | A list of media URLs. |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendParams;
@@ -113,13 +129,14 @@ Common sender variant that requires different request shape.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `from` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `from` | string | Yes | A valid alphanumeric sender ID on the user's account. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `text` | string | Yes | The message body. |
 | `messagingProfileId` | string (UUID) | Yes | The messaging profile ID to use. |
 | `webhookUrl` | string (URL) | No | Callback URL for delivery status updates. |
 | `webhookFailoverUrl` | string (URL) | No | Failover callback URL for delivery status updates. |
 | `useProfileWebhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendWithAlphanumericSenderParams;
@@ -148,6 +165,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;
@@ -186,7 +207,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -202,9 +223,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -225,11 +246,11 @@ Send one MMS payload to multiple recipients.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
-| `to` | array[object] | Yes | A list of destinations. |
+| `to` | array[string] | Yes | A list of destinations. |
 | `mediaUrls` | array[string] | No | A list of media URLs. |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +4 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendGroupMmsParams;
@@ -265,7 +286,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `mediaUrls` | array[string] | No | A list of media URLs. |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendLongCodeParams;
@@ -300,7 +321,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `mediaUrls` | array[string] | No | A list of media URLs. |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendNumberPoolParams;
@@ -335,7 +356,7 @@ Force a short-code sending path when the sender must be a short code.
 | `mediaUrls` | array[string] | No | A list of media URLs. |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendShortCodeParams;
@@ -381,7 +402,7 @@ MessageScheduleParams params = MessageScheduleParams.builder()
 
     .text("Appointment reminder")
 
-    .sendAt("2025-07-01T15:00:00Z")
+    .sendAt("2027-01-15T15:00:00Z")
     .build();
 MessageScheduleResponse response = client.messages().schedule(params);
 ```
@@ -403,11 +424,12 @@ Send WhatsApp traffic instead of SMS/MMS.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
-| `to` | string (E.164) | Yes | Phone number in +E.164 format |
+| `to` | string (E.164) | Yes | Recipient phone number in +E.164 format, or the business-sco... |
 | `whatsappMessage` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `messagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```java
 import com.telnyx.sdk.models.messages.MessageSendWhatsappParams;
@@ -497,6 +519,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using an alphanumeric sender ID — `client.messages().sendWithAlphanumericSender()`
 
@@ -505,6 +528,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookUrl` | string (URL) | Callback URL for delivery status updates. |
 | `webhookFailoverUrl` | string (URL) | Failover callback URL for delivery status updates. |
 | `useProfileWebhooks` | boolean | If true, use the messaging profile's webhook settings. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a group MMS message — `client.messages().sendGroupMms()`
 
@@ -516,6 +540,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a long code message — `client.messages().sendLongCode()`
 
@@ -530,6 +555,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using number pool — `client.messages().sendNumberPool()`
 
@@ -544,6 +570,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Schedule a message — `client.messages().schedule()`
 
@@ -574,6 +601,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a WhatsApp message — `client.messages().sendWhatsapp()`
 
@@ -582,17 +610,14 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `messagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update a messaging hosted number — `client.messagingHostedNumbers().update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `messagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to:
-
-* Omit thi... |
-| `messagingProduct` | string | Configure the messaging product for this number:
-
-* Omit this field or set it... |
+| `messagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to: * Omit this... |
+| `messagingProduct` | string | Configure the messaging product for this number: * Omit this field or set its... |
 | `tags` | array[string] | Tags to set on this phone number. |
 
 ### Create auto-response setting — `client.messagingProfiles().autorespConfigs().create()`

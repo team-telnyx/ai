@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -26,8 +27,24 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```ruby
-response = client.messages.send_(to: "+18445550001", from: "+18005550101", text: "Hello from Telnyx!")
-puts(response)
+begin
+  response = client.messages.send_(to: "+18445550001", from: "+18005550101", text: "Hello from Telnyx!")
+  puts(response)
+rescue Telnyx::Errors::APIConnectionError
+  puts "Network error — check connectivity and retry"
+  raise
+rescue Telnyx::Errors::RateLimitError
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
+  sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
+rescue Telnyx::Errors::APIStatusError => e
+  puts "API error #{e.status}: #{e.message}"
+  if e.status == 422
+    puts "Validation error — check required fields and formats"
+  end
+  raise # A failed request must never look like success to the caller
+end
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -69,7 +86,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_(to: "+18445550001", from: "+18005550101", text: "Hello from Telnyx!")
@@ -92,13 +109,14 @@ Common sender variant that requires different request shape.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `from` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `from` | string | Yes | A valid alphanumeric sender ID on the user's account. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `text` | string | Yes | The message body. |
 | `messaging_profile_id` | string (UUID) | Yes | The messaging profile ID to use. |
 | `webhook_url` | string (URL) | No | Callback URL for delivery status updates. |
 | `webhook_failover_url` | string (URL) | No | Failover callback URL for delivery status updates. |
 | `use_profile_webhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_with_alphanumeric_sender(
@@ -125,6 +143,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```ruby
 # In your webhook handler (e.g., Sinatra — use raw body):
@@ -153,7 +175,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -169,9 +191,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -192,11 +214,11 @@ Send one MMS payload to multiple recipients.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
-| `to` | array[object] | Yes | A list of destinations. |
+| `to` | array[string] | Yes | A list of destinations. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +4 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_group_mms(from: "+13125551234", to: ["+18655551234", "+14155551234"], text: "Hello from Telnyx!")
@@ -224,7 +246,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_long_code(from: "+18445550001", to: "+13125550002", text: "Hello from Telnyx!")
@@ -252,7 +274,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_number_pool(
@@ -285,7 +307,7 @@ Force a short-code sending path when the sender must be a short code.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_short_code(from: "+18445550001", to: "+18445550001", text: "Hello from Telnyx!")
@@ -315,7 +337,7 @@ Queue a message for future delivery instead of sending immediately.
 | ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
-response = client.messages.schedule(to: "+18445550001", from: "+18005550101", text: "Appointment reminder", send_at: "2025-07-01T15:00:00Z")
+response = client.messages.schedule(to: "+18445550001", from: "+18005550101", text: "Appointment reminder", send_at: "2027-01-15T15:00:00Z")
 puts(response)
 ```
 
@@ -336,11 +358,12 @@ Send WhatsApp traffic instead of SMS/MMS.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
-| `to` | string (E.164) | Yes | Phone number in +E.164 format |
+| `to` | string (E.164) | Yes | Recipient phone number in +E.164 format, or the business-sco... |
 | `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.messages.send_whatsapp(from: "+13125551234", to: "+13125551234", whatsapp_message: {})
@@ -423,6 +446,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using an alphanumeric sender ID — `client.messages.send_with_alphanumeric_sender()`
 
@@ -431,6 +455,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_url` | string (URL) | Callback URL for delivery status updates. |
 | `webhook_failover_url` | string (URL) | Failover callback URL for delivery status updates. |
 | `use_profile_webhooks` | boolean | If true, use the messaging profile's webhook settings. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a group MMS message — `client.messages.send_group_mms()`
 
@@ -442,6 +467,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a long code message — `client.messages.send_long_code()`
 
@@ -456,6 +482,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using number pool — `client.messages.send_number_pool()`
 
@@ -470,6 +497,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Schedule a message — `client.messages.schedule()`
 
@@ -500,6 +528,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a WhatsApp message — `client.messages.send_whatsapp()`
 
@@ -508,17 +537,14 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `messaging_profile_id` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update a messaging hosted number — `client.messaging_hosted_numbers.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `messaging_profile_id` | string (UUID) | Configure the messaging profile this phone number is assigned to:
-
-* Omit thi... |
-| `messaging_product` | string | Configure the messaging product for this number:
-
-* Omit this field or set it... |
+| `messaging_profile_id` | string (UUID) | Configure the messaging profile this phone number is assigned to: * Omit this... |
+| `messaging_product` | string | Configure the messaging product for this number: * Omit this field or set its... |
 | `tags` | array[string] | Tags to set on this phone number. |
 
 ### Create auto-response setting — `client.messaging_profiles.autoresp_configs.create()`

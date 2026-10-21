@@ -28,6 +28,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -43,20 +44,23 @@ try {
   const response = await client.calls.dial({
     connection_id: '7267xxxxxxxxxxxxxx',
     from: '+18005550101',
-    to: '+18005550100;secure=srtp',
+    to: '+18005550100',
   });
 } catch (err) {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -99,25 +103,25 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.calls.dial({
   connection_id: '7267xxxxxxxxxxxxxx',
   from: '+18005550101',
-  to: '+18005550100;secure=srtp',
+  to: '+18005550100',
 });
 
 console.log(response.data);
 ```
 
 Primary response fields:
-- `response.data.callControlId`
-- `response.data.callLegId`
-- `response.data.callSessionId`
-- `response.data.isAlive`
-- `response.data.recordingId`
-- `response.data.callDuration`
+- `response.data.call_control_id`
+- `response.data.call_leg_id`
+- `response.data.call_session_id`
+- `response.data.is_alive`
+- `response.data.recording_id`
+- `response.data.call_duration`
 
 ### Answer an inbound call
 
@@ -141,7 +145,7 @@ console.log(response.data);
 
 Primary response fields:
 - `response.data.result`
-- `response.data.recordingId`
+- `response.data.recording_id`
 
 ### Transfer a live call
 
@@ -156,11 +160,11 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
-const response = await client.calls.actions.transfer('call_control_id', {
-  to: '+18005550100;secure=srtp',
+const response = await client.calls.actions.transfer('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', {
+  to: '+18005550100',
 });
 
 console.log(response.data);
@@ -175,6 +179,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```javascript
 // In your webhook handler (e.g., Express — use raw body, not parsed JSON):
@@ -256,6 +264,7 @@ End a live call from your webhook-driven control flow.
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `custom_headers` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.calls.actions.hangup('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -274,7 +283,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `call_control_id` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `call_control_id_to_bridge_with` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -282,7 +291,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
-const response = await client.calls.actions.bridge('call_control_id', {
+const response = await client.calls.actions.bridge('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', {
   call_control_id_to_bridge_with: 'v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg',
 });
 
@@ -300,13 +309,13 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```javascript
-const response = await client.calls.actions.reject('call_control_id', { cause: 'USER_BUSY' });
+const response = await client.calls.actions.reject('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', { cause: 'USER_BUSY' });
 
 console.log(response.data);
 ```
@@ -331,12 +340,12 @@ console.log(response.data);
 ```
 
 Primary response fields:
-- `response.data.callControlId`
-- `response.data.callDuration`
-- `response.data.callLegId`
-- `response.data.callSessionId`
-- `response.data.clientState`
-- `response.data.endTime`
+- `response.data.call_control_id`
+- `response.data.call_duration`
+- `response.data.call_leg_id`
+- `response.data.call_session_id`
+- `response.data.client_state`
+- `response.data.end_time`
 
 ### List all active calls for given connection
 
@@ -363,12 +372,12 @@ Response wrapper:
 - pagination: `connectionListActiveCallsResponse.meta`
 
 Primary item fields:
-- `callControlId`
-- `callDuration`
-- `callLegId`
-- `callSessionId`
-- `clientState`
-- `recordType`
+- `call_control_id`
+- `call_duration`
+- `call_leg_id`
+- `call_session_id`
+- `client_state`
+- `record_type`
 
 ### List call control applications
 
@@ -395,11 +404,11 @@ Response wrapper:
 
 Primary item fields:
 - `id`
-- `createdAt`
-- `updatedAt`
+- `created_at`
+- `updated_at`
 - `active`
-- `anchorsiteOverride`
-- `applicationName`
+- `anchorsite_override`
+- `application_name`
 
 ---
 
@@ -416,6 +425,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Delete a call control application | `client.callControlApplications.delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
 | SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
 | Send SIP info | `client.calls.actions.sendSipInfo()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
+| List dial metrics | `client.dialMetrics.list()` | `GET /dial_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
 
 ### Other Webhook Events
 

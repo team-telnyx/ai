@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -48,12 +50,26 @@ or authentication errors (401). Always handle errors in production code:
 ```java
 import com.telnyx.sdk.models.calls.CallDialParams;
 import com.telnyx.sdk.models.calls.CallDialResponse;
-CallDialParams params = CallDialParams.builder()
-    .connectionId("7267xxxxxxxxxxxxxx")
-    .from("+18005550101")
-    .to("+18005550100;secure=srtp")
-    .build();
-CallDialResponse response = client.calls().dial(params);
+import com.telnyx.sdk.errors.TelnyxServiceException;
+
+try {
+    CallDialParams params = CallDialParams.builder()
+        .connectionId("7267xxxxxxxxxxxxxx")
+        .from("+18005550101")
+        .to("+18005550100")
+        .build();
+    CallDialResponse response = client.calls().dial(params);
+} catch (TelnyxServiceException e) {
+    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
+    if (e.statusCode() == 422) {
+        System.err.println("Validation error — check required fields and formats");
+    } else if (e.statusCode() == 429) {
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
+        Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
+    }
+    throw e; // Re-throw: a failed request must never look like success to the caller
+}
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -95,7 +111,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.CallDialParams;
@@ -104,7 +120,7 @@ import com.telnyx.sdk.models.calls.CallDialResponse;
 CallDialParams params = CallDialParams.builder()
     .connectionId("7267xxxxxxxxxxxxxx")
     .from("+18005550101")
-    .to("+18005550100;secure=srtp")
+    .to("+18005550100")
     .build();
 CallDialResponse response = client.calls().dial(params);
 ```
@@ -155,7 +171,7 @@ Common post-answer control path with downstream webhook implications.
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionTransferParams;
@@ -163,7 +179,7 @@ import com.telnyx.sdk.models.calls.actions.ActionTransferResponse;
 
 ActionTransferParams params = ActionTransferParams.builder()
     .callControlId("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
-    .to("+18005550100;secure=srtp")
+    .to("+18005550100")
     .build();
 ActionTransferResponse response = client.calls().actions().transfer(params);
 ```
@@ -177,6 +193,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;
@@ -270,6 +290,7 @@ End a live call from your webhook-driven control flow.
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `customHeaders` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionHangupParams;
@@ -289,7 +310,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `callControlId` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `callControlIdToBridge` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
 | `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -318,7 +339,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `callControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -438,6 +459,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Delete a call control application | `client.callControlApplications().delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
 | SIP Refer a call | `client.calls().actions().refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sipAddress`, `callControlId` |
 | Send SIP info | `client.calls().actions().sendSipInfo()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `contentType`, `body`, `callControlId` |
+| List dial metrics | `client.dialMetrics().list()` | `GET /dial_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
 
 ### Other Webhook Events
 

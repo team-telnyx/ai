@@ -9,17 +9,20 @@
 
 ## Response Schemas
 
-**Returned by:** List assistants, Create an assistant, Import assistants from external provider, Get an assistant, Update an assistant, Clone Assistant, Get all versions of an assistant, Get a specific assistant version, Update a specific assistant version, Promote an assistant version to main
+**Returned by:** List assistants, Create an assistant, Import assistants from external provider, Get an assistant, Update an assistant, Clone Assistant, Restore an assistant, Get all versions of an assistant, Get a specific assistant version, Update a specific assistant version, Promote an assistant version to main
 
 | Field | Type |
 |-------|------|
+| `a2a_agents` | array[object] |
+| `avatar_settings` | object |
 | `conversation_flow` | object |
 | `created_at` | date-time |
+| `delegation_settings` | object |
 | `description` | string |
 | `dynamic_variables` | object |
 | `dynamic_variables_webhook_timeout_ms` | integer |
 | `dynamic_variables_webhook_url` | string |
-| `enabled_features` | array[object] |
+| `enabled_features` | array[string] |
 | `external_llm` | object |
 | `fallback_config` | object |
 | `greeting` | string |
@@ -46,6 +49,52 @@
 | `version_id` | string |
 | `version_name` | string |
 | `voice_settings` | object |
+| `websocket_settings` | object |
+| `widget_settings` | object |
+
+**Returned by:** List deleted assistants, Get a deleted assistant
+
+| Field | Type |
+|-------|------|
+| `a2a_agents` | array[object] |
+| `avatar_settings` | object |
+| `conversation_flow` | object |
+| `created_at` | date-time |
+| `delegation_settings` | object |
+| `deleted_at` | date-time |
+| `description` | string |
+| `dynamic_variables` | object |
+| `dynamic_variables_webhook_timeout_ms` | integer |
+| `dynamic_variables_webhook_url` | string |
+| `enabled_features` | array[string] |
+| `external_llm` | object |
+| `fallback_config` | object |
+| `greeting` | string |
+| `id` | string |
+| `import_metadata` | object |
+| `insight_settings` | object |
+| `instructions` | string |
+| `integrations` | array[object] |
+| `interruption_settings` | object |
+| `llm_api_key_ref` | string |
+| `mcp_servers` | array[object] |
+| `messaging_settings` | object |
+| `model` | string |
+| `name` | string |
+| `observability_settings` | object |
+| `permanently_deleted_at` | date-time |
+| `post_conversation_settings` | object |
+| `privacy_settings` | object |
+| `related_mission_ids` | array[string] |
+| `tags` | array[string] |
+| `telephony_settings` | object |
+| `tools` | array[object] |
+| `transcription` | object |
+| `version_created_at` | date-time |
+| `version_id` | string |
+| `version_name` | string |
+| `voice_settings` | object |
+| `websocket_settings` | object |
 | `widget_settings` | object |
 
 **Returned by:** Get All Tags, Add Assistant Tag, Remove Assistant Tag
@@ -109,7 +158,7 @@
 | `rules` | array[object] |
 | `updated_at` | date-time |
 
-**Returned by:** Assistant Chat (BETA)
+**Returned by:** Assistant Chat
 
 | Field | Type |
 |-------|------|
@@ -120,6 +169,13 @@
 | Field | Type |
 |-------|------|
 | `conversation_id` | string |
+
+**Returned by:** Assistant WhatsApp Chat
+
+| Field | Type |
+|-------|------|
+| `conversation_id` | string |
+| `message_id` | string |
 
 **Returned by:** List scheduled events
 
@@ -170,6 +226,7 @@
 | `Model` | string | ID of the model to use when `external_llm` is not set. |
 | `Tools` | array[object] | Deprecated for new integrations. |
 | `McpServers` | array[object] | MCP servers attached to the assistant. |
+| `A2aAgents` | array[object] | A2A agents this assistant can delegate to. |
 | `ToolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
@@ -177,10 +234,11 @@
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
+| `AvatarSettings` | object | **Beta:** Optional avatar configuration for supported realtime browser conver... |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |
-| `EnabledFeatures` | array[object] |  |
+| `EnabledFeatures` | array[string] |  |
 | `InsightSettings` | object |  |
 | `PrivacySettings` | object |  |
 | `DynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
@@ -192,13 +250,17 @@
 | `ObservabilitySettings` | object |  |
 | `Tags` | array[string] | Tags associated with the assistant. |
 | `PostConversationSettings` | object | Configuration for post-conversation processing. |
+| `DelegationSettings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `WebsocketSettings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `ConversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Import assistants from external provider — `client.AI.Assistants.Imports()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `ImportIds` | array[string] | Optional list of assistant IDs to import from the external provider. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Create a new assistant test — `client.AI.Assistants.Tests.New()`
 
@@ -208,12 +270,14 @@
 | `TelnyxConversationChannel` | object | The communication channel through which the test will be conducted. |
 | `MaxDurationSeconds` | integer | Maximum duration in seconds that the test conversation should run before timi... |
 | `TestSuite` | string | Optional test suite name to group related tests together. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Trigger test suite execution — `client.AI.Assistants.Tests.TestSuites.Runs.Trigger()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `DestinationVersionId` | string (UUID) | Optional assistant version ID to use for all test runs in this suite. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update an assistant test — `client.AI.Assistants.Tests.Update()`
 
@@ -233,6 +297,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `DestinationVersionId` | string (UUID) | Optional assistant version ID to use for this test run. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update an assistant — `client.AI.Assistants.Update()`
 
@@ -243,6 +308,7 @@
 | `Instructions` | string | System instructions for the assistant. |
 | `Tools` | array[object] | Deprecated for new integrations. |
 | `McpServers` | array[object] | MCP servers attached to the assistant. |
+| `A2aAgents` | array[object] | A2A agents this assistant can delegate to. |
 | `ToolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
@@ -250,10 +316,11 @@
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
+| `AvatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |
-| `EnabledFeatures` | array[object] |  |
+| `EnabledFeatures` | array[string] |  |
 | `InsightSettings` | object |  |
 | `PrivacySettings` | object |  |
 | `DynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
@@ -266,6 +333,8 @@
 | `Tags` | array[string] | Tags associated with the assistant. |
 | `VersionName` | string | Human-readable name for the assistant version. |
 | `PostConversationSettings` | object | Configuration for post-conversation processing. |
+| `DelegationSettings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `WebsocketSettings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `ConversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
 | `PromoteToMain` | boolean | Indicates whether the assistant should be promoted to the main version. |
 
@@ -274,6 +343,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `Rules` | array[object] |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update Canary Deploy — `client.AI.Assistants.CanaryDeploys.Update()`
 
@@ -281,11 +351,12 @@
 |-----------|------|-------------|
 | `Rules` | array[object] |  |
 
-### Assistant Chat (BETA) — `client.AI.Assistants.Chat()`
+### Assistant Chat — `client.AI.Assistants.Chat()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `Name` | string | The optional display name of the user sending the message |
+| `Stream` | boolean | When true, the response is streamed as Server-Sent Events (`text/event-stream... |
 
 ### Assistant Sms Chat — `client.AI.Assistants.SendSMS()`
 
@@ -294,6 +365,20 @@
 | `Text` | string |  |
 | `ConversationMetadata` | object |  |
 | `ShouldCreateConversation` | boolean |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
+
+### Assistant WhatsApp Chat — `client.AI.Assistants.Whatsapp()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ConversationMetadata` | object | Metadata stored on the conversation. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
+
+### Clone Assistant — `client.AI.Assistants.Clone()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Enhance Assistant Instructions — `client.AI.Assistants.Instructions.Enhance()`
 
@@ -311,8 +396,8 @@
 | `DynamicVariables` | object | A map of dynamic variable names to values. |
 | `MaxRetriesClientErrors` | integer | Configure number of retries on client errors: busy, no-answer, failed, cancel... |
 | `RetryIntervalSecs` | integer |  |
-| `CallSettings` | object | Per-call telephony overrides applied when a scheduled phone-call event
-dispat... |
+| `CallSettings` | object | Per-call telephony overrides applied when a scheduled phone-call event dispat... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Test Assistant Tool — `client.AI.Assistants.Tools.Test()`
 
@@ -330,6 +415,7 @@ dispat... |
 | `Instructions` | string | System instructions for the assistant. |
 | `Tools` | array[object] | Deprecated for new integrations. |
 | `McpServers` | array[object] | MCP servers attached to the assistant. |
+| `A2aAgents` | array[object] | A2A agents this assistant can delegate to. |
 | `ToolIds` | array[string] | IDs of shared tools to attach to the assistant. |
 | `Description` | string |  |
 | `Greeting` | string | Text that the assistant will use to start the conversation. |
@@ -337,10 +423,11 @@ dispat... |
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
+| `AvatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |
-| `EnabledFeatures` | array[object] |  |
+| `EnabledFeatures` | array[string] |  |
 | `InsightSettings` | object |  |
 | `PrivacySettings` | object |  |
 | `DynamicVariablesWebhookUrl` | string (URL) | If `dynamic_variables_webhook_url` is set, Telnyx sends a POST request to thi... |
@@ -353,6 +440,8 @@ dispat... |
 | `Tags` | array[string] | Tags associated with the assistant. |
 | `VersionName` | string | Human-readable name for the assistant version. |
 | `PostConversationSettings` | object | Configuration for post-conversation processing. |
+| `DelegationSettings` | object | Splits the conversation between a frontend model that talks to the caller and... |
+| `WebsocketSettings` | object | Streams conversation and telephony events to a WebSocket server you host, and... |
 | `ConversationFlow` | object | Conversation flow as supplied by API clients (create / update). |
 
 ### Create MCP Server — `client.AI.McpServers.New()`
@@ -361,6 +450,7 @@ dispat... |
 |-----------|------|-------------|
 | `ApiKeyRef` | string |  |
 | `AllowedTools` | array[string] |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update MCP Server — `client.AI.McpServers.Update()`
 
@@ -383,8 +473,12 @@ dispat... |
 | `Handoff` | object |  |
 | `Invite` | object |  |
 | `Webhook` | object |  |
+| `Pay` | object |  |
 | `ClientSideTool` | object |  |
+| `UpdateDynamicVariables` | object | Configuration for an update_dynamic_variables tool. |
+| `Vision` | object |  |
 | `TimeoutMs` | integer |  |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update Tool — `client.AI.Tools.Update()`
 
@@ -397,5 +491,8 @@ dispat... |
 | `Handoff` | object |  |
 | `Invite` | object |  |
 | `Webhook` | object |  |
+| `Pay` | object |  |
 | `ClientSideTool` | object |  |
+| `UpdateDynamicVariables` | object | Configuration for an update_dynamic_variables tool. |
+| `Vision` | object |  |
 | `TimeoutMs` | integer |  |

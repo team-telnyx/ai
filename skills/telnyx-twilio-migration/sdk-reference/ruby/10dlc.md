@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -26,14 +27,30 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```ruby
-telnyx_brand = client.messaging_10dlc.brand.create(
-  country: "US",
-  display_name: "ABC Mobile",
-  email: "support@example.com",
-  entity_type: :PRIVATE_PROFIT,
-  vertical: :TECHNOLOGY
-)
-puts(telnyx_brand)
+begin
+  telnyx_brand = client.messaging_10dlc.brand.create(
+    country: "US",
+    display_name: "ABC Mobile",
+    email: "support@example.com",
+    entity_type: :PRIVATE_PROFIT,
+    vertical: :TECHNOLOGY
+  )
+  puts(telnyx_brand)
+rescue Telnyx::Errors::APIConnectionError
+  puts "Network error — check connectivity and retry"
+  raise
+rescue Telnyx::Errors::RateLimitError
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
+  sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
+rescue Telnyx::Errors::APIStatusError => e
+  puts "API error #{e.status}: #{e.message}"
+  if e.status == 422
+    puts "Validation error — check required fields and formats"
+  end
+  raise # A failed request must never look like success to the caller
+end
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -167,6 +184,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```ruby
 # In your webhook handler (e.g., Sinatra — use raw body):
 post "/webhooks" do
@@ -286,7 +307,7 @@ Primary response fields:
 - `phone_number_campaign.campaignId`
 - `phone_number_campaign.createdAt`
 - `phone_number_campaign.failureReasons`
-- `phone_number_campaign.phoneNumber`
+- `phone_number_campaign.nonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -395,7 +416,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | `client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `task_id` |
 | List phone number campaigns | `client.messaging_10dlc.phone_number_campaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phone_number` |
-| Create New Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
+| Update Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
 | Delete Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phone_number` |
 
 ---

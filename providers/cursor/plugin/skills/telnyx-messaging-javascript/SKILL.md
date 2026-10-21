@@ -28,6 +28,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -49,14 +50,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -99,7 +103,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.send({
@@ -116,7 +120,7 @@ Primary response fields:
 - `response.data.to`
 - `response.data.from`
 - `response.data.text`
-- `response.data.sentAt`
+- `response.data.sent_at`
 - `response.data.errors`
 
 ### Send an SMS with an alphanumeric sender ID
@@ -127,13 +131,14 @@ Common sender variant that requires different request shape.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `from` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `from` | string | Yes | A valid alphanumeric sender ID on the user's account. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `text` | string | Yes | The message body. |
 | `messaging_profile_id` | string (UUID) | Yes | The messaging profile ID to use. |
 | `webhook_url` | string (URL) | No | Callback URL for delivery status updates. |
 | `webhook_failover_url` | string (URL) | No | Failover callback URL for delivery status updates. |
 | `use_profile_webhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendWithAlphanumericSender({
@@ -151,7 +156,7 @@ Primary response fields:
 - `response.data.to`
 - `response.data.from`
 - `response.data.text`
-- `response.data.sentAt`
+- `response.data.sent_at`
 - `response.data.errors`
 
 ---
@@ -160,6 +165,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```javascript
 // In your webhook handler (e.g., Express — use raw body, not parsed JSON):
@@ -186,7 +195,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -202,9 +211,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -225,11 +234,11 @@ Send one MMS payload to multiple recipients.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
-| `to` | array[object] | Yes | A list of destinations. |
+| `to` | array[string] | Yes | A list of destinations. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendGroupMms({
@@ -262,7 +271,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendLongCode({
@@ -294,7 +303,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendNumberPool({
@@ -327,7 +336,7 @@ Force a short-code sending path when the sender must be a short code.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendShortCode({
@@ -365,7 +374,7 @@ const response = await client.messages.schedule({
     to: '+18445550001',
     from: '+18005550101',
     text: 'Appointment reminder',
-    send_at: '2025-07-01T15:00:00Z',
+    send_at: '2027-01-15T15:00:00Z',
 });
 
 console.log(response.data);
@@ -388,11 +397,12 @@ Send WhatsApp traffic instead of SMS/MMS.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
-| `to` | string (E.164) | Yes | Phone number in +E.164 format |
+| `to` | string (E.164) | Yes | Recipient phone number in +E.164 format, or the business-sco... |
 | `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```javascript
 const response = await client.messages.sendWhatsapp({

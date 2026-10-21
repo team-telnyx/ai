@@ -35,6 +35,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -52,7 +53,7 @@ response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
 		ConnectionID: "7267xxxxxxxxxxxxxx",
 		From:         "+18005550101",
 		To: telnyx.CallDialParamsToUnion{
-			OfString: telnyx.String("+18005550100;secure=srtp"),
+			OfString: telnyx.String("+18005550100"),
 		},
 	})
 if err != nil {
@@ -62,6 +63,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -69,6 +71,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -111,14 +114,14 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
 		ConnectionID: "7267xxxxxxxxxxxxxx",
 		From:         "+18005550101",
 		To: telnyx.CallDialParamsToUnion{
-			OfString: telnyx.String("+18005550100;secure=srtp"),
+			OfString: telnyx.String("+18005550100"),
 		},
 	})
 	if err != nil {
@@ -178,14 +181,14 @@ Common post-answer control path with downstream webhook implications.
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Transfer(
 		context.Background(),
 		"call_control_id",
 		telnyx.CallActionTransferParams{
-			To: "+18005550100;secure=srtp",
+			To: "+18005550100",
 		},
 	)
 	if err != nil {
@@ -203,6 +206,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```go
 // In your webhook handler:
@@ -282,6 +289,7 @@ End a live call from your webhook-driven control flow.
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `CustomHeaders` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Hangup(
@@ -306,7 +314,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `CallControlId` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `CallControlIDToBridgeWith` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
 | `CallControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -338,7 +346,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `Cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `Cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `CallControlId` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -468,6 +476,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Delete a call control application | `client.CallControlApplications.Delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `Id` |
 | SIP Refer a call | `client.Calls.Actions.Refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `SipAddress`, `CallControlId` |
 | Send SIP info | `client.Calls.Actions.SendSipInfo()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `ContentType`, `Body`, `CallControlId` |
+| List dial metrics | `client.DialMetrics.List()` | `GET /dial_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
 
 ### Other Webhook Events
 

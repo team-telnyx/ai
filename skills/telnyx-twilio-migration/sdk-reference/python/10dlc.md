@@ -16,6 +16,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -39,13 +40,18 @@ try:
     )
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -176,6 +182,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```python
 # In your webhook handler (e.g., Flask — use raw body, not parsed JSON):
 @app.route("/webhooks", methods=["POST"])
@@ -228,8 +238,7 @@ Inspect the current state of an existing brand registration.
 | `brand_id` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```python
-brand = client.messaging_10dlc.brand.retrieve(
-    "brandId",
+brand = client.messaging_10dlc.brand.retrieve("BXXX001",
 )
 print(brand)
 ```
@@ -294,7 +303,7 @@ Primary response fields:
 - `phone_number_campaign.campaign_id`
 - `phone_number_campaign.created_at`
 - `phone_number_campaign.failure_reasons`
-- `phone_number_campaign.phone_number`
+- `phone_number_campaign.non_tmobile_number_mapping_status`
 
 ### Get campaign
 
@@ -307,8 +316,7 @@ Inspect the current state of an existing campaign registration.
 | `campaign_id` | string (UUID) | Yes | Unique identifier of the campaign. |
 
 ```python
-telnyx_campaign_csp = client.messaging_10dlc.campaign.retrieve(
-    "campaignId",
+telnyx_campaign_csp = client.messaging_10dlc.campaign.retrieve("CXXX001",
 )
 print(telnyx_campaign_csp.brand_id)
 ```
@@ -356,8 +364,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 | `brand_id` | string (UUID) | Yes | Unique identifier of the brand. |
 
 ```python
-response = client.messaging_10dlc.brand.get_feedback(
-    "brandId",
+response = client.messaging_10dlc.brand.get_feedback("BXXX001",
 )
 print(response.brand_id)
 ```
@@ -405,7 +412,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | `client.messaging_10dlc.phone_number_assignment_by_profile.list_phone_number_status()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `task_id` |
 | List phone number campaigns | `client.messaging_10dlc.phone_number_campaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phone_number` |
-| Create New Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
+| Update Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phone_number`, `campaign_id`, `phone_number` |
 | Delete Phone Number Campaign | `client.messaging_10dlc.phone_number_campaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phone_number` |
 
 ---

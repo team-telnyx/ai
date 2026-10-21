@@ -27,6 +27,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -44,14 +45,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -94,12 +98,12 @@ Response wrapper:
 - pagination: `availablePhoneNumbers.meta`
 
 Primary item fields:
-- `phoneNumber`
-- `recordType`
+- `phone_number`
+- `record_type`
 - `quickship`
 - `reservable`
-- `bestEffort`
-- `costInformation`
+- `best_effort`
+- `cost_information`
 
 ### Create a number order
 
@@ -126,10 +130,10 @@ console.log(numberOrder.data);
 Primary response fields:
 - `numberOrder.data.id`
 - `numberOrder.data.status`
-- `numberOrder.data.phoneNumbersCount`
-- `numberOrder.data.requirementsMet`
-- `numberOrder.data.messagingProfileId`
-- `numberOrder.data.connectionId`
+- `numberOrder.data.phone_numbers_count`
+- `numberOrder.data.requirements_met`
+- `numberOrder.data.messaging_profile_id`
+- `numberOrder.data.connection_id`
 
 ### Check number order status
 
@@ -150,10 +154,10 @@ console.log(numberOrder.data);
 Primary response fields:
 - `numberOrder.data.id`
 - `numberOrder.data.status`
-- `numberOrder.data.requirementsMet`
-- `numberOrder.data.phoneNumbersCount`
-- `numberOrder.data.phoneNumbers`
-- `numberOrder.data.connectionId`
+- `numberOrder.data.requirements_met`
+- `numberOrder.data.phone_numbers_count`
+- `numberOrder.data.phone_numbers`
+- `numberOrder.data.connection_id`
 
 ---
 
@@ -186,9 +190,9 @@ console.log(numberReservation.data);
 Primary response fields:
 - `numberReservation.data.id`
 - `numberReservation.data.status`
-- `numberReservation.data.createdAt`
-- `numberReservation.data.updatedAt`
-- `numberReservation.data.customerReference`
+- `numberReservation.data.created_at`
+- `numberReservation.data.updated_at`
+- `numberReservation.data.customer_reference`
 - `numberReservation.data.errors`
 
 ### Retrieve a number reservation
@@ -210,9 +214,9 @@ console.log(numberReservation.data);
 Primary response fields:
 - `numberReservation.data.id`
 - `numberReservation.data.status`
-- `numberReservation.data.createdAt`
-- `numberReservation.data.updatedAt`
-- `numberReservation.data.customerReference`
+- `numberReservation.data.created_at`
+- `numberReservation.data.updated_at`
+- `numberReservation.data.customer_reference`
 - `numberReservation.data.errors`
 
 ### List Advanced Orders
@@ -233,10 +237,10 @@ Response wrapper:
 Primary item fields:
 - `id`
 - `status`
-- `areaCode`
+- `area_code`
 - `comments`
-- `countryCode`
-- `customerReference`
+- `country_code`
+- `customer_reference`
 
 ### Create Advanced Order
 
@@ -260,10 +264,10 @@ console.log(advancedOrder.id);
 Primary response fields:
 - `advancedOrder.id`
 - `advancedOrder.status`
-- `advancedOrder.areaCode`
+- `advancedOrder.area_code`
 - `advancedOrder.comments`
-- `advancedOrder.countryCode`
-- `advancedOrder.customerReference`
+- `advancedOrder.country_code`
+- `advancedOrder.customer_reference`
 
 ### Update Advanced Order
 
@@ -290,10 +294,10 @@ console.log(response.id);
 Primary response fields:
 - `response.id`
 - `response.status`
-- `response.areaCode`
+- `response.area_code`
 - `response.comments`
-- `response.countryCode`
-- `response.customerReference`
+- `response.country_code`
+- `response.customer_reference`
 
 ### Get Advanced Order
 
@@ -314,10 +318,10 @@ console.log(advancedOrder.id);
 Primary response fields:
 - `advancedOrder.id`
 - `advancedOrder.status`
-- `advancedOrder.areaCode`
+- `advancedOrder.area_code`
 - `advancedOrder.comments`
-- `advancedOrder.countryCode`
-- `advancedOrder.customerReference`
+- `advancedOrder.country_code`
+- `advancedOrder.customer_reference`
 
 ### List available phone number blocks
 
@@ -340,12 +344,12 @@ Response wrapper:
 - pagination: `availablePhoneNumberBlocks.meta`
 
 Primary item fields:
-- `phoneNumber`
-- `costInformation`
+- `phone_number`
+- `cost_information`
 - `features`
 - `range`
-- `recordType`
-- `regionInformation`
+- `record_type`
+- `region_information`
 
 ### Retrieve all comments
 
@@ -370,10 +374,10 @@ Response wrapper:
 Primary item fields:
 - `id`
 - `body`
-- `createdAt`
-- `updatedAt`
-- `commentRecordId`
-- `commentRecordType`
+- `created_at`
+- `updated_at`
+- `comment_record_id`
+- `comment_record_type`
 
 ---
 

@@ -22,6 +22,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -47,6 +48,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -54,6 +56,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -96,7 +99,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `MessagingProfileId` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +8 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.Send(context.Background(), telnyx.MessageSendParams{
@@ -126,13 +129,14 @@ Common sender variant that requires different request shape.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `From` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `From` | string | Yes | A valid alphanumeric sender ID on the user's account. |
 | `To` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `Text` | string | Yes | The message body. |
 | `MessagingProfileId` | string (UUID) | Yes | The messaging profile ID to use. |
 | `WebhookUrl` | string (URL) | No | Callback URL for delivery status updates. |
 | `WebhookFailoverUrl` | string (URL) | No | Failover callback URL for delivery status updates. |
 | `UseProfileWebhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendWithAlphanumericSender(context.Background(), telnyx.MessageSendWithAlphanumericSenderParams{
@@ -162,6 +166,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```go
 // In your webhook handler:
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +193,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -201,9 +209,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -224,11 +232,11 @@ Send one MMS payload to multiple recipients.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `From` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
-| `To` | array[object] | Yes | A list of destinations. |
+| `To` | array[string] | Yes | A list of destinations. |
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +4 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendGroupMms(context.Background(), telnyx.MessageSendGroupMmsParams{
@@ -263,7 +271,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendLongCode(context.Background(), telnyx.MessageSendLongCodeParams{
@@ -298,7 +306,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendNumberPool(context.Background(), telnyx.MessageSendNumberPoolParams{
@@ -333,7 +341,7 @@ Force a short-code sending path when the sender must be a short code.
 | `MediaUrls` | array[string] | No | A list of media URLs. |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +7 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendShortCode(context.Background(), telnyx.MessageSendShortCodeParams{
@@ -374,7 +382,7 @@ Queue a message for future delivery instead of sending immediately.
 		To: "+18445550001",
 		From: "+18005550101",
 		Text: "Appointment reminder",
-		SendAt: "2025-07-01T15:00:00Z",
+		SendAt: "2027-01-15T15:00:00Z",
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -399,11 +407,12 @@ Send WhatsApp traffic instead of SMS/MMS.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `From` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
-| `To` | string (E.164) | Yes | Phone number in +E.164 format |
+| `To` | string (E.164) | Yes | Recipient phone number in +E.164 format, or the business-sco... |
 | `WhatsappMessage` | object | Yes |  |
 | `Type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `WebhookUrl` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `MessagingProfileId` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```go
 	response, err := client.Messages.SendWhatsapp(context.Background(), telnyx.MessageSendWhatsappParams{
@@ -492,6 +501,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `SendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using an alphanumeric sender ID — `client.Messages.SendWithAlphanumericSender()`
 
@@ -500,6 +510,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `WebhookUrl` | string (URL) | Callback URL for delivery status updates. |
 | `WebhookFailoverUrl` | string (URL) | Failover callback URL for delivery status updates. |
 | `UseProfileWebhooks` | boolean | If true, use the messaging profile's webhook settings. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a group MMS message — `client.Messages.SendGroupMms()`
 
@@ -511,6 +522,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `WebhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `UseProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a long code message — `client.Messages.SendLongCode()`
 
@@ -525,6 +537,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using number pool — `client.Messages.SendNumberPool()`
 
@@ -539,6 +552,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Schedule a message — `client.Messages.Schedule()`
 
@@ -569,6 +583,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `Type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `AutoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `Encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a WhatsApp message — `client.Messages.SendWhatsapp()`
 
@@ -577,17 +592,14 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `Type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `WebhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `MessagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update a messaging hosted number — `client.MessagingHostedNumbers.Update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `MessagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to:
-
-* Omit thi... |
-| `MessagingProduct` | string | Configure the messaging product for this number:
-
-* Omit this field or set it... |
+| `MessagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to: * Omit this... |
+| `MessagingProduct` | string | Configure the messaging product for this number: * Omit this field or set its... |
 | `Tags` | array[string] | Tags to set on this phone number. |
 
 ### Create auto-response setting — `client.MessagingProfiles.AutorespConfigs.New()`
