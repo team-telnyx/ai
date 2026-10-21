@@ -34,6 +34,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -55,7 +56,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -63,6 +64,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -150,6 +152,8 @@ Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_pu
 
 ## List OTA updates
 
+Retrieve a paginated list of over-the-air (OTA) update operations for your SIM cards.
+
 `GET /ota_updates`
 
 ```go
@@ -192,7 +196,7 @@ This API lists a paginated collection of SIM card actions. It enables exploring 
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Get SIM card action details
 
@@ -208,7 +212,7 @@ This API fetches detailed information about a SIM card action to follow-up on an
 	fmt.Printf("%+v\n", action.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## List SIM card data usage notifications
 
@@ -351,7 +355,7 @@ Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object),
 
 ## Create a SIM card group
 
-Creates a new SIM card group object
+Creates a new SIM card group and returns it. Groups let you apply shared settings to a set of SIM cards.
 
 `POST /sim_card_groups` — Required: `name`
 
@@ -391,7 +395,7 @@ Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object),
 
 ## Update a SIM card group
 
-Updates a SIM card group
+Updates the specified SIM card group's attributes and returns the updated group.
 
 `PATCH /sim_card_groups/{id}`
 
@@ -413,7 +417,7 @@ Returns: `consumed_data` (object), `created_at` (string), `data_limit` (object),
 
 ## Delete a SIM card group
 
-Permanently deletes a SIM card group
+Permanently deletes the specified SIM card group from your account.
 
 `DELETE /sim_card_groups/{id}`
 
@@ -445,7 +449,7 @@ Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` 
 
 ## Request Wireless Blocklist removal from SIM card group
 
-This action will asynchronously remove an existing Wireless Blocklist to all the SIMs in the SIM card group.
+This action asynchronously removes the Wireless Blocklist assigned to a SIM Card Group. The request returns `404` when the SIM Card Group does not exist and `422` when no Wireless Blocklist is assigned.
 
 `POST /sim_card_groups/{id}/actions/remove_wireless_blocklist`
 
@@ -483,7 +487,7 @@ Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` 
 
 ## Request Wireless Blocklist assignment for SIM card group
 
-This action will asynchronously assign a Wireless Blocklist to all the SIMs in the SIM card group.
+This action asynchronously assigns a Wireless Blocklist to all SIMs in the SIM Card Group. The request returns `404` when the SIM Card Group does not exist and `422` when the Wireless Blocklist does not exist.
 
 `POST /sim_card_groups/{id}/actions/set_wireless_blocklist` — Required: `wireless_blocklist_id`
 
@@ -505,7 +509,7 @@ Returns: `created_at` (string), `id` (uuid), `record_type` (string), `settings` 
 
 ## Preview SIM card orders
 
-Preview SIM card order purchases.
+Previews a SIM card order purchase, returning estimated costs and details before you place the order. The preview is processed asynchronously.
 
 `POST /sim_card_order_preview` — Required: `quantity`, `address_id`
 
@@ -540,7 +544,7 @@ Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (o
 
 ## Create a SIM card order
 
-Creates a new order for SIM cards.
+Creates a new order for physical SIM cards, including quantity and shipping details, and returns the created order.
 
 `POST /sim_card_orders` — Required: `address_id`, `quantity`
 
@@ -560,7 +564,7 @@ Returns: `cost` (object), `created_at` (string), `id` (uuid), `order_address` (o
 
 ## Get a single SIM card order
 
-Get a single SIM card order by its ID.
+Returns the details of a single SIM card order by its ID, including its status.
 
 `GET /sim_card_orders/{id}`
 
@@ -615,6 +619,8 @@ This API triggers an asynchronous operation to enable voice on SIM cards belongi
 For each SIM Card a SIM Card Action will be generated.
 
 `POST /sim_cards/actions/bulk_enable_voice` — Required: `sim_card_group_id`
+
+Optional: `connection_id` (string)
 
 ```go
 	response, err := client.SimCards.Actions.BulkEnableVoice(context.Background(), telnyx.SimCardActionBulkEnableVoiceParams{
@@ -687,7 +693,7 @@ Returns: `actions_in_progress` (boolean), `authorized_imeis` (array | null), `cr
 
 ## Update a SIM card
 
-Updates SIM card data
+Updates the specified SIM card's attributes and returns the updated SIM card.
 
 `PATCH /sim_cards/{id}`
 
@@ -745,7 +751,27 @@ The API will trigger an asynchronous operation called a SIM Card Action. Transit
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+
+## Request disabling voice on a SIM card
+
+This API disables voice calling on a SIM card. The SIM card will no longer be able to make or receive calls. 
+The API will trigger an asynchronous operation called a SIM Card Action. The status of the SIM Card Action can be followed through the [List SIM Card Action](https://developers.telnyx.com/api-reference/sim-card-actions/list-sim-card-actions) API.
+
+`POST /sim_cards/{id}/actions/disable_voice`
+
+```go
+	response, err := client.SimCards.Actions.DisableVoice(
+		context.Background(),
+		"id",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Request a SIM card enable
 
@@ -763,7 +789,31 @@ The API will trigger an asynchronous operation called a SIM Card Action. Transit
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+
+## Request enabling voice on a SIM card
+
+This API enables voice calling on a SIM card. When a `connection_id` is provided, the SIM is associated with the specified Mobile Voice Connection. The connection must be owned by the same user and of type `mobile_voice`. 
+The API will trigger an asynchronous operation called a SIM Card Action.
+
+`POST /sim_cards/{id}/actions/enable_voice`
+
+Optional: `connection_id` (string)
+
+```go
+	response, err := client.SimCards.Actions.EnableVoice(
+		context.Background(),
+		"id",
+		telnyx.SimCardActionEnableVoiceParams{
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Request removing a SIM card public IP
 
@@ -780,7 +830,7 @@ This API removes an existing public IP from a SIM card.
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Request setting a SIM card public IP
 
@@ -801,7 +851,7 @@ This API makes a SIM card reachable on the public internet by mapping a random p
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Request setting a SIM card to standby
 
@@ -819,7 +869,7 @@ The API will trigger an asynchronous operation called a SIM Card Action. Transit
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
+Returns: `action_type` (enum: enable, enable_standby_sim_card, disable, set_standby, enable_voice, disable_voice), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object | null), `sim_card_id` (uuid), `status` (object), `updated_at` (string)
 
 ## Get activation code for an eSIM
 
@@ -892,6 +942,8 @@ Returns: `apn` (string), `cell_id` (string), `created_at` (string), `id` (intege
 
 ## List Migration Source coverage
 
+List the external storage providers and regions supported as migration sources.
+
 `GET /storage/migration_source_coverage`
 
 ```go
@@ -905,6 +957,8 @@ Returns: `apn` (string), `cell_id` (string), `created_at` (string), `id` (intege
 Returns: `provider` (enum: aws), `source_region` (string)
 
 ## List all Migration Sources
+
+List the migration sources configured on your account. A migration source is an external storage bucket from which data can be migrated into Telnyx Cloud Storage.
 
 `GET /storage/migration_sources`
 
@@ -944,6 +998,8 @@ Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), 
 
 ## Get a Migration Source
 
+Retrieve the details of a specific migration source.
+
 `GET /storage/migration_sources/{id}`
 
 ```go
@@ -958,6 +1014,8 @@ Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), 
 
 ## Delete a Migration Source
 
+Delete a migration source configuration.
+
 `DELETE /storage/migration_sources/{id}`
 
 ```go
@@ -971,6 +1029,8 @@ Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), 
 Returns: `bucket_name` (string), `id` (string), `provider` (enum: aws, telnyx), `provider_auth` (object), `source_region` (string)
 
 ## List all Migrations
+
+Retrieve a list of the storage migrations on your account.
 
 `GET /storage/migrations`
 
@@ -1010,6 +1070,8 @@ Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` 
 
 ## Get a Migration
 
+Retrieve the details and status of a specific storage migration.
+
 `GET /storage/migrations/{id}`
 
 ```go
@@ -1023,6 +1085,8 @@ Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` 
 Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
 
 ## Stop a Migration
+
+Stops the specified in-progress storage migration and returns the updated migration.
 
 `POST /storage/migrations/{id}/actions/stop`
 
@@ -1038,6 +1102,8 @@ Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` 
 
 ## List Mobile Voice Connections
 
+Retrieve a paginated list of mobile voice connections on your account.
+
 `GET /v2/mobile_voice_connections`
 
 ```go
@@ -1051,6 +1117,8 @@ Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` 
 Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Create a Mobile Voice Connection
+
+Creates a new mobile voice connection with the provided configuration and returns the created connection.
 
 `POST /v2/mobile_voice_connections`
 
@@ -1068,6 +1136,8 @@ Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time
 
 ## Retrieve a Mobile Voice Connection
 
+Retrieve the details of a specific mobile voice connection.
+
 `GET /v2/mobile_voice_connections/{id}`
 
 ```go
@@ -1081,6 +1151,8 @@ Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time
 Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Update a Mobile Voice Connection
+
+Update the settings of a specific mobile voice connection.
 
 `PATCH /v2/mobile_voice_connections/{id}`
 
@@ -1101,6 +1173,8 @@ Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `o
 Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Delete a Mobile Voice Connection
+
+Delete a mobile voice connection from your account.
 
 `DELETE /v2/mobile_voice_connections/{id}`
 
@@ -1134,7 +1208,7 @@ Returns: `code` (string), `inserted_at` (date-time), `name` (string), `updated_a
 
 ## Get all possible wireless blocklist values
 
-Retrieve all wireless blocklist values for a given blocklist type.
+Retrieve all wireless blocklist values for a given blocklist type. The request returns `422` when `type` is missing or invalid.
 
 `GET /wireless_blocklist_values`
 
@@ -1148,7 +1222,7 @@ Retrieve all wireless blocklist values for a given blocklist type.
 	fmt.Printf("%+v\n", wirelessBlocklistValues.Data)
 ```
 
-Returns: `data` (object), `meta` (object)
+Returns: `data` (object)
 
 ## Get all Wireless Blocklists
 
@@ -1164,7 +1238,7 @@ Get all Wireless Blocklists belonging to the user.
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Returns: `created_at` (string), `id` (uuid), `name` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
 ## Create a Wireless Blocklist
 
@@ -1184,7 +1258,7 @@ Create a Wireless Blocklist to prevent SIMs from connecting to certain networks.
 	fmt.Printf("%+v\n", wirelessBlocklist.Data)
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Returns: `created_at` (string), `id` (uuid), `name` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
 ## Get a Wireless Blocklist
 
@@ -1200,11 +1274,11 @@ Retrieve information about a Wireless Blocklist.
 	fmt.Printf("%+v\n", wirelessBlocklist.Data)
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Returns: `created_at` (string), `id` (uuid), `name` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
 ## Update a Wireless Blocklist
 
-Update a Wireless Blocklist.
+Updates the specified wireless blocklist. The update is processed asynchronously, so the request is accepted and completes in the background.
 
 `PATCH /wireless_blocklists/{id}`
 
@@ -1222,11 +1296,11 @@ Optional: `name` (string), `values` (array[object])
 	fmt.Printf("%+v\n", wirelessBlocklist.Data)
 ```
 
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
+Returns: `created_at` (string), `id` (uuid), `name` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])
 
 ## Delete a Wireless Blocklist
 
-Deletes the Wireless Blocklist.
+Permanently deletes the specified wireless blocklist from your account. The request returns `422` when the wireless blocklist is assigned to a SIM Card Group.
 
 `DELETE /wireless_blocklists/{id}`
 
@@ -1237,5 +1311,3 @@ Deletes the Wireless Blocklist.
 	}
 	fmt.Printf("%+v\n", wirelessBlocklist.Data)
 ```
-
-Returns: `created_at` (string), `id` (uuid), `name` (string), `record_type` (string), `type` (enum: country, mcc, plmn), `updated_at` (string), `values` (array[object])

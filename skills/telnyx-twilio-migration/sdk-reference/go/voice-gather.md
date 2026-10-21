@@ -22,6 +22,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -43,7 +44,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -51,6 +52,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -64,7 +66,7 @@ Add messages to the conversation started by an AI assistant on the call.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
+Optional: `client_state` (string), `command_id` (string), `messages` (array[object]), `trigger_response` (boolean)
 
 ```go
 	response, err := client.Calls.Actions.AddAIAssistantMessages(
@@ -84,12 +86,13 @@ Returns: `result` (string)
 
 Start an AI assistant on the call. **Expected Webhooks:**
 
+- [`call.conversation.created`](/api-reference/callbacks/call-conversation-created) includes `conversation_id` during startup
 - `call.conversation.ended`
 - `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object), `voice` (string), `voice_settings` (object)
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object)
 
 ```go
 	response, err := client.Calls.Actions.StartAIAssistant(
@@ -107,7 +110,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
-Stop an AI assistant on the call.
+Stops the AI assistant currently engaged on the call. The call remains active and can continue with other call control commands.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_stop`
 
@@ -259,6 +262,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```go
 // In your webhook handler:

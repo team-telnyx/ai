@@ -146,7 +146,7 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, Humain, Reson8, Cohere, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
 
 ```bash
 curl \
@@ -160,7 +160,7 @@ Returns: `result` (string)
 
 ## Transcription stop
 
-Stop real-time transcription.
+Stops real-time transcription on the call. Transcription webhooks cease once the command takes effect; the call itself is unaffected.
 
 `POST /calls/{call_control_id}/actions/transcription_stop`
 
@@ -184,6 +184,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+Keep it in `TELNYX_PUBLIC_KEY` and pass it to whatever Ed25519 library verifies the signature;
+without it no webhook can be verified.
 
 ```bash
 # Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).

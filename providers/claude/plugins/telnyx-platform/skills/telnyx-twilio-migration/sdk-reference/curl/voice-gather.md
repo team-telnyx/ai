@@ -51,7 +51,7 @@ Add messages to the conversation started by an AI assistant on the call.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
+Optional: `client_state` (string), `command_id` (string), `messages` (array[object]), `trigger_response` (boolean)
 
 ```bash
 curl \
@@ -67,12 +67,13 @@ Returns: `result` (string)
 
 Start an AI assistant on the call. **Expected Webhooks:**
 
+- [`call.conversation.created`](/api-reference/callbacks/call-conversation-created) includes `conversation_id` during startup
 - `call.conversation.ended`
 - `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object), `voice` (string), `voice_settings` (object)
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object)
 
 ```bash
 curl \
@@ -86,7 +87,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
-Stop an AI assistant on the call.
+Stops the AI assistant currently engaged on the call. The call remains active and can continue with other call control commands.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_stop`
 
@@ -229,6 +230,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+Keep it in `TELNYX_PUBLIC_KEY` and pass it to whatever Ed25519 library verifies the signature;
+without it no webhook can be verified.
 
 ```bash
 # Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).

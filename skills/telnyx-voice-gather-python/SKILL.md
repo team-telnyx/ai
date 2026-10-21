@@ -29,6 +29,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -46,14 +47,18 @@ try:
     result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
-    # 429: rate limited — wait and retry with exponential backoff
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -66,7 +71,7 @@ Add messages to the conversation started by an AI assistant on the call.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
+Optional: `client_state` (string), `command_id` (string), `messages` (array[object]), `trigger_response` (boolean)
 
 ```python
 response = client.calls.actions.add_ai_assistant_messages(
@@ -81,12 +86,13 @@ Returns: `result` (string)
 
 Start an AI assistant on the call. **Expected Webhooks:**
 
+- [`call.conversation.created`](/api-reference/callbacks/call-conversation-created) includes `conversation_id` during startup
 - `call.conversation.ended`
 - `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object), `voice` (string), `voice_settings` (object)
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object)
 
 ```python
 response = client.calls.actions.start_ai_assistant(
@@ -99,7 +105,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
-Stop an AI assistant on the call.
+Stops the AI assistant currently engaged on the call. The call remains active and can continue with other call control commands.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_stop`
 
@@ -218,6 +224,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```python
 # In your webhook handler (e.g., Flask — use raw body, not parsed JSON):

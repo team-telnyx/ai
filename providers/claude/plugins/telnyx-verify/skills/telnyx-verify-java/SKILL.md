@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -55,9 +57,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -87,6 +91,8 @@ Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `f
 
 ## List verifications by phone number
 
+Returns a paginated list of verifications associated with the specified phone number.
+
 `GET /verifications/by_phone_number/{phone_number}`
 
 ```java
@@ -99,6 +105,8 @@ ByPhoneNumberListResponse byPhoneNumbers = client.verifications().byPhoneNumber(
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
+
+Submits a verification code for the specified phone number and Verify profile. The response indicates whether the code was accepted or rejected.
 
 `POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
 
@@ -117,6 +125,8 @@ VerifyVerificationCodeResponse verifyVerificationCodeResponse = client.verificat
 Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
 
 ## Trigger Call verification
+
+Starts a verification for the specified phone number and delivers its code in a voice call using the selected Verify profile. Returns the pending verification record.
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
 
@@ -137,6 +147,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Trigger Flash call verification
 
+Starts a verification for the specified phone number and places a brief call with the code embedded in the caller ID. Returns the pending verification record.
+
 `POST /verifications/flashcall` — Required: `phone_number`, `verify_profile_id`
 
 Optional: `timeout_secs` (integer)
@@ -155,6 +167,8 @@ CreateVerificationResponse createVerificationResponse = client.verifications().t
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
+
+Starts a verification for the specified phone number and sends its code by SMS using the selected Verify profile. Returns the pending verification record.
 
 `POST /verifications/sms` — Required: `phone_number`, `verify_profile_id`
 
@@ -175,6 +189,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Trigger WhatsApp verification
 
+Starts a verification for the specified phone number and sends its code over WhatsApp using the selected Verify profile. Returns the pending verification record.
+
 `POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
 
 Optional: `custom_code` (string | null), `timeout_secs` (integer)
@@ -194,6 +210,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Retrieve verification
 
+Returns the verification identified by ID, including its channel, phone number, Verify profile, timeout, and current status.
+
 `GET /verifications/{verification_id}`
 
 ```java
@@ -206,6 +224,8 @@ VerificationRetrieveResponse verification = client.verifications().retrieve("12a
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
+
+Checks the supplied code, or the supplied status for a custom-code verification, against the verification identified by ID. The response indicates whether the verification was accepted or rejected.
 
 `POST /verifications/{verification_id}/actions/verify`
 
@@ -309,7 +329,7 @@ Returns: `id` (uuid), `text` (string)
 
 ## Retrieve Verify profile
 
-Gets a single Verify profile.
+Returns the details of a single Verify profile by its ID, including its verification channel configuration.
 
 `GET /verify_profiles/{verify_profile_id}`
 
@@ -323,6 +343,8 @@ VerifyProfileData verifyProfileData = client.verifyProfiles().retrieve("12ade33a
 Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
+
+Updates the specified Verify profile's name, webhook destinations, language, daily spend limits, or channel-specific settings. Returns the updated profile.
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
@@ -338,6 +360,8 @@ VerifyProfileData verifyProfileData = client.verifyProfiles().update("12ade33a-2
 Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
+
+Deletes the specified Verify profile and returns the deleted profile record.
 
 `DELETE /verify_profiles/{verify_profile_id}`
 

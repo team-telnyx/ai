@@ -15,6 +15,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -32,15 +33,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -54,7 +57,7 @@ Add messages to the conversation started by an AI assistant on the call.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
+Optional: `client_state` (string), `command_id` (string), `messages` (array[object]), `trigger_response` (boolean)
 
 ```javascript
 const response = await client.calls.actions.addAIAssistantMessages('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -68,12 +71,13 @@ Returns: `result` (string)
 
 Start an AI assistant on the call. **Expected Webhooks:**
 
+- [`call.conversation.created`](/api-reference/callbacks/call-conversation-created) includes `conversation_id` during startup
 - `call.conversation.ended`
 - `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object), `voice` (string), `voice_settings` (object)
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object)
 
 ```javascript
 const response = await client.calls.actions.startAIAssistant('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
@@ -85,7 +89,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
-Stop an AI assistant on the call.
+Stops the AI assistant currently engaged on the call. The call remains active and can continue with other call control commands.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_stop`
 
@@ -108,7 +112,10 @@ Gather DTMF signals to build interactive menus. You can pass a list of valid dig
 Optional: `client_state` (string), `command_id` (string), `gather_id` (string), `initial_timeout_millis` (int32), `inter_digit_timeout_millis` (int32), `maximum_digits` (int32), `minimum_digits` (int32), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string)
 
 ```javascript
-const response = await client.calls.actions.gather('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ');
+const response = await client.calls.actions.gather('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', {
+    minimum_digits: 1,
+    maximum_digits: 4,
+});
 
 console.log(response.data);
 ```
@@ -142,7 +149,7 @@ Gather parameters defined in the request payload using a voice assistant. You ca
 Optional: `assistant` (object), `client_state` (string), `command_id` (string), `gather_ended_speech` (string), `greeting` (string), `interruption_settings` (object), `language` (object), `message_history` (array[object]), `send_message_history_updates` (boolean), `send_partial_results` (boolean), `transcription` (object), `user_response_timeout_ms` (integer), `voice` (string), `voice_settings` (object)
 
 ```javascript
-const response = await client.calls.actions.gatherUsingAI('call_control_id', {
+const response = await client.calls.actions.gatherUsingAI('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', {
   parameters: {
     properties: 'bar',
     required: 'bar',
@@ -180,7 +187,7 @@ Convert text to speech and play it on the call until the required DTMF signals a
 Optional: `client_state` (string), `command_id` (string), `inter_digit_timeout_millis` (int32), `invalid_payload` (string), `language` (enum: arb, cmn-CN, cy-GB, da-DK, de-DE, en-AU, en-GB, en-GB-WLS, en-IN, en-US, es-ES, es-MX, es-US, fr-CA, fr-FR, hi-IN, is-IS, it-IT, ja-JP, ko-KR, nb-NO, nl-NL, pl-PL, pt-BR, pt-PT, ro-RO, ru-RU, sv-SE, tr-TR), `maximum_digits` (int32), `maximum_tries` (int32), `minimum_digits` (int32), `payload_type` (enum: text, ssml), `service_level` (enum: basic, premium), `terminating_digit` (string), `timeout_millis` (int32), `valid_digits` (string), `voice_settings` (object)
 
 ```javascript
-const response = await client.calls.actions.gatherUsingSpeak('call_control_id', {
+const response = await client.calls.actions.gatherUsingSpeak('v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ', {
   payload: 'say this on call',
   voice: 'male',
 });
@@ -198,6 +205,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```javascript
 // In your webhook handler (e.g., Express — use raw body, not parsed JSON):

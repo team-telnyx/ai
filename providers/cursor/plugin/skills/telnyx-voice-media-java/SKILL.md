@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -55,9 +57,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -226,6 +230,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;

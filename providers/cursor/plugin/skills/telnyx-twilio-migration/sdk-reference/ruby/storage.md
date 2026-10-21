@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -30,14 +31,18 @@ begin
   result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
+  raise
 rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
   sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
 rescue Telnyx::Errors::APIStatusError => e
   puts "API error #{e.status}: #{e.message}"
   if e.status == 422
     puts "Validation error — check required fields and formats"
   end
+  raise # A failed request must never look like success to the caller
 end
 ```
 

@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -30,14 +31,18 @@ begin
   result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
+  raise
 rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
   sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
 rescue Telnyx::Errors::APIStatusError => e
   puts "API error #{e.status}: #{e.message}"
   if e.status == 422
     puts "Validation error — check required fields and formats"
   end
+  raise # A failed request must never look like success to the caller
 end
 ```
 
@@ -89,8 +94,7 @@ Start streaming the media from a call to a specific WebSocket address or Dialogf
 Optional: `client_state` (string), `command_id` (string), `custom_parameters` (array[object]), `dialogflow_config` (object), `enable_dialogflow` (boolean), `stream_auth_token` (string), `stream_bidirectional_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16), `stream_bidirectional_mode` (enum: mp3, rtp), `stream_bidirectional_sampling_rate` (enum: 8000, 16000, 22050, 24000, 48000), `stream_bidirectional_target_legs` (enum: both, self, opposite), `stream_codec` (enum: PCMU, PCMA, G722, OPUS, AMR-WB, L16, default), `stream_track` (enum: inbound_track, outbound_track, both_tracks), `stream_url` (string)
 
 ```ruby
-response = client.calls.actions.start_streaming("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
-
+response = client.calls.actions.start_streaming("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", stream_url: "wss://example.com/audio-stream")
 puts(response)
 ```
 
@@ -122,7 +126,7 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, Humain, Reson8, Cohere, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
 
 ```ruby
 response = client.calls.actions.start_transcription("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
@@ -134,7 +138,7 @@ Returns: `result` (string)
 
 ## Transcription stop
 
-Stop real-time transcription.
+Stops real-time transcription on the call. Transcription webhooks cease once the command takes effect; the call itself is unaffected.
 
 `POST /calls/{call_control_id}/actions/transcription_stop`
 
@@ -156,6 +160,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```ruby
 # In your webhook handler (e.g., Sinatra — use raw body):

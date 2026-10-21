@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -22,6 +22,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -42,9 +44,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -123,7 +127,7 @@ Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance
 
 ## Update a managed account
 
-Update a single managed account.
+Updates the specified managed account's attributes and returns the updated account.
 
 `PATCH /managed_accounts/{id}`
 
@@ -217,7 +221,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Get organization user
 
-Returns a user in your organization.
+Returns the details of a user in your organization, optionally including the groups the user belongs to.
 
 `GET /organizations/users/{id}`
 
@@ -232,7 +236,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Delete organization user
 
-Deletes a user in your organization.
+Removes the specified user from your organization and returns the result of the removal.
 
 `POST /organizations/users/{id}/actions/remove`
 

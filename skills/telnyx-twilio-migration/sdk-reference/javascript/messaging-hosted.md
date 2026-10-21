@@ -15,6 +15,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -32,15 +33,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -54,6 +57,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Pagination:** List methods return an auto-paginating iterator. Use `for await (const item of result) { ... }` to iterate through all pages automatically.
 
 ## Send an RCS message
+
+Queues an outbound RCS message through the selected RCS agent. Check recipient capabilities before sending features that require RCS support.
 
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
 
@@ -88,6 +93,8 @@ Returns: `url` (string)
 
 ## List all RCS agents
 
+Returns RCS agents available to the authenticated account.
+
 `GET /messaging/rcs/agents`
 
 ```javascript
@@ -101,6 +108,8 @@ Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `
 
 ## Retrieve an RCS agent
 
+Returns the configuration and current state of the specified RCS agent.
+
 `GET /messaging/rcs/agents/{id}`
 
 ```javascript
@@ -112,6 +121,8 @@ console.log(rcsAgentResponse.data);
 Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Modify an RCS agent
+
+Updates the supplied configuration fields on the specified RCS agent.
 
 `PATCH /messaging/rcs/agents/{id}`
 
@@ -126,6 +137,8 @@ console.log(rcsAgentResponse.data);
 Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Check RCS capabilities (batch)
+
+Returns RCS capability information for multiple recipients in one request.
 
 `POST /messaging/rcs/bulk_capabilities` — Required: `agent_id`, `phone_numbers`
 
@@ -142,10 +155,12 @@ Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]),
 
 ## Check RCS capabilities
 
+Returns the RCS features supported by the specified recipient for the selected agent.
+
 `GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
 
 ```javascript
-const response = await client.messaging.rcs.retrieveCapabilities('phone_number', {
+const response = await client.messaging.rcs.retrieveCapabilities('+13125550001', {
   agent_id: '550e8400-e29b-41d4-a716-446655440000',
 });
 
@@ -161,7 +176,7 @@ Adds a test phone number to an RCS agent for testing purposes.
 `PUT /messaging/rcs/test_number_invite/{id}/{phone_number}`
 
 ```javascript
-const response = await client.messaging.rcs.inviteTestNumber('phone_number', { id: '550e8400-e29b-41d4-a716-446655440000' });
+const response = await client.messaging.rcs.inviteTestNumber('+13125550001', { id: '550e8400-e29b-41d4-a716-446655440000' });
 
 console.log(response.data);
 ```
@@ -169,6 +184,8 @@ console.log(response.data);
 Returns: `agent_id` (string), `phone_number` (string), `record_type` (enum: rcs.test_number_invite), `status` (string)
 
 ## List messaging hosted number orders
+
+Returns hosted-messaging orders for the authenticated account. Apply the documented filters and pagination parameters to narrow the result set.
 
 `GET /messaging_hosted_number_orders`
 
@@ -182,6 +199,8 @@ for await (const messagingHostedNumberOrder of client.messagingHostedNumberOrder
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Create a messaging hosted number order
+
+Creates an order to enable Telnyx messaging on phone numbers whose voice service remains with another carrier.
 
 `POST /messaging_hosted_number_orders`
 
@@ -197,6 +216,8 @@ Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (a
 
 ## Check hosted messaging eligibility
 
+Checks whether the supplied phone numbers are eligible for hosted messaging before an order is created.
+
 `POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
 
 ```javascript
@@ -210,6 +231,8 @@ console.log(response.phone_numbers);
 Returns: `phone_numbers` (array[object])
 
 ## Retrieve a messaging hosted number order
+
+Returns the current state, phone numbers, and required actions for the specified hosted-messaging order.
 
 `GET /messaging_hosted_number_orders/{id}`
 
@@ -237,6 +260,8 @@ Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (a
 
 ## Upload hosted number document
 
+Uploads a supporting document to the specified hosted-messaging order.
+
 `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
 
 ```javascript
@@ -256,7 +281,7 @@ Validate the verification codes sent to the numbers of the hosted order. The ver
 `POST /messaging_hosted_number_orders/{id}/validation_codes` — Required: `verification_codes`
 
 ```javascript
-const response = await client.messagingHostedNumberOrders.validateCodes('id', {
+const response = await client.messagingHostedNumberOrders.validateCodes('550e8400-e29b-41d4-a716-446655440000', {
   verification_codes: [{ code: 'code', phone_number: '+13125550001' }],
 });
 
@@ -272,7 +297,7 @@ Create verification codes to validate numbers of the hosted order. The verificat
 `POST /messaging_hosted_number_orders/{id}/verification_codes` — Required: `phone_numbers`, `verification_method`
 
 ```javascript
-const response = await client.messagingHostedNumberOrders.createVerificationCodes('id', {
+const response = await client.messagingHostedNumberOrders.createVerificationCodes('550e8400-e29b-41d4-a716-446655440000', {
   phone_numbers: ['string'],
   verification_method: 'sms',
 });
@@ -283,6 +308,8 @@ console.log(response.data);
 Returns: `error` (string), `phone_number` (string), `type` (enum: sms, call), `verification_code_id` (uuid)
 
 ## Delete a messaging hosted number
+
+Removes the specified hosted number from Telnyx messaging management.
 
 `DELETE /messaging_hosted_numbers/{id}`
 
@@ -443,6 +470,8 @@ console.log(response.records);
 Returns: `records` (array[object]), `total_records` (integer)
 
 ## List messaging URL domains
+
+Returns the URL domains available to the authenticated account for message URL shortening.
 
 `GET /messaging_url_domains`
 

@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -55,9 +57,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -71,7 +75,7 @@ Add messages to the conversation started by an AI assistant on the call.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_add_messages`
 
-Optional: `client_state` (string), `command_id` (string), `messages` (array[object])
+Optional: `client_state` (string), `command_id` (string), `messages` (array[object]), `trigger_response` (boolean)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionAddAiAssistantMessagesParams;
@@ -86,12 +90,13 @@ Returns: `result` (string)
 
 Start an AI assistant on the call. **Expected Webhooks:**
 
+- [`call.conversation.created`](/api-reference/callbacks/call-conversation-created) includes `conversation_id` during startup
 - `call.conversation.ended`
 - `call.conversation_insights.generated`
 
 `POST /calls/{call_control_id}/actions/ai_assistant_start`
 
-Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object), `voice` (string), `voice_settings` (object)
+Optional: `assistant` (object), `client_state` (string), `command_id` (string), `greeting` (string), `interruption_settings` (object), `message_history` (array[object]), `participants` (array[object]), `send_message_history_updates` (boolean), `transcription` (object)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionStartAiAssistantParams;
@@ -104,7 +109,7 @@ Returns: `conversation_id` (uuid), `result` (string)
 
 ## Stop AI Assistant
 
-Stop an AI assistant on the call.
+Stops the AI assistant currently engaged on the call. The call remains active and can continue with other call control commands.
 
 `POST /calls/{call_control_id}/actions/ai_assistant_stop`
 
@@ -228,6 +233,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;

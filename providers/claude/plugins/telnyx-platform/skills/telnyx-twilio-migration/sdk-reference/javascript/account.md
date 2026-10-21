@@ -15,6 +15,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -32,15 +33,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -68,6 +71,8 @@ for await (const auditEventListResponse of client.auditEvents.list()) {
 Returns: `alternate_resource_id` (string | null), `change_made_by` (enum: telnyx, account_manager, account_owner, organization_member), `change_type` (string), `changes` (array | null), `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (string), `resource_id` (string), `user_id` (uuid)
 
 ## Get user balance details
+
+Retrieve the current balance, available credit, and credit limit for your account.
 
 `GET /balance`
 
@@ -127,7 +132,7 @@ Returns: `carrier` (string), `carrier_fee` (string), `cld` (string), `cli` (stri
 
 ## List invoices
 
-Retrieve a paginated list of invoices.
+Returns a paginated list of your invoices, with support for sorting.
 
 `GET /invoices`
 
@@ -186,7 +191,7 @@ Returns: `enabled` (boolean), `id` (string), `invoice_enabled` (boolean), `prefe
 
 ## List User Tags
 
-List all user tags.
+Returns the user tags defined on your account, with support for filtering. Tags help organize resources such as phone numbers.
 
 `GET /user_tags`
 
@@ -199,6 +204,8 @@ console.log(userTags.data);
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
 
 ## Create a stored payment transaction
+
+Create a transaction that charges a stored payment method on the account.
 
 `POST /v2/payment/stored_payment_transactions` — Required: `amount`
 

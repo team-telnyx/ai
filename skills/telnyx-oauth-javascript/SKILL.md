@@ -27,6 +27,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -44,15 +45,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -122,7 +125,7 @@ Returns: `client_id` (string), `logo_uri` (uri), `name` (string), `policy_uri` (
 
 ## Create OAuth grant
 
-Create an OAuth authorization grant
+Creates an OAuth authorization grant and returns the grant response for completing the authorization flow.
 
 `POST /oauth/grants` — Required: `allowed`, `consent_token`
 
@@ -211,7 +214,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Create OAuth client
 
-Create a new OAuth client
+Creates a new OAuth client on your account for authenticating third-party integrations, and returns the created client.
 
 `POST /oauth_clients` — Required: `name`, `allowed_scopes`, `client_type`, `allowed_grant_types`
 
@@ -232,7 +235,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Get OAuth client
 
-Retrieve a single OAuth client by ID
+Returns the details of a single OAuth client on your account by its ID.
 
 `GET /oauth_clients/{id}`
 
@@ -246,7 +249,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Update OAuth client
 
-Update an existing OAuth client
+Updates the specified OAuth client's configuration and returns the updated client.
 
 `PUT /oauth_clients/{id}`
 
@@ -262,7 +265,7 @@ Returns: `allowed_grant_types` (array[string]), `allowed_scopes` (array[string])
 
 ## Delete OAuth client
 
-Delete an OAuth client
+Permanently deletes the specified OAuth client from your account.
 
 `DELETE /oauth_clients/{id}`
 
@@ -287,7 +290,7 @@ Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used
 
 ## Get OAuth grant
 
-Retrieve a single OAuth grant by ID
+Returns the details of a single OAuth grant on your account by its ID.
 
 `GET /oauth_grants/{id}`
 
@@ -301,7 +304,7 @@ Returns: `client_id` (string), `created_at` (date-time), `id` (uuid), `last_used
 
 ## Revoke OAuth grant
 
-Revoke an OAuth grant
+Revokes the specified OAuth grant, withdrawing the access previously granted to the client.
 
 `DELETE /oauth_grants/{id}`
 

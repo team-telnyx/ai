@@ -22,6 +22,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -43,7 +44,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -51,6 +52,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -63,6 +65,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Pagination:** Use `ListAutoPaging()` for automatic iteration: `iter := client.Resource.ListAutoPaging(ctx, params); for iter.Next() { item := iter.Current() }`.
 
 ## List mobile push credentials
+
+Returns a paginated list of the mobile push credentials on your account, with support for filtering.
 
 `GET /mobile_push_credentials`
 
@@ -77,6 +81,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
 
 ## Creates a new mobile push credential
+
+Creates a new mobile push credential for delivering push notifications to iOS or Android apps, and returns the created credential.
 
 `POST /mobile_push_credentials` — Required: `type`, `certificate`, `private_key`, `alias`
 
@@ -127,7 +133,7 @@ Deletes a mobile push credential based on the given `push_credential_id`
 
 ## List all credentials
 
-List all On-demand Credentials.
+Returns a paginated list of the on-demand telephony credentials on your account, with support for filtering.
 
 `GET /telephony_credentials`
 
@@ -143,7 +149,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Create a credential
 
-Create a credential.
+Creates a new on-demand telephony credential for the specified connection. The credential can then be used to generate access tokens for SIP or WebRTC clients.
 
 `POST /telephony_credentials` — Required: `connection_id`
 
@@ -179,7 +185,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Update a credential
 
-Update an existing credential.
+Updates the specified telephony credential and returns the updated credential.
 
 `PATCH /telephony_credentials/{id}`
 
@@ -201,7 +207,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Delete a credential
 
-Delete an existing credential.
+Permanently deletes the specified telephony credential, revoking any access it provided.
 
 `DELETE /telephony_credentials/{id}`
 
