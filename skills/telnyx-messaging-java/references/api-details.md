@@ -25,6 +25,7 @@
 
 | Field | Type |
 |-------|------|
+| `body` | object |
 | `cc` | array[object] |
 | `completed_at` | date-time |
 | `cost` | object \| null |
@@ -48,9 +49,11 @@
 | `tcr_campaign_billable` | boolean |
 | `tcr_campaign_id` | string \| null |
 | `tcr_campaign_registered` | string \| null |
+| `template_id` | string |
+| `template_name` | string |
 | `text` | string |
 | `to` | array[object] |
-| `type` | enum: SMS, MMS |
+| `type` | enum: SMS, MMS, RCS, WHATSAPP |
 | `valid_until` | date-time |
 | `wait_seconds` | float |
 | `webhook_failover_url` | url |
@@ -160,6 +163,7 @@
 | `daily_spend_limit` | string |
 | `daily_spend_limit_enabled` | boolean |
 | `enabled` | boolean |
+| `features` | object \| null |
 | `health_webhook_url` | url |
 | `id` | uuid |
 | `mms_fall_back_to_sms` | boolean |
@@ -217,6 +221,7 @@
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using an alphanumeric sender ID — `client.messages().sendWithAlphanumericSender()`
 
@@ -225,6 +230,7 @@
 | `webhookUrl` | string (URL) | Callback URL for delivery status updates. |
 | `webhookFailoverUrl` | string (URL) | Failover callback URL for delivery status updates. |
 | `useProfileWebhooks` | boolean | If true, use the messaging profile's webhook settings. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a group MMS message — `client.messages().sendGroupMms()`
 
@@ -236,6 +242,7 @@
 | `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a long code message — `client.messages().sendLongCode()`
 
@@ -250,6 +257,7 @@
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a message using number pool — `client.messages().sendNumberPool()`
 
@@ -264,6 +272,7 @@
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Schedule a message — `client.messages().schedule()`
 
@@ -294,6 +303,7 @@
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
 | `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Send a WhatsApp message — `client.messages().sendWhatsapp()`
 
@@ -302,17 +312,14 @@
 | `type` | enum (WHATSAPP) | Message type - must be set to "WHATSAPP" |
 | `webhookUrl` | string (URL) | The URL where webhooks related to this message will be sent. |
 | `messagingProfileId` | string (UUID) | Messaging profile ID - required if the 'from' number is not SMS-enabled |
+| `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
 ### Update a messaging hosted number — `client.messagingHostedNumbers().update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `messagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to:
-
-* Omit thi... |
-| `messagingProduct` | string | Configure the messaging product for this number:
-
-* Omit this field or set it... |
+| `messagingProfileId` | string (UUID) | Configure the messaging profile this phone number is assigned to: * Omit this... |
+| `messagingProduct` | string | Configure the messaging product for this number: * Omit this field or set its... |
 | `tags` | array[string] | Tags to set on this phone number. |
 
 ### Create auto-response setting — `client.messagingProfiles().autorespConfigs().create()`
@@ -335,12 +342,12 @@
 |-------|------|-------------|
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 | `data.id` | uuid | Identifies the type of resource. |
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
 | `data.payload.record_type` | enum: message | Identifies the type of the resource. |
 | `data.payload.direction` | enum: outbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, RCS, WHATSAPP | The type of message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | uuid | The id of the organization the messaging profile belongs to. |
 | `data.payload.to` | array[object] |  |
@@ -366,6 +373,8 @@
 | `data.payload.errors` | array[object] | These errors may point at addressees when referring to unsuccessful/unconfirmed delivery statuses. |
 | `data.payload.smart_encoding_applied` | boolean | Indicates whether smart encoding was applied to this message. |
 | `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
+| `data.payload.template_id` | string | Telnyx ID of the WhatsApp template used by the message, when known. |
+| `data.payload.template_name` | string | Name of the WhatsApp template used by the message. |
 | `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
 | `meta.delivered_to` | url | The webhook URL the event was delivered to. |
 
@@ -377,13 +386,14 @@
 | `data.id` | uuid | Identifies the type of resource. |
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.occurred_at` | date-time | ISO 8601 formatted date indicating when the resource was created. |
+| `data.payload.autoresponse_type` | string | Automatic response type triggered by an inbound opt-in, opt-out, or help keyword. |
 | `data.payload.record_type` | enum: message | Identifies the type of the resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.messaging_profile_id` | string | Unique identifier for a messaging profile. |
 | `data.payload.organization_id` | string | Unique identifier for a messaging profile. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.cc` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
 | `data.payload.num_chars` | integer | The number of characters in the message text |

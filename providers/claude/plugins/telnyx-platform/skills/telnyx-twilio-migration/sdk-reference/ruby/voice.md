@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -26,12 +27,28 @@ All API calls can fail with network errors, rate limits (429), validation errors
 or authentication errors (401). Always handle errors in production code:
 
 ```ruby
-response = client.calls.dial(
-  connection_id: "7267xxxxxxxxxxxxxx",
-  from: "+18005550101",
-  to: "+18005550100;secure=srtp"
-)
-puts(response)
+begin
+  response = client.calls.dial(
+    connection_id: "7267xxxxxxxxxxxxxx",
+    from: "+18005550101",
+    to: "+18005550100"
+  )
+  puts(response)
+rescue Telnyx::Errors::APIConnectionError
+  puts "Network error — check connectivity and retry"
+  raise
+rescue Telnyx::Errors::RateLimitError
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
+  sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
+rescue Telnyx::Errors::APIStatusError => e
+  puts "API error #{e.status}: #{e.message}"
+  if e.status == 422
+    puts "Validation error — check required fields and formats"
+  end
+  raise # A failed request must never look like success to the caller
+end
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -73,13 +90,13 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +59 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.calls.dial(
   connection_id: "7267xxxxxxxxxxxxxx",
   from: "+18005550101",
-  to: "+18005550100;secure=srtp"
+  to: "+18005550100"
 )
 
 puts(response)
@@ -130,12 +147,11 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +37 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
-response = client.calls.actions.transfer(
-  "call_control_id",
-  to: "+18005550100;secure=srtp"
+response = client.calls.actions.transfer("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ",
+  to: "+18005550100"
 )
 
 puts(response)
@@ -150,6 +166,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```ruby
 # In your webhook handler (e.g., Sinatra — use raw body):
@@ -233,6 +253,7 @@ End a live call from your webhook-driven control flow.
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `custom_headers` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
 response = client.calls.actions.hangup("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
@@ -251,7 +272,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `call_control_id` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `call_control_id_to_bridge_with` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -259,8 +280,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | ... | | | +16 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
-response = client.calls.actions.bridge(
-  "call_control_id",
+response = client.calls.actions.bridge("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ",
   call_control_id_to_bridge_with: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg"
 )
 
@@ -278,13 +298,13 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 
 ```ruby
-response = client.calls.actions.reject("call_control_id", cause: :USER_BUSY)
+response = client.calls.actions.reject("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", cause: :USER_BUSY)
 
 puts(response)
 ```
@@ -390,6 +410,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Delete a call control application | `client.call_control_applications.delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
 | SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
 | Send SIP info | `client.calls.actions.send_sip_info()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
+| List dial metrics | `client.dial_metrics.list()` | `GET /dial_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
 
 ### Other Webhook Events
 
@@ -445,8 +466,9 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `assistant` | object | AI Assistant configuration. |
+| `assistant` | object | AI Assistant configuration and per-call overrides. |
 | `conversation_relay_config` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
+| `diversion` | string | The `to` number of an active inbound call, in +E164 format. |
 | `from_display_name` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
 | `privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `audio_url` | string (URL) | The URL of a file to be played back to the callee when the call is answered. |
@@ -454,8 +476,9 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `media_name` | string | The media_name of a file to be played back to the callee when the call is ans... |
 | `preferred_codecs` | string | The list of comma-separated codecs in a preferred order for the forked media ... |
 | `timeout_secs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
+| `retry_on_timeout` | boolean | Whether to keep trying the remaining routing paths (e.g. |
 | `time_limit_secs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
-| `answering_machine_detection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `answering_machine_detection` | enum (premium, premium_ios_call_screening_detection, detect, detect_beep, detect_words, ...) | Enables Answering Machine Detection. |
 | `answering_machine_detection_config` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
 | `deepfake_detection` | object | Enables deepfake detection on the call. |
 | `conference_config` | object | Optional configuration parameters to dial new participant into a conference. |
@@ -485,7 +508,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `send_silence_when_idle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhook_url` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `webhook_url_method` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
-| `webhook_urls` | object | A map of event types to webhook URLs. |
+| `webhook_urls` | object | A map of event types to arrays of webhook URLs. |
 | `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `webhook_retries_policies` | object | A map of event types to retry policies. |
 | `record` | enum (record-from-answer) | Start recording automatically after an event. |
@@ -504,12 +527,13 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `transcription_config` | object |  |
 | `sip_region` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `stream_auth_token` | string | An authentication token to be sent as part of the WebSocket connection when u... |
+| `route_to_mobile` | boolean | When set to true, routes the call directly to the mobile device associated wi... |
 
 ### Answer call — `client.calls.actions.answer()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `assistant` | object | AI Assistant configuration. |
+| `assistant` | object | AI Assistant configuration and per-call overrides. |
 | `conversation_relay_config` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
 | `billing_group_id` | string (UUID) | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | Use this field to add state to every subsequent webhook. |
@@ -527,7 +551,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `send_silence_when_idle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhook_url` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `webhook_url_method` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
-| `transcription` | boolean | Enable transcription upon call answer. |
+| `transcription` | boolean | Enable standalone call transcription upon call answer. |
 | `transcription_config` | object |  |
 | `record` | enum (record-from-answer) | Start recording automatically after an event. |
 | `record_channels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
@@ -537,7 +561,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_track` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `record_trim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
-| `webhook_urls` | object | A map of event types to webhook URLs. |
+| `webhook_urls` | object | A map of event types to arrays of webhook URLs. |
 | `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `webhook_retries_policies` | object | A map of event types to retry policies. |
 | `deepfake_detection` | object | Enables deepfake detection on the call. |
@@ -573,6 +597,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `client_state` | string | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | Use this field to avoid duplicate commands. |
 | `custom_headers` | array[object] | Custom headers to be added to the SIP BYE message. |
+| `reason` | string | Text for the SIP `Reason` header (RFC 3326) sent when cancelling an unanswere... |
 
 ### SIP Refer a call — `client.calls.actions.refer()`
 
@@ -604,6 +629,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `from` | string (E.164) | The `from` number to be used as the caller id presented to the destination (`... |
+| `diversion` | string | The `to` number of an active inbound call, in +E164 format. |
 | `from_display_name` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
 | `privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `audio_url` | string (URL) | The URL of a file to be played back when the transfer destination answers bef... |
@@ -613,7 +639,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `timeout_secs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
 | `time_limit_secs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
 | `park_after_unbridge` | string | Specifies behavior after the bridge ends (i.e. |
-| `answering_machine_detection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `answering_machine_detection` | enum (premium, premium_ios_call_screening_detection, detect, detect_beep, detect_words, ...) | Enables Answering Machine Detection. |
 | `answering_machine_detection_config` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
 | `custom_headers` | array[object] | Custom headers to be added to the SIP INVITE. |
 | `client_state` | string | Use this field to add state to every subsequent webhook. |
@@ -638,6 +664,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `sip_region` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `preferred_codecs` | string | The list of comma-separated codecs in order of preference to be used during t... |
-| `webhook_urls` | object | A map of event types to webhook URLs. |
+| `webhook_urls` | object | A map of event types to arrays of webhook URLs. |
 | `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `webhook_retries_policies` | object | A map of event types to retry policies. |
+| `route_to_mobile` | boolean | When set to true, routes the call directly to the mobile device associated wi... |

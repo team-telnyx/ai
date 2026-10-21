@@ -16,6 +16,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -33,13 +34,18 @@ try:
     available_phone_numbers = client.available_phone_numbers.list()
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -127,8 +133,7 @@ Order status determines whether provisioning completed or additional requirement
 | `number_order_id` | string (UUID) | Yes | The number order ID. |
 
 ```python
-number_order = client.number_orders.retrieve(
-    "number_order_id",
+number_order = client.number_orders.retrieve("550e8400-e29b-41d4-a716-446655440000",
 )
 print(number_order.data)
 ```
@@ -187,8 +192,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 | `number_reservation_id` | string (UUID) | Yes | The number reservation ID. |
 
 ```python
-number_reservation = client.number_reservations.retrieve(
-    "number_reservation_id",
+number_reservation = client.number_reservations.retrieve("550e8400-e29b-41d4-a716-446655440000",
 )
 print(number_reservation.data)
 ```

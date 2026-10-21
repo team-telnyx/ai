@@ -6,17 +6,20 @@
 
 ## Response Schemas
 
-**Returned by:** List assistants, Create an assistant, Import assistants from external provider, Get an assistant, Update an assistant, Clone Assistant, Get all versions of an assistant, Get a specific assistant version, Update a specific assistant version, Promote an assistant version to main
+**Returned by:** List assistants, Create an assistant, Import assistants from external provider, Get an assistant, Update an assistant, Clone Assistant, Restore an assistant, Get all versions of an assistant, Get a specific assistant version, Update a specific assistant version, Promote an assistant version to main
 
 | Field | Type |
 |-------|------|
+| `a2a_agents` | array[object] |
+| `avatar_settings` | object |
 | `conversation_flow` | object |
 | `created_at` | date-time |
+| `delegation_settings` | object |
 | `description` | string |
 | `dynamic_variables` | object |
 | `dynamic_variables_webhook_timeout_ms` | integer |
 | `dynamic_variables_webhook_url` | string |
-| `enabled_features` | array[object] |
+| `enabled_features` | array[string] |
 | `external_llm` | object |
 | `fallback_config` | object |
 | `greeting` | string |
@@ -43,6 +46,52 @@
 | `version_id` | string |
 | `version_name` | string |
 | `voice_settings` | object |
+| `websocket_settings` | object |
+| `widget_settings` | object |
+
+**Returned by:** List deleted assistants, Get a deleted assistant
+
+| Field | Type |
+|-------|------|
+| `a2a_agents` | array[object] |
+| `avatar_settings` | object |
+| `conversation_flow` | object |
+| `created_at` | date-time |
+| `delegation_settings` | object |
+| `deleted_at` | date-time |
+| `description` | string |
+| `dynamic_variables` | object |
+| `dynamic_variables_webhook_timeout_ms` | integer |
+| `dynamic_variables_webhook_url` | string |
+| `enabled_features` | array[string] |
+| `external_llm` | object |
+| `fallback_config` | object |
+| `greeting` | string |
+| `id` | string |
+| `import_metadata` | object |
+| `insight_settings` | object |
+| `instructions` | string |
+| `integrations` | array[object] |
+| `interruption_settings` | object |
+| `llm_api_key_ref` | string |
+| `mcp_servers` | array[object] |
+| `messaging_settings` | object |
+| `model` | string |
+| `name` | string |
+| `observability_settings` | object |
+| `permanently_deleted_at` | date-time |
+| `post_conversation_settings` | object |
+| `privacy_settings` | object |
+| `related_mission_ids` | array[string] |
+| `tags` | array[string] |
+| `telephony_settings` | object |
+| `tools` | array[object] |
+| `transcription` | object |
+| `version_created_at` | date-time |
+| `version_id` | string |
+| `version_name` | string |
+| `voice_settings` | object |
+| `websocket_settings` | object |
 | `widget_settings` | object |
 
 **Returned by:** Get All Tags, Add Assistant Tag, Remove Assistant Tag
@@ -106,7 +155,7 @@
 | `rules` | array[object] |
 | `updated_at` | date-time |
 
-**Returned by:** Assistant Chat (BETA)
+**Returned by:** Assistant Chat
 
 | Field | Type |
 |-------|------|
@@ -117,6 +166,13 @@
 | Field | Type |
 |-------|------|
 | `conversation_id` | string |
+
+**Returned by:** Assistant WhatsApp Chat
+
+| Field | Type |
+|-------|------|
+| `conversation_id` | string |
+| `message_id` | string |
 
 **Returned by:** List scheduled events
 

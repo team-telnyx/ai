@@ -15,6 +15,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -38,14 +39,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -180,6 +184,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```javascript
 // In your webhook handler (e.g., Express — use raw body, not parsed JSON):
 app.post('/webhooks', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -299,7 +307,7 @@ Primary response fields:
 - `phoneNumberCampaign.campaignId`
 - `phoneNumberCampaign.createdAt`
 - `phoneNumberCampaign.failureReasons`
-- `phoneNumberCampaign.phoneNumber`
+- `phoneNumberCampaign.nonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -409,7 +417,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | `client.messaging10dlc.phoneNumberAssignmentByProfile.listPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
 | List phone number campaigns | `client.messaging10dlc.phoneNumberCampaigns.list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
-| Create New Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Update Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
 | Delete Phone Number Campaign | `client.messaging10dlc.phoneNumberCampaigns.delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
 
 ---

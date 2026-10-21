@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -22,6 +22,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -37,14 +39,28 @@ import com.telnyx.sdk.models.messaging10dlc.brand.BrandCreateParams;
 import com.telnyx.sdk.models.messaging10dlc.brand.EntityType;
 import com.telnyx.sdk.models.messaging10dlc.brand.TelnyxBrand;
 import com.telnyx.sdk.models.messaging10dlc.brand.Vertical;
-BrandCreateParams params = BrandCreateParams.builder()
-    .country("US")
-    .displayName("ABC Mobile")
-    .email("support@example.com")
-    .entityType(EntityType.PRIVATE_PROFIT)
-    .vertical(Vertical.TECHNOLOGY)
-    .build();
-TelnyxBrand telnyxBrand = client.messaging10dlc().brand().create(params);
+import com.telnyx.sdk.errors.TelnyxServiceException;
+
+try {
+    BrandCreateParams params = BrandCreateParams.builder()
+        .country("US")
+        .displayName("ABC Mobile")
+        .email("support@example.com")
+        .entityType(EntityType.PRIVATE_PROFIT)
+        .vertical(Vertical.TECHNOLOGY)
+        .build();
+    TelnyxBrand telnyxBrand = client.messaging10dlc().brand().create(params);
+} catch (TelnyxServiceException e) {
+    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
+    if (e.statusCode() == 422) {
+        System.err.println("Validation error — check required fields and formats");
+    } else if (e.statusCode() == 429) {
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
+        Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
+    }
+    throw e; // Re-throw: a failed request must never look like success to the caller
+}
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -186,6 +202,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;
 import com.telnyx.sdk.core.http.Headers;
@@ -323,7 +343,7 @@ Primary response fields:
 - `phoneNumberCampaign.campaignId`
 - `phoneNumberCampaign.createdAt`
 - `phoneNumberCampaign.failureReasons`
-- `phoneNumberCampaign.phoneNumber`
+- `phoneNumberCampaign.nonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -435,7 +455,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | `client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
 | List phone number campaigns | `client.messaging10dlc().phoneNumberCampaigns().list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
-| Create New Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Update Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
 | Delete Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
 
 ---

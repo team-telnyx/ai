@@ -35,6 +35,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -62,6 +63,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -69,6 +71,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -209,6 +212,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
+
 ```go
 // In your webhook handler:
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -338,7 +345,7 @@ Primary response fields:
 - `phoneNumberCampaign.CampaignID`
 - `phoneNumberCampaign.CreatedAt`
 - `phoneNumberCampaign.FailureReasons`
-- `phoneNumberCampaign.PhoneNumber`
+- `phoneNumberCampaign.NonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -453,7 +460,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Get Phone Number Status | `client.Messaging10dlc.PhoneNumberAssignmentByProfile.ListPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `TaskId` |
 | List phone number campaigns | `client.Messaging10dlc.PhoneNumberCampaigns.List()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Get()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `PhoneNumber` |
-| Create New Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `PhoneNumber`, `CampaignId`, `PhoneNumber` |
+| Update Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `PhoneNumber`, `CampaignId`, `PhoneNumber` |
 | Delete Phone Number Campaign | `client.Messaging10dlc.PhoneNumberCampaigns.Delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `PhoneNumber` |
 
 ---

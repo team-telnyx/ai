@@ -61,7 +61,7 @@
 | `webhookURL` | string |
 | `website` | string |
 
-**Returned by:** Get Brand Feedback By Id
+**Returned by:** Get Brand Feedback By Id, Get Brand Feedback By Id
 
 | Field | Type |
 |-------|------|
@@ -144,7 +144,7 @@
 | `brandId` | string |
 | `referenceId` | string |
 
-**Returned by:** Get Campaign Cost
+**Returned by:** Get Campaign Cost, Get Campaign Cost
 
 | Field | Type |
 |-------|------|
@@ -313,7 +313,7 @@
 |-------|------|
 | `records` | array[object] |
 
-**Returned by:** Create New Phone Number Campaign, Get Single Phone Number Campaign, Create New Phone Number Campaign, Delete Phone Number Campaign
+**Returned by:** Create New Phone Number Campaign, Get Single Phone Number Campaign, Update Phone Number Campaign, Delete Phone Number Campaign
 
 | Field | Type |
 |-------|------|
@@ -322,10 +322,12 @@
 | `campaignId` | string |
 | `createdAt` | string |
 | `failureReasons` | string |
+| `nonTmobileNumberMappingStatus` | string |
 | `phoneNumber` | string |
 | `tcrBrandId` | string |
 | `tcrCampaignId` | string |
 | `telnyxCampaignId` | string |
+| `tmobileNumberMappingStatus` | string |
 | `updatedAt` | string |
 
 ## Optional Parameters

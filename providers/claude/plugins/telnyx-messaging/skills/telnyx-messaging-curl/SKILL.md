@@ -86,7 +86,7 @@ Primary outbound messaging flow. Agents need exact request fields and delivery-r
 | `messaging_profile_id` | string (UUID) | No | Unique identifier for a messaging profile. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
-| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +8 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -117,13 +117,14 @@ Common sender variant that requires different request shape.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `from` | string (E.164) | Yes | A valid alphanumeric sender ID on the user's account. |
+| `from` | string | Yes | A valid alphanumeric sender ID on the user's account. |
 | `to` | string (E.164) | Yes | Receiving address (+E.164 formatted phone number or short co... |
 | `text` | string | Yes | The message body. |
 | `messaging_profile_id` | string (UUID) | Yes | The messaging profile ID to use. |
 | `webhook_url` | string (URL) | No | Callback URL for delivery status updates. |
 | `webhook_failover_url` | string (URL) | No | Failover callback URL for delivery status updates. |
 | `use_profile_webhooks` | boolean | No | If true, use the messaging profile's webhook settings. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -154,6 +155,10 @@ Primary response fields:
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+Keep it in `TELNYX_PUBLIC_KEY` and pass it to whatever Ed25519 library verifies the signature;
+without it no webhook can be verified.
+
 ```bash
 # Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).
 # Headers sent with each webhook:
@@ -174,7 +179,7 @@ These webhook payload fields are inline because they are part of the primary int
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `data.event_type` | enum: message.sent, message.finalized | The type of event being delivered. |
+| `data.event_type` | enum: message.sent, message.finalized, message.read | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.to` | array[object] |  |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
@@ -190,9 +195,9 @@ These webhook payload fields are inline because they are part of the primary int
 | `data.event_type` | enum: message.received | The type of event being delivered. |
 | `data.payload.id` | uuid | Identifies the type of resource. |
 | `data.payload.direction` | enum: inbound | The direction of the message. |
-| `data.payload.to` | array[object] |  |
+| `data.payload.to` | object | Receiving address. |
 | `data.payload.text` | string | Message body (i.e., content) as a non-empty string. |
-| `data.payload.type` | enum: SMS, MMS | The type of message. |
+| `data.payload.type` | enum: SMS, MMS, WHATSAPP, RCS | The messaging channel used for the message. |
 | `data.payload.media` | array[object] |  |
 | `data.record_type` | enum: event | Identifies the type of the resource. |
 
@@ -213,11 +218,11 @@ Send one MMS payload to multiple recipients.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number, in +E.164 format, used to send the message. |
-| `to` | array[object] | Yes | A list of destinations. |
+| `to` | array[string] | Yes | A list of destinations. |
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +3 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +4 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -255,7 +260,7 @@ Force a long-code sending path instead of the generic send endpoint.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -291,7 +296,7 @@ Let a messaging profile or number pool choose the sender for you.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -327,7 +332,7 @@ Force a short-code sending path when the sender must be a short code.
 | `media_urls` | array[string] | No | A list of media URLs. |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `webhook_failover_url` | string (URL) | No | The failover URL where webhooks related to this message will... |
-| ... | | | +6 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +7 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -373,7 +378,7 @@ curl \
       "to": "+13125550001",
       "from": "+18005550101",
       "text": "Appointment reminder",
-      "send_at": "2025-07-01T15:00:00Z"
+      "send_at": "2027-01-15T15:00:00Z"
   }' \
   "https://api.telnyx.com/v2/messages/schedule"
 ```
@@ -395,11 +400,12 @@ Send WhatsApp traffic instead of SMS/MMS.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `from` | string (E.164) | Yes | Phone number in +E.164 format associated with Whatsapp accou... |
-| `to` | string (E.164) | Yes | Phone number in +E.164 format |
+| `to` | string (E.164) | Yes | Recipient phone number in +E.164 format, or the business-sco... |
 | `whatsapp_message` | object | Yes |  |
 | `type` | enum (WHATSAPP) | No | Message type - must be set to "WHATSAPP" |
 | `webhook_url` | string (URL) | No | The URL where webhooks related to this message will be sent. |
 | `messaging_profile_id` | string (UUID) | No | Messaging profile ID - required if the 'from' number is not ... |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -437,7 +443,12 @@ Before using any operation below, read [the optional-parameters section](referen
 | Create an alphanumeric sender ID | HTTP only | `POST /alphanumeric_sender_ids` | Create or provision an additional resource when the core tasks do not cover this flow. | `alphanumeric_sender_id`, `messaging_profile_id` |
 | Retrieve an alphanumeric sender ID | HTTP only | `GET /alphanumeric_sender_ids/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Delete an alphanumeric sender ID | HTTP only | `DELETE /alphanumeric_sender_ids/{id}` | Remove, detach, or clean up an existing resource. | `id` |
+| Send a message using an alphanumeric sender ID | HTTP only | `POST /messages/alphanumeric/sender/id` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `text`, `messaging_profile_id` |
 | Retrieve group MMS messages | HTTP only | `GET /messages/group/{message_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `message_id` |
+| List messaging hosted numbers | HTTP only | `GET /messaging/hosted/numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
+| Regenerate messaging profile secret | HTTP only | `POST /messaging/profiles/{id}/actions/regenerate/secret` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `id` |
+| List alphanumeric sender IDs for a messaging profile | HTTP only | `GET /messaging/profiles/{id}/alphanumeric/sender/ids` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
+| Get detailed messaging profile metrics | HTTP only | `GET /messaging/profiles/{id}/metrics` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | List messaging hosted numbers | HTTP only | `GET /messaging_hosted_numbers` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Retrieve a messaging hosted number | HTTP only | `GET /messaging_hosted_numbers/{id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `id` |
 | Update a messaging hosted number | HTTP only | `PATCH /messaging_hosted_numbers/{id}` | Modify an existing resource without recreating it. | `id` |

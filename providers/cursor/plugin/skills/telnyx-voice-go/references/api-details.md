@@ -87,6 +87,19 @@
 | `client_state` | string |
 | `record_type` | enum: call |
 
+**Returned by:** List dial metrics
+
+| Field | Type |
+|-------|------|
+| `average_dps` | number |
+| `dials` | object |
+| `dps_limit` | integer \| null |
+| `end_time` | date-time |
+| `peak_dps` | number |
+| `record_type` | enum: dial_metric |
+| `region` | string |
+| `start_time` | date-time |
+
 ## Optional Parameters
 
 ### Create a call control application — `client.CallControlApplications.New()`
@@ -128,8 +141,9 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `Assistant` | object | AI Assistant configuration. |
+| `Assistant` | object | AI Assistant configuration and per-call overrides. |
 | `ConversationRelayConfig` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
+| `Diversion` | string | The `to` number of an active inbound call, in +E164 format. |
 | `FromDisplayName` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
 | `Privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `AudioUrl` | string (URL) | The URL of a file to be played back to the callee when the call is answered. |
@@ -137,8 +151,9 @@
 | `MediaName` | string | The media_name of a file to be played back to the callee when the call is ans... |
 | `PreferredCodecs` | string | The list of comma-separated codecs in a preferred order for the forked media ... |
 | `TimeoutSecs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
+| `RetryOnTimeout` | boolean | Whether to keep trying the remaining routing paths (e.g. |
 | `TimeLimitSecs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
-| `AnsweringMachineDetection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `AnsweringMachineDetection` | enum (premium, premium_ios_call_screening_detection, detect, detect_beep, detect_words, ...) | Enables Answering Machine Detection. |
 | `AnsweringMachineDetectionConfig` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
 | `DeepfakeDetection` | object | Enables deepfake detection on the call. |
 | `ConferenceConfig` | object | Optional configuration parameters to dial new participant into a conference. |
@@ -168,7 +183,7 @@
 | `SendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
 | `WebhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `WebhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
-| `WebhookUrls` | object | A map of event types to webhook URLs. |
+| `WebhookUrls` | object | A map of event types to arrays of webhook URLs. |
 | `WebhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `WebhookRetriesPolicies` | object | A map of event types to retry policies. |
 | `Record` | enum (record-from-answer) | Start recording automatically after an event. |
@@ -187,12 +202,13 @@
 | `TranscriptionConfig` | object |  |
 | `SipRegion` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `StreamAuthToken` | string | An authentication token to be sent as part of the WebSocket connection when u... |
+| `RouteToMobile` | boolean | When set to true, routes the call directly to the mobile device associated wi... |
 
 ### Answer call — `client.Calls.Actions.Answer()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `Assistant` | object | AI Assistant configuration. |
+| `Assistant` | object | AI Assistant configuration and per-call overrides. |
 | `ConversationRelayConfig` | object | Starts a Conversation Relay session automatically when the answered/dialed ca... |
 | `BillingGroupId` | string (UUID) | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | Use this field to add state to every subsequent webhook. |
@@ -210,7 +226,7 @@
 | `SendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
 | `WebhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `WebhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
-| `Transcription` | boolean | Enable transcription upon call answer. |
+| `Transcription` | boolean | Enable standalone call transcription upon call answer. |
 | `TranscriptionConfig` | object |  |
 | `Record` | enum (record-from-answer) | Start recording automatically after an event. |
 | `RecordChannels` | enum (single, dual) | Defines which channel should be recorded ('single' or 'dual') when `record` i... |
@@ -220,7 +236,7 @@
 | `RecordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `RecordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
 | `RecordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
-| `WebhookUrls` | object | A map of event types to webhook URLs. |
+| `WebhookUrls` | object | A map of event types to arrays of webhook URLs. |
 | `WebhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `WebhookRetriesPolicies` | object | A map of event types to retry policies. |
 | `DeepfakeDetection` | object | Enables deepfake detection on the call. |
@@ -256,6 +272,7 @@
 | `ClientState` | string | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | Use this field to avoid duplicate commands. |
 | `CustomHeaders` | array[object] | Custom headers to be added to the SIP BYE message. |
+| `Reason` | string | Text for the SIP `Reason` header (RFC 3326) sent when cancelling an unanswere... |
 
 ### SIP Refer a call — `client.Calls.Actions.Refer()`
 
@@ -287,6 +304,7 @@
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `From` | string (E.164) | The `from` number to be used as the caller id presented to the destination (`... |
+| `Diversion` | string | The `to` number of an active inbound call, in +E164 format. |
 | `FromDisplayName` | string | The `from_display_name` string to be used as the caller id name (SIP From Dis... |
 | `Privacy` | enum (id, none) | Indicates the privacy level to be used for the call. |
 | `AudioUrl` | string (URL) | The URL of a file to be played back when the transfer destination answers bef... |
@@ -296,7 +314,7 @@
 | `TimeoutSecs` | integer | The number of seconds that Telnyx will wait for the call to be answered by th... |
 | `TimeLimitSecs` | integer | Sets the maximum duration of a Call Control Leg in seconds. |
 | `ParkAfterUnbridge` | string | Specifies behavior after the bridge ends (i.e. |
-| `AnsweringMachineDetection` | enum (premium, detect, detect_beep, detect_words, greeting_end, ...) | Enables Answering Machine Detection. |
+| `AnsweringMachineDetection` | enum (premium, premium_ios_call_screening_detection, detect, detect_beep, detect_words, ...) | Enables Answering Machine Detection. |
 | `AnsweringMachineDetectionConfig` | object | Optional configuration parameters to modify 'answering_machine_detection' per... |
 | `CustomHeaders` | array[object] | Custom headers to be added to the SIP INVITE. |
 | `ClientState` | string | Use this field to add state to every subsequent webhook. |
@@ -321,9 +339,10 @@
 | `RecordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `SipRegion` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `PreferredCodecs` | string | The list of comma-separated codecs in order of preference to be used during t... |
-| `WebhookUrls` | object | A map of event types to webhook URLs. |
+| `WebhookUrls` | object | A map of event types to arrays of webhook URLs. |
 | `WebhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
 | `WebhookRetriesPolicies` | object | A map of event types to retry policies. |
+| `RouteToMobile` | boolean | When set to true, routes the call directly to the mobile device associated wi... |
 
 ## Webhook Payload Fields
 

@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -48,12 +50,26 @@ or authentication errors (401). Always handle errors in production code:
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
 import com.telnyx.sdk.models.ai.assistants.InferenceEmbedding;
-AssistantCreateParams params = AssistantCreateParams.builder()
-    .instructions("You are a helpful assistant.")
-    .name("my-resource")
-    .model("openai/gpt-4o")
-    .build();
-InferenceEmbedding assistant = client.ai().assistants().create(params);
+import com.telnyx.sdk.errors.TelnyxServiceException;
+
+try {
+    AssistantCreateParams params = AssistantCreateParams.builder()
+        .instructions("You are a helpful assistant.")
+        .name("my-resource")
+        .model("openai/gpt-4o")
+        .build();
+    InferenceEmbedding assistant = client.ai().assistants().create(params);
+} catch (TelnyxServiceException e) {
+    System.err.println("API error " + e.statusCode() + ": " + e.getMessage());
+    if (e.statusCode() == 422) {
+        System.err.println("Validation error — check required fields and formats");
+    } else if (e.statusCode() == 429) {
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
+        Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
+    }
+    throw e; // Re-throw: a failed request must never look like success to the caller
+}
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -87,7 +103,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | No | Deprecated for new integrations. |
-| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +28 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantCreateParams;
@@ -107,7 +123,7 @@ Primary response fields:
 - `assistant.model`
 - `assistant.instructions`
 - `assistant.createdAt`
-- `assistant.conversationFlow`
+- `assistant.a2aAgents`
 
 ### Chat with an assistant
 
@@ -121,6 +137,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | `conversationId` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
 | `assistantId` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
+| `stream` | boolean | No | When true, the response is streamed as Server-Sent Events (`... |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantChatParams;
@@ -152,7 +169,7 @@ Test creation is the main validation path for production assistant behavior befo
 | `description` | string | No | Optional detailed description of what this test evaluates an... |
 | `telnyxConversationChannel` | object | No | The communication channel through which the test will be con... |
 | `maxDurationSeconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
-| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.tests.AssistantTest;
@@ -213,9 +230,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### Update an assistant
 
@@ -229,7 +246,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
-| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantUpdateParams;
@@ -242,9 +259,9 @@ Primary response fields:
 - `assistant.id`
 - `assistant.name`
 - `assistant.createdAt`
+- `assistant.a2aAgents`
+- `assistant.avatarSettings`
 - `assistant.conversationFlow`
-- `assistant.description`
-- `assistant.dynamicVariables`
 
 ### List assistants
 
@@ -266,9 +283,36 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
+
+### List deleted assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`client.ai().assistants().deleted().list()` — `GET /ai/assistants/deleted`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number to retrieve (1-based). |
+| `page[size]` | integer | No | Number of items to return per page. |
+
+```java
+var page = client.ai().assistants().deleted().list();
+```
+
+Response wrapper:
+- items: `page.data`
+- pagination: `page.meta`
+
+Primary item fields:
+- `id`
+- `name`
+- `createdAt`
+- `a2aAgents`
+- `avatarSettings`
+- `conversationFlow`
 
 ### Import assistants from external provider
 
@@ -281,6 +325,7 @@ Import existing assistants from an external provider instead of creating from sc
 | `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
 | `apiKeyRef` | string | Yes | Integration secret pointer that refers to the API key for th... |
 | `importIds` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `Idempotency-Key` | string | No | Optional opaque, unquoted key for safely retrying the same l... |
 
 ```java
 import com.telnyx.sdk.models.ai.assistants.AssistantImportsParams;
@@ -300,9 +345,9 @@ Primary item fields:
 - `id`
 - `name`
 - `createdAt`
+- `a2aAgents`
+- `avatarSettings`
 - `conversationFlow`
-- `description`
-- `dynamicVariables`
 
 ### Get All Tags
 
@@ -371,38 +416,6 @@ Response wrapper:
 Primary item fields:
 - `data`
 
-### Get test suite run history
-
-Fetch the current state before updating, deleting, or making control-flow decisions.
-
-`client.ai().assistants().tests().testSuites().runs().list()` — `GET /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `suiteName` | string | Yes | Name of the suite. |
-| `testSuiteRunId` | string (UUID) | No | Filter runs by specific suite execution batch ID |
-| `status` | string | No | Filter runs by execution status (pending, running, completed... |
-| `page` | object | No | Consolidated page parameter (deepObject style). |
-
-```java
-import com.telnyx.sdk.models.ai.assistants.tests.testsuites.runs.RunListPage;
-import com.telnyx.sdk.models.ai.assistants.tests.testsuites.runs.RunListParams;
-
-RunListPage page = client.ai().assistants().tests().testSuites().runs().list("suite_name");
-```
-
-Response wrapper:
-- items: `page.data`
-- pagination: `page.meta`
-
-Primary item fields:
-- `status`
-- `createdAt`
-- `updatedAt`
-- `completedAt`
-- `conversationId`
-- `conversationInsightsId`
-
 ---
 
 ## Additional Operations
@@ -412,6 +425,7 @@ Before using any operation below, read [the optional-parameters section](referen
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
+| Get test suite run history | `client.ai().assistants().tests().testSuites().runs().list()` | `GET /ai/assistants/tests/test-suites/{suite_name}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `suiteName` |
 | Trigger test suite execution | `client.ai().assistants().tests().testSuites().runs().trigger()` | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suiteName` |
 | Get assistant test by ID | `client.ai().assistants().tests().retrieve()` | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `testId` |
 | Update an assistant test | `client.ai().assistants().tests().update()` | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `testId` |
@@ -425,8 +439,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Update Canary Deploy | `client.ai().assistants().canaryDeploys().update()` | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistantId` |
 | Delete Canary Deploy | `client.ai().assistants().canaryDeploys().delete()` | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistantId` |
 | Assistant Sms Chat | `client.ai().assistants().sendSms()` | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistantId` |
+| Assistant WhatsApp Chat | `client.ai().assistants().whatsapp()` | `POST /ai/assistants/{assistant_id}/chat/whatsapp` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `content`, `assistantId` |
 | Clone Assistant | `client.ai().assistants().clone()` | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistantId` |
+| Get a deleted assistant | `client.ai().assistants().deleted().get()` | `GET /ai/assistants/{assistant_id}/deleted` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
 | Enhance Assistant Instructions | `client.ai().assistants().instructions().enhance()` | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId` |
+| Restore an assistant | `client.ai().assistants().restore()` | `POST /ai/assistants/{assistant_id}/restore` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistantId` |
 | List scheduled events | `client.ai().assistants().scheduledEvents().list()` | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId` |
 | Create a scheduled event | `client.ai().assistants().scheduledEvents().create()` | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyxConversationChannel`, `telnyxEndUserTarget`, `telnyxAgentTarget`, `scheduledAtFixedDatetime`, +1 more |
 | Get a scheduled event | `client.ai().assistants().scheduledEvents().retrieve()` | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistantId`, `eventId` |

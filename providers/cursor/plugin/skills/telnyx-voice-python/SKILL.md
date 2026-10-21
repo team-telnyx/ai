@@ -29,6 +29,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -46,17 +47,22 @@ try:
     response = client.calls.dial(
         connection_id="7267xxxxxxxxxxxxxx",
         from_="+18005550101",
-        to="+18005550100;secure=srtp",
+        to="+18005550100",
     )
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -98,13 +104,13 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +56 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.dial(
     connection_id="7267xxxxxxxxxxxxxx",
     from_="+18005550101",
-    to="+18005550100;secure=srtp",
+    to="+18005550100",
 )
 print(response.data)
 ```
@@ -155,12 +161,12 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +35 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.transfer(
     call_control_id="550e8400-e29b-41d4-a716-446655440000",
-    to="+18005550100;secure=srtp",
+    to="+18005550100",
 )
 print(response.data)
 ```
@@ -174,6 +180,10 @@ Primary response fields:
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```python
 # In your webhook handler (e.g., Flask — use raw body, not parsed JSON):
@@ -254,6 +264,7 @@ End a live call from your webhook-driven control flow.
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `custom_headers` | array[object] | No | Custom headers to be added to the SIP BYE message. |
+| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
 
 ```python
 response = client.calls.actions.hangup(
@@ -273,7 +284,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `call_control_id` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
+| `call_control_id_to_bridge` | string (UUID) | Yes | The Call Control ID of the call you want to bridge with, can... |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -299,7 +310,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `cause` | enum (CALL_REJECTED, USER_BUSY) | Yes | Cause for call rejection. |
+| `cause` | enum (CALL_REJECTED, NOT_FOUND, TEMPORARILY_UNAVAILABLE, USER_BUSY) | Yes | Cause for call rejection. |
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
@@ -326,8 +337,7 @@ Fetch the current state before updating, deleting, or making control-flow decisi
 | `call_control_id` | string (UUID) | Yes | Unique identifier and token for controlling the call |
 
 ```python
-response = client.calls.retrieve_status(
-    "call_control_id",
+response = client.calls.retrieve_status("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ",
 )
 print(response.data)
 ```
@@ -416,6 +426,7 @@ Before using any operation below, read [the optional-parameters section](referen
 | Delete a call control application | `client.call_control_applications.delete()` | `DELETE /call_control_applications/{id}` | Remove, detach, or clean up an existing resource. | `id` |
 | SIP Refer a call | `client.calls.actions.refer()` | `POST /calls/{call_control_id}/actions/refer` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `sip_address`, `call_control_id` |
 | Send SIP info | `client.calls.actions.send_sip_info()` | `POST /calls/{call_control_id}/actions/send_sip_info` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `content_type`, `body`, `call_control_id` |
+| List dial metrics | `client.dial_metrics.list()` | `GET /dial_metrics` | Inspect available resources or choose an existing resource before mutating it. | None |
 
 ### Other Webhook Events
 
