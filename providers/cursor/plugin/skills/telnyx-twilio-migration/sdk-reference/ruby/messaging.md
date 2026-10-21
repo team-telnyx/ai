@@ -366,7 +366,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 | ... | | | +1 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```ruby
-response = client.messages.send_whatsapp(from: "+13125551234", to: "+13125551234", whatsapp_message: {})
+response = client.messages.send_whatsapp(from: "+13125551234", to: "+13125551234", whatsapp_message: {type: "text", text: {body: "Hello from Telnyx!"}})
 
 puts(response)
 ```

@@ -431,7 +431,10 @@ Send WhatsApp traffic instead of SMS/MMS.
 	response, err := client.Messages.SendWhatsapp(context.Background(), telnyx.MessageSendWhatsappParams{
 		From:            "+13125551234",
 		To:              "+13125551234",
-		WhatsappMessage: telnyx.WhatsappMessageContentParam{},
+		WhatsappMessage: telnyx.WhatsappMessageContentParam{
+			Type: telnyx.WhatsappMessageContentTypeText,
+			Text: telnyx.WhatsappMessageContentTextParam{Body: "Hello from Telnyx!"},
+		},
 	})
 	if err != nil {
 		log.Fatal(err)
