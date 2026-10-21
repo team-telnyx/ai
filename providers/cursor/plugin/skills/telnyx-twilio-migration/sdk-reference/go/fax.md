@@ -22,6 +22,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -43,7 +44,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -51,6 +52,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -159,6 +161,8 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 
 ## View a list of faxes
 
+Retrieve a paginated list of faxes sent or received on your account.
+
 `GET /faxes`
 
 ```go
@@ -169,7 +173,7 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Send a fax
 
@@ -192,9 +196,11 @@ Optional: `black_threshold` (integer), `client_state` (string), `from_display_na
 	fmt.Printf("%+v\n", fax.Data)
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## View a fax
+
+Returns the details of a single fax, including its current status.
 
 `GET /faxes/{id}`
 
@@ -206,9 +212,11 @@ Returns: `client_state` (string), `connection_id` (string), `created_at` (date-t
 	fmt.Printf("%+v\n", fax.Data)
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Delete a fax
+
+Delete a fax resource from your account.
 
 `DELETE /faxes/{id}`
 
@@ -259,6 +267,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```go
 // In your webhook handler:
@@ -327,7 +339,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.failure_reason` | enum: rejected | Cause of the sending failure |
+| `data.payload.failure_reason` | string | Customer-facing cause of the fax failure. |
+| `data.payload.internal_failure_reason` | string | Internal, more granular cause of the fax failure. |
 | `data.payload.status` | enum: failed | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |

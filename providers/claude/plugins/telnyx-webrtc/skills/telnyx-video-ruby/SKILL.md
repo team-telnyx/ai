@@ -27,6 +27,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -42,14 +43,18 @@ begin
   result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
+  raise
 rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
   sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
 rescue Telnyx::Errors::APIStatusError => e
   puts "API error #{e.status}: #{e.message}"
   if e.status == 422
     puts "Validation error — check required fields and formats"
   end
+  raise # A failed request must never look like success to the caller
 end
 ```
 
@@ -58,6 +63,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 `429` rate limited (retry with exponential backoff).
 
 ## View a list of room compositions.
+
+Returns a paginated list of room compositions. Filter compositions by creation date, room session, or processing status.
 
 `GET /room_compositions`
 
@@ -87,6 +94,8 @@ Returns: `completed_at` (date-time), `created_at` (date-time), `download_url` (s
 
 ## View a room composition.
 
+Returns the composition identified by `room_composition_id`, including its room and session, processing status, media details, video layout, lifecycle timestamps, and download URL.
+
 `GET /room_compositions/{room_composition_id}`
 
 ```ruby
@@ -111,6 +120,8 @@ puts(result)
 
 ## View a list of room participants.
 
+Returns a paginated list of room participants across sessions. Filter participants by session, join, update, or leave date and by participant context.
+
 `GET /room_participants`
 
 ```ruby
@@ -122,6 +133,8 @@ puts(page)
 Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
 
 ## View a room participant.
+
+Returns the participant identified by `room_participant_id`, including its session, context, and join, update, and leave timestamps.
 
 `GET /room_participants/{room_participant_id}`
 
@@ -135,6 +148,8 @@ Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (da
 
 ## View a list of room recordings.
 
+Returns a paginated list of room recordings. Filter recordings by room, session, participant, recording type, status, duration, or start and end dates.
+
 `GET /room_recordings`
 
 ```ruby
@@ -146,6 +161,8 @@ puts(page)
 Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time), `download_url` (string), `duration_secs` (integer), `ended_at` (date-time), `id` (uuid), `participant_id` (uuid), `record_type` (string), `room_id` (uuid), `session_id` (uuid), `size_mb` (float), `started_at` (date-time), `status` (enum: completed, processing), `type` (enum: audio, video), `updated_at` (date-time)
 
 ## Delete several room recordings in a bulk.
+
+Deletes the room recordings that match the supplied filters and returns the number of recordings affected. Filters support room, session, participant, recording type, status, duration, and start or end dates.
 
 `DELETE /room_recordings`
 
@@ -159,6 +176,8 @@ Returns: `room_recordings` (integer)
 
 ## View a room recording.
 
+Returns the recording identified by `room_recording_id`, including its room, session, participant, status, media details, lifecycle timestamps, and download URL.
+
 `GET /room_recordings/{room_recording_id}`
 
 ```ruby
@@ -171,7 +190,7 @@ Returns: `codec` (string), `completed_at` (date-time), `created_at` (date-time),
 
 ## Delete a room recording.
 
-Synchronously delete a Room Recording.
+Synchronously deletes the specified video room recording. The recording's media is removed permanently.
 
 `DELETE /room_recordings/{room_recording_id}`
 
@@ -182,6 +201,8 @@ puts(result)
 ```
 
 ## View a list of room sessions.
+
+Returns a paginated list of room sessions across the account. Filter sessions by room, creation, update, or end date and active status, and use `include_participants` to include participant records.
 
 `GET /room_sessions`
 
@@ -194,6 +215,8 @@ puts(page)
 Returns: `active` (boolean), `created_at` (date-time), `ended_at` (date-time), `id` (uuid), `participants` (array[object]), `record_type` (string), `room_id` (uuid), `updated_at` (date-time)
 
 ## View a room session.
+
+Returns the room session identified by `room_session_id`, including its room, active status, and lifecycle timestamps. Use `include_participants` to include its participant records.
 
 `GET /room_sessions/{room_session_id}`
 
@@ -221,6 +244,8 @@ Returns: `result` (string)
 
 ## Kick participants from a room session.
 
+Removes the selected participants from the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
+
 `POST /room_sessions/{room_session_id}/actions/kick`
 
 Optional: `exclude` (array[string]), `participants` (object)
@@ -234,6 +259,8 @@ puts(response)
 Returns: `result` (string)
 
 ## Mute participants in room session.
+
+Mutes the selected participants in the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
 
 `POST /room_sessions/{room_session_id}/actions/mute`
 
@@ -249,6 +276,8 @@ Returns: `result` (string)
 
 ## Unmute participants in room session.
 
+Unmutes the selected participants in the specified room session. Apply the action to a list of participant IDs or to `all`, with optional participant IDs excluded from the action.
+
 `POST /room_sessions/{room_session_id}/actions/unmute`
 
 Optional: `exclude` (array[string]), `participants` (object)
@@ -263,6 +292,8 @@ Returns: `result` (string)
 
 ## View a list of room participants.
 
+Returns a paginated list of participants for the specified room session. Filter participants by join, update, or leave date and by participant context.
+
 `GET /room_sessions/{room_session_id}/participants`
 
 ```ruby
@@ -274,6 +305,8 @@ puts(page)
 Returns: `context` (string), `id` (uuid), `joined_at` (date-time), `left_at` (date-time), `record_type` (string), `session_id` (uuid), `updated_at` (date-time)
 
 ## View a list of rooms.
+
+Returns a paginated list of rooms. Filter the results by creation or update date and unique name, and use `include_sessions` to include each room’s sessions.
 
 `GET /rooms`
 
@@ -287,7 +320,7 @@ Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording
 
 ## Create a room.
 
-Synchronously create a Room.
+Synchronously creates a new video room with the provided configuration and returns the created room.
 
 `POST /rooms`
 
@@ -302,6 +335,8 @@ Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording
 
 ## View a room.
 
+Returns the room identified by `room_id`, including its participant limit, recording and webhook configuration, and active session identifier. Use `include_sessions` to include its sessions.
+
 `GET /rooms/{room_id}`
 
 ```ruby
@@ -314,7 +349,7 @@ Returns: `active_session_id` (uuid), `created_at` (date-time), `enable_recording
 
 ## Update a room.
 
-Synchronously update a Room.
+Synchronously updates the specified video room's configuration and returns the updated room.
 
 `PATCH /rooms/{room_id}`
 
@@ -376,6 +411,8 @@ puts(response)
 Returns: `token` (string), `token_expires_at` (date-time)
 
 ## View a list of room sessions.
+
+Returns a paginated list of sessions for the specified room. Filter sessions by creation, update, or end date and active status, and use `include_participants` to include participant records.
 
 `GET /rooms/{room_id}/sessions`
 

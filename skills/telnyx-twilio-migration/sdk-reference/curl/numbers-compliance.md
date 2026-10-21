@@ -52,7 +52,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Retrieve Bundles
 
-Get all allowed bundles.
+Returns a paginated list of the billing bundles available to your account, with support for filtering.
 
 `GET /bundle_pricing/billing_bundles`
 
@@ -64,7 +64,7 @@ Returns: `cost_code` (string), `created_at` (date), `currency` (string), `id` (u
 
 ## Get Bundle By Id
 
-Get a single bundle by ID.
+Returns the details of a single billing bundle by its ID, so you can inspect its contents before purchasing a user bundle.
 
 `GET /bundle_pricing/billing_bundles/{bundle_id}`
 
@@ -76,7 +76,7 @@ Returns: `active` (boolean), `bundle_limits` (array[object]), `cost_code` (strin
 
 ## Get User Bundles
 
-Get a paginated list of user bundles.
+Returns a paginated list of the bundles active on your account, with support for filtering.
 
 `GET /bundle_pricing/user_bundles`
 
@@ -118,7 +118,7 @@ Returns: `billing_bundle` (object), `user_bundle_ids` (array[string])
 
 ## Get User Bundle by Id
 
-Retrieves a user bundle by its ID.
+Returns the details of a single user bundle on your account by its ID.
 
 `GET /bundle_pricing/user_bundles/{user_bundle_id}`
 
@@ -130,7 +130,7 @@ Returns: `active` (boolean), `billing_bundle` (object), `created_at` (date), `id
 
 ## Deactivate User Bundle
 
-Deactivates a user bundle by its ID.
+Deactivates the specified user bundle on your account and returns the deactivated bundle.
 
 `DELETE /bundle_pricing/user_bundles/{user_bundle_id}`
 
@@ -200,7 +200,7 @@ Returns: `av_scan_status` (enum: scanned, infected, pending_scan, not_scanned), 
 
 ## Retrieve a document
 
-Retrieve a document.
+Returns the details of a single document on your account, including its metadata.
 
 `GET /documents/{id}`
 
@@ -212,7 +212,7 @@ Returns: `av_scan_status` (enum: scanned, infected, pending_scan, not_scanned), 
 
 ## Update a document
 
-Update a document.
+Updates the specified document's attributes and returns the updated document.
 
 `PATCH /documents/{id}`
 
@@ -245,7 +245,7 @@ Returns: `av_scan_status` (enum: scanned, infected, pending_scan, not_scanned), 
 
 ## Download a document
 
-Download a document.
+Downloads the raw file content of the specified document as originally uploaded.
 
 `GET /documents/{id}/download`
 
@@ -265,7 +265,43 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/docum
 
 Returns: `url` (uri)
 
+## Get action requirement details for a sub number order
+
+Returns the input fields an action requirement needs and the current requirement action for a sub number order. Action requirements are fulfilled by an external step rather than by uploading documents. Australia mobile ID verification is currently the only action requirement.
+
+`GET /external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}"
+```
+
+Returns: `fields_required` (array[object]), `regulatory_requirement_id` (uuid), `requirement_action` (object)
+
+## Fulfill an action requirement for a sub number order
+
+Submits the end user's details to the external verification provider and returns the requirement action. Australia mobile ID verification is currently the only action requirement. It generates a unique Onfido verification link, returned in `requirement_action.value`, which you share with the end user.
+
+`POST /external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}` — Required: `requirement`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "requirement": {
+    "first_name": "Jane",
+    "last_name": "Doe"
+  }
+}' \
+  "https://api.telnyx.com/v2/external_requirements/{regulatory_requirement_id}/sub_number_orders/{sub_number_order_id}"
+```
+
+Returns: `regulatory_requirement_id` (uuid), `requirement_action` (object), `sub_order_id` (uuid)
+
 ## Update requirement group for a phone number order
+
+Associates an existing requirement group with a phone number in a number order. The response contains the updated number-order phone-number details.
 
 `POST /number_order_phone_numbers/{id}/requirement_group` — Required: `requirement_group_id`
 
@@ -275,7 +311,7 @@ curl \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-  "requirement_group_id": "550e8400-e29b-41d4-a716-446655440000"
+  "requirement_group_id": "a4b201f9-8646-4e54-a7d2-b2e403eeaf8c"
 }' \
   "https://api.telnyx.com/v2/number_order_phone_numbers/550e8400-e29b-41d4-a716-446655440000/requirement_group"
 ```
@@ -283,6 +319,20 @@ curl \
 Returns: `bundle_id` (uuid), `country_code` (string), `deadline` (date-time), `id` (uuid), `is_block_number` (boolean), `locality` (string), `order_request_id` (uuid), `phone_number` (string), `phone_number_type` (string), `record_type` (string), `regulatory_requirements` (array[object]), `requirements_met` (boolean), `requirements_status` (string), `status` (string), `sub_number_order_id` (uuid)
 
 ## Retrieve regulatory requirements for a list of phone numbers
+
+Retrieve the regulatory requirements that apply to a list of phone numbers.
+
+`GET /phone_numbers/regulatory_requirements`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/phone_numbers/regulatory_requirements"
+```
+
+Returns: `phone_number` (string), `phone_number_type` (string), `record_type` (string), `region_information` (array[object]), `regulatory_requirements` (array[object])
+
+## Retrieve regulatory requirements for a list of phone numbers
+
+Returns the regulatory requirements that apply to the supplied comma-separated phone numbers. The response includes the matching requirement records and pagination metadata.
 
 `GET /phone_numbers_regulatory_requirements`
 
@@ -294,6 +344,8 @@ Returns: `phone_number` (string), `phone_number_type` (string), `record_type` (s
 
 ## Retrieve regulatory requirements
 
+Returns regulatory requirements for number ordering, porting, or other supported actions. Results can be filtered by phone number, requirement group, country, number type, and action.
+
 `GET /regulatory_requirements`
 
 ```bash
@@ -304,6 +356,8 @@ Returns: `action` (string), `country_code` (string), `phone_number_type` (string
 
 ## List requirement groups
 
+Returns regulatory requirement groups for the account. Results can be filtered by country, number type, action, approval status, and customer reference.
+
 `GET /requirement_groups`
 
 ```bash
@@ -311,6 +365,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/requi
 ```
 
 ## Create a new requirement group
+
+Creates a regulatory requirement group for a country, number type, and ordering or porting action. Optional customer-reference and requirement values are retained on the created group.
 
 `POST /requirement_groups` — Required: `country_code`, `phone_number_type`, `action`
 
@@ -333,6 +389,8 @@ Returns: `action` (string), `country_code` (string), `created_at` (date-time), `
 
 ## Get a single requirement group by ID
 
+Returns the regulatory requirement group identified by `id`, including its requirement values and current approval status.
+
 `GET /requirement_groups/{id}`
 
 ```bash
@@ -342,6 +400,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/requi
 Returns: `action` (string), `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `phone_number_type` (string), `record_type` (string), `regulatory_requirements` (array[object]), `status` (enum: approved, unapproved, pending-approval, declined, expired), `updated_at` (date-time)
 
 ## Update requirement values in requirement group
+
+Updates the customer reference or regulatory requirement values on the specified requirement group. The response contains the updated group.
 
 `PATCH /requirement_groups/{id}`
 
@@ -359,6 +419,8 @@ Returns: `action` (string), `country_code` (string), `created_at` (date-time), `
 
 ## Delete a requirement group by ID
 
+Deletes the regulatory requirement group identified by `id`. The response contains the deleted requirement-group representation.
+
 `DELETE /requirement_groups/{id}`
 
 ```bash
@@ -371,6 +433,8 @@ curl \
 Returns: `action` (string), `country_code` (string), `created_at` (date-time), `customer_reference` (string), `id` (string), `phone_number_type` (string), `record_type` (string), `regulatory_requirements` (array[object]), `status` (enum: approved, unapproved, pending-approval, declined, expired), `updated_at` (date-time)
 
 ## Submit a Requirement Group for Approval
+
+Submits the specified regulatory requirement group for approval. The response contains the requirement group with its resulting approval status.
 
 `POST /requirement_groups/{id}/submit_for_approval`
 
@@ -398,7 +462,7 @@ Returns: `acceptance_criteria` (object), `created_at` (string), `description` (s
 
 ## Retrieve a requirement types
 
-Retrieve a requirement type by id
+Returns the details of a single requirement type by its identifier, describing a kind of documentation needed for regulatory purposes.
 
 `GET /requirement_types/{id}`
 
@@ -418,11 +482,11 @@ List all requirements with filtering, sorting, and pagination
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/requirements?sort=['country_code']"
 ```
 
-Returns: `action` (enum: both, branded_calling, ordering, porting), `country_code` (string), `created_at` (string), `id` (uuid), `locality` (string), `phone_number_type` (enum: local, national, toll_free), `record_type` (string), `requirements_types` (array[object]), `updated_at` (string)
+Returns: `action` (enum: both, branded_calling, ordering, porting), `country_code` (string), `created_at` (string), `effective_end_at` (date-time), `effective_start_at` (date-time), `id` (uuid), `locality` (string), `phone_number_type` (enum: local, mobile, multipurpose, national, shared_cost, toll_free), `record_type` (string), `requirement_types` (array[object]), `updated_at` (string), `version` (integer)
 
 ## Retrieve a document requirement
 
-Retrieve a document requirement record
+Returns a single document requirement record by its identifier, describing the documentation needed for number-related actions. A specific requirement version can be requested.
 
 `GET /requirements/{id}`
 
@@ -430,9 +494,48 @@ Retrieve a document requirement record
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/requirements/a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa"
 ```
 
-Returns: `action` (enum: both, branded_calling, ordering, porting), `country_code` (string), `created_at` (string), `id` (uuid), `locality` (string), `phone_number_type` (enum: local, national, toll_free), `record_type` (string), `requirements_types` (array[object]), `updated_at` (string)
+Returns: `action` (enum: both, branded_calling, ordering, porting), `country_code` (string), `created_at` (string), `effective_end_at` (date-time), `effective_start_at` (date-time), `id` (uuid), `locality` (string), `phone_number_type` (enum: local, mobile, multipurpose, national, shared_cost, toll_free), `record_type` (string), `requirement_types` (array[object]), `updated_at` (string), `version` (integer)
+
+## Schedule a future requirement version
+
+Create a new pending version of a requirement with a future effective start date. Only one pending version may exist per requirement at a time.
+
+`POST /requirements/{id}/versions` — Required: `effective_start_at`, `requirement_type_ids`
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "effective_start_at": "2026-08-01T00:00:00.000Z",
+  "requirement_type_ids": [
+    "a38c217a-8019-48f8-bff6-0fdd9939075b"
+  ]
+}' \
+  "https://api.telnyx.com/v2/requirements/a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa/versions"
+```
+
+Returns: `action` (enum: both, branded_calling, ordering, porting), `country_code` (string), `created_at` (string), `effective_end_at` (date-time), `effective_start_at` (date-time), `id` (uuid), `locality` (string), `phone_number_type` (enum: local, mobile, multipurpose, national, shared_cost, toll_free), `record_type` (string), `requirement_types` (array[object]), `updated_at` (string), `version` (integer)
+
+## Cancel a pending requirement version
+
+Cancel a pending requirement version. The pending version is marked as cancelled and the previously active version is restored with effective_end_at set to NULL.
+
+`DELETE /requirements/{id}/versions/pending`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/requirements/a9dad8d5-fdbd-49d7-aa23-39bb08a5ebaa/versions/pending"
+```
+
+Returns: `cancelled` (object), `restored` (object)
 
 ## Update requirement group for a sub number order
+
+Associates an existing requirement group with the specified sub number order. The response contains the updated sub number order requirement-group relationship.
 
 `POST /sub_number_orders/{id}/requirement_group` — Required: `requirement_group_id`
 
@@ -451,7 +554,57 @@ Returns: `country_code` (string), `created_at` (date-time), `customer_reference`
 
 ## List all user addresses
 
-Returns a list of your user addresses.
+Returns a paginated list of your user addresses, with support for filtering and sorting.
+
+`GET /user/addresses`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/user/addresses?sort=street_address"
+```
+
+Returns: `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (uuid), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string)
+
+## Creates a user address
+
+Creates a new user address from the provided details and returns the created address.
+
+`POST /user/addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
+
+Optional: `administrative_area` (string), `borough` (string), `customer_reference` (string), `extended_address` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `skip_address_verification` (boolean)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "first_name": "Alfred",
+  "last_name": "Foster",
+  "business_name": "Toy-O'Kon",
+  "street_address": "600 Congress Avenue",
+  "locality": "Austin",
+  "country_code": "US"
+}' \
+  "https://api.telnyx.com/v2/user/addresses"
+```
+
+Returns: `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (uuid), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string)
+
+## Retrieve a user address
+
+Retrieves the details of an existing user address.
+
+`GET /user/addresses/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/user/addresses/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `administrative_area` (string), `borough` (string), `business_name` (string), `country_code` (string), `created_at` (string), `customer_reference` (string), `extended_address` (string), `first_name` (string), `id` (uuid), `last_name` (string), `locality` (string), `neighborhood` (string), `phone_number` (string), `postal_code` (string), `record_type` (string), `street_address` (string), `updated_at` (string)
+
+## List all user addresses
+
+Returns a paginated list of your user addresses, with support for filtering and sorting.
 
 `GET /user_addresses`
 
@@ -463,7 +616,7 @@ Returns: `administrative_area` (string), `borough` (string), `business_name` (st
 
 ## Creates a user address
 
-Creates a user address.
+Creates a new user address from the provided details and returns the created address.
 
 `POST /user_addresses` — Required: `first_name`, `last_name`, `business_name`, `street_address`, `locality`, `country_code`
 
@@ -535,6 +688,8 @@ Returns: `phone_number` (string), `verification_method` (string)
 
 ## Retrieve a verified number
 
+Retrieve the details of a verified number on your account.
+
 `GET /verified_numbers/{phone_number}`
 
 ```bash
@@ -544,6 +699,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/verif
 Returns: `phone_number` (string), `record_type` (enum: verified_number), `verified_at` (string)
 
 ## Delete a verified number
+
+Remove a verified number from your account.
 
 `DELETE /verified_numbers/{phone_number}`
 
@@ -557,6 +714,8 @@ curl \
 Returns: `phone_number` (string), `record_type` (enum: verified_number), `verified_at` (string)
 
 ## Submit verification code
+
+Submit the verification code received via the selected verification method to verify a phone number.
 
 `POST /verified_numbers/{phone_number}/actions/verify` — Required: `verification_code`
 

@@ -210,6 +210,10 @@ Returns: `result` (string)
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
 
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+Keep it in `TELNYX_PUBLIC_KEY` and pass it to whatever Ed25519 library verifies the signature;
+without it no webhook can be verified.
+
 ```bash
 # Telnyx signs webhooks with Ed25519 (asymmetric — NOT HMAC/Standard Webhooks).
 # Headers sent with each webhook:

@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -30,14 +31,18 @@ begin
   result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
+  raise
 rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
   sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
 rescue Telnyx::Errors::APIStatusError => e
   puts "API error #{e.status}: #{e.message}"
   if e.status == 422
     puts "Validation error — check required fields and formats"
   end
+  raise # A failed request must never look like success to the caller
 end
 ```
 
@@ -61,7 +66,7 @@ custom_storage_credential = client.custom_storage_credentials.retrieve("connecti
 puts(custom_storage_credential)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Create a custom storage credential
 
@@ -75,7 +80,7 @@ custom_storage_credential = client.custom_storage_credentials.create("connection
 puts(custom_storage_credential)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Update a stored credential
 
@@ -89,7 +94,7 @@ custom_storage_credential = client.custom_storage_credentials.update("connection
 puts(custom_storage_credential)
 ```
 
-Returns: `backend` (enum: gcs, s3, azure), `configuration` (object)
+Returns: `backend` (enum: gcs, s3, s3-generic, azure), `configuration` (object)
 
 ## Delete a stored credential
 
@@ -147,7 +152,7 @@ Returns: `connection_id` (string), `conversation_profile_id` (string), `environm
 
 ## Update stored Dialogflow Connection
 
-Updates a stored Dialogflow Connection.
+Updates the stored Dialogflow connection for the specified connection and returns the updated configuration.
 
 `PUT /dialogflow_connections/{connection_id}`
 
@@ -175,7 +180,7 @@ Returns: `connection_id` (string), `conversation_profile_id` (string), `environm
 
 ## Delete stored Dialogflow Connection
 
-Deletes a stored Dialogflow Connection.
+Deletes the stored Dialogflow connection for the specified connection.
 
 `DELETE /dialogflow_connections/{connection_id}`
 
@@ -336,6 +341,8 @@ puts(civic_address)
 Returns: `city_or_town` (string), `city_or_town_alias` (string), `company_name` (string), `country` (string), `country_or_district` (string), `default_location_id` (uuid), `description` (string), `house_number` (string), `house_number_suffix` (string), `id` (uuid), `locations` (array[object]), `postal_or_zip_code` (string), `record_type` (string), `state_or_province` (string), `street_name` (string), `street_suffix` (string)
 
 ## Update a location's static emergency address
+
+Update the static emergency address assigned to a specific location of an external connection.
 
 `PATCH /external_connections/{id}/locations/{location_id}` — Required: `static_emergency_address_id`
 
@@ -523,7 +530,7 @@ Returns: `available_usages` (array[string]), `error_code` (string), `error_messa
 
 ## List uploaded media
 
-Returns a list of stored media files.
+Returns a list of the media files stored on your account, with support for filtering.
 
 `GET /media`
 
@@ -567,7 +574,7 @@ Returns: `content_type` (string), `created_at` (string), `expires_at` (string), 
 
 ## Update stored media
 
-Updates a stored media file.
+Updates the specified stored media file and returns the updated resource.
 
 `PUT /media/{media_name}`
 
@@ -583,7 +590,7 @@ Returns: `content_type` (string), `created_at` (string), `expires_at` (string), 
 
 ## Deletes stored media
 
-Deletes a stored media file.
+Permanently deletes the specified media file from storage.
 
 `DELETE /media/{media_name}`
 
@@ -595,7 +602,7 @@ puts(result)
 
 ## Download stored media
 
-Downloads a stored media file.
+Downloads the raw content of the specified stored media file.
 
 `GET /media/{media_name}/download`
 
@@ -663,7 +670,7 @@ Returns: `created_at` (string), `duration_millis` (int32), `id` (string), `recor
 
 ## List all call recordings
 
-Returns a list of your call recordings.
+Returns a paginated list of your call recordings, with support for filtering to locate specific recordings.
 
 `GET /recordings`
 
@@ -707,7 +714,7 @@ Returns: `call_control_id` (string), `call_leg_id` (string), `call_session_id` (
 
 ## Delete a call recording
 
-Permanently deletes a call recording.
+Permanently deletes the specified call recording and returns the deleted recording resource. The media is removed and can no longer be downloaded.
 
 `DELETE /recordings/{recording_id}`
 
@@ -768,7 +775,7 @@ Returns: `app_subdomain` (string), `created_at` (string), `host` (string), `name
 
 ## Delete a SIPREC connector
 
-Deletes a stored SIPREC connector.
+Deletes the stored SIPREC connector with the specified connector name.
 
 `DELETE /siprec_connectors/{connector_name}`
 

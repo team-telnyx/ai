@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -22,6 +22,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -42,9 +44,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -147,6 +151,8 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 
 ## View a list of faxes
 
+Retrieve a paginated list of faxes sent or received on your account.
+
 `GET /faxes`
 
 ```java
@@ -156,7 +162,7 @@ import com.telnyx.sdk.models.faxes.FaxListParams;
 FaxListPage page = client.faxes().list();
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Send a fax
 
@@ -179,9 +185,11 @@ FaxCreateParams params = FaxCreateParams.builder()
 FaxCreateResponse fax = client.faxes().create(params);
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## View a fax
+
+Returns the details of a single fax, including its current status.
 
 `GET /faxes/{id}`
 
@@ -192,9 +200,11 @@ import com.telnyx.sdk.models.faxes.FaxRetrieveResponse;
 FaxRetrieveResponse fax = client.faxes().retrieve("182bd5e5-6e1a-4fe4-a799-aa6d9a6ab26e");
 ```
 
-Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `from` (string), `from_display_name` (string), `id` (uuid), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
+Returns: `client_state` (string), `connection_id` (string), `created_at` (date-time), `direction` (enum: inbound, outbound), `failure_reason` (string | null), `from` (string), `from_display_name` (string), `id` (uuid), `internal_failure_reason` (string | null), `media_name` (string), `media_url` (string), `preview_url` (string), `quality` (enum: normal, high, very_high, ultra_light, ultra_dark), `record_type` (enum: fax), `status` (enum: queued, media.processed, originated, sending, delivered, failed, initiated, receiving, media.processing, received), `store_media` (boolean), `stored_media_url` (string), `to` (string), `updated_at` (date-time), `webhook_failover_url` (string), `webhook_url` (string)
 
 ## Delete a fax
+
+Delete a fax resource from your account.
 
 `DELETE /faxes/{id}`
 
@@ -242,6 +252,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```java
 import com.telnyx.sdk.core.UnwrapWebhookParams;
@@ -324,7 +338,8 @@ All webhooks include `telnyx-timestamp` and `telnyx-signature-ed25519` headers f
 | `data.payload.to` | string | The phone number, in E.164 format, the fax will be sent to or SIP URI |
 | `data.payload.from` | string | The phone number, in E.164 format, the fax will be sent from. |
 | `data.payload.user_id` | uuid | Identifier of the user to whom the fax belongs |
-| `data.payload.failure_reason` | enum: rejected | Cause of the sending failure |
+| `data.payload.failure_reason` | string | Customer-facing cause of the fax failure. |
+| `data.payload.internal_failure_reason` | string | Internal, more granular cause of the fax failure. |
 | `data.payload.status` | enum: failed | The status of the fax. |
 | `data.payload.client_state` | string | State received from a command. |
 | `meta.attempt` | integer | The delivery attempt number. |

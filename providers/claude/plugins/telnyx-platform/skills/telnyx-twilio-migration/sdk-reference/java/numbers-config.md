@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -22,6 +22,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -42,9 +44,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -58,6 +62,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 - **Pagination:** List methods return a page. Use `.autoPager()` for automatic iteration: `for (var item : page.autoPager()) { ... }`. For manual control, use `.hasNextPage()` and `.nextPage()`.
 
 ## Bulk update phone number profiles
+
+Starts a bulk update of messaging-profile assignments for the supplied phone numbers. The response identifies the order used to monitor processing.
 
 `POST /messaging_numbers_bulk_updates` — Required: `messaging_profile_id`, `numbers`
 
@@ -83,6 +89,8 @@ Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]),
 
 ## Retrieve bulk update status
 
+Returns processing status and results for a bulk messaging-settings update order.
+
 `GET /messaging_numbers_bulk_updates/{order_id}`
 
 ```java
@@ -95,6 +103,8 @@ MessagingNumbersBulkUpdateRetrieveResponse messagingNumbersBulkUpdate = client.m
 Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
 
 ## List mobile phone numbers with messaging settings
+
+Returns mobile phone numbers with their current messaging configuration.
 
 `GET /mobile_phone_numbers/messaging`
 
@@ -109,6 +119,8 @@ Returns: `country_code` (string), `created_at` (date-time), `features` (object),
 
 ## Retrieve a mobile phone number with messaging settings
 
+Returns the messaging configuration for the specified mobile phone number.
+
 `GET /mobile_phone_numbers/{id}/messaging`
 
 ```java
@@ -122,6 +134,8 @@ Returns: `country_code` (string), `created_at` (date-time), `features` (object),
 
 ## List phone numbers
 
+Returns phone numbers associated with the account. Results support pagination, sorting, and filters for number attributes, status, source, connections, billing groups, emergency addresses, tags, and customer references.
+
 `GET /phone_numbers`
 
 ```java
@@ -131,7 +145,7 @@ import com.telnyx.sdk.models.phonenumbers.PhoneNumberListParams;
 PhoneNumberListPage page = client.phoneNumbers().list();
 ```
 
-Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_campaign_id` (string | null), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Verify ownership of phone numbers
 
@@ -153,6 +167,8 @@ Returns: `found` (array[object]), `not_found` (array[string]), `record_type` (st
 
 ## Lists the phone numbers jobs
 
+Returns background jobs that operate on phone numbers. Filter by job type, target phone numbers, job status, or creation-time customer reference, and sort by creation time. Multiple phone-number or status values use OR semantics within that filter; different filter categories use AND semantics.
+
 `GET /phone_numbers/jobs`
 
 ```java
@@ -162,7 +178,7 @@ import com.telnyx.sdk.models.phonenumbers.jobs.JobListParams;
 JobListPage page = client.phoneNumbers().jobs().list();
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `parameters` (object), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
 
 ## Delete a batch of numbers
 
@@ -185,7 +201,7 @@ JobDeleteBatchParams params = JobDeleteBatchParams.builder()
 JobDeleteBatchResponse response = client.phoneNumbers().jobs().deleteBatch(params);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `parameters` (object), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
 
 ## Update the emergency settings from a batch of numbers
 
@@ -211,7 +227,7 @@ JobUpdateEmergencySettingsBatchParams params = JobUpdateEmergencySettingsBatchPa
 JobUpdateEmergencySettingsBatchResponse response = client.phoneNumbers().jobs().updateEmergencySettingsBatch(params);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `parameters` (object), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
 
 ## Update a batch of numbers
 
@@ -232,9 +248,11 @@ JobUpdateBatchParams params = JobUpdateBatchParams.builder()
 JobUpdateBatchResponse response = client.phoneNumbers().jobs().updateBatch(params);
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `parameters` (object), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
 
 ## Retrieve a phone numbers job
+
+Returns the status and details of the phone-number background job identified by `id`.
 
 `GET /phone_numbers/jobs/{id}`
 
@@ -245,9 +263,11 @@ import com.telnyx.sdk.models.phonenumbers.jobs.JobRetrieveResponse;
 JobRetrieveResponse job = client.phoneNumbers().jobs().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
+Returns: `created_at` (string), `etc` (date-time), `failed_operations` (array[object]), `id` (uuid), `parameters` (object), `pending_operations` (array[object]), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: pending, in_progress, completed, failed, expired), `successful_operations` (array[object]), `type` (enum: update_emergency_settings, delete_phone_numbers, update_phone_numbers), `updated_at` (string)
 
 ## List phone numbers with messaging settings
+
+Returns phone numbers with their current messaging product and messaging-profile assignments.
 
 `GET /phone_numbers/messaging`
 
@@ -277,6 +297,8 @@ Returns: `activated_at` (object), `billing_group_id` (string), `call_forwarding_
 
 ## List phone numbers with voice settings
 
+Returns account phone numbers together with their voice settings. Results support pagination, sorting, and filters for number, connection name, customer reference, and voice usage payment method.
+
 `GET /phone_numbers/voice`
 
 ```java
@@ -290,6 +312,8 @@ Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (
 
 ## Retrieve a phone number
 
+Returns the detailed configuration and current state of the phone number identified by `id`.
+
 `GET /phone_numbers/{id}`
 
 ```java
@@ -299,9 +323,11 @@ import com.telnyx.sdk.models.phonenumbers.PhoneNumberRetrieveResponse;
 PhoneNumberRetrieveResponse phoneNumber = client.phoneNumbers().retrieve("1293384261075731499");
 ```
 
-Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_campaign_id` (string | null), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Update a phone number
+
+Updates the configurable settings of the specified phone number. The response contains the complete updated phone-number representation.
 
 `PATCH /phone_numbers/{id}`
 
@@ -314,9 +340,11 @@ import com.telnyx.sdk.models.phonenumbers.PhoneNumberUpdateResponse;
 PhoneNumberUpdateResponse phoneNumber = client.phoneNumbers().update("1293384261075731499");
 ```
 
-Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
+Returns: `activated_at` (object), `billing_group_id` (string | null), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string | null), `connection_name` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `deletion_lock_enabled` (boolean), `emergency_address_id` (string | null), `emergency_enabled` (boolean), `emergency_status` (enum: active, deprovisioning, disabled, provisioning, provisioning-failed), `external_pin` (string | null), `hd_voice_enabled` (boolean), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `messaging_campaign_id` (string | null), `messaging_profile_id` (string | null), `messaging_profile_name` (string | null), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline, tollfree, shortcode, longcode), `purchased_at` (string), `record_type` (string), `source_type` (object), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending, requirement-info-pending, requirement-info-under-review, requirement-info-exception, provision-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Delete a phone number
+
+Deletes the specified phone number from the account. The response contains the phone number's final deleted representation.
 
 `DELETE /phone_numbers/{id}`
 
@@ -330,6 +358,8 @@ PhoneNumberDeleteResponse phoneNumber = client.phoneNumbers().delete("1293384261
 Returns: `activated_at` (object), `billing_group_id` (string), `call_forwarding_enabled` (boolean), `call_recording_enabled` (boolean), `caller_id_name_enabled` (boolean), `cnam_listing_enabled` (boolean), `connection_id` (string), `connection_name` (string), `created_at` (string), `customer_reference` (string), `deletion_lock_enabled` (boolean), `emergency_address_id` (string), `emergency_enabled` (boolean), `external_pin` (string), `hd_voice_enabled` (boolean), `id` (string), `messaging_profile_id` (string), `messaging_profile_name` (string), `phone_number` (string), `phone_number_type` (enum: local, toll_free, mobile, national, shared_cost, landline), `purchased_at` (string), `record_type` (string), `status` (enum: purchase-pending, purchase-failed, port-pending, port-failed, active, deleted, emergency-only, ported-out, port-out-pending), `t38_fax_gateway_enabled` (boolean), `tags` (array[string]), `updated_at` (string)
 
 ## Change the bundle status for a phone number (set to being in a bundle or remove from a bundle)
+
+Adds the specified phone number to a bundle or removes it from a bundle according to the requested status change. The response contains the phone number with its updated bundle state.
 
 `PATCH /phone_numbers/{id}/actions/bundle_status_change` — Required: `bundle_id`
 
@@ -347,6 +377,8 @@ ActionChangeBundleStatusResponse response = client.phoneNumbers().actions().chan
 Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ## Enable emergency for a phone number
+
+Associates emergency-service settings with the specified phone number. The operation returns the updated phone-number configuration when completed immediately or an accepted state when processing continues asynchronously.
 
 `POST /phone_numbers/{id}/actions/enable_emergency` — Required: `emergency_enabled`, `emergency_address_id`
 
@@ -366,6 +398,8 @@ Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (
 
 ## Retrieve a phone number with messaging settings
 
+Returns the messaging product and messaging-profile assignment for the specified phone number.
+
 `GET /phone_numbers/{id}/messaging`
 
 ```java
@@ -378,6 +412,8 @@ MessagingRetrieveResponse messaging = client.phoneNumbers().messaging().retrieve
 Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_products` (array[string]), `features` (object), `health` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: long-code, toll-free, short-code, longcode, tollfree, shortcode), `updated_at` (date-time)
 
 ## Update the messaging profile and/or messaging product of a phone number
+
+Updates the messaging product, messaging profile, or both for the specified phone number.
 
 `PATCH /phone_numbers/{id}/messaging`
 
@@ -394,6 +430,8 @@ Returns: `country_code` (string), `created_at` (date-time), `eligible_messaging_
 
 ## Retrieve a phone number with voice settings
 
+Returns the specified phone number together with its current voice configuration.
+
 `GET /phone_numbers/{id}/voice`
 
 ```java
@@ -406,6 +444,8 @@ VoiceRetrieveResponse voice = client.phoneNumbers().voice().retrieve("1293384261
 Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
 
 ## Update a phone number with voice settings
+
+Updates the voice configuration for the specified phone number. The response contains the phone number with its updated voice settings.
 
 `PATCH /phone_numbers/{id}/voice`
 
@@ -427,6 +467,8 @@ Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (
 
 ## List Mobile Phone Numbers
 
+Retrieve a paginated list of mobile phone numbers on your account.
+
 `GET /v2/mobile_phone_numbers`
 
 ```java
@@ -440,6 +482,8 @@ Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_
 
 ## Retrieve a Mobile Phone Number
 
+Retrieve the details of a specific mobile phone number.
+
 `GET /v2/mobile_phone_numbers/{id}`
 
 ```java
@@ -452,6 +496,8 @@ MobilePhoneNumberRetrieveResponse mobilePhoneNumber = client.mobilePhoneNumbers(
 Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
 
 ## Update a Mobile Phone Number
+
+Update the settings of a specific mobile phone number.
 
 `PATCH /v2/mobile_phone_numbers/{id}`
 

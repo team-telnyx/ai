@@ -29,6 +29,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -46,14 +47,18 @@ try:
     result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
-    # 429: rate limited — wait and retry with exponential backoff
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -142,7 +147,7 @@ Start real-time transcription. Transcription will stop on call hang-up, or can b
 
 `POST /calls/{call_control_id}/actions/transcription_start`
 
-Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
+Optional: `client_state` (string), `command_id` (string), `transcription_engine` (enum: Google, Telnyx, Deepgram, Azure, xAI, AssemblyAI, Speechmatics, Soniox, Parakeet, Humain, Reson8, Cohere, A, B), `transcription_engine_config` (object), `transcription_tracks` (string)
 
 ```python
 response = client.calls.actions.start_transcription(
@@ -155,7 +160,7 @@ Returns: `result` (string)
 
 ## Transcription stop
 
-Stop real-time transcription.
+Stops real-time transcription on the call. Transcription webhooks cease once the command takes effect; the call itself is unaffected.
 
 `POST /calls/{call_control_id}/actions/transcription_stop`
 
@@ -178,6 +183,10 @@ Returns: `result` (string)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```python
 # In your webhook handler (e.g., Flask — use raw body, not parsed JSON):

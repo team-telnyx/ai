@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -35,6 +35,8 @@ implementation("com.telnyx.sdk:telnyx:6.89.0")
 import com.telnyx.sdk.client.TelnyxClient;
 import com.telnyx.sdk.client.okhttp.TelnyxOkHttpClient;
 
+// fromEnv() reads TELNYX_API_KEY and TELNYX_PUBLIC_KEY (the public key is required for
+// client.webhooks().unwrap() — webhook verification)
 TelnyxClient client = TelnyxOkHttpClient.fromEnv();
 ```
 
@@ -55,9 +57,11 @@ try {
     if (e.statusCode() == 422) {
         System.err.println("Validation error — check required fields and formats");
     } else if (e.statusCode() == 429) {
-        // Rate limited — wait and retry with exponential backoff
+        // Rate limited — wait, then retry the request (bounded exponential backoff)
         Thread.sleep(1000);
+        // ...retry the call here (give up after a few attempts)
     }
+    throw e; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -285,7 +289,7 @@ Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time)
 
 ## List conference resources
 
-Lists conference resources.
+Returns a paginated list of conference resources for the account, with support for filtering by friendly name, status, and creation or update dates.
 
 `GET /texml/Accounts/{account_sid}/Conferences`
 
@@ -300,7 +304,7 @@ Returns: `conferences` (array[object]), `end` (integer), `first_page_uri` (strin
 
 ## Fetch a conference resource
 
-Returns a conference resource.
+Returns a single conference resource for the account by its ConferenceSid.
 
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
 
@@ -319,7 +323,7 @@ Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_confer
 
 ## Update a conference resource
 
-Updates a conference resource.
+Updates the specified conference resource, for example to modify its status, and returns the updated conference.
 
 `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
 
@@ -338,7 +342,7 @@ Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_confer
 
 ## List conference participants
 
-Lists conference participants
+Returns the list of participants currently in the specified conference.
 
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
 
@@ -357,7 +361,7 @@ Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `
 
 ## Dial a new conference participant
 
-Dials a new conference participant
+Dials a new participant into the specified conference and returns the created participant resource.
 
 `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
 
@@ -376,7 +380,7 @@ Returns: `account_sid` (string), `call_sid` (string), `coaching` (boolean), `coa
 
 ## Get conference participant resource
 
-Gets conference participant resource
+Returns a single conference participant resource by call SID or participant label.
 
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
 
@@ -396,7 +400,7 @@ Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `c
 
 ## Update a conference participant
 
-Updates a conference participant
+Updates the specified conference participant, for example muting or holding them, and returns the updated participant.
 
 `POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
 
@@ -416,7 +420,7 @@ Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `c
 
 ## Delete a conference participant
 
-Deletes a conference participant
+Removes the specified participant from the conference, ending their leg of the call.
 
 `DELETE /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
 
@@ -433,7 +437,7 @@ client.texml().accounts().conferences().participants().delete(params);
 
 ## List conference recordings
 
-Lists conference recordings
+Returns the list of recordings made for the specified conference.
 
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
 
@@ -471,7 +475,7 @@ Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `pag
 
 ## List queue resources
 
-Lists queue resources.
+Returns a paginated list of queue resources for the account, with support for filtering by creation or update dates.
 
 `GET /texml/Accounts/{account_sid}/Queues`
 
@@ -486,7 +490,7 @@ Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `
 
 ## Create a new queue
 
-Creates a new queue resource.
+Creates a new queue resource for the account with the provided settings and returns it.
 
 `POST /texml/Accounts/{account_sid}/Queues`
 
@@ -501,7 +505,7 @@ Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (
 
 ## Fetch a queue resource
 
-Returns a queue resource.
+Returns a single queue resource for the account by its QueueSid.
 
 `GET /texml/Accounts/{account_sid}/Queues/{queue_sid}`
 
@@ -520,7 +524,7 @@ Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (
 
 ## Update a queue resource
 
-Updates a queue resource.
+Updates the specified queue resource's settings and returns the updated queue.
 
 `POST /texml/Accounts/{account_sid}/Queues/{queue_sid}`
 
@@ -539,7 +543,7 @@ Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (
 
 ## Delete a queue resource
 
-Delete a queue resource.
+Permanently deletes the specified queue resource from the account.
 
 `DELETE /texml/Accounts/{account_sid}/Queues/{queue_sid}`
 
@@ -655,11 +659,11 @@ client.texml().accounts().transcriptions().json().deleteRecordingTranscriptionSi
 
 ## Initiate an outbound AI call
 
-Initiate an outbound AI call with warm-up support. Validates parameters, builds an internal TeXML with an AI Assistant configuration, encodes instructions into client state, and calls the dial API. The Twiml, Texml, and Url parameters are not allowed and will result in a 422 error.
+Initiate an outbound AI call with warm-up support: Telnyx attempts to warm up the assistant identified by `AIAssistantId` before placing the call and starts it automatically when the called party answers.
 
 `POST /texml/ai_calls/{connection_id}` — Required: `From`, `To`, `AIAssistantId`
 
-Optional: `AIAssistantDynamicVariables` (object), `AIAssistantVersion` (string), `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `ConversationCallback` (string), `ConversationCallbackMethod` (enum: GET, POST), `ConversationCallbacks` (array[string]), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular, PremiumCallScreening), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionPromptEndTimeout` (integer), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `Passports` (string), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (string), `StatusCallbackMethod` (enum: GET, POST), `StatusCallbacks` (array[string]), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim)
+Optional: `AIAssistantDynamicVariables` (object), `AIAssistantVersion` (string), `AsyncAmd` (boolean), `AsyncAmdStatusCallback` (string), `AsyncAmdStatusCallbackMethod` (enum: GET, POST), `CallerId` (string), `ConversationCallback` (string), `ConversationCallbackMethod` (enum: GET, POST), `ConversationCallbacks` (array[string]), `CustomHeaders` (array[object]), `DetectionMode` (enum: Premium, Regular, PremiumCallScreening), `MachineDetection` (enum: Enable, Disable, DetectMessageEnd), `MachineDetectionBeepMaxFrequency` (int32), `MachineDetectionBeepMinFrequency` (int32), `MachineDetectionBeepMinToneDuration` (int32), `MachineDetectionBeepProfile` (enum: both, freq_only), `MachineDetectionBeepSpectralConfirmation` (boolean), `MachineDetectionBeepSpectralMinPurity` (number), `MachineDetectionBeepSpectralRejectFaxCng` (boolean), `MachineDetectionBeepSpectralWindow` (int32), `MachineDetectionPromptEndTimeout` (integer), `MachineDetectionSilenceTimeout` (integer), `MachineDetectionSpeechEndThreshold` (integer), `MachineDetectionSpeechThreshold` (integer), `MachineDetectionTimeout` (integer), `Passports` (string), `PreferredCodecs` (string), `Record` (boolean), `RecordingChannels` (enum: mono, dual), `RecordingStatusCallback` (string), `RecordingStatusCallbackEvent` (string), `RecordingStatusCallbackMethod` (enum: GET, POST), `RecordingTimeout` (integer), `RecordingTrack` (enum: inbound, outbound, both), `SendRecordingUrl` (boolean), `SipAuthPassword` (string), `SipAuthUsername` (string), `SipRegion` (enum: US, Europe, Canada, Australia, Middle East), `StatusCallback` (string), `StatusCallbackEvent` (string), `StatusCallbackMethod` (enum: GET, POST), `StatusCallbacks` (array[string]), `TimeLimit` (integer), `Timeout` (integer), `Trim` (enum: trim-silence, do-not-trim)
 
 ```java
 import com.telnyx.sdk.models.texml.TexmlInitiateAiCallParams;
@@ -675,6 +679,26 @@ TexmlInitiateAiCallResponse response = client.texml().initiateAiCall(params);
 ```
 
 Returns: `call_sid` (string), `from` (string), `status` (string), `to` (string)
+
+## Create a connection-scoped TeXML call
+
+Initiate an outbound TeXML call using a TeXML application connection ID, not an account SID. Request parameter names are case-sensitive. From and To are required; Texml supplies inline instructions and Url overrides the application XML request URL. When neither is supplied, the application configuration supplies the instructions. The response is a flat call object without a data wrapper.
+
+`POST /texml/calls/{connection_id}` — Required: `From`, `To`
+
+Optional: `Method` (enum: GET, POST), `Texml` (string), `Url` (string)
+
+```java
+import com.telnyx.sdk.models.texml.calls.CallCreateParams;
+
+CallCreateParams params = CallCreateParams.builder()
+    .From("+13120001234")
+    .To("+13121230000")
+    .build();
+var response = client.texml().calls().create("connection_id", params);
+```
+
+Returns: `call_sid` (string), `from` (string), `status` (enum: queued), `to` (string)
 
 ## Create a TeXML secret
 
@@ -712,7 +736,7 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 
 ## Creates a TeXML Application
 
-Creates a TeXML Application.
+Creates a TeXML application, which defines the voice URLs and settings used to serve TeXML instructions for calls, and returns the created application.
 
 `POST /texml_applications` — Required: `friendly_name`, `voice_url`
 
@@ -770,7 +794,7 @@ Returns: `active` (boolean), `anchorsite_override` (enum: Latency, Chicago, IL, 
 
 ## Deletes a TeXML Application
 
-Deletes a TeXML Application.
+Permanently deletes the specified TeXML application from your account.
 
 `DELETE /texml_applications/{id}`
 

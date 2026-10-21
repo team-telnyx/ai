@@ -27,6 +27,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -44,15 +45,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -127,7 +130,7 @@ Returns: `api_key` (string), `api_token` (string), `api_user` (string), `balance
 
 ## Update a managed account
 
-Update a single managed account.
+Updates the specified managed account's attributes and returns the updated account.
 
 `PATCH /managed_accounts/{id}`
 
@@ -216,7 +219,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Get organization user
 
-Returns a user in your organization.
+Returns the details of a user in your organization, optionally including the groups the user belongs to.
 
 `GET /organizations/users/{id}`
 
@@ -230,7 +233,7 @@ Returns: `created_at` (string), `email` (email), `groups` (array[object]), `id` 
 
 ## Delete organization user
 
-Deletes a user in your organization.
+Removes the specified user from your organization and returns the result of the removal.
 
 `POST /organizations/users/{id}/actions/remove`
 

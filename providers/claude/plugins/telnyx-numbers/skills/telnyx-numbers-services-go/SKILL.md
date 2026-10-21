@@ -34,6 +34,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -55,7 +56,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -63,6 +64,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -130,7 +132,7 @@ Returns: `administrative_area` (string), `country_code` (enum: US, CA, PR), `cre
 
 ## Create a dynamic emergency address.
 
-Creates a dynamic emergency address.
+Creates a dynamic emergency address, the validated physical location used when provisioning dynamic emergency endpoints.
 
 `POST /dynamic_emergency_addresses` — Required: `house_number`, `street_name`, `locality`, `administrative_area`, `postal_code`, `country_code`
 
@@ -205,7 +207,7 @@ Returns: `callback_number` (string), `caller_name` (string), `created_at` (strin
 
 ## Create a dynamic emergency endpoint.
 
-Creates a dynamic emergency endpoints.
+Creates a dynamic emergency endpoint, associating a callback number and location with a device for emergency calling.
 
 `POST /dynamic_emergency_endpoints` — Required: `dynamic_emergency_address_id`, `callback_number`, `caller_name`
 
@@ -339,15 +341,15 @@ Returns the voicemail settings for a phone number
 	fmt.Printf("%+v\n", voicemail.Data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ## Create voicemail
 
-Create voicemail settings for a phone number
+Create voicemail settings for a phone number. You can also configure a custom greeting by setting the `greeting` object: use `mode` `custom_greeting` together with a `media_name` that points to an audio file uploaded through the Media Storage API, or `mode` `default` to use the standard system greeting.
 
 `POST /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+Optional: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ```go
 	voicemail, err := client.PhoneNumbers.Voicemail.New(
@@ -363,15 +365,15 @@ Optional: `enabled` (boolean), `pin` (string)
 	fmt.Printf("%+v\n", voicemail.Data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ## Update voicemail
 
-Update voicemail settings for a phone number
+Update voicemail settings for a phone number. You can also configure a custom greeting by setting the `greeting` object: use `mode` `custom_greeting` together with a `media_name` that points to an audio file uploaded through the Media Storage API, or `mode` `default` to use the standard system greeting.
 
 `PATCH /phone_numbers/{phone_number_id}/voicemail`
 
-Optional: `enabled` (boolean), `pin` (string)
+Optional: `enabled` (boolean), `greeting` (object), `pin` (string)
 
 ```go
 	voicemail, err := client.PhoneNumbers.Voicemail.Update(
@@ -387,4 +389,4 @@ Optional: `enabled` (boolean), `pin` (string)
 	fmt.Printf("%+v\n", voicemail.Data)
 ```
 
-Returns: `enabled` (boolean), `pin` (string)
+Returns: `enabled` (boolean), `greeting` (object), `pin` (string)

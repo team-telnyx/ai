@@ -29,6 +29,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -46,14 +47,18 @@ try:
     result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
-    # 429: rate limited — wait and retry with exponential backoff
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -66,6 +71,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List mobile push credentials
 
+Returns a paginated list of the mobile push credentials on your account, with support for filtering.
+
 `GET /mobile_push_credentials`
 
 ```python
@@ -77,6 +84,8 @@ print(page.id)
 Returns: `alias` (string), `certificate` (string), `created_at` (date-time), `id` (string), `private_key` (string), `project_account_json_file` (object), `record_type` (string), `type` (string), `updated_at` (date-time)
 
 ## Creates a new mobile push credential
+
+Creates a new mobile push credential for delivering push notifications to iOS or Android apps, and returns the created credential.
 
 `POST /mobile_push_credentials` — Required: `type`, `certificate`, `private_key`, `alias`
 
@@ -123,7 +132,7 @@ client.mobile_push_credentials.delete(
 
 ## List all credentials
 
-List all On-demand Credentials.
+Returns a paginated list of the on-demand telephony credentials on your account, with support for filtering.
 
 `GET /telephony_credentials`
 
@@ -137,7 +146,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Create a credential
 
-Create a credential.
+Creates a new on-demand telephony credential for the specified connection. The credential can then be used to generate access tokens for SIP or WebRTC clients.
 
 `POST /telephony_credentials` — Required: `connection_id`
 
@@ -159,8 +168,7 @@ Get the details of an existing On-demand Credential.
 `GET /telephony_credentials/{id}`
 
 ```python
-telephony_credential = client.telephony_credentials.retrieve(
-    "id",
+telephony_credential = client.telephony_credentials.retrieve("550e8400-e29b-41d4-a716-446655440000",
 )
 print(telephony_credential.data)
 ```
@@ -169,7 +177,7 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Update a credential
 
-Update an existing credential.
+Updates the specified telephony credential and returns the updated credential.
 
 `PATCH /telephony_credentials/{id}`
 
@@ -186,13 +194,12 @@ Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id`
 
 ## Delete a credential
 
-Delete an existing credential.
+Permanently deletes the specified telephony credential, revoking any access it provided.
 
 `DELETE /telephony_credentials/{id}`
 
 ```python
-telephony_credential = client.telephony_credentials.delete(
-    "id",
+telephony_credential = client.telephony_credentials.delete("550e8400-e29b-41d4-a716-446655440000",
 )
 print(telephony_credential.data)
 ```

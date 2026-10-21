@@ -34,6 +34,7 @@ import (
 
 client := telnyx.NewClient(
   option.WithAPIKey(os.Getenv("TELNYX_API_KEY")),
+  option.WithPublicKey(os.Getenv("TELNYX_PUBLIC_KEY")), // Required for client.Webhooks.Unwrap (webhook verification)
 )
 ```
 
@@ -55,7 +56,7 @@ if err != nil {
     case 422:
       fmt.Println("Validation error — check required fields and formats")
     case 429:
-      // Rate limited — wait and retry with exponential backoff
+      // Rate limited — wait, then retry the request (bounded exponential backoff)
       fmt.Println("Rate limited, retrying...")
     default:
       fmt.Printf("API error %d: %s\n", apiErr.StatusCode, apiErr.Error())
@@ -63,6 +64,7 @@ if err != nil {
   } else {
     fmt.Println("Network error — check connectivity and retry")
   }
+  return err // Propagate: a failed request must never look like success to the caller
 }
 ```
 
@@ -91,6 +93,8 @@ Retrieve a list of audit log entries. Audit logs are a best-effort, eventually c
 Returns: `alternate_resource_id` (string | null), `change_made_by` (enum: telnyx, account_manager, account_owner, organization_member), `change_type` (string), `changes` (array | null), `created_at` (date-time), `id` (uuid), `organization_id` (uuid), `record_type` (string), `resource_id` (string), `user_id` (uuid)
 
 ## Get user balance details
+
+Retrieve the current balance, available credit, and credit limit for your account.
 
 `GET /balance`
 
@@ -159,7 +163,7 @@ Returns: `carrier` (string), `carrier_fee` (string), `cld` (string), `cli` (stri
 
 ## List invoices
 
-Retrieve a paginated list of invoices.
+Returns a paginated list of your invoices, with support for sorting.
 
 `GET /invoices`
 
@@ -229,7 +233,7 @@ Returns: `enabled` (boolean), `id` (string), `invoice_enabled` (boolean), `prefe
 
 ## List User Tags
 
-List all user tags.
+Returns the user tags defined on your account, with support for filtering. Tags help organize resources such as phone numbers.
 
 `GET /user_tags`
 
@@ -244,6 +248,8 @@ List all user tags.
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
 
 ## Create a stored payment transaction
+
+Create a transaction that charges a stored payment method on the account.
 
 `POST /v2/payment/stored_payment_transactions` — Required: `amount`
 

@@ -15,6 +15,7 @@ require "telnyx"
 
 client = Telnyx::Client.new(
   api_key: ENV["TELNYX_API_KEY"], # This is the default and can be omitted
+  public_key: ENV["TELNYX_PUBLIC_KEY"], # Required for client.webhooks.unwrap (webhook verification)
 )
 ```
 
@@ -30,14 +31,18 @@ begin
   result = client.messages.send_(to: "+13125550001", from: "+13125550002", text: "Hello")
 rescue Telnyx::Errors::APIConnectionError
   puts "Network error — check connectivity and retry"
+  raise
 rescue Telnyx::Errors::RateLimitError
-  # 429: rate limited — wait and retry with exponential backoff
+  # 429: rate limited — wait, then retry the request (bounded exponential backoff)
   sleep(1) # Check Retry-After header for actual delay
+  # ...retry the call here (give up after a few attempts); otherwise re-raise:
+  raise
 rescue Telnyx::Errors::APIStatusError => e
   puts "API error #{e.status}: #{e.message}"
   if e.status == 422
     puts "Validation error — check required fields and formats"
   end
+  raise # A failed request must never look like success to the caller
 end
 ```
 
@@ -51,14 +56,14 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Enqueue call
 
-Put the call in a queue.
+Places the call into a queue, where it waits until it is removed or bridged to another leg. Queue behavior is configured through the request body.
 
 `POST /calls/{call_control_id}/actions/enqueue` — Required: `queue_name`
 
 Optional: `client_state` (string), `command_id` (string), `keep_after_hangup` (boolean), `max_size` (integer), `max_wait_time_secs` (integer)
 
 ```ruby
-response = client.calls.actions.enqueue("call_control_id", queue_name: "support")
+response = client.calls.actions.enqueue("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", queue_name: "support")
 
 puts(response)
 ```
@@ -67,7 +72,7 @@ Returns: `result` (string)
 
 ## Remove call from a queue
 
-Removes the call from a queue.
+Removes the call from the queue it is currently waiting in. The call remains active and can be directed with further call commands.
 
 `POST /calls/{call_control_id}/actions/leave_queue`
 
@@ -116,7 +121,7 @@ Returns: `connection_id` (string), `created_at` (string), `end_reason` (enum: al
 
 ## List conference participants
 
-Lists conference participants
+Returns a paginated list of participants in the specified conference, with support for filtering.
 
 `GET /conferences/{conference_id}/participants`
 
@@ -130,7 +135,7 @@ Returns: `call_control_id` (string), `call_leg_id` (string), `conference` (objec
 
 ## Retrieve a conference
 
-Retrieve an existing conference
+Returns the details of an existing conference, including its current status.
 
 `GET /conferences/{id}`
 
@@ -202,8 +207,7 @@ Join an existing call leg to a conference. Issue the Join Conference command wit
 Optional: `beep_enabled` (enum: always, never, on_enter, on_exit), `client_state` (string), `command_id` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `hold_audio_url` (string), `hold_media_name` (string), `mute` (boolean), `region` (enum: Australia, Europe, Middle East, US), `soft_end_conference_on_exit` (boolean), `start_conference_on_enter` (boolean), `supervisor_role` (enum: barge, monitor, none, whisper), `whisper_call_control_ids` (array[string])
 
 ```ruby
-response = client.conferences.actions.join(
-  "id",
+response = client.conferences.actions.join("550e8400-e29b-41d4-a716-446655440000",
   call_control_id: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg"
 )
 
@@ -223,7 +227,7 @@ Removes a call leg from a conference and moves it back to parked state. **Expect
 Optional: `beep_enabled` (enum: always, never, on_enter, on_exit), `command_id` (string), `region` (enum: Australia, Europe, Middle East, US)
 
 ```ruby
-response = client.conferences.actions.leave("id", call_control_id: "c46e06d7-b78f-4b13-96b6-c576af9640ff")
+response = client.conferences.actions.leave("550e8400-e29b-41d4-a716-446655440000", call_control_id: "c46e06d7-b78f-4b13-96b6-c576af9640ff")
 
 puts(response)
 ```
@@ -264,7 +268,7 @@ Returns: `result` (string)
 
 ## Conference recording pause
 
-Pause conference recording.
+Pauses the active recording of the specified conference. Resume it later with the record_resume action.
 
 `POST /conferences/{id}/actions/record_pause`
 
@@ -280,7 +284,7 @@ Returns: `result` (string)
 
 ## Conference recording resume
 
-Resume conference recording.
+Resumes a previously paused recording of the specified conference, continuing capture from the point it was paused.
 
 `POST /conferences/{id}/actions/record_resume`
 
@@ -305,7 +309,7 @@ Start recording the conference. Recording will stop on conference end, or via th
 Optional: `channels` (enum: single, dual), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum: Australia, Europe, Middle East, US), `trim` (enum: trim-silence)
 
 ```ruby
-response = client.conferences.actions.record_start("id", format_: :wav)
+response = client.conferences.actions.record_start("550e8400-e29b-41d4-a716-446655440000", format_: :wav)
 
 puts(response)
 ```
@@ -355,7 +359,7 @@ Convert text to speech and play it to all or some participants.
 Optional: `call_control_ids` (array[string]), `command_id` (string), `language` (enum: arb, cmn-CN, cy-GB, da-DK, de-DE, en-AU, en-GB, en-GB-WLS, en-IN, en-US, es-ES, es-MX, es-US, fr-CA, fr-FR, hi-IN, is-IS, it-IT, ja-JP, ko-KR, nb-NO, nl-NL, pl-PL, pt-BR, pt-PT, ro-RO, ru-RU, sv-SE, tr-TR), `payload_type` (enum: text, ssml), `region` (enum: Australia, Europe, Middle East, US), `voice_settings` (object)
 
 ```ruby
-response = client.conferences.actions.speak("id", payload: "Say this to participants", voice: "female")
+response = client.conferences.actions.speak("550e8400-e29b-41d4-a716-446655440000", payload: "Say this to participants", voice: "female")
 
 puts(response)
 ```
@@ -387,8 +391,7 @@ Unhold a list of participants in a conference call
 Optional: `region` (enum: Australia, Europe, Middle East, US)
 
 ```ruby
-response = client.conferences.actions.unhold(
-  "id",
+response = client.conferences.actions.unhold("550e8400-e29b-41d4-a716-446655440000",
   call_control_ids: ["v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg"]
 )
 
@@ -422,8 +425,7 @@ Update conference participant supervisor_role
 Optional: `command_id` (string), `region` (enum: Australia, Europe, Middle East, US), `whisper_call_control_ids` (array[string])
 
 ```ruby
-action = client.conferences.actions.update(
-  "id",
+action = client.conferences.actions.update("550e8400-e29b-41d4-a716-446655440000",
   call_control_id: "v3:MdI91X4lWFEs7IgbBEOT9M4AigoY08M0WWZFISt1Yw2axZ_IiE4pqg",
   supervisor_role: :whisper
 )
@@ -479,7 +481,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Create a queue
 
-Create a new call queue.
+Creates a new call queue with the provided configuration and returns the created queue.
 
 `POST /queues` — Required: `queue_name`
 
@@ -495,7 +497,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Retrieve a call queue
 
-Retrieve an existing call queue
+Returns the details of an existing call queue, including its current configuration.
 
 `GET /queues/{queue_name}`
 
@@ -523,7 +525,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Delete a queue
 
-Delete an existing call queue.
+Permanently deletes the specified call queue from your account.
 
 `DELETE /queues/{queue_name}`
 
@@ -554,7 +556,7 @@ Retrieve an existing call from an existing queue
 `GET /queues/{queue_name}/calls/{call_control_id}`
 
 ```ruby
-call = client.queues.calls.retrieve("call_control_id", queue_name: "my-queue")
+call = client.queues.calls.retrieve("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", queue_name: "my-queue")
 
 puts(call)
 ```
@@ -570,7 +572,7 @@ Update queued call's keep_after_hangup flag
 Optional: `keep_after_hangup` (boolean)
 
 ```ruby
-result = client.queues.calls.update("call_control_id", queue_name: "my-queue")
+result = client.queues.calls.update("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", queue_name: "my-queue")
 
 puts(result)
 ```
@@ -582,7 +584,7 @@ Removes an inactive call from a queue. If the call is no longer active, use this
 `DELETE /queues/{queue_name}/calls/{call_control_id}`
 
 ```ruby
-result = client.queues.calls.remove("call_control_id", queue_name: "my-queue")
+result = client.queues.calls.remove("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ", queue_name: "my-queue")
 
 puts(result)
 ```
@@ -595,6 +597,10 @@ puts(result)
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```ruby
 # In your webhook handler (e.g., Sinatra — use raw body):

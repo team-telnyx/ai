@@ -15,6 +15,7 @@ import Telnyx from 'telnyx';
 
 const client = new Telnyx({
   apiKey: process.env['TELNYX_API_KEY'], // This is the default and can be omitted
+  publicKey: process.env['TELNYX_PUBLIC_KEY'], // Required for client.webhooks.unwrap() (webhook verification)
 });
 ```
 
@@ -32,15 +33,17 @@ try {
   if (err instanceof Telnyx.APIConnectionError) {
     console.error('Network error — check connectivity and retry');
   } else if (err instanceof Telnyx.RateLimitError) {
-    // 429: rate limited — wait and retry with exponential backoff
+    // 429: rate limited — wait, then retry the request (bounded exponential backoff)
     const retryAfter = err.headers?.['retry-after'] || 1;
     await new Promise(r => setTimeout(r, retryAfter * 1000));
+    // ...retry the call here (give up after a few attempts)
   } else if (err instanceof Telnyx.APIError) {
     console.error(`API error ${err.status}: ${err.message}`);
     if (err.status === 422) {
       console.error('Validation error — check required fields and formats');
     }
   }
+  throw err; // Re-throw: a failed request must never look like success to the caller
 }
 ```
 
@@ -69,6 +72,8 @@ Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `f
 
 ## List verifications by phone number
 
+Returns a paginated list of verifications associated with the specified phone number.
+
 `GET /verifications/by_phone_number/{phone_number}`
 
 ```javascript
@@ -80,6 +85,8 @@ console.log(byPhoneNumbers.data);
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by phone number
+
+Submits a verification code for the specified phone number and Verify profile. The response indicates whether the code was accepted or rejected.
 
 `POST /verifications/by_phone_number/{phone_number}/actions/verify` — Required: `code`, `verify_profile_id`
 
@@ -95,6 +102,8 @@ console.log(verifyVerificationCodeResponse.data);
 Returns: `phone_number` (string), `response_code` (enum: accepted, rejected)
 
 ## Trigger Call verification
+
+Starts a verification for the specified phone number and delivers its code in a voice call using the selected Verify profile. Returns the pending verification record.
 
 `POST /verifications/call` — Required: `phone_number`, `verify_profile_id`
 
@@ -113,6 +122,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Trigger Flash call verification
 
+Starts a verification for the specified phone number and places a brief call with the code embedded in the caller ID. Returns the pending verification record.
+
 `POST /verifications/flashcall` — Required: `phone_number`, `verify_profile_id`
 
 Optional: `timeout_secs` (integer)
@@ -129,6 +140,8 @@ console.log(createVerificationResponse.data);
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Trigger SMS verification
+
+Starts a verification for the specified phone number and sends its code by SMS using the selected Verify profile. Returns the pending verification record.
 
 `POST /verifications/sms` — Required: `phone_number`, `verify_profile_id`
 
@@ -147,6 +160,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Trigger WhatsApp verification
 
+Starts a verification for the specified phone number and sends its code over WhatsApp using the selected Verify profile. Returns the pending verification record.
+
 `POST /verifications/whatsapp` — Required: `phone_number`, `verify_profile_id`
 
 Optional: `custom_code` (string | null), `timeout_secs` (integer)
@@ -164,6 +179,8 @@ Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `pho
 
 ## Retrieve verification
 
+Returns the verification identified by ID, including its channel, phone number, Verify profile, timeout, and current status.
+
 `GET /verifications/{verification_id}`
 
 ```javascript
@@ -175,6 +192,8 @@ console.log(verification.data);
 Returns: `created_at` (string), `custom_code` (string | null), `id` (uuid), `phone_number` (string), `record_type` (enum: verification), `status` (enum: pending, accepted, invalid, expired, error), `timeout_secs` (integer), `type` (enum: sms, call, flashcall, whatsapp), `updated_at` (string), `verify_profile_id` (uuid)
 
 ## Verify verification code by ID
+
+Checks the supplied code, or the supplied status for a custom-code verification, against the verification identified by ID. The response indicates whether the verification was accepted or rejected.
 
 `POST /verifications/{verification_id}/actions/verify`
 
@@ -270,7 +289,7 @@ Returns: `id` (uuid), `text` (string)
 
 ## Retrieve Verify profile
 
-Gets a single Verify profile.
+Returns the details of a single Verify profile by its ID, including its verification channel configuration.
 
 `GET /verify_profiles/{verify_profile_id}`
 
@@ -285,6 +304,8 @@ console.log(verifyProfileData.data);
 Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Update Verify profile
+
+Updates the specified Verify profile's name, webhook destinations, language, daily spend limits, or channel-specific settings. Returns the updated profile.
 
 `PATCH /verify_profiles/{verify_profile_id}`
 
@@ -301,6 +322,8 @@ console.log(verifyProfileData.data);
 Returns: `call` (object), `created_at` (string), `daily_spend_limit` (number), `daily_spend_limit_enabled` (boolean), `flashcall` (object), `id` (uuid), `language` (string), `name` (string), `record_type` (enum: verification_profile), `sms` (object), `updated_at` (string), `webhook_failover_url` (string), `webhook_url` (string), `whatsapp` (object)
 
 ## Delete Verify profile
+
+Deletes the specified Verify profile and returns the deleted profile record.
 
 `DELETE /verify_profiles/{verify_profile_id}`
 

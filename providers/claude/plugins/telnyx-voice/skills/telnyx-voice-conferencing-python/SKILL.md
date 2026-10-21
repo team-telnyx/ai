@@ -29,6 +29,7 @@ from telnyx import Telnyx
 
 client = Telnyx(
     api_key=os.environ.get("TELNYX_API_KEY"),  # This is the default and can be omitted
+    public_key=os.environ.get("TELNYX_PUBLIC_KEY"),  # Required for client.webhooks.unwrap() (webhook verification)
 )
 ```
 
@@ -46,14 +47,18 @@ try:
     result = client.messages.send(to="+13125550001", from_="+13125550002", text="Hello")
 except telnyx.APIConnectionError:
     print("Network error — check connectivity and retry")
+    raise
 except telnyx.RateLimitError:
-    # 429: rate limited — wait and retry with exponential backoff
+    # 429: rate limited — wait, then retry the request (bounded exponential backoff)
     import time
     time.sleep(1)  # Check Retry-After header for actual delay
+    # ...retry the call here (give up after a few attempts); otherwise re-raise:
+    raise
 except telnyx.APIStatusError as e:
     print(f"API error {e.status_code}: {e.message}")
     if e.status_code == 422:
         print("Validation error — check required fields and formats")
+    raise  # A failed request must never look like success to the caller
 ```
 
 Common error codes: `401` invalid API key, `403` insufficient permissions,
@@ -66,7 +71,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Enqueue call
 
-Put the call in a queue.
+Places the call into a queue, where it waits until it is removed or bridged to another leg. Queue behavior is configured through the request body.
 
 `POST /calls/{call_control_id}/actions/enqueue` — Required: `queue_name`
 
@@ -84,7 +89,7 @@ Returns: `result` (string)
 
 ## Remove call from a queue
 
-Removes the call from a queue.
+Removes the call from the queue it is currently waiting in. The call remains active and can be directed with further call commands.
 
 `POST /calls/{call_control_id}/actions/leave_queue`
 
@@ -133,7 +138,7 @@ Returns: `connection_id` (string), `created_at` (string), `end_reason` (enum: al
 
 ## List conference participants
 
-Lists conference participants
+Returns a paginated list of participants in the specified conference, with support for filtering.
 
 `GET /conferences/{conference_id}/participants`
 
@@ -149,7 +154,7 @@ Returns: `call_control_id` (string), `call_leg_id` (string), `conference` (objec
 
 ## Retrieve a conference
 
-Retrieve an existing conference
+Returns the details of an existing conference, including its current status.
 
 `GET /conferences/{id}`
 
@@ -288,7 +293,7 @@ Returns: `result` (string)
 
 ## Conference recording pause
 
-Pause conference recording.
+Pauses the active recording of the specified conference. Resume it later with the record_resume action.
 
 `POST /conferences/{id}/actions/record_pause`
 
@@ -305,7 +310,7 @@ Returns: `result` (string)
 
 ## Conference recording resume
 
-Resume conference recording.
+Resumes a previously paused recording of the specified conference, continuing capture from the point it was paused.
 
 `POST /conferences/{id}/actions/record_resume`
 
@@ -517,7 +522,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Create a queue
 
-Create a new call queue.
+Creates a new call queue with the provided configuration and returns the created queue.
 
 `POST /queues` — Required: `queue_name`
 
@@ -534,7 +539,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Retrieve a call queue
 
-Retrieve an existing call queue
+Returns the details of an existing call queue, including its current configuration.
 
 `GET /queues/{queue_name}`
 
@@ -565,7 +570,7 @@ Returns: `average_wait_time_secs` (integer), `created_at` (string), `current_siz
 
 ## Delete a queue
 
-Delete an existing call queue.
+Permanently deletes the specified call queue from your account.
 
 `DELETE /queues/{queue_name}`
 
@@ -643,6 +648,10 @@ client.queues.calls.remove(
 
 Telnyx signs webhooks with Ed25519. Each request includes `telnyx-signature-ed25519`
 and `telnyx-timestamp` headers. Always verify signatures in production:
+
+Verification needs your account's **public key** (Mission Control Portal → API Keys → Public Key).
+The SDK reads it from `TELNYX_PUBLIC_KEY` (the `## Setup` block above passes it explicitly);
+without it every valid webhook fails verification and the handler below returns 400.
 
 ```python
 # In your webhook handler (e.g., Flask — use raw body, not parsed JSON):
