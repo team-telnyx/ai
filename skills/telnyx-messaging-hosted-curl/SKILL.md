@@ -65,6 +65,8 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## Send an RCS message
 
+Queues an outbound RCS message through the selected RCS agent. Check recipient capabilities before sending features that require RCS support.
+
 `POST /messages/rcs` — Required: `agent_id`, `to`, `messaging_profile_id`, `agent_message`
 
 Optional: `mms_fallback` (object), `sms_fallback` (object), `type` (enum: RCS), `webhook_url` (url)
@@ -97,7 +99,21 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messa
 
 Returns: `url` (string)
 
+## Generate RCS deeplink
+
+Generate a deeplink URL that can be used to start an RCS conversation with a specific agent.
+
+`GET /messages/rcs_deeplinks/{agent_id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messages/rcs_deeplinks/{agent_id}?phone_number=%2B18445550001&body=hello%20world"
+```
+
+Returns: `url` (string)
+
 ## List all RCS agents
+
+Returns RCS agents available to the authenticated account.
 
 `GET /messaging/rcs/agents`
 
@@ -109,6 +125,8 @@ Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `
 
 ## Retrieve an RCS agent
 
+Returns the configuration and current state of the specified RCS agent.
+
 `GET /messaging/rcs/agents/{id}`
 
 ```bash
@@ -118,6 +136,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messa
 Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Modify an RCS agent
+
+Updates the supplied configuration fields on the specified RCS agent.
 
 `PATCH /messaging/rcs/agents/{id}`
 
@@ -134,6 +154,8 @@ curl \
 Returns: `agent_id` (string), `agent_name` (string), `created_at` (date-time), `enabled` (boolean), `profile_id` (uuid), `updated_at` (date-time), `user_id` (string), `webhook_failover_url` (url), `webhook_url` (url)
 
 ## Check RCS capabilities (batch)
+
+Returns RCS capability information for multiple recipients in one request.
 
 `POST /messaging/rcs/bulk_capabilities` — Required: `agent_id`, `phone_numbers`
 
@@ -154,6 +176,8 @@ curl \
 Returns: `agent_id` (string), `agent_name` (string), `features` (array[string]), `phone_number` (string), `record_type` (enum: rcs.capabilities)
 
 ## Check RCS capabilities
+
+Returns the RCS features supported by the specified recipient for the selected agent.
 
 `GET /messaging/rcs/capabilities/{agent_id}/{phone_number}`
 
@@ -179,7 +203,21 @@ curl \
 
 Returns: `agent_id` (string), `phone_number` (string), `record_type` (enum: rcs.test_number_invite), `status` (string)
 
+## Get Verification Request Status History
+
+Get the history of status changes for a verification request. Returns a paginated list of historical status changes including the reason for each change and when it occurred.
+
+`GET /messaging/tollfree/verification/requests/{id}/status/history`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messaging/tollfree/verification/requests/550e8400-e29b-41d4-a716-446655440000/status/history"
+```
+
+Returns: `records` (array[object]), `total_records` (integer)
+
 ## List messaging hosted number orders
+
+Returns hosted-messaging orders for the authenticated account. Apply the documented filters and pagination parameters to narrow the result set.
 
 `GET /messaging_hosted_number_orders`
 
@@ -190,6 +228,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messa
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Create a messaging hosted number order
+
+Creates an order to enable Telnyx messaging on phone numbers whose voice service remains with another carrier.
 
 `POST /messaging_hosted_number_orders`
 
@@ -206,6 +246,8 @@ curl \
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Check hosted messaging eligibility
+
+Checks whether the supplied phone numbers are eligible for hosted messaging before an order is created.
 
 `POST /messaging_hosted_number_orders/eligibility_numbers_check` — Required: `phone_numbers`
 
@@ -225,6 +267,8 @@ curl \
 Returns: `phone_numbers` (array[object])
 
 ## Retrieve a messaging hosted number order
+
+Returns the current state, phone numbers, and required actions for the specified hosted-messaging order.
 
 `GET /messaging_hosted_number_orders/{id}`
 
@@ -250,6 +294,8 @@ curl \
 Returns: `id` (uuid), `messaging_profile_id` (string | null), `phone_numbers` (array[object]), `record_type` (string), `status` (enum: carrier_rejected, compliance_review_failed, deleted, failed, incomplete_documentation, incorrect_billing_information, ineligible_carrier, loa_file_invalid, loa_file_successful, pending, provisioning, successful)
 
 ## Upload hosted number document
+
+Uploads a supporting document to the specified hosted-messaging order.
 
 `POST /messaging_hosted_number_orders/{id}/actions/file_upload`
 
@@ -277,7 +323,10 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "verification_codes": [
-    {}
+    {
+      "phone_number": "+13125550001",
+      "code": "string"
+    }
   ]
 }' \
   "https://api.telnyx.com/v2/messaging_hosted_number_orders/550e8400-e29b-41d4-a716-446655440000/validation_codes"
@@ -308,6 +357,8 @@ curl \
 Returns: `error` (string), `phone_number` (string), `type` (enum: sms, call), `verification_code_id` (uuid)
 
 ## Delete a messaging hosted number
+
+Removes the specified hosted number from Telnyx messaging management.
 
 `DELETE /messaging_hosted_numbers/{id}`
 
@@ -478,6 +529,8 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/messa
 Returns: `records` (array[object]), `total_records` (integer)
 
 ## List messaging URL domains
+
+Returns the URL domains available to the authenticated account for message URL shortening.
 
 `GET /messaging_url_domains`
 
