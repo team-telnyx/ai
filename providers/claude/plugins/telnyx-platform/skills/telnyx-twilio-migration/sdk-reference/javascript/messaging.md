@@ -395,7 +395,7 @@ Send WhatsApp traffic instead of SMS/MMS.
 const response = await client.messages.sendWhatsapp({
   from: '+13125551234',
   to: '+13125551234',
-  whatsapp_message: {},
+  whatsapp_message: { type: 'text', text: { body: 'Hello from Telnyx!' } },
 });
 
 console.log(response.data);

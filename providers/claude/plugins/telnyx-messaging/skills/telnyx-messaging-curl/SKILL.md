@@ -415,7 +415,7 @@ curl \
   -d '{
   "from": "+13125551234",
   "to": "+13125551234",
-  "whatsapp_message": {}
+  "whatsapp_message": {"type": "text", "text": {"body": "Hello from Telnyx!"}}
 }' \
   "https://api.telnyx.com/v2/messages/whatsapp"
 ```

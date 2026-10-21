@@ -439,7 +439,10 @@ import com.telnyx.sdk.models.messages.WhatsappMessageContent;
 MessageSendWhatsappParams params = MessageSendWhatsappParams.builder()
     .from("+13125551234")
     .to("+13125551234")
-    .whatsappMessage(WhatsappMessageContent.builder().build())
+    .whatsappMessage(WhatsappMessageContent.builder()
+        .type(WhatsappMessageContent.Type.TEXT)
+        .text(WhatsappMessageContent.Text.builder().body("Hello from Telnyx!").build())
+        .build())
     .build();
 MessageSendWhatsappResponse response = client.messages().sendWhatsapp(params);
 ```
