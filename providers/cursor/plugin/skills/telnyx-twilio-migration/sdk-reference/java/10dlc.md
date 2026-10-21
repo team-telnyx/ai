@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.89.0</version>
+    <version>6.95.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.89.0")
+implementation("com.telnyx.sdk:telnyx:6.95.0")
 ```
 
 ## Setup
@@ -323,7 +323,7 @@ Primary response fields:
 - `phoneNumberCampaign.campaignId`
 - `phoneNumberCampaign.createdAt`
 - `phoneNumberCampaign.failureReasons`
-- `phoneNumberCampaign.phoneNumber`
+- `phoneNumberCampaign.nonTmobileNumberMappingStatus`
 
 ### Get campaign
 
@@ -435,7 +435,7 @@ Before using any operation below, read the Optional Parameters section below and
 | Get Phone Number Status | `client.messaging10dlc().phoneNumberAssignmentByProfile().listPhoneNumberStatus()` | `GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers` | Fetch the current state before updating, deleting, or making control-flow decisions. | `taskId` |
 | List phone number campaigns | `client.messaging10dlc().phoneNumberCampaigns().list()` | `GET /10dlc/phone_number_campaigns` | Inspect available resources or choose an existing resource before mutating it. | None |
 | Get Single Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().retrieve()` | `GET /10dlc/phone_number_campaigns/{phoneNumber}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `phoneNumber` |
-| Create New Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
+| Update Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().update()` | `PUT /10dlc/phone_number_campaigns/{phoneNumber}` | Modify an existing resource without recreating it. | `phoneNumber`, `campaignId`, `phoneNumber` |
 | Delete Phone Number Campaign | `client.messaging10dlc().phoneNumberCampaigns().delete()` | `DELETE /10dlc/phone_number_campaigns/{phoneNumber}` | Remove, detach, or clean up an existing resource. | `phoneNumber` |
 
 ---

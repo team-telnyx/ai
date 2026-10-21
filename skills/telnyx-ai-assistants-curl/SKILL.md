@@ -78,7 +78,7 @@ Assistant creation is the entrypoint for any AI assistant integration. Agents ne
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
 | `tools` | array[object] | No | Deprecated for new integrations. |
-| ... | | | +23 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +28 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -99,7 +99,7 @@ Primary response fields:
 - `.data.model`
 - `.data.instructions`
 - `.data.created_at`
-- `.data.conversation_flow`
+- `.data.a2a_agents`
 
 ### Chat with an assistant
 
@@ -113,6 +113,7 @@ Chat is the primary runtime path. Agents need the exact assistant method and the
 | `conversation_id` | string (UUID) | Yes | A unique identifier for the conversation thread, used to mai... |
 | `assistant_id` | string (UUID) | Yes | Unique identifier of the assistant. |
 | `name` | string | No | The optional display name of the user sending the message |
+| `stream` | boolean | No | When true, the response is streamed as Server-Sent Events (`... |
 
 ```bash
 curl \
@@ -144,7 +145,7 @@ Test creation is the main validation path for production assistant behavior befo
 | `description` | string | No | Optional detailed description of what this test evaluates an... |
 | `telnyx_conversation_channel` | object | No | The communication channel through which the test will be con... |
 | `max_duration_seconds` | integer | No | Maximum duration in seconds that the test conversation shoul... |
-| ... | | | +1 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +2 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -205,9 +206,9 @@ Primary response fields:
 - `.data.id`
 - `.data.name`
 - `.data.created_at`
+- `.data.a2a_agents`
+- `.data.avatar_settings`
 - `.data.conversation_flow`
-- `.data.description`
-- `.data.dynamic_variables`
 
 ### Update an assistant
 
@@ -221,7 +222,7 @@ Create or provision an additional resource when the core tasks do not cover this
 | `tags` | array[string] | No | Tags associated with the assistant. |
 | `name` | string | No |  |
 | `model` | string | No | ID of the model to use when `external_llm` is not set. |
-| ... | | | +27 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```bash
 curl \
@@ -235,9 +236,9 @@ Primary response fields:
 - `.data.id`
 - `.data.name`
 - `.data.created_at`
+- `.data.a2a_agents`
+- `.data.avatar_settings`
 - `.data.conversation_flow`
-- `.data.description`
-- `.data.dynamic_variables`
 
 ### List assistants
 
@@ -256,9 +257,36 @@ Primary item fields:
 - `id`
 - `name`
 - `created_at`
+- `a2a_agents`
+- `avatar_settings`
 - `conversation_flow`
-- `description`
-- `dynamic_variables`
+
+### List deleted assistants
+
+Inspect available resources or choose an existing resource before mutating it.
+
+`GET /ai/assistants/deleted`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `page[number]` | integer | No | Page number to retrieve (1-based). |
+| `page[size]` | integer | No | Number of items to return per page. |
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/deleted"
+```
+
+Response wrapper:
+- items: `.data`
+- pagination: `.meta`
+
+Primary item fields:
+- `id`
+- `name`
+- `created_at`
+- `a2a_agents`
+- `avatar_settings`
+- `conversation_flow`
 
 ### Import assistants from external provider
 
@@ -271,6 +299,7 @@ Import existing assistants from an external provider instead of creating from sc
 | `provider` | enum (elevenlabs, vapi, retell) | Yes | The external provider to import assistants from. |
 | `api_key_ref` | string | Yes | Integration secret pointer that refers to the API key for th... |
 | `import_ids` | array[string] | No | Optional list of assistant IDs to import from the external p... |
+| `Idempotency-Key` | string | No | Optional opaque, unquoted key for safely retrying the same l... |
 
 ```bash
 curl \
@@ -279,7 +308,10 @@ curl \
   -H "Content-Type: application/json" \
   -d '{
   "provider": "elevenlabs",
-  "api_key_ref": "my-openai-key"
+  "api_key_ref": "my-openai-key",
+  "import_ids": [
+    "string"
+  ]
 }' \
   "https://api.telnyx.com/v2/ai/assistants/import"
 ```
@@ -291,9 +323,9 @@ Primary item fields:
 - `id`
 - `name`
 - `created_at`
+- `a2a_agents`
+- `avatar_settings`
 - `conversation_flow`
-- `description`
-- `dynamic_variables`
 
 ### Get All Tags
 
@@ -353,35 +385,6 @@ Response wrapper:
 Primary item fields:
 - `data`
 
-### Get test suite run history
-
-Fetch the current state before updating, deleting, or making control-flow decisions.
-
-`GET /ai/assistants/tests/test-suites/{suite_name}/runs`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `suite_name` | string | Yes | Name of the suite. |
-| `test_suite_run_id` | string (UUID) | No | Filter runs by specific suite execution batch ID |
-| `status` | string | No | Filter runs by execution status (pending, running, completed... |
-| `page` | object | No | Consolidated page parameter (deepObject style). |
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/assistants/tests/test-suites/{suite_name}/runs"
-```
-
-Response wrapper:
-- items: `.data`
-- pagination: `.meta`
-
-Primary item fields:
-- `status`
-- `created_at`
-- `updated_at`
-- `completed_at`
-- `conversation_id`
-- `conversation_insights_id`
-
 ---
 
 ## Additional Operations
@@ -391,6 +394,7 @@ Before using any operation below, read [the optional-parameters section](referen
 
 | Operation | SDK method | Endpoint | Use when | Required params |
 |-----------|------------|----------|----------|-----------------|
+| Get test suite run history | HTTP only | `GET /ai/assistants/tests/test-suites/{suite_name}/runs` | Fetch the current state before updating, deleting, or making control-flow decisions. | `suite_name` |
 | Trigger test suite execution | HTTP only | `POST /ai/assistants/tests/test-suites/{suite_name}/runs` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `suite_name` |
 | Get assistant test by ID | HTTP only | `GET /ai/assistants/tests/{test_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `test_id` |
 | Update an assistant test | HTTP only | `PUT /ai/assistants/tests/{test_id}` | Modify an existing resource without recreating it. | `test_id` |
@@ -404,8 +408,11 @@ Before using any operation below, read [the optional-parameters section](referen
 | Update Canary Deploy | HTTP only | `PUT /ai/assistants/{assistant_id}/canary-deploys` | Modify an existing resource without recreating it. | `assistant_id` |
 | Delete Canary Deploy | HTTP only | `DELETE /ai/assistants/{assistant_id}/canary-deploys` | Remove, detach, or clean up an existing resource. | `assistant_id` |
 | Assistant Sms Chat | HTTP only | `POST /ai/assistants/{assistant_id}/chat/sms` | Run assistant chat over SMS instead of direct API chat. | `from`, `to`, `assistant_id` |
+| Assistant WhatsApp Chat | HTTP only | `POST /ai/assistants/{assistant_id}/chat/whatsapp` | Create or provision an additional resource when the core tasks do not cover this flow. | `from`, `to`, `content`, `assistant_id` |
 | Clone Assistant | HTTP only | `POST /ai/assistants/{assistant_id}/clone` | Trigger a follow-up action in an existing workflow rather than creating a new top-level resource. | `assistant_id` |
+| Get a deleted assistant | HTTP only | `GET /ai/assistants/{assistant_id}/deleted` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Enhance Assistant Instructions | HTTP only | `POST /ai/assistants/{assistant_id}/instructions/enhance` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
+| Restore an assistant | HTTP only | `POST /ai/assistants/{assistant_id}/restore` | Create or provision an additional resource when the core tasks do not cover this flow. | `assistant_id` |
 | List scheduled events | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id` |
 | Create a scheduled event | HTTP only | `POST /ai/assistants/{assistant_id}/scheduled_events` | Create or provision an additional resource when the core tasks do not cover this flow. | `telnyx_conversation_channel`, `telnyx_end_user_target`, `telnyx_agent_target`, `scheduled_at_fixed_datetime`, +1 more |
 | Get a scheduled event | HTTP only | `GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}` | Fetch the current state before updating, deleting, or making control-flow decisions. | `assistant_id`, `event_id` |

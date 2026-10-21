@@ -84,6 +84,19 @@
 | `client_state` | string |
 | `record_type` | enum: call |
 
+**Returned by:** List dial metrics
+
+| Field | Type |
+|-------|------|
+| `average_dps` | number |
+| `dials` | object |
+| `dps_limit` | integer \| null |
+| `end_time` | date-time |
+| `peak_dps` | number |
+| `record_type` | enum: dial_metric |
+| `region` | string |
+| `start_time` | date-time |
+
 ## Webhook Payload Fields
 
 ### `callAnswered`
