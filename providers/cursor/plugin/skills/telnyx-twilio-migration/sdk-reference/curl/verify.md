@@ -60,7 +60,7 @@ Returns information about the provided phone number.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/number_lookup/+18665552368"
 ```
 
-Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `fraud` (string | null), `national_format` (string), `phone_number` (string), `portability` (object), `record_type` (string)
+Returns: `caller_identity` (object), `caller_name` (object), `carrier` (object), `country_code` (string), `enhanced_caller_name` (object), `fraud` (string | null), `national_format` (string), `nnid_override` (object | null), `phone_number` (string), `portability` (object), `record_type` (string), `valid_number` (boolean)
 
 ## List verifications by phone number
 
