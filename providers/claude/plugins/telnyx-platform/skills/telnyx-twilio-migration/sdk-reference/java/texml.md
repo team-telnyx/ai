@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.96.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.96.0")
 ```
 
 ## Setup
@@ -77,7 +77,7 @@ Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `n
 
 ## Initiate an outbound call
 
-Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
+Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the TeXML Application in the Mission Control Portal.
 
 `POST /texml/Accounts/{account_sid}/Calls` — Required: `Url`
 
