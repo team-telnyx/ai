@@ -371,6 +371,34 @@ describe("AI assistant lifecycle action commands", () => {
     ]]);
   });
 
+  it("forwards assistant avatar settings only to Go CLI v0.34+", () => {
+    const avatarSettings = '{"avatar_id":"avatar_custom-1","background_id":"office","model":"foxtrot-1","provider":"telnyx"}';
+    const supportedFake = setupFakeTelnyx({ version: "0.34.0" });
+    const created = runAgent([
+      "create-ai-assistant", "--name", "Concierge", "--instructions", "Help callers",
+      "--avatar-settings", avatarSettings, "--json",
+    ], supportedFake.env);
+    assert.equal(created.status, 0, created.stderr);
+    const createdArgs = loggedArgs(supportedFake.logPath).at(-1)!;
+    assertFlag(createdArgs, "--avatar-settings", avatarSettings);
+
+    const updatedFake = setupFakeTelnyx({ version: "0.34.0" });
+    const updated = runAgent([
+      "update-ai-assistant", "--id", "assistant-1", "--avatar-settings", avatarSettings, "--json",
+    ], updatedFake.env);
+    assert.equal(updated.status, 0, updated.stderr);
+    const updatedArgs = loggedArgs(updatedFake.logPath).at(-1)!;
+    assertFlag(updatedArgs, "--avatar-settings", avatarSettings);
+
+    const outdatedFake = setupFakeTelnyx({ version: "0.33.9" });
+    const outdated = runAgent([
+      "update-ai-assistant", "--id", "assistant-1", "--avatar-settings", avatarSettings, "--json",
+    ], outdatedFake.env);
+    assert.notEqual(outdated.status, 0);
+    assert.match(JSON.parse(outdated.stdout).error, /requires >= 0\.34\.0/);
+    assert.deepEqual(loggedArgs(outdatedFake.logPath), []);
+  });
+
   it("rejects invalid A2A and fallback controls before dispatch", () => {
     const invalidCases = [
       ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--a2a-agent", "[]", "--json"],
@@ -763,6 +791,7 @@ describe("AI assistant lifecycle action commands", () => {
     assert.match(help.stdout, /--a2a-agent <json> Repeatable A2A delegation-agent JSON object/);
     assert.match(help.stdout, /--fallback-destination <destination> Transfer destination for abnormal voice-assistant ends/);
     assert.match(help.stdout, /--clear-a2a-agents Clear all A2A delegation agents/);
+    assert.match(help.stdout, /--avatar-settings <json> Avatar provider settings.*Go CLI v0\.34\+/);
 
     const assistantsCapability = capabilities.api_capabilities["🤖 AI"].find(
       (capability: { name: string }) => capability.name === "Assistants",
@@ -777,6 +806,7 @@ describe("AI assistant lifecycle action commands", () => {
       "delete_ai_assistant",
       "configure_ai_assistant_a2a_agents",
       "set_ai_assistant_fallback_destination",
+      "set_ai_assistant_avatar_settings",
       "enhance_ai_assistant_instructions",
       "chat_ai_assistant",
       "send_ai_assistant_sms",
