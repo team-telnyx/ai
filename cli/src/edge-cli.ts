@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { basename } from "node:path";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const STATUS_TIMEOUT_MS = 45000;
@@ -283,6 +284,22 @@ export function supportsSqlStdinImport(): boolean {
   }
 }
 
+/** Detect the v0.5.12 local SQL workflow from each command's own help surface. */
+export function supportsLocalSqlWorkflow(): boolean {
+  const hasFlags = (args: string[], flags: string[]): boolean => {
+    try {
+      const out = runEdge(args);
+      return flags.every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+    } catch {
+      return false;
+    }
+  };
+  const execute = hasFlags(["storage", "sqldb", "execute", "--help"], ["local", "persist-to"]);
+  const migrationsList = hasFlags(["storage", "sqldb", "migrations", "list", "--help"], ["local"]);
+  const migrationsApply = hasFlags(["storage", "sqldb", "migrations", "apply", "--help"], ["local"]);
+  return execute && migrationsList && migrationsApply;
+}
+
 /**
  * Detect the complete custom-domain workflow from its own help surfaces. The
  * root command must advertise every lifecycle step, certificate upload must
@@ -331,6 +348,66 @@ export function supportsActorMetrics(): boolean {
     const out = runEdge(["actors", "metrics", "--help"]);
     return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
       ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect historical StatefulActor logs without mistaking function logs for them. */
+export function supportsActorLogs(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["type", "instance", "since", "last", "json"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the live actor-log stream directly rather than inferring it from history. */
+export function supportsActorLiveLogTail(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) && /--tail\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect v0.5.8 stored-state actor metrics while retaining the earlier metrics probe. */
+export function supportsActorStorageMetrics(): boolean {
+  try {
+    const out = runEdge(["actors", "metrics", "--help"]);
+    return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out)) &&
+      /stored\s+state/i.test(out) && /\b90h\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the complete local umbrella-project development command surface. */
+export function supportsLocalDev(): boolean {
+  try {
+    const out = runEdge(["dev", "--help"]);
+    return /^Usage:\s+\S+\s+dev(?:\s|\[|$)/im.test(out) &&
+      ["from-dir", "port", "no-watch", "generate-only"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect the v0.5.13 verified self-update only for the released binary name.
+ * Development binaries deliberately cannot replace themselves.
+ */
+export function supportsSelfUpdate(): boolean {
+  if (basename(resolveEdgeBinary()) !== "telnyx-edge") return false;
+  try {
+    const out = runEdge(["update", "--help"]);
+    return /^Usage:\s+telnyx-edge\s+update(?:\s|\[|$)/im.test(out) && /--yes\b/i.test(out);
   } catch {
     return false;
   }
