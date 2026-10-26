@@ -122,6 +122,12 @@ import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiAnthropicMessageCommand } from "./commands/ai-anthropic-message.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
+  createAiAvatarCommand,
+  getAiAvatarCommand,
+  listAiAvatarsCommand,
+  updateAiAvatarCommand,
+} from "./commands/ai-avatars.ts";
+import {
   chatAiAssistantCommand,
   createAiAssistantCommand,
   deleteAiAssistantCommand,
@@ -313,6 +319,10 @@ Commands:
   ai-chat           Create an OpenAI-compatible chat completion
   ai-anthropic-message Create an Anthropic-compatible message response
   ai-embed          Create OpenAI-compatible text embeddings
+  list-ai-avatars   List Telnyx stock and organization-owned custom AI avatars
+  create-ai-avatar  Upload an image and create a custom AI avatar
+  get-ai-avatar     Retrieve one AI avatar by ID
+  update-ai-avatar  Rename a custom AI avatar by ID
   list-ai-assistants List AI assistant configurations
   create-ai-assistant Create an AI assistant
   get-ai-assistant  Retrieve an AI assistant by ID
@@ -882,6 +892,7 @@ AI Assistant Lifecycle Flags:
   --transcription-model Speech-to-text model (create, update)
   --transcription-language Speech-to-text language (create, update)
   --dynamic-variables <json> Dynamic variable defaults as a JSON object (create, update)
+  --avatar-settings <json> Avatar provider settings, including a stock or custom avatar ID (create, update; Go CLI v0.34+)
   --dynamic-variables-webhook-url <url> Dynamic variable resolver webhook (create, update)
   --dynamic-variables-webhook-timeout-ms <1-10000> Resolver timeout (create, update)
   --tags <csv>      Comma-separated assistant tags (create, update)
@@ -895,6 +906,16 @@ AI Assistant Lifecycle Flags:
   --version-name    Human-readable version name (update only)
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
+
+AI Avatar Lifecycle Flags (requires Telnyx Go CLI v0.34+):
+  --id / --avatar-id <id> AI avatar ID (get, update; --avatar-id is forwarded upstream)
+  --image-file <path> Local readable regular image file (create required; image validation is upstream)
+  --name <text>     Custom avatar name (create and update required)
+  --filter-avatar-type <stock|custom> Filter stock or organization-owned custom avatars (list)
+  --filter-id <id>  Filter avatars by ID (list)
+  --filter-name <text> Case-insensitive avatar-name substring filter (list)
+  --page-number <n> / --page-size <n> Positive result-page controls (list; Go CLI defaults are 1 and 20)
+  --max-items <n>   Maximum avatars returned from the selected response; -1 means unlimited (list)
 
 AI Assistant Instruction Enhancement Flags (requires Telnyx Go CLI v0.30+):
   --assistant-id <id> Assistant ID to inspect and enhance (required)
@@ -1161,6 +1182,10 @@ Examples:
   telnyx-agent ai-anthropic-message --model zai-org/GLM-5.2 --max-tokens 256 --message '{"role":"user","content":"Hello"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
+  telnyx-agent list-ai-avatars --filter-avatar-type stock --page-size 20 --json
+  telnyx-agent create-ai-avatar --image-file ./avatar.png --name "Support Host" --json
+  telnyx-agent get-ai-avatar --id <avatar-id> --json
+  telnyx-agent update-ai-avatar --id <avatar-id> --name "After-hours Host" --json
   telnyx-agent list-ai-assistants --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Delegate specialist work" --a2a-agent '{"name":"billing","url":"https://billing.example.com"}' --fallback-destination sip:support@example.com --json
@@ -1313,6 +1338,10 @@ const COMMANDS: Record<string, (
   "ai-chat": aiChatCommand,
   "ai-anthropic-message": aiAnthropicMessageCommand,
   "ai-embed": aiEmbedCommand,
+  "list-ai-avatars": listAiAvatarsCommand,
+  "create-ai-avatar": createAiAvatarCommand,
+  "get-ai-avatar": getAiAvatarCommand,
+  "update-ai-avatar": updateAiAvatarCommand,
   "list-ai-assistants": listAiAssistantsCommand,
   "create-ai-assistant": createAiAssistantCommand,
   "get-ai-assistant": getAiAssistantCommand,
@@ -1357,7 +1386,7 @@ const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
-  "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
+  "attachment", "audio", "audio-url", "authorized-person", "avatar-id", "avatar-settings", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
@@ -1376,13 +1405,13 @@ const KNOWN_FLAGS = new Set<string>([
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
-  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
+  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-avatar-type", "filter-id", "filter-name", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
-  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
+  "image-file", "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",

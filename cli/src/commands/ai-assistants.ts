@@ -64,6 +64,7 @@ export interface AiAssistantToolTestResult {
 
 const AI_ASSISTANT_INSTRUCTION_ENHANCE_MINIMUM_CLI_VERSION = "0.30.0";
 const AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION = "0.32.0";
+const AI_ASSISTANT_AVATAR_SETTINGS_MINIMUM_CLI_VERSION = "0.34.0";
 
 export async function listAiAssistantsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -109,12 +110,8 @@ export async function createAiAssistantCommand(
   addAssistantFields(args, flags, jsonOutput, undefined, occurrences);
 
   try {
-    const response = await telnyxCli(
-      args,
-      usesAiAssistantV032Controls(flags)
-        ? { minimumVersion: AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION }
-        : undefined,
-    );
+    const minimumVersion = aiAssistantMinimumCliVersion(flags);
+    const response = await telnyxCli(args, minimumVersion ? { minimumVersion } : undefined);
     presentAssistant("AI assistant created!", normalizeAssistant(response), jsonOutput);
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
@@ -157,9 +154,8 @@ export async function updateAiAssistantCommand(
     const options: { stdin?: string; minimumVersion?: string } = Object.keys(requestBody).length > 0
       ? { stdin: JSON.stringify(requestBody) }
       : {};
-    if (usesAiAssistantV032Controls(flags)) {
-      options.minimumVersion = AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION;
-    }
+    const minimumVersion = aiAssistantMinimumCliVersion(flags);
+    if (minimumVersion) options.minimumVersion = minimumVersion;
     const response = await telnyxCli(args, Object.keys(options).length > 0 ? options : undefined);
     presentAssistant("AI assistant updated!", normalizeAssistant(response, assistantId), jsonOutput);
   } catch (err) {
@@ -437,6 +433,7 @@ function addAssistantFields(
   addMappedFlag(args, flags, "greeting", "--greeting", true);
   addMappedFlag(args, flags, "dynamic-variables-webhook-url", "--dynamic-variables-webhook-url");
   addJsonObjectFlag(args, flags, "dynamic-variables", "--dynamic-variables", jsonOutput);
+  addJsonObjectFlag(args, flags, "avatar-settings", "--avatar-settings", jsonOutput);
   addIntegerRangeFlag(
     args,
     flags,
@@ -493,6 +490,15 @@ function usesAiAssistantV032Controls(flags: Flags): boolean {
   return flags["a2a-agent"] !== undefined
     || flags["clear-a2a-agents"] !== undefined
     || flags["fallback-destination"] !== undefined;
+}
+
+function aiAssistantMinimumCliVersion(flags: Flags): string | undefined {
+  if (flags["avatar-settings"] !== undefined) {
+    return AI_ASSISTANT_AVATAR_SETTINGS_MINIMUM_CLI_VERSION;
+  }
+  return usesAiAssistantV032Controls(flags)
+    ? AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION
+    : undefined;
 }
 
 function normalizeAssistantList(response: unknown): AssistantListResult {
