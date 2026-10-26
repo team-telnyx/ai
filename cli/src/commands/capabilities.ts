@@ -95,7 +95,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Port-Out", description: "List and inspect Port-Out activity, authorize or reject orders, and create or list comments", actions: ["list_portout_orders", "get_portout_order", "list_portout_rejection_codes", "update_portout_status", "create_portout_comment", "list_portout_comments"] },
   ],
   "💬 WhatsApp": [
-    { name: "WhatsApp Business", description: "Send text, template, media, interactive, location, reaction, sticker, contact, and video WhatsApp messages; manage business accounts, phone numbers, and templates", actions: ["setup_whatsapp", "send_whatsapp_message", "send_whatsapp_audio", "send_whatsapp_document", "send_whatsapp_image", "send_whatsapp_interactive", "send_whatsapp_location", "send_whatsapp_reaction", "send_whatsapp_sticker", "send_whatsapp_contacts", "send_whatsapp_video", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile"] },
+    { name: "WhatsApp Business", description: "Send text, template, media, interactive, location, reaction, sticker, contact, and video WhatsApp messages; manage business accounts, phone numbers, and templates; create, retrieve, and list Telnyx-hosted Embedded Signup URLs (hosted signup requires Go CLI v0.34+)", actions: ["setup_whatsapp", "send_whatsapp_message", "send_whatsapp_audio", "send_whatsapp_document", "send_whatsapp_image", "send_whatsapp_interactive", "send_whatsapp_location", "send_whatsapp_reaction", "send_whatsapp_sticker", "send_whatsapp_contacts", "send_whatsapp_video", "list_whatsapp_templates", "create_whatsapp_template", "verify_whatsapp_number", "manage_whatsapp_profile", "create_whatsapp_hosted_signup", "get_whatsapp_hosted_signup", "list_whatsapp_hosted_signups"] },
   ],
 };
 
@@ -193,7 +193,10 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
-  { name: "telnyx-agent whatsapp-send", description: "Send text, template, media, interactive, location, reaction, stickers, contacts, or video over WhatsApp" },
+  { name: "telnyx-agent whatsapp-send", description: "Send text, template, media, interactive, location, reaction, stickers, contacts, or video over WhatsApp (recipient can be E.164 or a v0.34+ WhatsApp BSUID)" },
+  { name: "telnyx-agent create-whatsapp-hosted-signup", description: "Create a time-limited Telnyx-hosted WhatsApp Embedded Signup URL (Go CLI v0.34+)" },
+  { name: "telnyx-agent get-whatsapp-hosted-signup", description: "Retrieve a Telnyx-hosted WhatsApp Embedded Signup URL (Go CLI v0.34+)" },
+  { name: "telnyx-agent list-whatsapp-hosted-signups", description: "List Telnyx-hosted WhatsApp Embedded Signups with pagination (Go CLI v0.34+)" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts an audio URL and returns the transcript with optional language, model, and keyword biasing" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts a hosted audio file URL and returns the transcript with optional model and language selection" },
   { name: "telnyx-agent stt-providers", description: "List available speech-to-text providers, optionally filtered by provider name or service type" },
