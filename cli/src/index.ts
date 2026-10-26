@@ -46,6 +46,11 @@ import { ttsVoicesCommand } from "./commands/tts-voices.ts";
 import { setupWhatsappCommand } from "./commands/setup-whatsapp.ts";
 import { whatsappSendCommand } from "./commands/whatsapp-send.ts";
 import { whatsappTemplatesCommand } from "./commands/whatsapp-templates.ts";
+import {
+  createWhatsappHostedSignupCommand,
+  getWhatsappHostedSignupCommand,
+  listWhatsappHostedSignupsCommand,
+} from "./commands/whatsapp-hosted-signups.ts";
 import { sendSmsCommand } from "./commands/send-sms.ts";
 import {
   emailForwardCommand,
@@ -240,6 +245,9 @@ Commands:
   setup-whatsapp    Zero to WhatsApp: list WABA, buy number, verify, set profile
   whatsapp-send     Send a WhatsApp message (text, template, media, or rich payload)
   whatsapp-templates List or create WhatsApp message templates
+  create-whatsapp-hosted-signup Create a Telnyx-hosted WhatsApp Embedded Signup URL (Go CLI v0.34+)
+  get-whatsapp-hosted-signup Retrieve a WhatsApp hosted signup (Go CLI v0.34+)
+  list-whatsapp-hosted-signups List WhatsApp hosted signups (Go CLI v0.34+)
   send-sms          Send SMS/MMS from a number, alphanumeric sender, or number pool
   send-sms          Send an SMS or MMS message (--media-url sends MMS)
   email-send        Send or schedule an outbound email
@@ -597,7 +605,7 @@ WhatsApp Flags:
   --category        WhatsApp business category, e.g. RETAIL (setup-whatsapp)
   --code            Verification code, to verify a number already initialized (setup-whatsapp)
   --from            Sender E.164 number (whatsapp-send, required)
-  --to              Recipient E.164 number (whatsapp-send, required)
+  --to              Recipient E.164 number or WhatsApp BSUID, e.g. US.13491208655302741918 (whatsapp-send, required; BSUID requires Go CLI v0.34+)
   --text            Text message body (whatsapp-send)
   --template-name   Template name to send (whatsapp-send)
   --template-language Template language code, default en_US (whatsapp-send)
@@ -613,6 +621,13 @@ WhatsApp Flags:
   --biz-opaque-callback-data <text> Custom data returned with status updates
   --messaging-profile-id Messaging profile id (whatsapp-send)
   --webhook-url     Message status webhook URL (whatsapp-send)
+  --idempotency-key Idempotency key (whatsapp-send; requires Go CLI v0.34+)
+  --app-id          Meta App ID (create-whatsapp-hosted-signup, required; Go CLI v0.34+)
+  --expires-at      Hosted Signup URL expiration in RFC 3339 format (create-whatsapp-hosted-signup)
+  --signup-type     standard (default) or coexistence (create-whatsapp-hosted-signup)
+  --id              Hosted Signup ID (get-whatsapp-hosted-signup, required)
+  --page-number / --page-size Positive pagination values (list-whatsapp-hosted-signups)
+  --max-items       Maximum hosted signups returned; -1 means unlimited (list-whatsapp-hosted-signups)
   --create          Switch to create mode (whatsapp-templates)
   --name            Template name (whatsapp-templates, create)
   --language        Template language, default en_US (whatsapp-templates, create)
@@ -1043,6 +1058,8 @@ Examples:
   telnyx-agent whatsapp-send --from +155****1111 --to +155****2222 --image '{"link":"https://example.com/photo.jpg","caption":"Hello"}'
   telnyx-agent whatsapp-templates --waba-id <id> --json
   telnyx-agent whatsapp-templates --waba-id <id> --create --name promo --category MARKETING --component '[]'
+  telnyx-agent create-whatsapp-hosted-signup --app-id <meta-app-id> --signup-type coexistence --json
+  telnyx-agent list-whatsapp-hosted-signups --page-size 25 --json
   telnyx-agent send-sms --from +131****0000 --to +131****0001 --text "Hello!"
   telnyx-agent send-sms --messaging-profile-id <id> --to +131****0001 --text "From the pool"
   telnyx-agent send-sms --from MyCompany --messaging-profile-id <id> --to +131****0001 --text "Hello!"
@@ -1241,6 +1258,9 @@ const COMMANDS: Record<string, (
   "setup-whatsapp": setupWhatsappCommand,
   "whatsapp-send": whatsappSendCommand,
   "whatsapp-templates": whatsappTemplatesCommand,
+  "create-whatsapp-hosted-signup": createWhatsappHostedSignupCommand,
+  "get-whatsapp-hosted-signup": getWhatsappHostedSignupCommand,
+  "list-whatsapp-hosted-signups": listWhatsappHostedSignupsCommand,
   "send-sms": sendSmsCommand,
   "email-send": emailSendCommand,
   "email-forward": emailForwardCommand,
@@ -1356,7 +1376,7 @@ const COMMANDS: Record<string, (
 const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
+  "api-key", "api-key-ref", "app-id", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
@@ -1374,7 +1394,7 @@ const KNOWN_FLAGS = new Set<string>([
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id", "expires-at",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
   "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
@@ -1413,7 +1433,7 @@ const KNOWN_FLAGS = new Set<string>([
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
-  "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "signup-type", "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",

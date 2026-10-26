@@ -47,6 +47,12 @@ const OBJECT_PAYLOAD_TYPES = [
   "video",
 ] as const;
 
+const MINIMUM_NEW_WHATSAPP_FEATURES_CLI_VERSION = "0.34.0";
+// WhatsApp Business Subscriber IDs identify a WhatsApp recipient as
+// <ISO-3166 alpha-2 country code>.<numeric subscriber ID>, e.g.
+// US.13491208655302741918.
+const WHATSAPP_BSUID_RE = /^[A-Z]{2}\.\d+$/;
+
 export async function whatsappSendCommand(flags: Record<string, string | boolean>): Promise<void> {
   const jsonOutput = flags.json === true;
   const from = flags.from as string;
@@ -54,9 +60,13 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
   const messagingProfileId = flags["messaging-profile-id"] as string | undefined;
   const webhookUrl = flags["webhook-url"] as string | undefined;
   const callbackData = flags["biz-opaque-callback-data"] as string | undefined;
+  const idempotencyKey = flags["idempotency-key"] as string | undefined;
 
   if (!from || !to) {
-    failWith("--from and --to are required (E.164 phone numbers)", jsonOutput);
+    failWith("--from and --to are required (--from must be E.164; --to must be E.164 or a WhatsApp BSUID)", jsonOutput);
+  }
+  if (idempotencyKey !== undefined && (!idempotencyKey || typeof idempotencyKey !== "string")) {
+    failWith("--idempotency-key requires a non-empty value", jsonOutput);
   }
 
   const { messageType, message } = buildWhatsappMessage(flags, jsonOutput);
@@ -73,8 +83,16 @@ export async function whatsappSendCommand(flags: Record<string, string | boolean
     ];
     if (messagingProfileId) args.push("--messaging-profile-id", messagingProfileId);
     if (webhookUrl) args.push("--webhook-url", webhookUrl);
+    if (idempotencyKey) args.push("--idempotency-key", idempotencyKey);
 
-    const res = await telnyxCli(args);
+    // E.164 sends retain the existing compatibility path. BSUID recipients and
+    // idempotency keys were added by Go CLI v0.34.0 and therefore receive a
+    // command-scoped check only when either new feature is requested.
+    const res = await telnyxCli(args, {
+      minimumVersion: WHATSAPP_BSUID_RE.test(to) || Boolean(idempotencyKey)
+        ? MINIMUM_NEW_WHATSAPP_FEATURES_CLI_VERSION
+        : undefined,
+    });
     const data = (res.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
     const deliveryStatus = deriveMessageStatus(data, "submitted");
