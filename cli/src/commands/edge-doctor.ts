@@ -40,6 +40,7 @@ import {
   supportsSqlDatabases,
   supportsSqlStdinImport,
   supportsStatefulActors,
+  supportsSelfUpdate,
   supportsTypes,
 } from "../edge-cli.ts";
 
@@ -81,6 +82,7 @@ interface EdgeDoctorResult {
   sql_stdin_import_supported: boolean;
   local_sql_workflow_supported: boolean;
   custom_domains_supported: boolean;
+  self_update_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -124,6 +126,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlStdinImportSupported = false;
   let localSqlWorkflowSupported = false;
   let customDomainsSupported = false;
+  let selfUpdateSupported = false;
 
   try {
     getEdgeHelp();
@@ -173,6 +176,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlStdinImportSupported = supportsSqlStdinImport();
     localSqlWorkflowSupported = supportsLocalSqlWorkflow();
     customDomainsSupported = supportsCustomDomains();
+    selfUpdateSupported = supportsSelfUpdate();
 
     checks.push({
       name: "API-key auth supported",
@@ -381,6 +385,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         ? "domains add/verify/list/delete and cert upload are available with non-interactive deletion"
         : "custom-domain help surfaces did not advertise the complete lifecycle, certificate paths, and delete --yes",
     });
+    checks.push({
+      name: "Verified self-update",
+      ok: selfUpdateSupported,
+      detail: selfUpdateSupported
+        ? "update --yes is available from the released telnyx-edge binary"
+        : "update --yes was not detected, or this is not a released binary named telnyx-edge",
+    });
 
     try {
       const status = getEdgeAuthStatus();
@@ -457,7 +468,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !shipSupported && "ship",
     ].filter((value): value is string => Boolean(value));
     nextSteps = [
-      `Upgrade telnyx-edge: the executable setup handoffs require ${missing.join(", ")}.`,
+      selfUpdateSupported
+        ? `Upgrade telnyx-edge with verified self-update: telnyx-edge update --yes. The executable setup handoffs require ${missing.join(", ")}.`
+        : `Upgrade telnyx-edge from https://github.com/team-telnyx/edge-compute/releases: the executable setup handoffs require ${missing.join(", ")}.`,
       "Verify each missing command or flag on its own --help surface, then rerun telnyx-agent edge-doctor.",
     ];
   } else {
@@ -563,6 +576,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !localDevSupported && "local dev",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
+      nextSteps.push(selfUpdateSupported
+        ? "Upgrade the released CLI with verified self-update: telnyx-edge update --yes"
+        : "Download the latest telnyx-edge release from https://github.com/team-telnyx/edge-compute/releases (self-update requires a released binary named telnyx-edge).");
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
     }
   }
@@ -605,6 +621,7 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_stdin_import_supported: sqlStdinImportSupported,
     local_sql_workflow_supported: localSqlWorkflowSupported,
     custom_domains_supported: customDomainsSupported,
+    self_update_supported: selfUpdateSupported,
     checks,
     next_steps: nextSteps,
   };

@@ -33,6 +33,11 @@ telnyx-edge status
 ```bash
 telnyx-agent edge-doctor --json
 ```
+CLI v0.5.13 adds verified self-update. When `edge-doctor` reports `self_update_supported: true` and recommends an upgrade, prefer:
+```bash
+telnyx-edge update --yes
+```
+Self-update only works for the released binary named `telnyx-edge`; it cannot update `telnyx-edge-dev`. If it is unavailable, download the replacement from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases).
 ## Function names
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
 ## Quick Start

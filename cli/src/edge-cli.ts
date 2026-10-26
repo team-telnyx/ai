@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { basename } from "node:path";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const STATUS_TIMEOUT_MS = 45000;
@@ -393,6 +394,20 @@ export function supportsLocalDev(): boolean {
     return /^Usage:\s+\S+\s+dev(?:\s|\[|$)/im.test(out) &&
       ["from-dir", "port", "no-watch", "generate-only"]
         .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect the v0.5.13 verified self-update only for the released binary name.
+ * Development binaries deliberately cannot replace themselves.
+ */
+export function supportsSelfUpdate(): boolean {
+  if (basename(resolveEdgeBinary()) !== "telnyx-edge") return false;
+  try {
+    const out = runEdge(["update", "--help"]);
+    return /^Usage:\s+telnyx-edge\s+update(?:\s|\[|$)/im.test(out) && /--yes\b/i.test(out);
   } catch {
     return false;
   }

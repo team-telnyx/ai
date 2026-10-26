@@ -80,6 +80,10 @@ type FakeEdgeOptions = {
   sqlLocalPersistTo?: boolean;
   sqlMigrationsListLocal?: boolean;
   sqlMigrationsApplyLocal?: boolean;
+  selfUpdate?: boolean;
+  selfUpdateUsage?: boolean;
+  selfUpdateYes?: boolean;
+  binaryName?: "telnyx-edge" | "telnyx-edge-dev";
   customDomainCommands?: Array<"add" | "verify" | "list" | "delete" | "cert">;
   customDomainCertUpload?: boolean;
   customDomainCertFlag?: boolean;
@@ -159,6 +163,9 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const sqlLocalPersistTo = config.sqlLocalPersistTo ?? true;
   const sqlMigrationsListLocal = config.sqlMigrationsListLocal ?? true;
   const sqlMigrationsApplyLocal = config.sqlMigrationsApplyLocal ?? true;
+  const selfUpdate = config.selfUpdate ?? true;
+  const selfUpdateUsage = config.selfUpdateUsage ?? true;
+  const selfUpdateYes = config.selfUpdateYes ?? true;
   const customDomainCommands = config.customDomainCommands ?? ["add", "verify", "list", "delete", "cert"];
   const customDomainCertUpload = config.customDomainCertUpload ?? true;
   const customDomainCertFlag = config.customDomainCertFlag ?? true;
@@ -168,7 +175,7 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
   mkdirSync(binDir, { recursive: true });
-  const fakeEdge = join(binDir, "telnyx-edge");
+  const fakeEdge = join(binDir, config.binaryName ?? "telnyx-edge");
   writeFileSync(
     fakeEdge,
     `#!/usr/bin/env node
@@ -381,6 +388,14 @@ if (args[0] === 'dev' && args.includes('--help')) {
   process.stderr.write('unknown command "dev"\\n');
   process.exit(1);
 }
+if (args[0] === 'update' && args.includes('--help')) {
+  if (${selfUpdate}) {
+    console.log(['Verify and install the latest telnyx-edge release', 'Usage: ${selfUpdateUsage ? "telnyx-edge update [flags]" : "telnyx-edge [flags]"}', ...(${selfUpdateYes} ? ['  -y, --yes  Install without an interactive prompt'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "update"\\n');
+  process.exit(1);
+}
 if (args.length === 1 && args[0] === '--help') {
   console.log(['Telnyx Edge CLI v0.5.0', '', 'Available Commands:', '  actors      Manage StatefulActor types', '  inspect     Show function details', '  auth        Authentication commands', '  ship        Ship a function', '  storage     Manage storage'].join('\\n'));
   process.exit(0);
@@ -509,6 +524,9 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_stdin_import_supported, true);
     assert.equal(data.local_sql_workflow_supported, true);
     assert.equal(data.custom_domains_supported, true);
+    assert.equal(data.self_update_supported, true);
+    assert.ok(data.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Verified self-update" && check.ok));
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -622,6 +640,7 @@ describe("CLI — Edge Compute handoff", () => {
       ["actors", "metrics", "--help"],
       ["actors", "logs", "--help"],
       ["dev", "--help"],
+      ["update", "--help"],
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
     }
@@ -888,6 +907,36 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.local_sql_workflow_supported, false, `missing ${missing} must not report local SQL support`);
       assert.ok(data.next_steps.some((step: string) =>
         step.includes("Optional capabilities not detected") && step.includes("local SQL workflow")));
+    }
+  });
+
+  it("requires complete v0.5.13 self-update help from the released binary and uses it for upgrades", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", localDev: false, argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true, "self-update remains optional for setup handoffs");
+    assert.equal(available.self_update_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Verified self-update" && check.ok));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("telnyx-edge update --yes")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(["update", "--help"])));
+
+    for (const config of [
+      { selfUpdate: false },
+      { selfUpdateUsage: false },
+      { selfUpdateYes: false },
+      { binaryName: "telnyx-edge-dev" as const },
+    ]) {
+      const fake = withFakeEdgeCli({ auth: "api_key", localDev: false, ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "self-update remains optional for setup handoffs");
+      assert.equal(data.self_update_supported, false);
+      assert.ok(data.checks.some((check: { name: string; ok: boolean }) =>
+        check.name === "Verified self-update" && !check.ok));
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("https://github.com/team-telnyx/edge-compute/releases")));
+      assert.ok(!data.next_steps.some((step: string) => step.includes("telnyx-edge update --yes")));
     }
   });
 
