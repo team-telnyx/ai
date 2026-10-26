@@ -468,6 +468,9 @@ TTS Flags:
   --output-type     Response format: base64 (base64-encoded audio JSON; default: base64)
   --text-type       Input format: text or ssml (default: text)
   --disable-cache   Skip cached audio and regenerate (boolean)
+  --voice-speed     Telnyx voice speed multiplier (Bayan: 0.5-2.0; Ultra: 0.6-1.5)
+  --response-format Telnyx audio format: pcm, wav, or mp3 (Sukhan: pcm or mp3)
+  --sampling-rate   Telnyx Bayan resample rate: 8000, 22050, or 24000 (requires --response-format pcm)
 
 TTS-voices Flags:
   --provider        Filter voices by provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (optional)
@@ -1034,6 +1037,7 @@ Examples:
   telnyx-agent tts --text "Hello world"
   telnyx-agent tts --text "Hello world" --voice en-US-Standard-A --provider aws --json
   telnyx-agent tts --text "<speak>Hello</speak>" --text-type ssml --output-type base64
+  telnyx-agent tts --text "Marhaban" --voice Telnyx.Bayan.Ahmed --voice-speed 1.1 --response-format pcm --sampling-rate 24000 --json
   telnyx-agent tts-voices --json
   telnyx-agent tts-voices --provider aws
   telnyx-agent setup-whatsapp --json
@@ -1414,7 +1418,7 @@ const KNOWN_FLAGS = new Set<string>([
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
-  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "version-name", "vertical", "video", "voice", "voice-speed", "sampling-rate", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
