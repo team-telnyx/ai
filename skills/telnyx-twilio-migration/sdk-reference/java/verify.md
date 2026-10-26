@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.96.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.96.0")
 ```
 
 ## Setup
@@ -74,7 +74,7 @@ import com.telnyx.sdk.models.numberlookup.NumberLookupRetrieveResponse;
 NumberLookupRetrieveResponse numberLookup = client.numberLookup().retrieve("+18665552368");
 ```
 
-Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `fraud` (string | null), `national_format` (string), `phone_number` (string), `portability` (object), `record_type` (string)
+Returns: `caller_identity` (object), `caller_name` (object), `carrier` (object), `country_code` (string), `enhanced_caller_name` (object), `fraud` (string | null), `national_format` (string), `nnid_override` (object | null), `phone_number` (string), `portability` (object), `record_type` (string), `valid_number` (boolean)
 
 ## List verifications by phone number
 
