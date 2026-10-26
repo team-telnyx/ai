@@ -48,7 +48,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Deep Research", description: "Synthesize cited answers from multiple web sources, synchronously or as a background task", actions: ["web_research", "get_web_research_status"] },
   ],
   "🔊 Text-to-Speech": [
-    { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
+    { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai); Telnyx supports voice speed, response format, and Bayan PCM sampling-rate controls", actions: ["generate_speech"] },
     { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["list_voices"] },
   ],
   "🎤 Speech-to-Text": [
@@ -190,7 +190,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent update-portout-status", description: "Authorize or reject a Port-Out order after explicit --confirm acknowledgement" },
   { name: "telnyx-agent create-portout-comment", description: "Create a comment on a Port-Out order" },
   { name: "telnyx-agent list-portout-comments", description: "List comments on a Port-Out order" },
-  { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
+  { name: "telnyx-agent tts", description: "Generate speech from text across providers with optional Telnyx voice speed, response format, and Bayan PCM sampling-rate controls; returns base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
   { name: "telnyx-agent whatsapp-send", description: "Send text, template, media, interactive, location, reaction, stickers, contacts, or video over WhatsApp" },
