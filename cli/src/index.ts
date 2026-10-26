@@ -183,6 +183,7 @@ import { storageSqlQueryCommand } from "./commands/storage-sql.ts";
 import { getWireguardPeerConfigCommand } from "./commands/wireguard-peers.ts";
 import {
   networkCommand,
+  tailscaleSubnetRouterCommand,
   wireguardInterfaceCommand,
   wireguardPeerCommand,
 } from "./commands/networking.ts";
@@ -214,6 +215,7 @@ Commands:
   network           Manage private networks (--action create|retrieve|update|list|delete|list-interfaces)
   wireguard-interface Manage WireGuard interfaces (--action create|retrieve|list|delete)
   wireguard-peer    Manage WireGuard peers (--action create|retrieve|update|list|delete)
+  tailscale-subnet-router Manage Tailscale subnet routers (--action create|retrieve|update|list|delete; Go CLI v0.34+)
   get-wireguard-peer-config Retrieve the WireGuard client configuration for a peer
   setup-verify      Zero to verification: create profile (no number bought)
   verify-send       Trigger a phone verification (sms, call, flashcall, or whatsapp)
@@ -364,13 +366,15 @@ Setup-specific Flags:
   --name            AI assistant name (setup-ai)
   --network-id      Use existing network (setup-wireguard)
   --id <peer-id>    WireGuard peer ID (get-wireguard-peer-config — required); configuration is sensitive and emitted only with --json
-  --action <name>   Network and WireGuard lifecycle action (see network, wireguard-interface, wireguard-peer)
+  --action <name>   Network lifecycle action (see network, wireguard-interface, wireguard-peer, tailscale-subnet-router)
   --name <name>     Required network or WireGuard-interface name for create/update actions
-  --region-code <code> Required WireGuard interface deployment region for create
+  --region-code <code> Required WireGuard interface or Tailscale subnet router deployment region for create
   --wireguard-interface-id <id> WireGuard interface ID (wireguard-peer create/list)
   --public-key <key> Optional WireGuard peer public key (wireguard-peer create/update)
+  --advertised-route <cidr> Repeatable Tailscale subnet route (tailscale-subnet-router create; optional update)
+  --auth-key <key>  Tailscale enrollment auth key (tailscale-subnet-router create; optional update; never output)
   --status / --type Interface filters (network --action list-interfaces)
-  --confirm         Bare safety acknowledgement required for network, WireGuard-interface, and WireGuard-peer delete actions; never forwarded
+  --confirm         Bare safety acknowledgement required for networking delete actions; never forwarded
   --profile-name    Custom verify profile name (setup-verify)
   --destinations    Whitelisted destination countries for verify (setup-verify, default: US)
 
@@ -1225,6 +1229,7 @@ const COMMANDS: Record<string, (
   network: networkCommand,
   "wireguard-interface": wireguardInterfaceCommand,
   "wireguard-peer": wireguardPeerCommand,
+  "tailscale-subnet-router": tailscaleSubnetRouterCommand,
   "get-wireguard-peer-config": getWireguardPeerConfigCommand,
   "setup-verify": setupVerifyCommand,
   "verify-send": verifySendCommand,
@@ -1372,10 +1377,9 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
+  "about", "action", "action-type", "active", "actor", "administrative-area", "advertised-route", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
-  "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
+  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id", "attachment", "audio", "audio-url", "auth-key", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",

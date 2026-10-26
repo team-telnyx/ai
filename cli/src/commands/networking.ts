@@ -9,15 +9,19 @@ import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
 import { failWith, outputJson, printError, printSuccess } from "../utils/output.ts";
 
 type Flags = Record<string, string | boolean>;
+type Occurrences = Record<string, Array<string | boolean>>;
 type JsonRecord = Record<string, unknown>;
 
-type Resource = "network" | "wireguard-interface" | "wireguard-peer";
+type Resource = "network" | "wireguard-interface" | "wireguard-peer" | "tailscale-subnet-router";
 
 const ACTIONS: Record<Resource, readonly string[]> = {
   network: ["create", "retrieve", "update", "list", "delete", "list-interfaces"],
   "wireguard-interface": ["create", "retrieve", "list", "delete"],
   "wireguard-peer": ["create", "retrieve", "update", "list", "delete"],
+  "tailscale-subnet-router": ["create", "retrieve", "update", "list", "delete"],
 };
+
+const TAILSCALE_SUBNET_ROUTER_MINIMUM_CLI_VERSION = "0.34.0";
 
 export async function networkCommand(flags: Flags): Promise<void> {
   await runLifecycleCommand("network", flags);
@@ -31,17 +35,27 @@ export async function wireguardPeerCommand(flags: Flags): Promise<void> {
   await runLifecycleCommand("wireguard-peer", flags);
 }
 
-async function runLifecycleCommand(resource: Resource, flags: Flags): Promise<void> {
+export async function tailscaleSubnetRouterCommand(flags: Flags, occurrences: Occurrences = {}): Promise<void> {
+  await runLifecycleCommand("tailscale-subnet-router", flags, occurrences);
+}
+
+async function runLifecycleCommand(resource: Resource, flags: Flags, occurrences: Occurrences = {}): Promise<void> {
   const jsonOutput = flags.json === true;
   const action = requiredAction(resource, flags, jsonOutput);
   const maxItems = isListAction(action) ? listMaxItems(flags, jsonOutput) : undefined;
-  const args = buildArgs(resource, action, flags, jsonOutput, maxItems);
+  const args = buildArgs(resource, action, flags, occurrences, jsonOutput, maxItems);
+  const sensitiveValues = resource === "tailscale-subnet-router"
+    ? repeatedStrings(flags, occurrences, "auth-key", jsonOutput)
+    : [];
 
   try {
-    const response = await telnyxCli(args, isListAction(action) ? { format: "raw" } : undefined);
+    const response = await telnyxCli(args, {
+      ...(isListAction(action) ? { format: "raw" as const } : {}),
+      ...(resource === "tailscale-subnet-router" ? { minimumVersion: TAILSCALE_SUBNET_ROUTER_MINIMUM_CLI_VERSION } : {}),
+    });
     present(resource, action, truncateListResponse(response, maxItems), jsonOutput);
   } catch (err) {
-    failWith(errorMsg(err), jsonOutput);
+    failWith(errorMsg(err, sensitiveValues), jsonOutput);
   }
 }
 
@@ -60,6 +74,7 @@ function buildArgs(
   resource: Resource,
   action: string,
   flags: Flags,
+  occurrences: Occurrences,
   jsonOutput: boolean,
   maxItems: number | undefined,
 ): string[] {
@@ -70,6 +85,8 @@ function buildArgs(
       return buildWireguardInterfaceArgs(action, flags, jsonOutput, maxItems);
     case "wireguard-peer":
       return buildWireguardPeerArgs(action, flags, jsonOutput, maxItems);
+    case "tailscale-subnet-router":
+      return buildTailscaleSubnetRouterArgs(action, flags, occurrences, jsonOutput, maxItems);
   }
 }
 
@@ -170,6 +187,53 @@ function buildWireguardPeerArgs(action: string, flags: Flags, jsonOutput: boolea
   }
 }
 
+function buildTailscaleSubnetRouterArgs(
+  action: string,
+  flags: Flags,
+  occurrences: Occurrences,
+  jsonOutput: boolean,
+  maxItems: number | undefined,
+): string[] {
+  switch (action) {
+    case "create": {
+      const routes = requiredRepeatedStrings(flags, occurrences, "advertised-route", "at least one advertised route", jsonOutput);
+      const args = ["tailscale-subnet-routers", "create"];
+      for (const route of routes) args.push("--advertised-route", route);
+      return [
+        ...args,
+        "--auth-key", requiredString(flags, "auth-key", "Tailscale auth key", jsonOutput),
+        "--name", requiredString(flags, "name", "Tailscale subnet router name", jsonOutput),
+        "--network-id", requiredString(flags, "network-id", "network ID", jsonOutput),
+        "--region-code", requiredString(flags, "region-code", "Tailscale subnet router region", jsonOutput),
+      ];
+    }
+    case "retrieve":
+      return ["tailscale-subnet-routers", "retrieve", "--id", requiredString(flags, "id", "Tailscale subnet router ID", jsonOutput)];
+    case "update": {
+      const args = ["tailscale-subnet-routers", "update", "--id", requiredString(flags, "id", "Tailscale subnet router ID", jsonOutput)];
+      for (const route of repeatedStrings(flags, occurrences, "advertised-route", jsonOutput)) args.push("--advertised-route", route);
+      const authKey = optionalString(flags, "auth-key", jsonOutput);
+      if (authKey !== undefined) args.push("--auth-key", authKey);
+      const name = optionalString(flags, "name", jsonOutput);
+      if (name !== undefined) args.push("--name", name);
+      return args;
+    }
+    case "list":
+      return addListFlags(
+        ["tailscale-subnet-routers", "list"],
+        flags,
+        jsonOutput,
+        { "network-id": "--filter.network-id" },
+        maxItems,
+      );
+    case "delete":
+      requireBareConfirm(flags, "deleting a Tailscale subnet router", jsonOutput);
+      return ["tailscale-subnet-routers", "delete", "--id", requiredString(flags, "id", "Tailscale subnet router ID", jsonOutput)];
+    default:
+      throw new Error(`unsupported Tailscale subnet router action: ${action}`);
+  }
+}
+
 function addListFlags(
   args: string[],
   flags: Flags,
@@ -212,6 +276,28 @@ function optionalString(flags: Flags, key: string, jsonOutput: boolean): string 
     failWith(`--${key} requires a non-empty value`, jsonOutput);
   }
   return value;
+}
+
+function repeatedStrings(flags: Flags, occurrences: Occurrences, key: string, jsonOutput: boolean): string[] {
+  const values = occurrences[key] ?? (flags[key] === undefined ? [] : [flags[key]]);
+  return values.map((value) => {
+    if (typeof value !== "string" || value.length === 0) {
+      failWith(`--${key} requires a non-empty value`, jsonOutput);
+    }
+    return value;
+  });
+}
+
+function requiredRepeatedStrings(
+  flags: Flags,
+  occurrences: Occurrences,
+  key: string,
+  label: string,
+  jsonOutput: boolean,
+): string[] {
+  const values = repeatedStrings(flags, occurrences, key, jsonOutput);
+  if (values.length === 0) failWith(`--${key} is required (${label})`, jsonOutput);
+  return values;
 }
 
 function requireBareConfirm(flags: Flags, description: string, jsonOutput: boolean): void {
@@ -267,7 +353,8 @@ function present(resource: Resource, action: string, response: unknown, jsonOutp
 function resourceLabel(resource: Resource): string {
   if (resource === "network") return "Network";
   if (resource === "wireguard-interface") return "WireGuard interface";
-  return "WireGuard peer";
+  if (resource === "wireguard-peer") return "WireGuard peer";
+  return "Tailscale subnet router";
 }
 
 function addDetail(details: Record<string, string | number | boolean>, label: string, value: string): void {
@@ -286,8 +373,11 @@ function stringValue(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
 }
 
-function errorMsg(err: unknown): string {
-  if (err instanceof TelnyxCLIError) return err.stderr || err.message;
-  if (err instanceof Error) return err.message;
-  return String(err);
+function errorMsg(err: unknown, sensitiveValues: string[] = []): string {
+  const message = err instanceof TelnyxCLIError
+    ? err.stderr || err.message
+    : err instanceof Error
+      ? err.message
+      : String(err);
+  return sensitiveValues.reduce((redacted, value) => redacted.replaceAll(value, "[REDACTED]"), message);
 }

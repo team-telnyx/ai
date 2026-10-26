@@ -15,7 +15,7 @@ type Fake = { env: NodeJS.ProcessEnv; logPath: string };
 
 type AgentResult = { status: number; stdout: string; stderr: string };
 
-function setupFakeTelnyx(): Fake {
+function setupFakeTelnyx(version = "0.34.0", fail = false): Fake {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-networking-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -24,12 +24,18 @@ function setupFakeTelnyx(): Fake {
   writeFileSync(fakeTelnyx, `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
+if (args[0] === "--version") { console.log("telnyx version ${version}"); process.exit(0); }
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
+if (${JSON.stringify(fail)}) {
+  process.stderr.write("fake request failed with tskey-dummy-only");
+  process.exit(9);
+}
 const list = args.includes("list") || args.includes("list-interfaces");
 const resource = args[0];
+const routerAuth = resource === "tailscale-subnet-routers" ? { auth_key: "fake-response-auth-key" } : {};
 const data = list
   ? [1, 2, 3].map((number) => ({ id: resource + "-" + number, name: "agent-network-" + number, status: "active", type: "wireguard" }))
-  : { id: resource + "-1", name: "agent-network", status: "active" };
+  : { id: resource + "-1", name: "agent-network", status: "active", ...routerAuth };
 process.stdout.write(JSON.stringify(list ? { data, meta: { total_results: 3 } } : { data }));
 `);
   chmodSync(fakeTelnyx, 0o755);
@@ -122,6 +128,71 @@ describe("network lifecycle", () => {
   });
 });
 
+describe("Tailscale subnet router lifecycle", () => {
+  it("routes create, retrieve, update, empty-body retry, list, and delete through v0.34 generated actions without emitting auth keys", () => {
+    const fake = setupFakeTelnyx("0.34.0");
+    const create = expectSuccess([
+      "tailscale-subnet-router", "--action", "create",
+      "--advertised-route", "10.10.0.0/24", "--advertised-route", "10.11.0.0/24",
+      "--auth-key", "tskey-dummy-only", "--name", "branch-router", "--network-id", "net-1", "--region-code", "ashburn-va", "--json",
+    ], fake) as { data: Record<string, string> };
+    assert.equal(create.data.auth_key, "[REDACTED]");
+    expectSuccess(["tailscale-subnet-router", "--action", "retrieve", "--id", "tsr-1", "--json"], fake);
+    expectSuccess([
+      "tailscale-subnet-router", "--action", "update", "--id", "tsr-1",
+      "--advertised-route", "10.12.0.0/24", "--advertised-route", "10.13.0.0/24",
+      "--auth-key", "tskey-dummy-only", "--name", "renamed-router", "--json",
+    ], fake);
+    expectSuccess(["tailscale-subnet-router", "--action", "update", "--id", "tsr-1", "--json"], fake);
+    expectSuccess([
+      "tailscale-subnet-router", "--action", "list", "--network-id", "net-1",
+      "--page-number", "2", "--page-size", "10", "--max-items", "2", "--json",
+    ], fake);
+    expectSuccess(["tailscale-subnet-router", "--action", "delete", "--id", "tsr-1", "--confirm", "--json"], fake);
+
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["tailscale-subnet-routers", "create", "--advertised-route", "10.10.0.0/24", "--advertised-route", "10.11.0.0/24", "--auth-key", "tskey-dummy-only", "--name", "branch-router", "--network-id", "net-1", "--region-code", "ashburn-va", "--format", "json"],
+      ["tailscale-subnet-routers", "retrieve", "--id", "tsr-1", "--format", "json"],
+      ["tailscale-subnet-routers", "update", "--id", "tsr-1", "--advertised-route", "10.12.0.0/24", "--advertised-route", "10.13.0.0/24", "--auth-key", "tskey-dummy-only", "--name", "renamed-router", "--format", "json"],
+      ["tailscale-subnet-routers", "update", "--id", "tsr-1", "--format", "json"],
+      ["tailscale-subnet-routers", "list", "--filter.network-id", "net-1", "--page-number", "2", "--page-size", "10", "--max-items", "2", "--format", "raw"],
+      ["tailscale-subnet-routers", "delete", "--id", "tsr-1", "--format", "json"],
+    ]);
+  });
+
+  it("requires v0.34 before dispatching and does not leak auth keys in failures", () => {
+    const oldCli = setupFakeTelnyx("0.33.9");
+    const oldResult = runAgent([
+      "tailscale-subnet-router", "--action", "create", "--advertised-route", "10.10.0.0/24",
+      "--auth-key", "tskey-dummy-only", "--name", "branch-router", "--network-id", "net-1", "--region-code", "ashburn-va", "--json",
+    ], oldCli.env);
+    assert.equal(oldResult.status, 1);
+    assert.match(oldResult.stdout, /requires >= 0\.34\.0/);
+    assert.doesNotMatch(`${oldResult.stdout}${oldResult.stderr}`, /tskey-dummy-only/);
+    assert.deepEqual(loggedArgs(oldCli.logPath), []);
+
+    const failing = setupFakeTelnyx("0.34.0", true);
+    const failed = runAgent([
+      "tailscale-subnet-router", "--action", "update", "--id", "tsr-1", "--auth-key", "tskey-dummy-only", "--json",
+    ], failing.env);
+    assert.equal(failed.status, 1);
+    assert.match(`${failed.stdout}${failed.stderr}`, /\[REDACTED\]/);
+    assert.doesNotMatch(`${failed.stdout}${failed.stderr}`, /tskey-dummy-only/);
+  });
+
+  it("requires routes and bare confirmation before dispatch", () => {
+    for (const args of [
+      ["tailscale-subnet-router", "--action", "create", "--auth-key", "tskey-dummy-only", "--name", "branch-router", "--network-id", "net-1", "--region-code", "ashburn-va", "--json"],
+      ["tailscale-subnet-router", "--action", "delete", "--id", "tsr-1", "--json"],
+      ["tailscale-subnet-router", "--action", "delete", "--id", "tsr-1", "--confirm", "true", "--json"],
+    ]) {
+      const fake = setupFakeTelnyx();
+      assert.match(expectFailure(args, fake), /required|bare --confirm/);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+  });
+});
+
 describe("WireGuard interface and peer lifecycle", () => {
   it("uses generated body, path, filter, and update flags without a version gate", () => {
     const fake = setupFakeTelnyx();
@@ -202,14 +273,16 @@ describe("WireGuard interface and peer lifecycle", () => {
 });
 
 describe("networking registration", () => {
-  it("shows the three generic action commands in help and capabilities without dispatching", () => {
+  it("shows the generic action commands in help and advertises networking capabilities without dispatching", () => {
     const fake = setupFakeTelnyx();
     const help = runAgent(["network", "--help"], fake.env);
     assert.equal(help.status, 0, help.stderr);
     assert.match(help.stdout, /network\s+Manage private networks/);
     assert.match(help.stdout, /wireguard-interface/);
     assert.match(help.stdout, /wireguard-peer/);
-    assert.match(help.stdout, /--region-code <code> Required WireGuard interface deployment region for create/);
+    assert.match(help.stdout, /tailscale-subnet-router/);
+    assert.match(help.stdout, /Go CLI v0\.34\+/);
+    assert.match(help.stdout, /--advertised-route <cidr>/);
     assert.deepEqual(loggedArgs(fake.logPath), []);
 
     const capabilities = expectSuccess(["capabilities", "--json"], fake) as {
@@ -218,6 +291,8 @@ describe("networking registration", () => {
     const networking = capabilities.api_capabilities["🔐 Networking"];
     assert.ok(networking.some((capability) => capability.actions.includes("list_network_interfaces")));
     assert.ok(networking.some((capability) => capability.actions.includes("delete_wireguard_peer")));
+    assert.ok(networking.some((capability) => capability.actions.includes("create_tailscale_subnet_router")));
+    assert.ok(networking.some((capability) => capability.actions.includes("delete_tailscale_subnet_router")));
     assert.deepEqual(loggedArgs(fake.logPath), []);
   });
 });

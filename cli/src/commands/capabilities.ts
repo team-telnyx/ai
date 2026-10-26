@@ -73,7 +73,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "Verification Check", description: "Submit a code for verification or check verification status", actions: ["verify_code", "check_verification_status"] },
   ],
   "🔐 Networking": [
-    { name: "WireGuard VPN", description: "Create, retrieve, update, list, and delete private networks, WireGuard interfaces, and WireGuard peers; inspect interfaces in a network and retrieve a peer's client configuration", actions: ["create_network", "get_network", "update_network", "list_networks", "delete_network", "list_network_interfaces", "create_wireguard_interface", "get_wireguard_interface", "list_wireguard_interfaces", "delete_wireguard_interface", "create_wireguard_peer", "get_wireguard_peer", "update_wireguard_peer", "list_wireguard_peers", "delete_wireguard_peer", "get_wireguard_peer_config"] },
+    { name: "WireGuard VPN", description: "Create, retrieve, update, list, and delete private networks, WireGuard interfaces, WireGuard peers, and Tailscale subnet routers; inspect interfaces in a network and retrieve a peer's client configuration. Tailscale subnet routers require Telnyx Go CLI v0.34+.", actions: ["create_network", "get_network", "update_network", "list_networks", "delete_network", "list_network_interfaces", "create_wireguard_interface", "get_wireguard_interface", "list_wireguard_interfaces", "delete_wireguard_interface", "create_wireguard_peer", "get_wireguard_peer", "update_wireguard_peer", "list_wireguard_peers", "delete_wireguard_peer", "get_wireguard_peer_config", "create_tailscale_subnet_router", "get_tailscale_subnet_router", "update_tailscale_subnet_router", "list_tailscale_subnet_routers", "delete_tailscale_subnet_router"] },
   ],
   "⚡ Edge Compute": [
     { name: "Edge Functions", description: "Pair Telnyx AI workflows with Telnyx Edge Compute. telnyx-agent now provides an executable handoff and prefers API-key auth for agent use when supported by telnyx-edge.", actions: ["see_guides_edge_compute"] },
@@ -166,6 +166,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent network", description: "Manage private networks with --action create, retrieve, update, list, delete, or list-interfaces" },
   { name: "telnyx-agent wireguard-interface", description: "Manage WireGuard interfaces with --action create, retrieve, list, or delete" },
   { name: "telnyx-agent wireguard-peer", description: "Manage WireGuard peers with --action create, retrieve, update, list, or delete" },
+  { name: "telnyx-agent tailscale-subnet-router", description: "Manage Tailscale subnet routers with --action create, retrieve, update, list, or delete (Go CLI v0.34+; auth keys are never output)" },
   { name: "telnyx-agent get-wireguard-peer-config", description: "Retrieve a peer WireGuard configuration (Go CLI v0.30+; output is sensitive and requires --json)" },
   { name: "telnyx-edge ship", description: "Deploy an Edge Compute function with the dedicated telnyx-edge CLI (referenced by the Edge Compute guide)" },
   { name: "telnyx-agent edge-doctor", description: "Validate Edge Compute handoff prerequisites and point to the next concrete telnyx-edge steps" },
