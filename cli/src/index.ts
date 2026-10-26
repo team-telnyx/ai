@@ -877,6 +877,11 @@ AI Assistant Lifecycle Flags:
   --instructions    System instructions (create required; update optional)
   --description     Assistant description (create, update)
   --model           Language model ID (create, update)
+  --insight-model <model> Insight model: zai-org/GLM-5.3-Flash|meta-llama/Llama-3.3-70B-Instruct
+                    (create, update; forwarded as --insight-settings.model; Go CLI v0.34+)
+  --pii-redaction <mode> Stored-conversation PII redaction: disabled|redact (create, update;
+                    redact assistants cannot be used for SMS/WhatsApp; forwarded as
+                    --privacy-settings.pii-redaction; Go CLI v0.34+)
   --greeting        Initial assistant greeting; an empty string makes it wait (create, update)
   --voice           Voice ID, forwarded as --voice-settings.voice (create, update)
   --transcription-model Speech-to-text model (create, update)
@@ -1162,7 +1167,7 @@ Examples:
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
   telnyx-agent list-ai-assistants --json
-  telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
+  telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --insight-model zai-org/GLM-5.3-Flash --pii-redaction redact --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Delegate specialist work" --a2a-agent '{"name":"billing","url":"https://billing.example.com"}' --fallback-destination sip:support@example.com --json
   telnyx-agent get-ai-assistant --id <assistant-id> --json
   telnyx-agent update-ai-assistant --id <assistant-id> --greeting "How can I help?" --json
@@ -1382,7 +1387,7 @@ const KNOWN_FLAGS = new Set<string>([
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
-  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
+  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "insight-model", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
@@ -1396,7 +1401,7 @@ const KNOWN_FLAGS = new Set<string>([
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
-  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
+  "pii-redaction", "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
