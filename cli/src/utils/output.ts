@@ -78,6 +78,7 @@ function redactSensitive<T>(value: T): T {
 
 function isSensitiveKey(key: string): boolean {
   return /(^|_)(password|passphrase|secret|token|api_key)$/i.test(key)
+    || /^auth[_-]?key$/i.test(key)
     || /^(sipPassword|pin_?passcode)$/i.test(key);
 }
 
