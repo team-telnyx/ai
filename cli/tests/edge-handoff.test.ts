@@ -934,8 +934,9 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.self_update_supported, false);
       assert.ok(data.checks.some((check: { name: string; ok: boolean }) =>
         check.name === "Verified self-update" && !check.ok));
-      assert.ok(data.next_steps.some((step: string) =>
-        step.includes("https://github.com/team-telnyx/edge-compute/releases")));
+      assert.ok(data.next_steps.includes(
+        "Download the latest telnyx-edge release from https://github.com/team-telnyx/edge-compute/releases (self-update requires a released binary named telnyx-edge).",
+      ));
       assert.ok(!data.next_steps.some((step: string) => step.includes("telnyx-edge update --yes")));
     }
   });
