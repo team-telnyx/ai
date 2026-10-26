@@ -484,6 +484,7 @@ SMS Action Flags:
                               for E.164 send-sms (not supported by group MMS)
   --webhook-url <url>    Webhook for delivery status updates (send-sms)
   --subject <text>       MMS subject line (send-sms)
+  --idempotency-key <key> Retry-safe key for send-sms and send-group-mms; send-sms requires Telnyx Go CLI v0.34+ when used
   --send-at <iso8601>    Send time, ISO 8601 (schedule-sms — required, e.g., 2024-12-31T00:00:00Z)
   --id <message-id>      Message ID (sms-status — required)
   --cancel               Cancel a scheduled message instead of retrieving status (sms-status)

@@ -12,7 +12,7 @@ interface Capability {
 
 const CAPABILITIES: Record<string, Capability[]> = {
   "📱 Messaging": [
-    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles, including AI detection of non-standard inbound opt-out requests (Go CLI v0.32+)", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "configure_ai_opt_out_detection", "delete_messaging_profile"] },
+    { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles, including retry-safe idempotency keys for sends (send-sms requires Go CLI v0.34+ when used) and AI detection of non-standard inbound opt-out requests (Go CLI v0.32+)", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "configure_ai_opt_out_detection", "delete_messaging_profile"] },
   ],
   "📧 Email": [
     { name: "Email", description: "Send or schedule outbound email and reply to or forward messages received by an email inbox", actions: ["send_email", "forward_email", "reply_email", "reply_all_email"] },
@@ -101,8 +101,8 @@ const CAPABILITIES: Record<string, Capability[]> = {
 
 const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent setup-sms", description: "Zero to SMS: creates messaging profile, buys number, assigns it" },
-  { name: "telnyx-agent send-sms", description: "Send SMS/MMS from an E.164 number, alphanumeric sender, or messaging-profile number pool" },
-  { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS)" },
+  { name: "telnyx-agent send-sms", description: "Send SMS/MMS from an E.164 number, alphanumeric sender, or messaging-profile number pool; --idempotency-key requires Go CLI v0.34+" },
+  { name: "telnyx-agent send-sms", description: "Send an SMS or MMS message (pass --media-url to send MMS); --idempotency-key requires Go CLI v0.34+" },
   { name: "telnyx-agent email-send", description: "Send or schedule outbound email with multiple recipients, bodies, templates, and attachments" },
   { name: "telnyx-agent email-forward", description: "Forward an email inbox message to caller-supplied recipients" },
   { name: "telnyx-agent email-reply", description: "Reply to the Reply-To or From address of an email inbox message" },
@@ -117,7 +117,7 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent fax-status", description: "Retrieve the latest status and useful details for one fax" },
   { name: "telnyx-agent fax-cancel", description: "Cancel an outbound fax that is queued, processed, originated, or sending" },
   { name: "telnyx-agent fax-refresh", description: "Refresh the expired temporary media URL for an inbound fax" },
-  { name: "telnyx-agent send-group-mms", description: "Send a group MMS to multiple recipients (--to comma-separated E.164 numbers)" },
+  { name: "telnyx-agent send-group-mms", description: "Send a group MMS to multiple recipients (--to comma-separated E.164 numbers) with an optional idempotency key" },
   { name: "telnyx-agent schedule-sms", description: "Schedule an SMS for future delivery at a given ISO 8601 time" },
   { name: "telnyx-agent sms-status", description: "Check SMS delivery status, or cancel a scheduled message with --cancel" },
   { name: "telnyx-agent rcs-send", description: "Send a text message from an RCS agent" },
