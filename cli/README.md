@@ -491,6 +491,24 @@ telnyx-agent setup-ai --name "Support Bot" --json
 
 Output: `{ assistant_id, phone_number, test_command }`
 
+To resume with known resources, supply their IDs (the phone number may also be E.164):
+
+```bash
+telnyx-agent setup-ai --assistant-id assistant-uuid --phone-number-id number-uuid --texml-app-id app-uuid --json
+```
+
+Supplied resources are read and validated before provisioning. An existing number
+must be unassigned or already assigned to the supplied app; the app must be active
+and linked to the supplied assistant. Do not combine an existing assistant with
+`--name` or `--instructions`; update it separately. Omitted resources are created,
+so a fresh invocation still creates paid resources. This is explicit resumption,
+not server-side idempotency or automatic crash recovery.
+
+Failure output preserves `assistant_id`, `phone_number`, `phone_number_id`,
+`texml_app_id`, and `number_order_id` when known. Reconcile any timed-out create or
+number order before resuming: a missing ID does not prove the operation failed.
+`ready: true` means number assignment was confirmed, not that a live call passed.
+
 ### `telnyx-agent setup-whatsapp`
 
 **One command: zero to WhatsApp.**
