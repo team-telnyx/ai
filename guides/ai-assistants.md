@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - Telnyx API key ([get one free](https://telnyx.com/agent-signup.md))
-- At least one phone number
+- A phone number only when using PSTN calls; assistant creation and WebSocket conversations do not require one
 - AI credits or pay-as-you-go enabled
 
 ## Quick Start
@@ -18,11 +18,11 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
   -d '{
     "name": "Support Bot",
     "instructions": "You are a helpful customer support assistant. Be friendly and concise.",
-    "voice": {"provider": "telnyx", "settings": {"voice_id": "en-US-Neural2-F"}}
+    "greeting": "Hello! How can I help you?"
   }'
 
-# Wire to a phone number (via Call Control application settings in portal)
-# Or use the assistant ID in your webhook response
+# Save the returned assistant ID. Test over WebSocket before provisioning telephony.
+# See "Test Without a Phone Number" below.
 ```
 
 ## API Reference
@@ -38,17 +38,7 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
   -d '{
     "name": "Sales Assistant",
     "instructions": "You are a sales representative for Acme Corp. Help customers find the right product. Be enthusiastic but not pushy. Ask qualifying questions about their needs and budget.",
-    "voice": {
-      "provider": "telnyx",
-      "settings": {
-        "voice_id": "en-US-Neural2-F",
-        "speed": 1.0,
-        "pitch": 0
-      }
-    },
-    "model": "meta-llama/Llama-3.3-70B-Instruct",
-    "greeting": "Hello! Thanks for calling Acme Corp. How can I help you today?",
-    "hold_music_url": "https://example.com/hold.mp3"
+    "greeting": "Hello! Thanks for calling Acme Corp. How can I help you today?"
   }'
 ```
 
@@ -56,11 +46,9 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
 |-----------|------|-------------|
 | `name` | string | Assistant name |
 | `instructions` | string | System prompt / personality |
-| `voice.provider` | string | `telnyx` or `elevenlabs` |
-| `voice.settings.voice_id` | string | Voice identifier |
-| `model` | string | LLM model — use `GET /v2/ai/models` or `telnyx ai models` to list available models. Not all inference models work for assistants. |
+| `voice_settings` | object | Optional voice configuration; see the current API reference for supported providers and fields. |
+| `model` | string | Optional. Omit it to use the current assistant default. Inference-model availability does not imply assistant support; an unsupported explicit model is rejected at creation. |
 | `greeting` | string | Initial greeting message |
-| `hold_music_url` | string | Music to play on hold |
 
 **Response:**
 
@@ -69,12 +57,17 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
   "id": "assistant-uuid",
   "name": "Sales Assistant",
   "instructions": "...",
-  "model": "meta-llama/Llama-3.3-70B-Instruct",
+  "model": "MODEL_RETURNED_BY_API",
   "created_at": "2024-01-15T12:00:00Z"
 }
 ```
 
-> **Note:** The AI assistants API returns the object directly — not wrapped in a `"data"` field like other v2 endpoints.
+> **Response handling:** Assistant examples below accept both a top-level object and a `data`-wrapped object, as the CLI does. List responses use `data`. Validate that creation returned an ID before continuing.
+
+The examples omit `model`, `voice_settings` (TTS), and `transcription` (STT) to
+use the current assistant API defaults. Inspect those fields in the response
+and select explicit supported settings when you need a fixed configuration.
+A model listed for inference may still be unavailable for assistants.
 
 ### List Assistants
 
@@ -96,10 +89,10 @@ curl "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \
 
 ### Update Assistant
 
-**`PATCH /v2/ai/assistants/{id}`**
+**`POST /v2/ai/assistants/{id}`**
 
 ```bash
-curl -X PATCH "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \
+curl -X POST "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -117,61 +110,15 @@ curl -X DELETE "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
-## Configuring Tools (Function Calling)
+## Tools and Knowledge
 
-Assistants can call tools/functions to perform actions.
+For new integrations, create shared tools and attach their IDs using `tool_ids`.
+The inline `tools` field is deprecated for new integrations. Use the
+[current assistant API reference](../skills/telnyx-ai-assistants-curl/references/api-details.md)
+for supported tool, retrieval, and configuration fields.
 
-```bash
-curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Order Assistant",
-    "instructions": "Help customers check their order status. Use the check_order tool when they provide an order number.",
-    "tools": [{
-      "type": "function",
-      "function": {
-        "name": "check_order",
-        "description": "Check the status of an order",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "order_id": {
-              "type": "string",
-              "description": "The order ID number"
-            }
-          },
-          "required": ["order_id"]
-        }
-      }
-    }]
-  }'
-```
-
-When the assistant calls a tool, your webhook receives a `function_call` event.
-
-## Knowledge Bases
-
-Add documents the assistant can reference.
-
-```bash
-curl -X POST "https://api.telnyx.com/v2/ai/knowledge_bases" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Product FAQ",
-    "documents": [{
-      "title": "Product Specs",
-      "content": "Our products are made from..."
-    }]
-  }'
-
-# Attach to assistant
-curl -X PATCH "https://api.telnyx.com/v2/ai/assistants/{id}" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"knowledge_base_ids": ["kb-uuid"]}'
-```
+For knowledge ingestion and retrieval, see the
+[AI collection commands](../cli/README.md). Wait for ingestion to finish before testing retrieval.
 
 ## Conversation History
 
@@ -180,7 +127,9 @@ Assistants maintain conversation context automatically. To view history:
 **`GET /v2/ai/conversations`**
 
 ```bash
-curl "https://api.telnyx.com/v2/ai/conversations?assistant_id={id}" \
+ASSISTANT_ID="YOUR_ASSISTANT_ID"
+curl --get "https://api.telnyx.com/v2/ai/conversations" \
+  --data-urlencode "metadata->assistant_id=eq.$ASSISTANT_ID" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
 ```
 
@@ -194,41 +143,49 @@ curl "https://api.telnyx.com/v2/ai/conversations/{conversation_id}" \
 ## Python Examples
 
 ```python
+import os
 import requests
 
-API_KEY = "KEY..."
+API_KEY = os.environ["TELNYX_API_KEY"]
 BASE_URL = "https://api.telnyx.com/v2"
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 
 # Create assistant
-assistant = requests.post(
+create_response = requests.post(
     f"{BASE_URL}/ai/assistants",
     headers=headers,
     json={
         "name": "Support Bot",
         "instructions": "You are a helpful customer support agent.",
-        "model": "meta-llama/Llama-3.3-70B-Instruct",
-        "voice": {"provider": "telnyx", "settings": {"voice_id": "en-US-Neural2-F"}},
         "greeting": "Hello! How can I help you today?"
     }
-).json()
-assistant_id = assistant["data"]["id"]
+)
+create_response.raise_for_status()
+payload = create_response.json()
+assistant = payload.get("data", payload)
+assistant_id = assistant["id"]
+if not isinstance(assistant_id, str) or not assistant_id.strip():
+    raise ValueError("Create response has no valid assistant ID")
 print(f"Created: {assistant_id}")
 
 # List assistants
-assistants = requests.get(f"{BASE_URL}/ai/assistants", headers=headers).json()
+list_response = requests.get(f"{BASE_URL}/ai/assistants", headers=headers)
+list_response.raise_for_status()
+assistants = list_response.json()
 for a in assistants["data"]:
     print(f"{a['id']}: {a['name']}")
 
 # Update
-requests.patch(
+update_response = requests.post(
     f"{BASE_URL}/ai/assistants/{assistant_id}",
     headers=headers,
     json={"greeting": "Hi there! What can I do for you?"}
 )
+update_response.raise_for_status()
 
 # Delete
-requests.delete(f"{BASE_URL}/ai/assistants/{assistant_id}", headers=headers)
+delete_response = requests.delete(f"{BASE_URL}/ai/assistants/{assistant_id}", headers=headers)
+delete_response.raise_for_status()
 ```
 
 ## TypeScript Examples
@@ -248,104 +205,123 @@ const createRes = await fetch(`${BASE_URL}/ai/assistants`, {
   body: JSON.stringify({
     name: "Support Bot",
     instructions: "You are a helpful customer support agent.",
-    model: "meta-llama/Llama-3.3-70B-Instruct",
-    voice: { provider: "telnyx", settings: { voice_id: "en-US-Neural2-F" } },
     greeting: "Hello! How can I help you today?",
   }),
 });
-const { data: assistant } = await createRes.json();
+if (!createRes.ok) throw new Error(`Create failed: ${createRes.status}`);
+const payload = await createRes.json();
+const assistant = payload.data ?? payload;
+if (typeof assistant.id !== "string" || !assistant.id.trim()) {
+  throw new Error("Create response has no valid assistant ID");
+}
 console.log(`Created: ${assistant.id}`);
 
 // List assistants
 const listRes = await fetch(`${BASE_URL}/ai/assistants`, { headers });
+if (!listRes.ok) throw new Error(`List failed: ${listRes.status}`);
 const { data: assistants } = await listRes.json();
 assistants.forEach((a: any) => console.log(`${a.id}: ${a.name}`));
 
 // Update
-await fetch(`${BASE_URL}/ai/assistants/${assistant.id}`, {
-  method: "PATCH",
+const updateRes = await fetch(`${BASE_URL}/ai/assistants/${assistant.id}`, {
+  method: "POST",
   headers,
   body: JSON.stringify({ greeting: "Hi there! What can I do for you?" }),
 });
+if (!updateRes.ok) throw new Error(`Update failed: ${updateRes.status}`);
 
 // Delete
-await fetch(`${BASE_URL}/ai/assistants/${assistant.id}`, {
+const deleteRes = await fetch(`${BASE_URL}/ai/assistants/${assistant.id}`, {
   method: "DELETE",
   headers,
 });
+if (!deleteRes.ok) throw new Error(`Delete failed: ${deleteRes.status}`);
 ```
 
 ## Agent Toolkit Examples
 
-Use the `telnyx-agent-toolkit` Python package for simplified tool execution:
+For framework-specific Python toolkit initialization and response handling, use
+[the Python toolkit README](../tools/python/README.md). The REST examples above
+can be used directly without a framework adapter.
 
-```python
-from telnyx_agent_toolkit import TelnyxToolkit
+## Test Without a Phone Number
 
-toolkit = TelnyxToolkit(api_key="KEY...")
-
-# Create an AI assistant
-assistant = toolkit.execute("create_ai_assistant", {
-    "name": "Support Bot",
-    "model": "meta-llama/Llama-3.3-70B-Instruct",
-    "instructions": "You are a helpful customer support agent."
-})
-print(f"Created: {assistant['data']['id']}")
-
-# List assistants
-assistants = toolkit.execute("list_ai_assistants", {"page_size": 10})
-for a in assistants["data"]:
-    print(f"{a['id']}: {a['name']}")
-```
+An assistant can receive audio through
+`wss://api.telnyx.com/v2/ai/assistants/{assistant_id}/conversation` without a
+phone number or PSTN connection. This still uses billable AI processing.
+Follow the [WebSocket conversation guide](https://developers.telnyx.com/docs/inference/ai-assistants/realtime-conversations)
+for authentication, PCM16 input, sample rates, and lifecycle events. Keep the
+account API key on a trusted server rather than embedding it in a browser.
 
 ## Wiring to a Phone Number
 
-1. Create a Call Control application in the portal
-2. Set the webhook URL to: `https://api.telnyx.com/v2/ai/assistants/{assistant_id}/answer`
-3. Assign your phone number to this application
+Create the assistant with the API examples above. If you need a new number,
+follow the [Phone Numbers guide](phone-numbers.md) to search with
+`filter[features]=voice`, check its cost, and place the order. New numbers incur
+recurring rental charges. Wait for the order to complete, then retrieve the
+owned number's resource ID; the order ID and E.164 number are not that ID.
 
-Or programmatically:
+Once you have an assistant and an owned number, retrieve the assistant's default
+TeXML app, validate its routing, and assign the number to that app:
 
 ```bash
-# Create connection pointing to assistant
-curl -X POST "https://api.telnyx.com/v2/connections" \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "AI Assistant Connection",
-    "active": true,
-    "webhook_api_url": "https://api.telnyx.com/v2/ai/assistants/{assistant_id}/answer"
-  }'
+set -euo pipefail
+ASSISTANT_ID="YOUR_ASSISTANT_ID"
+PHONE_NUMBER_ID="YOUR_PHONE_NUMBER_RESOURCE_ID"
+BASE_URL="https://api.telnyx.com/v2"
 
-# Assign phone number to connection
-curl -X PATCH "https://api.telnyx.com/v2/phone_numbers/{number_id}" \
+assistant=$(curl --fail-with-body -sS "$BASE_URL/ai/assistants/$ASSISTANT_ID" \
+  -H "Authorization: Bearer $TELNYX_API_KEY")
+app_id=$(jq -er '(.data // .).telephony_settings.default_texml_app_id | select(type == "string" and length > 0)' <<< "$assistant")
+curl --fail-with-body -sS "$BASE_URL/texml_applications/$app_id" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" | \
+  jq -e --arg app "$app_id" --arg url "$BASE_URL/ai/assistants/$ASSISTANT_ID/texml" \
+    '(.data // .) | .id == $app and .active == true and .voice_url == $url and (.voice_method | ascii_upcase) == "GET"' >/dev/null
+
+# Refuse to replace a different connection. Reconcile unexpected assignments first.
+curl --fail-with-body -sS "$BASE_URL/phone_numbers/$PHONE_NUMBER_ID" \
+  -H "Authorization: Bearer $TELNYX_API_KEY" | \
+  jq -e --arg id "$PHONE_NUMBER_ID" --arg app "$app_id" \
+    '(.data // .) | .id == $id and ((.connection_id // "") == "" or .connection_id == $app)' >/dev/null
+curl --fail-with-body -sS -X PATCH "$BASE_URL/phone_numbers/$PHONE_NUMBER_ID" \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"connection_id": "connection-id"}'
+  -d "$(jq -n --arg app "$app_id" '{connection_id: $app}')" | \
+  jq -e --arg id "$PHONE_NUMBER_ID" --arg app "$app_id" \
+    '(.data // .) | .id == $id and .connection_id == $app'
 ```
+
+This Bash example requires `jq` and uses the phone number's resource ID, not its
+E.164 value. If the assistant has no default app or the routing check fails,
+inspect its configuration before assigning a number. The supported voice route
+is `GET /v2/ai/assistants/{assistant_id}/texml`, not `/call`. These read/assign
+steps are not atomic with concurrent number updates. Confirm a real test call
+after assignment; a successful PATCH only verifies the connection ID.
+
+Preserve resource IDs if setup fails; do not blindly rerun a command that creates
+paid resources.
 
 ## Available Voices
 
-**Telnyx voices:**
-- `en-US-Neural2-F` (female, US)
-- `en-US-Neural2-M` (male, US)
-- `en-GB-Neural2-F` (female, UK)
-- `en-GB-Neural2-M` (male, UK)
-
-**ElevenLabs:** Provide your API key in voice settings for access to all ElevenLabs voices.
+Discover voices with `telnyx-agent tts-voices --json`, then check the assistant's
+`voice_settings` contract for the selected provider. A standalone TTS voice list
+does not guarantee that every voice is supported by assistants.
 
 ## Pricing
 
 - **AI model:** Per-token pricing (pricing varies by model)
-- **Voice synthesis:** Per-character pricing
-- **Phone call:** Standard voice rates
+- **Voice engine:** Per-minute orchestration and included hosted STT/TTS; optional providers/add-ons may have separate charges.
+- **Phone call:** Separate telephony rates and number rental.
+
+See [current Voice AI pricing](https://telnyx.com/pricing/voice-ai-agents), including
+billing increments. Standalone TTS per-character prices are not the bundled voice-engine rate.
 
 ## Error Handling
 
 | Error | HTTP Status | Resolution |
 |-------|-------------|------------|
 | `insufficient_credits` | 402 | Add AI credits |
-| `model_not_available` | 400 | Check model name |
+| `10027` with an unavailable assistant-model detail | 422 | Omit `model` for the current default or select a model supported by assistants |
 | `voice_not_found` | 400 | Verify voice_id |
 
 ## Resources
