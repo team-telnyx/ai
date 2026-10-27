@@ -166,6 +166,7 @@
 | `features` | object \| null |
 | `health_webhook_url` | url |
 | `id` | uuid |
+| `mm7_metadata` | object \| null |
 | `mms_fall_back_to_sms` | boolean |
 | `mms_transcoding` | boolean |
 | `mobile_only` | boolean |
