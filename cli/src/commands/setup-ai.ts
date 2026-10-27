@@ -40,6 +40,7 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
   let phoneNumberId = "";
   let texmlAppId = "";
   let orderId = "";
+  let defaultTexmlAppId = "";
 
   try {
     if (!jsonOutput) console.log("\n🚀 Setting up AI Assistant...\n");
@@ -59,14 +60,11 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       assistantId = requiredValue(data.id, "assistant ID");
       if (assistantId !== existingAssistant) throw new Error("Retrieved assistant ID does not match --assistant-id");
       assistantName = typeof data.name === "string" ? data.name : assistantId;
+      defaultTexmlAppId = defaultAppId(data);
     }
-    if (existingApp) {
-      const data = resource(await client.get(`/texml_applications/${encodeURIComponent(existingApp)}`));
-      if (data.ai_assistant_id !== assistantId || data.active !== true) {
-        throw new Error("TeXML application must be active and linked to the supplied assistant");
-      }
-      texmlAppId = requiredValue(data.id, "TeXML application ID");
-      if (texmlAppId !== existingApp) throw new Error("Retrieved TeXML application ID does not match --texml-app-id");
+    if (existingApp || defaultTexmlAppId) {
+      texmlAppId = existingApp || defaultTexmlAppId;
+      await validateApp(client, texmlAppId, assistantId);
     }
     if (existingNumber) {
       const data = resource(await telnyxCli(["phone-numbers", "retrieve", "--id", existingNumber]));
@@ -93,9 +91,14 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
           "ai:assistants", "create",
           "--name", assistantName,
           "--instructions", instructions,
-          "--model", "Qwen/Qwen3-235B-A22B",
         ]);
-        assistantId = requiredValue(resource(assistantRes).id, "assistant ID");
+        const assistant = resource(assistantRes);
+        assistantId = requiredValue(assistant.id, "assistant ID");
+        defaultTexmlAppId = defaultAppId(assistant);
+        if (defaultTexmlAppId) {
+          texmlAppId = defaultTexmlAppId;
+          await validateApp(client, texmlAppId, assistantId);
+        }
       }
       steps.push({ step: 1, name: assistantStep, status: "completed", resourceId: assistantId, detail: assistantName, elapsedMs: Date.now() - step1Start });
     } catch (err) {
@@ -135,11 +138,11 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
         const texmlRes = await client.post("/texml_applications", {
           friendly_name: `AI - ${ts}`,
           active: true,
-          ai_assistant_id: assistantId,
-          voice_url: `https://api.telnyx.com/v2/ai/assistants/${assistantId}/call`,
-          voice_method: "POST",
+          voice_url: assistantTexmlUrl(assistantId),
+          voice_method: "GET",
         });
         texmlAppId = requiredValue(resource(texmlRes).id, "TeXML application ID");
+        await validateApp(client, texmlAppId, assistantId);
       }
 
       // Use the REST assignment contract, as setup-voice/setup-sms do.
@@ -191,7 +194,7 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       phone_number_id: phoneNumberId || null,
       texml_app_id: texmlAppId || null,
       number_order_id: orderId || null,
-      recovery: "Keep these resource IDs. Reconcile any timed-out create/order before retrying. Reuse known resources with --assistant-id, --phone-number-id (ID or E.164), and --texml-app-id; omitted resources will be created. A fresh invocation is not idempotent.",
+      recovery: "Keep these resource IDs. Reconcile any timed-out create/order before retrying. Reuse known resources with --assistant-id, --phone-number-id (ID or E.164), and --texml-app-id. Without --texml-app-id, the assistant's default app is reused when available; other omitted resources are created. A fresh invocation is not idempotent.",
       ready: false,
       steps,
       error: errorMsg(err),
@@ -209,6 +212,27 @@ export async function setupAiCommand(flags: Record<string, string | boolean>): P
       console.log();
     }
     process.exit(1);
+  }
+}
+
+function assistantTexmlUrl(assistantId: string): string {
+  return `https://api.telnyx.com/v2/ai/assistants/${encodeURIComponent(assistantId)}/texml`;
+}
+
+function defaultAppId(assistant: Record<string, unknown>): string {
+  const settings = assistant.telephony_settings as Record<string, unknown> | undefined;
+  const id = settings?.default_texml_app_id;
+  return id == null ? "" : requiredValue(id, "default TeXML application ID");
+}
+
+async function validateApp(client: TelnyxClient, appId: string, assistantId: string): Promise<void> {
+  const app = resource(await client.get(`/texml_applications/${encodeURIComponent(appId)}`));
+  if (app.id !== appId) throw new Error("Retrieved TeXML application ID does not match the requested app");
+  // The TeXML API does not return ai_assistant_id. Its routing contract is the
+  // active app's voice URL and method, including for assistant-created apps.
+  if (app.active !== true || app.voice_url !== assistantTexmlUrl(assistantId) ||
+      typeof app.voice_method !== "string" || app.voice_method.toUpperCase() !== "GET") {
+    throw new Error("TeXML application must be active and route GET to the supplied assistant's /texml endpoint; inspect its voice_url and voice_method before retrying");
   }
 }
 

@@ -25,7 +25,7 @@ fs.appendFileSync(process.env.TEST_ARGS_LOG, JSON.stringify(args) + '\\n');
 const cmd = args.slice(0, 2).join(' ');
 let data;
 if (cmd === 'ai:assistants create' || cmd === 'ai:assistants retrieve') {
-  data = process.env.TEST_MODE === 'missing-assistant' ? {} : { id: 'assistant-1', name: 'Existing assistant' };
+  data = process.env.TEST_MODE === 'missing-assistant' ? {} : { id: 'assistant-1', name: 'Existing assistant', ...(process.env.TEST_MODE === 'default-app' ? {telephony_settings: {default_texml_app_id: 'app-1'}} : {}) };
 } else if (cmd === 'available-phone-numbers list') {
   data = [{ phone_number: '+13125550001' }];
 } else if (cmd === 'number-orders create') {
@@ -44,7 +44,7 @@ console.log(JSON.stringify({data}));
       requests.push({ method: req.method!, path: req.url!, body: body ? JSON.parse(body) : null });
       res.setHeader("Content-Type", "application/json");
       if (req.method === "GET" && req.url === "/v2/texml_applications/app-1") {
-        res.end(JSON.stringify({ data: { id: "app-1", ai_assistant_id: appMode === "mismatch" ? "other" : "assistant-1", active: true } }));
+        res.end(JSON.stringify({ data: { id: appMode === "wrong-id" ? "other-app" : "app-1", active: appMode !== "inactive", voice_url: `https://api.telnyx.com/v2/ai/assistants/${appMode === "mismatch" ? "other" : "assistant-1"}/${appMode === "legacy" ? "call" : "texml"}`, voice_method: appMode === "wrong-method" ? "post" : "get" } }));
       } else if (req.method === "POST" && req.url === "/v2/texml_applications") {
         res.end(JSON.stringify({ data: appMode === "missing" ? {} : { id: "app-1" } }));
       } else if (req.method === "PATCH" && req.url === "/v2/phone_numbers/number-1") {
@@ -82,6 +82,14 @@ describe("setup-ai recovery", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.data.ready, true);
     assert.equal(result.data.texml_app_id, "app-1");
+    const createArgs = readFileSync(join(dir, "args"), "utf8").trim().split("\n").map(line => JSON.parse(line)).find(args => args[0] === "ai:assistants" && args[1] === "create");
+    assert.deepEqual(createArgs, ["ai:assistants", "create", "--name", createArgs[3], "--instructions", "You are a helpful assistant.", "--format", "json"]);
+    assert.deepEqual(requests.find(r => r.method === "POST")?.body, {
+      friendly_name: requests.find(r => r.method === "POST")?.body.friendly_name,
+      active: true,
+      voice_url: "https://api.telnyx.com/v2/ai/assistants/assistant-1/texml",
+      voice_method: "GET",
+    });
     assert.deepEqual(requests.find(r => r.method === "PATCH"), { method: "PATCH", path: "/v2/phone_numbers/number-1", body: { connection_id: "app-1" } });
   });
   it("stops before buying a number when assistant creation returns no ID", async () => {
@@ -116,6 +124,35 @@ describe("setup-ai recovery", () => {
     appMode = "mismatch";
     assert.equal((await run(resume)).status, 1);
     assert.ok(requests.every(r => r.method === "GET"));
+  });
+  it("reuses the assistant-created default app without creating a duplicate", async () => {
+    const result = await run([], "default-app");
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.data.texml_app_id, "app-1");
+    assert.ok(!requests.some(r => r.method === "POST"));
+  });
+  it("reuses the default app during partial resumption", async () => {
+    const result = await run(resume.slice(0, 4), "default-app");
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(!commands().some(c => c.endsWith(" create")));
+    assert.ok(!requests.some(r => r.method === "POST"));
+  });
+  it("rejects inactive, legacy, wrong-method, and wrong-ID apps before mutation", async () => {
+    for (const mode of ["inactive", "legacy", "wrong-method", "wrong-id"]) {
+      requests = []; appMode = mode;
+      const result = await run(resume);
+      assert.equal(result.status, 1, mode);
+      assert.equal(result.data.texml_app_id, "app-1");
+      assert.ok(requests.every(r => r.method === "GET"));
+    }
+  });
+  it("validates a new assistant's default app before buying a number", async () => {
+    appMode = "legacy";
+    const result = await run([], "default-app");
+    assert.equal(result.status, 1);
+    assert.equal(result.data.assistant_id, "assistant-1");
+    assert.equal(result.data.texml_app_id, "app-1");
+    assert.ok(!commands().includes("number-orders create"));
   });
   it("does not report ready when a successful response does not confirm assignment", async () => {
     assignmentConfirmed = false;
