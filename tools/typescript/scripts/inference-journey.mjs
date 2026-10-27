@@ -47,9 +47,9 @@ export async function readCompletion(response) {
         requireValue(Number.isInteger(part.index) && part.index >= 0 && part.index < 8, "Invalid tool index");
         const call = calls.get(part.index) ?? { id: "", type: "function", function: { name: "", arguments: "" } };
         if (part.type) requireValue(part.type === "function", "Unexpected tool type");
-        if (part.id) {
-          requireValue(typeof part.id === "string" && (!call.id || call.id === part.id), "Tool ID changed mid-stream");
-          call.id = part.id;
+        if (part.id != null) {
+          requireValue(typeof part.id === "string", "Invalid tool ID delta");
+          call.id += part.id;
         }
         for (const field of ["name", "arguments"]) {
           if (part.function?.[field] != null) {

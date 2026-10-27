@@ -5,8 +5,8 @@ import { readCompletion, runInferenceJourney } from "../scripts/inference-journe
 const chunk = (delta, finish_reason = null) => ({ model: "fixture-model", choices: [{ index: 0, delta, finish_reason }] });
 const toolEvents = () => [
   chunk({ role: "assistant", reasoning_content: "Private reasoning." }),
-  chunk({ tool_calls: [{ index: 0, id: "call_123", type: "function", function: { name: "lookup_", arguments: '{"ref' } }] }),
-  chunk({ tool_calls: [{ index: 0, function: { name: "verification", arguments: 'erence":"win-the-bot"}' } }] }),
+  chunk({ tool_calls: [{ index: 0, id: "call_", type: "function", function: { name: "lookup_", arguments: '{"ref' } }] }),
+  chunk({ tool_calls: [{ index: 0, id: "123", function: { name: "verification", arguments: 'erence":"win-the-bot"}' } }] }),
   chunk({}, "tool_calls"),
 ];
 
@@ -20,7 +20,7 @@ function stream(events, { done = true, fragment = false } = {}) {
   } }), { headers: { "content-type": "text/event-stream", "x-request-id": "fixture-request" } });
 }
 
-it("assembles fragmented SSE, split UTF-8, tool names/arguments, and usage trailers", async () => {
+it("assembles fragmented SSE, split UTF-8, tool IDs/names/arguments, and usage trailers", async () => {
   const events = toolEvents();
   events[0] = chunk({ content: "café", reasoning_content: "Private reasoning." });
   events.push({ choices: [], usage: { completion_tokens: 25 } });
@@ -37,7 +37,7 @@ for (const [name, events, options, expected] of [
   ["missing finish reason", [chunk({ content: "hello" })], {}, /without finish reason/],
   ["invalid JSON", ["{"], {}, /Invalid SSE JSON/],
   ["provider error", [{ error: { message: "failure" } }], {}, /Invalid completion event/],
-  ["changed tool identity", [...toolEvents(), chunk({ tool_calls: [{ index: 0, id: "different" }] })], {}, /ID changed/],
+  ["non-string tool ID", [...toolEvents(), chunk({ tool_calls: [{ index: 0, id: 123 }] })], {}, /Invalid tool ID/],
   ["oversized output", [chunk({ content: "a".repeat(1024 * 1024) })], {}, /byte limit/],
 ]) {
   it(`rejects ${name}`, async () => {
@@ -59,6 +59,7 @@ function fixture({ first = toolEvents(), wrongAnswer = false, missingModel = fal
     if (requests.length === 2) return stream(first);
     const assistant = body.messages.at(-2);
     const tool = body.messages.at(-1);
+    assert.equal(assistant.tool_calls[0].id, "call_123");
     assert.equal(assistant.tool_calls[0].id, tool.tool_call_id);
     assert.equal(assistant.reasoning_content, "Private reasoning.");
     const answer = JSON.parse(tool.content).verification_code;
