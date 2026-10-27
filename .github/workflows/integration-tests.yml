@@ -63,6 +63,9 @@ jobs:
       - name: TypeScript adapter contract tests
         working-directory: tools/typescript
         run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts
+      - name: Inference journey contract tests (offline)
+        working-directory: tools/typescript
+        run: npm run test:inference-journey
       - name: Install CLI deps
         working-directory: cli
         run: npm ci
