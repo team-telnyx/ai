@@ -354,6 +354,7 @@ Setup-specific Flags:
                                avoid buying duplicate ~$1/mo numbers)
   --instructions    AI assistant instructions (setup-ai)
   --name            AI assistant name (setup-ai)
+  --texml-app-id     Reuse an active TeXML app (setup-ai; requires --assistant-id and --phone-number-id)
   --network-id      Use existing network (setup-wireguard)
   --id <peer-id>    WireGuard peer ID (get-wireguard-peer-config — required); configuration is sensitive and emitted only with --json
   --profile-name    Custom verify profile name (setup-verify)
@@ -1354,6 +1355,7 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
+  "texml-app-id",
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
