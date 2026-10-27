@@ -255,16 +255,14 @@ account API key on a trusted server rather than embedding it in a browser.
 
 ## Wiring to a Phone Number
 
-For a new assistant and a new number, the agent CLI provisions and wires the resources:
+Create the assistant with the API examples above. If you need a new number,
+follow the [Phone Numbers guide](phone-numbers.md) to search with
+`filter[features]=voice`, check its cost, and place the order. New numbers incur
+recurring rental charges. Wait for the order to complete, then retrieve the
+owned number's resource ID; the order ID and E.164 number are not that ID.
 
-```bash
-# Creates an assistant and purchases a phone number; incurs recurring number charges.
-telnyx-agent setup-ai --name "Support Bot" --instructions "You are a helpful assistant." --json
-```
-
-This is a provisioning command, not a way to attach the assistant created above.
-To attach an existing assistant and an existing number, retrieve the assistant's
-default TeXML app, validate its routing, and assign the number to that app:
+Once you have an assistant and an owned number, retrieve the assistant's default
+TeXML app, validate its routing, and assign the number to that app:
 
 ```bash
 set -euo pipefail
