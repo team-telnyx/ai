@@ -127,6 +127,7 @@ Assistants maintain conversation context automatically. To view history:
 **`GET /v2/ai/conversations`**
 
 ```bash
+ASSISTANT_ID="YOUR_ASSISTANT_ID"
 curl --get "https://api.telnyx.com/v2/ai/conversations" \
   --data-urlencode "metadata->assistant_id=eq.$ASSISTANT_ID" \
   -H "Authorization: Bearer $TELNYX_API_KEY"
@@ -210,7 +211,9 @@ const createRes = await fetch(`${BASE_URL}/ai/assistants`, {
 if (!createRes.ok) throw new Error(`Create failed: ${createRes.status}`);
 const payload = await createRes.json();
 const assistant = payload.data ?? payload;
-if (!assistant.id) throw new Error("Create response has no assistant ID");
+if (typeof assistant.id !== "string" || !assistant.id.trim()) {
+  throw new Error("Create response has no valid assistant ID");
+}
 console.log(`Created: ${assistant.id}`);
 
 // List assistants
@@ -320,7 +323,7 @@ billing increments. Standalone TTS per-character prices are not the bundled voic
 | Error | HTTP Status | Resolution |
 |-------|-------------|------------|
 | `insufficient_credits` | 402 | Add AI credits |
-| `model_not_available` | 400 | Check model name |
+| `10027` with an unavailable assistant-model detail | 422 | Omit `model` for the current default or select a model supported by assistants |
 | `voice_not_found` | 400 | Verify voice_id |
 
 ## Resources
