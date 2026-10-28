@@ -974,7 +974,6 @@ curl \
     "language_boost": "string"
   },
   "resemble": {
-    "api_key": "string",
     "precision": "string",
     "sample_rate": "string",
     "format": "string"
