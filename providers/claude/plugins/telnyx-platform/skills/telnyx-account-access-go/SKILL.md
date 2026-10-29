@@ -205,7 +205,7 @@ Optional: `administrative_area` (string), `extended_address` (string), `locality
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 

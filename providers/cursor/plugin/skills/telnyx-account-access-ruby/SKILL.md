@@ -180,7 +180,7 @@ response = client.addresses.actions.validate(
 puts(response)
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 

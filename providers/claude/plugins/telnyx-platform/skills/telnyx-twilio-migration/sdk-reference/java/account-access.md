@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.97.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.97.0")
 ```
 
 ## Setup
@@ -185,7 +185,7 @@ ActionValidateParams params = ActionValidateParams.builder()
 ActionValidateResponse response = client.addresses().actions().validate(params);
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 

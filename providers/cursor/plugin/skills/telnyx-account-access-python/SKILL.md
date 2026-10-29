@@ -183,7 +183,7 @@ response = client.addresses.actions.validate(
 print(response.data)
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 

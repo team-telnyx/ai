@@ -182,7 +182,7 @@ curl \
   "https://api.telnyx.com/v2/addresses/actions/validate"
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 

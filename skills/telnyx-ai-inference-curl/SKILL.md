@@ -664,7 +664,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/models"
 ```
 
-Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
+Returns: `base_model` (string | null), `beta` (boolean), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -986,7 +986,6 @@ curl \
     "language_boost": "string"
   },
   "resemble": {
-    "api_key": "string",
     "precision": "string",
     "sample_rate": "string",
     "format": "string"
