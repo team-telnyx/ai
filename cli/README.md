@@ -877,9 +877,12 @@ treating its label as a safety boundary:
 - **API Read-Only Tests** runs the CLI's `help`, `status`, and `capabilities`
   through its packaged launcher. The CLI suite does not invoke setup/funding
   commands or perform cleanup, and partial status-query failures fail the suite.
+  Telemetry and friction reporting are disabled in every CLI subprocess.
   `integration-ci-readonly.test.ts` runs this same suite against a local API
-  and checks every request is an expected GET. The job also runs SDK/guide
-  tests separately, including billable inference/lookup probes; its name is
+  with an allowlisted environment and checks every request is an expected GET.
+  A preloaded TCP guard is inherited by Node descendants and fails before any
+  connection outside that server, including reporter POSTs and HTTP redirects.
+  The job also runs SDK/guide tests separately, including billable inference/lookup probes; its name is
   not a promise of zero cost.
 - **API Write + Cleanup Tests** adds the explicitly write-gated coverage with
   `RUN_WRITE_TESTS=true`. It creates and cleans up real resources and runs only

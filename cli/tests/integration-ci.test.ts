@@ -26,7 +26,14 @@ const run = (command: "help" | "status" | "capabilities", json = false): string 
   return execFileSync(process.execPath, [CLI, command, ...(json ? ["--json"] : [])], {
     encoding: "utf-8",
     timeout: CLI_TIMEOUT_MS,
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      // A read-only command must not POST success/error reports, even when the
+      // invoking account or CI environment enables these reporters.
+      TELNYX_FRICTION_ENABLED: "false",
+      TELNYX_FRICTION_ENDPOINT: "",
+      TELNYX_TELEMETRY_ENDPOINT: "",
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
 };
