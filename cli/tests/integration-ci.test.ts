@@ -4,12 +4,12 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CLI = join(__dirname, "..", "bin", "telnyx-agent.ts");
+const CLI = join(__dirname, "..", "bin", "telnyx-agent.mjs");
 
 if (!process.env.TELNYX_API_KEY) {
   console.log("TELNYX_API_KEY not set — skipping");
@@ -19,37 +19,30 @@ if (!process.env.TELNYX_API_KEY) {
 const CLI_TIMEOUT_MS = Number(process.env.CLI_INTEGRATION_TIMEOUT_MS ?? 60000);
 let cachedStatusJson: any | undefined;
 
-const run = (args: string): string => {
-  return execSync(`npx tsx ${CLI} ${args}`, {
+// Only these commands belong in the live read-only suite. Setup/error-path
+// probes must use offline mocks: account state can make them provision resources.
+const run = (command: "help" | "status" | "capabilities", json = false): string => {
+  assert.ok(["help", "status", "capabilities"].includes(command), "Not a read-only probe");
+  return execFileSync(process.execPath, [CLI, command, ...(json ? ["--json"] : [])], {
     encoding: "utf-8",
     timeout: CLI_TIMEOUT_MS,
-    env: { ...process.env },
+    env: {
+      ...process.env,
+      // A read-only command must not POST success/error reports, even when the
+      // invoking account or CI environment enables these reporters.
+      TELNYX_FRICTION_ENABLED: "false",
+      TELNYX_FRICTION_ENDPOINT: "",
+      TELNYX_TELEMETRY_ENDPOINT: "",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
   });
 };
 
-const runJson = (args: string): any => {
-  const out = run(args);
-  return JSON.parse(out);
-};
+const runJson = (command: "status" | "capabilities"): any => JSON.parse(run(command, true));
 
 const getStatusJson = (): any => {
-  cachedStatusJson ??= runJson("status --json");
+  cachedStatusJson ??= runJson("status");
   return cachedStatusJson;
-};
-
-/**
- * Attempt to run a CLI command and return the result.
- * If the command fails, return { error, exitCode, stderr }.
- */
-const tryRunJson = (args: string): { ok: true; data: any } | { ok: false; error: string; exitCode: number } => {
-  try {
-    const data = runJson(args);
-    return { ok: true, data };
-  } catch (err: any) {
-    // execSync throws on non-zero exit — try to parse stderr/stdout
-    const output = err.stdout?.toString() || err.stderr?.toString() || err.message;
-    return { ok: false, error: output, exitCode: err.status ?? 1 };
-  }
 };
 
 describe("CLI — help", () => {
@@ -84,6 +77,12 @@ describe("CLI — status", () => {
     );
     assert.ok(data.connections !== undefined, "Missing connections");
     assert.ok(data.ai_assistants !== undefined, "Missing ai_assistants");
+    assert.ok(Array.isArray(data.warnings), "Missing warnings");
+    assert.deepEqual(
+      data.warnings.filter((warning: string) => warning.startsWith("Could not fetch")),
+      [],
+      "A partially failed status query must not pass integration coverage",
+    );
   });
 
   it("balance is a valid object with numeric amount", () => {
@@ -114,7 +113,7 @@ describe("CLI — status", () => {
 
 describe("CLI — capabilities", () => {
   it("returns valid JSON with --json", () => {
-    const data = runJson("capabilities --json");
+    const data = runJson("capabilities");
     assert.ok(
       data.total_tools >= 20,
       `Expected >= 20 tools, got ${data.total_tools}`
@@ -127,12 +126,12 @@ describe("CLI — capabilities", () => {
   });
 
   it("total_tools matches CLI capabilities count (>= 27)", () => {
-    const data = runJson("capabilities --json");
+    const data = runJson("capabilities");
     assert.ok(data.total_tools >= 27, `Expected >= 27 tools, got ${data.total_tools}`);
   });
 
   it("lists all categories with name and actions", () => {
-    const data = runJson("capabilities --json");
+    const data = runJson("capabilities");
     const categories = Object.keys(data.api_capabilities || {});
     assert.ok(
       categories.length >= 8,
@@ -150,7 +149,7 @@ describe("CLI — capabilities", () => {
   });
 
   it("composite_commands includes all setup commands", () => {
-    const data = runJson("capabilities --json");
+    const data = runJson("capabilities");
     const names = data.composite_commands.map((c: any) => c.name || c.command || c);
     const expected = ["setup-sms", "setup-voice", "setup-ai", "setup-iot", "setup-wireguard", "setup-verify", "setup-10dlc"];
     for (const cmd of expected) {
@@ -171,108 +170,5 @@ describe("CLI — capabilities", () => {
       out.includes("Voice") || out.includes("voice"),
       "Missing voice category"
     );
-  });
-});
-
-describe("CLI — setup-iot (read-only, lists SIMs)", () => {
-  it("runs without error and returns JSON", () => {
-    const result = tryRunJson("setup-iot --json");
-    if (result.ok) {
-      // If it succeeds, verify the output shape
-      const data = result.data;
-      assert.ok(data.steps || data.sim_id || data.ready !== undefined,
-        "Expected steps, sim_id, or ready field in output");
-    } else {
-      // setup-iot may fail if no SIMs available — that's OK
-      assert.ok(
-        result.error.includes("No SIM") ||
-        result.error.includes("sim") ||
-        result.error.includes("not found") ||
-        result.exitCode !== 0,
-        "Expected graceful failure for no SIMs"
-      );
-    }
-  });
-});
-
-describe("CLI — fund-account (error case, no wallet)", () => {
-  it("returns error when no wallet key provided", () => {
-    const result = tryRunJson("fund-account --json --amount 10");
-    // fund-account requires a wallet private key — should fail gracefully
-    if (result.ok) {
-      // If it returns JSON, it should indicate an error or missing wallet
-      const data = result.data;
-      assert.ok(
-        data.error || data.status === "error" || data.previous_balance,
-        "Expected error or wallet-related output"
-      );
-    } else {
-      // Non-zero exit is expected without a wallet
-      assert.ok(result.exitCode !== 0 || result.error.length > 0,
-        "Expected non-zero exit or error message");
-    }
-  });
-});
-
-describe("CLI — setup-10dlc (requires flags, error case)", () => {
-  it("fails gracefully without required --phone and --email flags", () => {
-    const result = tryRunJson("setup-10dlc --json");
-    // setup-10dlc requires --phone and --email
-    assert.equal(result.ok, false, "Should fail without required flags");
-    assert.ok(result.exitCode !== 0, "Should exit with non-zero code");
-  });
-});
-
-describe("CLI — setup-wireguard (network creation)", () => {
-  it("returns valid JSON output shape or graceful error", () => {
-    const result = tryRunJson("setup-wireguard --json");
-    if (result.ok) {
-      const data = result.data;
-      // Verify expected output fields
-      assert.ok(
-        data.network_id || data.steps || data.ready !== undefined,
-        "Expected network_id, steps, or ready field"
-      );
-    } else {
-      // May fail on test accounts — just verify it doesn't crash silently
-      assert.ok(result.error.length > 0 || result.exitCode !== 0,
-        "Expected error message or non-zero exit");
-    }
-  });
-});
-
-describe("CLI — setup-verify (verify profile creation)", () => {
-  it("returns valid JSON output shape or graceful error", () => {
-    const result = tryRunJson("setup-verify --json");
-    if (result.ok) {
-      const data = result.data;
-      assert.ok(
-        data.profile_id || data.steps || data.ready !== undefined,
-        "Expected profile_id, steps, or ready field"
-      );
-
-      // If it created resources, clean up
-      if (data.profile_id) {
-        try {
-          const headers = {
-            Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
-            "Content-Type": "application/json",
-          };
-          // Best-effort cleanup via curl
-          execSync(`curl -s -X DELETE "https://api.telnyx.com/v2/verify/profiles/${data.profile_id}" -H "Authorization: Bearer ${process.env.TELNYX_API_KEY}"`, {
-            timeout: 10000,
-          });
-          if (data.phone_number_id) {
-            execSync(`curl -s -X DELETE "https://api.telnyx.com/v2/phone_numbers/${data.phone_number_id}" -H "Authorization: Bearer ${process.env.TELNYX_API_KEY}"`, {
-              timeout: 10000,
-            });
-          }
-        } catch { /* best effort cleanup */ }
-      }
-    } else {
-      // setup-verify may fail on some accounts
-      assert.ok(result.error.length > 0 || result.exitCode !== 0,
-        "Expected error message or non-zero exit");
-    }
   });
 });

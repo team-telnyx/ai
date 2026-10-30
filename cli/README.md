@@ -874,11 +874,16 @@ npm test
 CI adds further live-network coverage. Inspect each job's test selection before
 treating its label as a safety boundary:
 
-- **API Read-Only Tests** is a legacy job name, not a mutation guarantee. Its
-  CLI `integration-ci` suite runs with a repository secret and invokes
-  `setup-iot`, `setup-wireguard`, and `setup-verify`; depending on account state,
-  those cases can create resources, enable or reassign a SIM, and rely on only
-  partial best-effort cleanup.
+- **API Read-Only Tests** runs the CLI's `help`, `status`, and `capabilities`
+  through its packaged launcher. The CLI suite does not invoke setup/funding
+  commands or perform cleanup, and partial status-query failures fail the suite.
+  Telemetry and friction reporting are disabled in every CLI subprocess.
+  `integration-ci-readonly.test.ts` runs this same suite against a local API
+  with an allowlisted environment and checks every request is an expected GET.
+  A preloaded TCP guard is inherited by Node descendants and fails before any
+  connection outside that server, including reporter POSTs and HTTP redirects.
+  The job also runs SDK/guide tests separately, including billable inference/lookup probes; its name is
+  not a promise of zero cost.
 - **API Write + Cleanup Tests** adds the explicitly write-gated coverage with
   `RUN_WRITE_TESTS=true`. It creates and cleans up real resources and runs only
   on pushes to `main` or an explicitly enabled manual workflow dispatch.
