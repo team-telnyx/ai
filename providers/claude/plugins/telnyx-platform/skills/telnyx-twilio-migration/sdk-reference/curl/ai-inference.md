@@ -376,7 +376,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Delete a conversation
 
-Delete a specific conversation by its ID.
+Delete a specific conversation by its ID. Permanently deletes the conversation and its associated data: the conversation's messages, its insight generation results, any conversation memories, and its webhook request logs. Recordings are not deleted — recordings are managed separately through the /v2/recordings endpoints. This action cannot be undone.
 
 `DELETE /ai/conversations/{conversation_id}`
 
@@ -398,6 +398,19 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/co
 ```
 
 Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
+## Delete a conversation's insight generation results
+
+Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself.
+
+`DELETE /ai/conversations/{conversation_id}/conversations-insights/{insight_id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/ai/conversations/550e8400-e29b-41d4-a716-446655440000/conversations-insights/{insight_id}"
+```
 
 ## Create Message
 
@@ -652,7 +665,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/models"
 ```
 
-Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
+Returns: `base_model` (string | null), `beta` (boolean), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -974,7 +987,6 @@ curl \
     "language_boost": "string"
   },
   "resemble": {
-    "api_key": "string",
     "precision": "string",
     "sample_rate": "string",
     "format": "string"
