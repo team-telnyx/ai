@@ -145,7 +145,7 @@ Returns a paginated list of the on-demand telephony credentials on your account,
 	fmt.Printf("%+v\n", page)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Create a credential
 
@@ -165,7 +165,7 @@ Optional: `expires_at` (string), `name` (string), `tag` (string)
 	fmt.Printf("%+v\n", telephonyCredential.Data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Get a credential
 
@@ -181,7 +181,7 @@ Get the details of an existing On-demand Credential.
 	fmt.Printf("%+v\n", telephonyCredential.Data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -203,7 +203,7 @@ Optional: `connection_id` (string), `expires_at` (string), `name` (string), `tag
 	fmt.Printf("%+v\n", telephonyCredential.Data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Delete a credential
 
@@ -219,4 +219,4 @@ Permanently deletes the specified telephony credential, revoking any access it p
 	fmt.Printf("%+v\n", telephonyCredential.Data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
