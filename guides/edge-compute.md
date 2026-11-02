@@ -37,7 +37,7 @@ CLI v0.5.13 adds verified self-update. When `edge-doctor` reports `self_update_s
 ```bash
 telnyx-edge update --yes
 ```
-Self-update only works for the released binary named `telnyx-edge`; it cannot update `telnyx-edge-dev`. If it is unavailable, download the replacement from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases).
+Self-update only works for the released binary named `telnyx-edge`; it cannot update `telnyx-edge-dev`. If it is unavailable, download the replacement from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). The current released CLI is v0.5.15; `edge-doctor` separately probes its optional tunnels/routes and 4 GiB SQL export help surfaces.
 ## Function names
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
 ## Quick Start
@@ -336,12 +336,25 @@ telnyx-edge types
 `env.DB` is generated as `SqlDatabase` and requires `@telnyx/edge-runtime` **0.9.0 or newer**. Keep the runtime current rather than pinning it to an older CLI-era version.
 
 Do not confuse shared account SQLDB with actor-local SQL. `[storage.sqldb.DB]` exposes one account database as `env.DB` to any functions that bind the same UUID. `ctx.storage.sql` belongs to one StatefulActor instance, is reached only inside that actor, and has no `storage sqldb execute` or migration CLI surface.
-### SQL export and standard-input import (v0.5.1)
-Export creates SQL data for backup or a deliberate copy; it is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. Import executes schema and data statements, can partially modify the destination on failure, and is not a transactional restore. Use an empty/disposable destination, or review the SQL and back up the target first; never pipe blindly into a populated production database. Protect the output, verify the destination before importing, and do not combine `--no-data` with `--no-schema`.
+### SQL export, execute input, and restore (v0.5.15 and current main)
+Export creates SQL data for backup or a deliberate copy. It is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. v0.5.15 raises the export limit to **4 GiB**; the export command still writes through your Telnyx Cloud Storage and then downloads the SQL file. Protect the output, verify the destination before restoring, and do not combine `--no-data` with `--no-schema`.
 ```bash
 telnyx-edge storage sqldb export "$SQLDB_ID" --remote --output ./database.sql
-telnyx-edge storage sqldb export "$SOURCE_SQLDB_ID" --remote --output - | telnyx-edge storage sqldb execute "$DEST_SQLDB_ID" --remote --file -
 ```
+`execute --remote --file` (including `--file -` standard input) sends the entire script in one remote SQL request, so it can restore only dumps within the **~4 MiB** remote-script limit. It rejects larger files even though `export` can create them. `execute --local --file` and `sqlite3` read a SQL file locally and do not have that remote request limit. A remote `execute` restore can partially modify its destination on failure and is not a transactional restore; use an empty/disposable destination, or review the SQL and back up the target first; never pipe blindly into a populated production database.
+
+Current main adds storage-backed import for a larger remote restore. Pass exactly one source: `--file` uploads a local dump (up to **100 MiB**) to your own Telnyx Cloud Storage, while `--from-export <export-id>` imports a completed export **of the same database** in place and uploads nothing. `--yes` skips the non-empty target confirmation; it does not raise the 100 MiB limit. `--json` writes the completed result as JSON.
+```bash
+# Upload and import a local SQL dump. Prefer an empty database.
+telnyx-edge storage sqldb import "$DEST_SQLDB_ID" --file ./database.sql --yes
+
+# Reuse a completed export created for this same database; no upload occurs.
+telnyx-edge storage sqldb import "$SQLDB_ID" --from-export "$EXPORT_ID" --json
+
+# Ctrl-C stops waiting, not the import. Resume observing this import later.
+telnyx-edge storage sqldb import status "$DEST_SQLDB_ID" "$IMPORT_ID" --json
+```
+The service validates the whole dump before running it, then applies ordered batches. Each batch is atomic, but an import is **not globally atomic**: if a later batch fails, earlier batches remain applied. A large import can take minutes; the command waits and reports progress until it finishes, while `Ctrl-C` prints the `import status` command to resume watching. With `--file`, a successful import removes the uploaded object; a failed import retains it and prints its Cloud Storage bucket and key for inspection or retry. An export supplied through `--from-export` is never deleted.
 ### Cloud Storage binding types (v0.2.4)
 
 CLI v0.2.4 added `[storage.cloudstorage.<name>]` manifest bindings and `CloudStorageBucket` output from `telnyx-edge types`. JavaScript/TypeScript scaffolds include the Cloud Storage dependencies.
@@ -391,6 +404,30 @@ const response = await env.MY_VPC.fetch("https://private.service.internal/health
 if (!response.ok) throw new Error(`Private service failed: ${response.status}`);
 ```
 The WireGuard sidecar is injected on deploy. Network bindings are generated and shipped configuration, not a local-dev feature; `telnyx-edge dev` reports them as unsupported locally.
+## Tunnels and network routes (v0.5.14)
+Tunnels let a function with a `[network.*]` binding reach an address on a machine you operate. Create a tunnel, route a CIDR on the target network to it, then run the tunnel process on the machine that can reach that CIDR:
+```bash
+# create prints the token once; store it in a secret manager before continuing.
+telnyx-edge tunnel create chicago-dc
+telnyx-edge network route add my-network 10.20.0.0/16 --tunnel chicago-dc
+
+# Run this on the machine that can dial addresses in 10.20.0.0/16.
+telnyx-edge tunnel run --token tnl_...
+```
+`tunnel run` dials the TLS relay outward, so it needs no inbound port, root access, CLI config, or writable home directory. The token is all it needs; it can instead be supplied through `TELNYX_TUNNEL_TOKEN`. The token is shown only by `tunnel create` and `tunnel rotate-token`; `tunnel get` and `tunnel list` never reveal it, so rotate it if it is lost. A dropped session reconnects with backoff, but a token invalidated by rotation fails rather than retrying forever.
+
+Inspect and complete the lifecycle with the authenticated management commands:
+```bash
+telnyx-edge tunnel get chicago-dc
+telnyx-edge tunnel list
+telnyx-edge network route list my-network
+telnyx-edge tunnel rotate-token chicago-dc
+
+# A tunnel cannot be deleted while a route points at it.
+telnyx-edge network route delete <route-id>
+telnyx-edge tunnel delete chicago-dc
+```
+`network route add` accepts the network and tunnel name or ID. `network route list` also shows platform-created routes, and `network route delete` takes the route ID. The address range must be reachable from the process running `tunnel run`; it is the process that dials the destination after traffic crosses the relay.
 ## Stateful Actors
 
 Probe actor capabilities directly:

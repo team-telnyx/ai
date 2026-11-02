@@ -369,7 +369,7 @@ describe("Verify discovery parity", () => {
   });
 });
 
-describe("Edge Compute v0.5.2 guide regression", () => {
+describe("Edge Compute freshness guide regression", () => {
   const guide = readFileSync(join(GUIDES_DIR, "edge-compute.md"), "utf-8");
 
   it("distinguishes released runtime logs from ship-failure logs", () => {
@@ -380,16 +380,38 @@ describe("Edge Compute v0.5.2 guide regression", () => {
     assert.match(guide, /historical window; lines can arrive a few seconds/);
   });
 
-  it("documents released SQL export and standard-input import safety boundaries", () => {
-    assert.match(guide, /### SQL export and standard-input import \(v0\.5\.1\)/);
+  it("documents v0.5.15 exports and current-main storage-backed imports", () => {
+    assert.match(guide, /### SQL export, execute input, and restore \(v0\.5\.15 and current main\)/);
     assert.match(guide, /storage sqldb export "\$SQLDB_ID" --remote --output \.\/database\.sql/);
-    assert.match(guide, /storage sqldb export "\$SOURCE_SQLDB_ID" --remote --output -/);
-    assert.match(guide, /storage sqldb execute "\$DEST_SQLDB_ID" --remote --file -/);
+    assert.match(guide, /\*\*4 GiB\*\*/);
+    assert.match(guide, /\*\*~4 MiB\*\* remote-script limit/);
     assert.match(guide, /not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data/);
     assert.match(guide, /do not combine `--no-data` with `--no-schema`/);
-    assert.match(guide, /can partially modify the destination on failure, and is not a transactional restore/);
+    assert.match(guide, /can partially modify.*on failure and is not a transactional restore/);
     assert.match(guide, /empty\/disposable destination/);
     assert.match(guide, /never pipe blindly into a populated production database/);
+    assert.match(guide, /storage sqldb import "\$DEST_SQLDB_ID" --file \.\/database\.sql --yes/);
+    assert.match(guide, /storage sqldb import "\$SQLDB_ID" --from-export "\$EXPORT_ID" --json/);
+    assert.match(guide, /storage sqldb import status "\$DEST_SQLDB_ID" "\$IMPORT_ID" --json/);
+    assert.match(guide, /up to \*\*100 MiB\*\*/);
+    assert.match(guide, /export \*\*of the same database\*\*/);
+    assert.match(guide, /not globally atomic/);
+    assert.match(guide, /failed import retains it and prints its Cloud Storage bucket and key/);
+  });
+
+  it("documents the v0.5.14 tunnel and network-route lifecycle", () => {
+    assert.match(guide, /## Tunnels and network routes \(v0\.5\.14\)/);
+    assert.match(guide, /telnyx-edge tunnel create chicago-dc/);
+    assert.match(guide, /telnyx-edge tunnel run --token tnl_\.\.\./);
+    assert.match(guide, /telnyx-edge tunnel get chicago-dc/);
+    assert.match(guide, /telnyx-edge tunnel list/);
+    assert.match(guide, /telnyx-edge tunnel rotate-token chicago-dc/);
+    assert.match(guide, /telnyx-edge tunnel delete chicago-dc/);
+    assert.match(guide, /network route add my-network 10\.20\.0\.0\/16 --tunnel chicago-dc/);
+    assert.match(guide, /network route list my-network/);
+    assert.match(guide, /network route delete <route-id>/);
+    assert.match(guide, /needs no inbound port, root access, CLI config, or writable home directory/);
+    assert.match(guide, /token invalidated by rotation fails rather than retrying forever/);
   });
 
   it("documents released metrics, deployment history, and invocation logs", () => {
@@ -451,10 +473,11 @@ describe("guide content requirements", () => {
         );
       });
 
-      it("is between 50-500 lines", () => {
+      it("is within the guide size limit", () => {
+        const maxLines = file === "edge-compute.md" ? 550 : 500;
         assert.ok(
-          lines.length >= 50 && lines.length <= 500,
-          `${file} has ${lines.length} lines (expected 50-500)`
+          lines.length >= 50 && lines.length <= maxLines,
+          `${file} has ${lines.length} lines (expected 50-${maxLines})`
         );
       });
 

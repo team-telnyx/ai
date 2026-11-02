@@ -36,11 +36,15 @@ import {
   supportsShip,
   supportsShipStatus,
   supportsSqlBoundParameters,
+  supportsLargeSqlDatabaseExport,
   supportsSqlDatabaseExport,
+  supportsSqlDatabaseImport,
   supportsSqlDatabases,
   supportsSqlStdinImport,
   supportsStatefulActors,
   supportsSelfUpdate,
+  supportsTunnelLifecycle,
+  supportsNetworkTunnelRoutes,
   supportsTypes,
 } from "../edge-cli.ts";
 
@@ -79,10 +83,14 @@ interface EdgeDoctorResult {
   sql_databases_supported: boolean;
   sql_bound_parameters_supported: boolean;
   sql_database_export_supported: boolean;
+  large_sql_database_export_supported: boolean;
   sql_stdin_import_supported: boolean;
   local_sql_workflow_supported: boolean;
+  sql_database_import_supported: boolean;
   custom_domains_supported: boolean;
   self_update_supported: boolean;
+  tunnel_lifecycle_supported: boolean;
+  network_tunnel_routes_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -123,10 +131,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlDatabasesSupported = false;
   let sqlBoundParametersSupported = false;
   let sqlDatabaseExportSupported = false;
+  let largeSqlDatabaseExportSupported = false;
   let sqlStdinImportSupported = false;
   let localSqlWorkflowSupported = false;
+  let sqlDatabaseImportSupported = false;
   let customDomainsSupported = false;
   let selfUpdateSupported = false;
+  let tunnelLifecycleSupported = false;
+  let networkTunnelRoutesSupported = false;
 
   try {
     getEdgeHelp();
@@ -173,10 +185,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlDatabasesSupported = supportsSqlDatabases();
     sqlBoundParametersSupported = supportsSqlBoundParameters();
     sqlDatabaseExportSupported = supportsSqlDatabaseExport();
+    largeSqlDatabaseExportSupported = supportsLargeSqlDatabaseExport();
     sqlStdinImportSupported = supportsSqlStdinImport();
     localSqlWorkflowSupported = supportsLocalSqlWorkflow();
+    sqlDatabaseImportSupported = supportsSqlDatabaseImport();
     customDomainsSupported = supportsCustomDomains();
     selfUpdateSupported = supportsSelfUpdate();
+    tunnelLifecycleSupported = supportsTunnelLifecycle();
+    networkTunnelRoutesSupported = supportsNetworkTunnelRoutes();
 
     checks.push({
       name: "API-key auth supported",
@@ -365,6 +381,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "storage sqldb export --help did not advertise the complete export surface",
     });
     checks.push({
+      name: "Large SQL database export",
+      ok: largeSqlDatabaseExportSupported,
+      detail: largeSqlDatabaseExportSupported
+        ? "storage sqldb export advertises exports up to 4 GiB"
+        : "storage sqldb export --help did not advertise the 4 GiB export limit",
+    });
+    checks.push({
       name: "SQL standard-input import",
       ok: sqlStdinImportSupported,
       detail: sqlStdinImportSupported
@@ -379,6 +402,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "SQL help did not advertise execute --local/--persist-to and migrations list/apply --local",
     });
     checks.push({
+      name: "SQL database import (current main)",
+      ok: sqlDatabaseImportSupported,
+      detail: sqlDatabaseImportSupported
+        ? "storage sqldb import supports --file, --from-export, --yes, --json, and import status"
+        : "storage sqldb import help did not advertise the complete current-main import and status lifecycle",
+    });
+    checks.push({
       name: "Custom domains",
       ok: customDomainsSupported,
       detail: customDomainsSupported
@@ -391,6 +421,21 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: selfUpdateSupported
         ? "update --yes is available from the released telnyx-edge binary"
         : "update --yes was not detected, or this is not a released binary named telnyx-edge",
+    });
+
+    checks.push({
+      name: "Tunnel lifecycle",
+      ok: tunnelLifecycleSupported,
+      detail: tunnelLifecycleSupported
+        ? "tunnel create/run/get/list/rotate-token/delete are available"
+        : "tunnel help did not advertise the complete create/run/get/list/rotate-token/delete lifecycle",
+    });
+    checks.push({
+      name: "Network tunnel routes",
+      ok: networkTunnelRoutesSupported,
+      detail: networkTunnelRoutesSupported
+        ? "network route add/list/delete supports --tunnel"
+        : "network route help did not advertise add/list/delete with --tunnel",
     });
 
     try {
@@ -540,14 +585,24 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlDatabaseExportSupported) {
       nextSteps.push("Export a remote SQL database with: telnyx-edge storage sqldb export <database> --remote --output ./database.sql");
     }
+    if (largeSqlDatabaseExportSupported) {
+      nextSteps.push("Export SQL dumps up to 4 GiB with: telnyx-edge storage sqldb export <database> --remote --output ./database.sql");
+    }
     if (sqlDatabaseExportSupported && sqlStdinImportSupported) {
       nextSteps.push("Copy SQL data only to an empty/disposable destination (imports can partially modify it on failure): telnyx-edge storage sqldb export <source-database> --remote --output - | telnyx-edge storage sqldb execute <destination-database> --remote --file -");
     }
     if (localSqlWorkflowSupported) {
       nextSteps.push("Run local SQL with Docker (separate from deployed data): telnyx-edge storage sqldb execute <database> --local --command \"SELECT 1\"");
     }
+    if (sqlDatabaseImportSupported) {
+      nextSteps.push("Import a SQL dump up to 100 MiB (non-atomic across batches): telnyx-edge storage sqldb import <database> --file ./database.sql");
+      nextSteps.push("Resume watching a SQL import with: telnyx-edge storage sqldb import status <database> <import-id>");
+    }
     if (customDomainsSupported) {
       nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
+    }
+    if (tunnelLifecycleSupported && networkTunnelRoutesSupported) {
+      nextSteps.push("Route a private CIDR to a local service with: telnyx-edge tunnel create <name>; telnyx-edge network route add <network> <cidr> --tunnel <name>; telnyx-edge tunnel run --token <token>");
     }
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
@@ -566,14 +621,18 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlDatabasesSupported && "remote SQL execution",
       !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
       !sqlDatabaseExportSupported && "SQL database export",
+      !largeSqlDatabaseExportSupported && "large SQL export (4 GiB)",
       !sqlStdinImportSupported && "SQL standard-input import",
       !localSqlWorkflowSupported && "local SQL workflow",
+      !sqlDatabaseImportSupported && "SQL database import (current main)",
       !customDomainsSupported && "custom domains",
       !actorMetricsSupported && "actor metrics",
       !actorStorageMetricsSupported && "actor stored-state metrics (90h maximum)",
       !actorLogsSupported && "actor historical logs",
       !actorLiveLogTailSupported && "live actor-log tail",
       !localDevSupported && "local dev",
+      !tunnelLifecycleSupported && "tunnel lifecycle",
+      !networkTunnelRoutesSupported && "network tunnel routes",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(selfUpdateSupported
@@ -618,10 +677,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_databases_supported: sqlDatabasesSupported,
     sql_bound_parameters_supported: sqlBoundParametersSupported,
     sql_database_export_supported: sqlDatabaseExportSupported,
+    large_sql_database_export_supported: largeSqlDatabaseExportSupported,
     sql_stdin_import_supported: sqlStdinImportSupported,
     local_sql_workflow_supported: localSqlWorkflowSupported,
+    sql_database_import_supported: sqlDatabaseImportSupported,
     custom_domains_supported: customDomainsSupported,
     self_update_supported: selfUpdateSupported,
+    tunnel_lifecycle_supported: tunnelLifecycleSupported,
+    network_tunnel_routes_supported: networkTunnelRoutesSupported,
     checks,
     next_steps: nextSteps,
   };
