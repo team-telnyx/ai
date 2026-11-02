@@ -1,7 +1,7 @@
 /**
  * Retrieve the client configuration for an existing WireGuard peer.
  *
- * The upstream action was added in Telnyx Go CLI v0.30.0. The bundled v0.32.0
+ * The upstream action was added in Telnyx Go CLI v0.30.0. The bundled v0.35.0
  * CLI satisfies that requirement; overrides still receive a command-scoped check.
  */
 import {

@@ -174,6 +174,15 @@ import {
   unmuteRoomParticipantsCommand,
 } from "./commands/room-sessions.ts";
 import {
+  closeBrowserSessionCommand,
+  createBrowserSessionCommand,
+  getBrowserSessionActionCommand,
+  getBrowserSessionArtifactCommand,
+  getBrowserSessionCommand,
+  listBrowserSessionsCommand,
+  navigateBrowserSessionCommand,
+} from "./commands/browser-sessions.ts";
+import {
   webContentsCommand,
   webResearchCommand,
   webResearchStatusCommand,
@@ -304,6 +313,13 @@ Commands:
   kick-room-participants Remove selected participants from a room session
   mute-room-participants Mute selected participants in a room session
   unmute-room-participants Unmute selected participants in a room session
+  create-browser-session Create an isolated browser session with an explicit domain allowlist
+  get-browser-session Retrieve one browser session by ID
+  list-browser-sessions List browser sessions with an optional status filter
+  close-browser-session Close a browser session (requires --confirm)
+  navigate-browser-session Navigate an isolated browser session to an allowed URL
+  get-browser-session-action Retrieve the status and result of a browser session action
+  get-browser-session-artifact Retrieve browser session artifact metadata and its authenticated URL
   stt               Transcribe audio to text (speech-to-text)
   stt-providers     List available speech-to-text providers
   list-phone-numbers List phone numbers owned by the account
@@ -763,6 +779,22 @@ Room Session Moderation Flags:
   --page-number     Result page (list-room-sessions, list-room-participants)
   --page-size       Results per page (list-room-sessions, list-room-participants)
 
+Browser Session Flags (requires Telnyx Go CLI v0.35+):
+  --allowed-domains <csv> Required exact domains or *.subdomain wildcards (create-browser-session)
+  --idle-timeout-seconds <n> Idle timeout, 1-1800 seconds (create-browser-session)
+  --lifetime-seconds <n> Maximum session duration, 60-1800 seconds (create-browser-session)
+  --metadata <json> Arbitrary metadata JSON object (create-browser-session)
+  --idempotency-key <key> Safe create or navigation retry key
+  --id <session-id> Browser session ID (retrieve, close, navigate, action, artifact commands)
+  --status <status> provisioning|ready|closing|closed|failed|expired (list-browser-sessions)
+  --confirm         Bare safety acknowledgement (close-browser-session; never forwarded)
+  --url <http(s)>   Allowed navigation URL (navigate-browser-session)
+  --wait-seconds <n> Maximum seconds the navigation submission waits; 0 returns immediately
+  --include-observation <bool> Include a fresh observation in the navigation result
+  --wait-until <value> load|dom_stable|none (navigate-browser-session)
+  --action-id <id> Browser session action ID (get-browser-session-action)
+  --artifact-id <id> Browser session artifact ID (get-browser-session-artifact)
+
 Meeting Bot Flags (requires Telnyx Go CLI v0.27+):
   --id <session-id> Meeting session ID (get/end/live/transcript/recording/artifact commands)
   --meeting-session-id Alias for --id
@@ -1147,6 +1179,12 @@ Examples:
   telnyx-agent unmute-room-participants --room-session-id <session-id> --participants <participant-id> --json
   telnyx-agent kick-room-participants --room-session-id <session-id> --participants <participant-id> --json
   telnyx-agent end-room-session --room-session-id <session-id> --json
+  telnyx-agent create-browser-session --allowed-domains example.com,*.docs.example.com --lifetime-seconds 300 --json
+  telnyx-agent list-browser-sessions --status ready --json
+  telnyx-agent navigate-browser-session --id <browser-session-id> --url https://example.com/docs --include-observation true --json
+  telnyx-agent get-browser-session-action --id <browser-session-id> --action-id <action-id> --json
+  telnyx-agent get-browser-session-artifact --id <browser-session-id> --artifact-id <artifact-id> --json
+  telnyx-agent close-browser-session --id <browser-session-id> --confirm --json
   telnyx-agent stt --audio-url https://example.com/audio.mp3
   telnyx-agent stt --audio-url https://example.com/audio.mp3 --model openai/whisper-large-v3-turbo --language es --json
   telnyx-agent stt-providers --json
@@ -1304,6 +1342,13 @@ const COMMANDS: Record<string, (
   "kick-room-participants": kickRoomParticipantsCommand,
   "mute-room-participants": muteRoomParticipantsCommand,
   "unmute-room-participants": unmuteRoomParticipantsCommand,
+  "create-browser-session": createBrowserSessionCommand,
+  "get-browser-session": getBrowserSessionCommand,
+  "list-browser-sessions": listBrowserSessionsCommand,
+  "close-browser-session": closeBrowserSessionCommand,
+  "navigate-browser-session": navigateBrowserSessionCommand,
+  "get-browser-session-action": getBrowserSessionActionCommand,
+  "get-browser-session-artifact": getBrowserSessionArtifactCommand,
   stt: sttCommand,
   "stt-providers": sttProvidersCommand,
   "list-phone-numbers": listPhoneNumbersCommand,
@@ -1354,7 +1399,7 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
+  "about", "action", "action-id", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
@@ -1364,7 +1409,7 @@ const KNOWN_FLAGS = new Set<string>([
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
-  "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
+  "allowed-domains", "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
@@ -1381,11 +1426,11 @@ const KNOWN_FLAGS = new Set<string>([
   "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
-  "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
+  "html-body", "iccid", "id", "idempotency-key", "idle-timeout-seconds", "ignore-suppression", "image", "include-observation",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
-  "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
+  "json", "language", "last-message-at", "lifetime-seconds", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
   "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
@@ -1414,7 +1459,7 @@ const KNOWN_FLAGS = new Set<string>([
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
-  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wait-until", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",

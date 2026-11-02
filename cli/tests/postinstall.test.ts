@@ -38,13 +38,13 @@ function runPostinstall(options: {
     mkdirSync(dirname(vendor), { recursive: true });
     executable(vendor, `echo "${options.vendorOutput}"\nexit ${options.vendorExitCode ?? 0}`);
   }
-  executable(join(root, "fake-bin", "telnyx"), `echo "${options.pathOutput ?? "telnyx version 0.32.0"}"`);
+  executable(join(root, "fake-bin", "telnyx"), `echo "${options.pathOutput ?? "telnyx version 0.35.0"}"`);
   executable(join(root, "fake-bin", "curl"), `printf '%s\\n' "$@" > "${join(root, "download-args")}"`);
   const installAfter = (flag: string) =>
     `printf '%s\\n' "$@" > "${join(root, "extract-args")}"; ` +
     `while [ "$#" -gt 0 ] && [ "$1" != "${flag}" ]; do shift; done; ` +
     `[ "$#" -ge 2 ] || exit 64; shift; mkdir -p "$1"; ` +
-    `printf '#!/bin/sh\\necho "telnyx version 0.32.0"\\n' > "$1/telnyx"`;
+    `printf '#!/bin/sh\\necho "telnyx version 0.35.0"\\n' > "$1/telnyx"`;
   executable(join(root, "fake-bin", "tar"), installAfter("-C"));
   executable(join(root, "fake-bin", "unzip"), installAfter("-d"));
   executable(join(root, "fake-bin", "rm"), "exit 0");
@@ -70,13 +70,13 @@ describe("postinstall vendor-first version decision", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.match(result.stdout, /Vendored telnyx CLI 0\.21\.0 found/);
-    assert.match(result.installedVersion, /0\.32\.0/);
+    assert.match(result.installedVersion, /0\.35\.0/);
   });
 
   it("keeps a current preferred vendor without downloading", () => {
     const result = runPostinstall({
-      vendorOutput: "telnyx version 0.32.0",
-      pathOutput: "telnyx version 0.33.0",
+      vendorOutput: "telnyx version 0.35.0",
+      pathOutput: "telnyx version 0.36.0",
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, false);
@@ -84,7 +84,7 @@ describe("postinstall vendor-first version decision", () => {
   });
 
   it("allows compatible PATH to suppress download only when vendor is absent", () => {
-    const result = runPostinstall({ pathOutput: "telnyx version 0.33.0" });
+    const result = runPostinstall({ pathOutput: "telnyx version 0.36.0" });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, false);
     assert.match(result.stdout, /already installed on PATH/);
@@ -98,7 +98,7 @@ describe("postinstall vendor-first version decision", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.match(result.stdout, /Vendored telnyx CLI has an unrecognized version/);
-    assert.match(result.installedVersion, /0\.32\.0/);
+    assert.match(result.installedVersion, /0\.35\.0/);
   });
 
   it("does not let an unrelated PATH candidate suppress download", () => {
@@ -134,9 +134,9 @@ describe("postinstall current-host release", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.downloaded, true);
     assert.ok(result.downloadArgs.trimEnd().endsWith(release.archiveName));
-    assert.ok(result.downloadArgs.includes(`releases/download/v0.32.0/${release.archiveName}`));
+    assert.ok(result.downloadArgs.includes(`releases/download/v0.35.0/${release.archiveName}`));
     assert.ok(result.extractArgs.includes(release.archiveName));
     assert.ok(result.extractArgs.split("\n").includes(release.executableName));
-    assert.match(result.installedVersion, /0\.32\.0/);
+    assert.match(result.installedVersion, /0\.35\.0/);
   });
 });
