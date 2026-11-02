@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.97.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.97.0")
 ```
 
 ## Setup
@@ -62,7 +62,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List portout requests
 
-Returns the portout requests according to filters
+Returns the portout requests according to filters. Carrier Port Out API available. Please contact porting@telnyx.com.
 
 `GET /portouts`
 
