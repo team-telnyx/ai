@@ -1,7 +1,7 @@
 /**
  * Meeting Bot session lifecycle, live controls, and artifact retrieval.
  *
- * These routes first appear in Telnyx Go CLI v0.27.0. The bundled v0.32.0 CLI
+ * These routes first appear in Telnyx Go CLI v0.27.0. The bundled v0.35.0 CLI
  * satisfies that requirement; every invocation still performs a command-scoped
  * compatibility check for explicit overrides and PATH fallbacks.
  *
