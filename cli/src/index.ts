@@ -136,6 +136,20 @@ import {
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
 import {
+  createAiEvaluationAgentCommand,
+  createAiEvaluationMetricCommand,
+  createAiEvaluationScenarioCommand,
+  generateAiEvaluationMetricsCommand,
+  generateAiEvaluationScenariosCommand,
+  getAiEvaluationMetricGenerationProgressCommand,
+  getAiEvaluationResultCommand,
+  getAiEvaluationScenarioGenerationProgressCommand,
+  listAiEvaluationPersonalitiesCommand,
+  listAiEvaluationResultsCommand,
+  rerunAiEvaluationResultCommand,
+  runAiEvaluationScenariosCommand,
+} from "./commands/ai-evaluations.ts";
+import {
   addAiConversationMessageCommand,
   createAiConversationCommand,
   deleteAiConversationCommand,
@@ -357,6 +371,18 @@ Commands:
   get-ai-assistant-test-run Retrieve one AI assistant test run
   list-ai-assistant-test-runs List execution history for an AI assistant test
   test-ai-assistant-tool Execute a webhook tool in an AI assistant context
+  list-ai-evaluation-personalities List available simulated-caller personalities (Go CLI v0.35+)
+  create-ai-evaluation-agent Create an evaluator test agent for an AI assistant (Go CLI v0.35+)
+  create-ai-evaluation-scenario Create an evaluator scenario for a test agent (Go CLI v0.35+)
+  generate-ai-evaluation-scenarios Start background evaluator scenario generation (Go CLI v0.35+)
+  get-ai-evaluation-scenario-generation-progress Retrieve scenario-generation progress (Go CLI v0.35+)
+  run-ai-evaluation-scenarios Run selected evaluator scenarios (Go CLI v0.35+)
+  get-ai-evaluation-result Retrieve one evaluator result batch (Go CLI v0.35+)
+  list-ai-evaluation-results List evaluator result batches (Go CLI v0.35+)
+  rerun-ai-evaluation-result Re-run an evaluator result batch (Go CLI v0.35+)
+  create-ai-evaluation-metric Create an evaluator metric (Go CLI v0.35+)
+  generate-ai-evaluation-metrics Start background evaluator metric generation (Go CLI v0.35+)
+  get-ai-evaluation-metric-generation-progress Retrieve metric-generation progress (Go CLI v0.35+)
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -1004,6 +1030,27 @@ AI Assistant Execution Flags:
   --arguments <json> Webhook tool arguments object
   --dynamic-variables <json> Dynamic variables object (tool test)
 
+AI Evaluator Workflow Flags (requires Telnyx Go CLI v0.35+):
+  --agent-name <name> Test-agent name (create-ai-evaluation-agent required)
+  --assistant-id <id> AI assistant under test (create agent; optional run/metric filter)
+  --agent-id <id>    Positive evaluator test-agent ID (scenario, generation, run, metric generation)
+  --personality-id <id> Simulated-caller personality ID (scenario required; repeatable for generation/run)
+  --name <name>      Scenario or metric name (create commands required)
+  --metric-id <id>   Metric ID to attach to a scenario (repeatable)
+  --num-scenarios <n> Number of scenarios to generate (required)
+  --progress-id <id> Background generation progress ID (required for progress retrieval)
+  --scenarios <ids|all> Comma-separated positive scenario IDs or all (run required)
+  --result-id <id>   Evaluation result-batch ID (get or rerun required)
+  --scenario-ids <ids> Comma-separated positive scenario IDs to filter result batches
+  --num-metrics <n>  Number of metrics to generate (required)
+  --scenario-id <id> Scenario ID to use for metric generation (repeatable)
+  --type <type>      Metric evaluator: custom_code or llm_judge
+  --eval-type <type> Metric score: numeric, continuous_qualitative, or binary_workflow_adherence
+  --prompt <text>    Judge prompt for an llm_judge metric
+  --generate-expected-outcomes <bool> Generate expected outcome prompts with scenarios
+  --concurrency-limit <n> Maximum concurrent simulated calls (run)
+  --mode <mode>      Run caller-number mode: same_number or different_numbers
+
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
   --iccid           Partial ICCID filter (list-sim-cards)
@@ -1381,6 +1428,18 @@ const COMMANDS: Record<string, (
   "get-ai-assistant-test-run": getAiAssistantTestRunCommand,
   "list-ai-assistant-test-runs": listAiAssistantTestRunsCommand,
   "test-ai-assistant-tool": testAiAssistantToolCommand,
+  "list-ai-evaluation-personalities": listAiEvaluationPersonalitiesCommand,
+  "create-ai-evaluation-agent": createAiEvaluationAgentCommand,
+  "create-ai-evaluation-scenario": createAiEvaluationScenarioCommand,
+  "generate-ai-evaluation-scenarios": generateAiEvaluationScenariosCommand,
+  "get-ai-evaluation-scenario-generation-progress": getAiEvaluationScenarioGenerationProgressCommand,
+  "run-ai-evaluation-scenarios": runAiEvaluationScenariosCommand,
+  "get-ai-evaluation-result": getAiEvaluationResultCommand,
+  "list-ai-evaluation-results": listAiEvaluationResultsCommand,
+  "rerun-ai-evaluation-result": rerunAiEvaluationResultCommand,
+  "create-ai-evaluation-metric": createAiEvaluationMetricCommand,
+  "generate-ai-evaluation-metrics": generateAiEvaluationMetricsCommand,
+  "get-ai-evaluation-metric-generation-progress": getAiEvaluationMetricGenerationProgressCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -1399,62 +1458,62 @@ const COMMANDS: Record<string, (
 // like `tts --output-typ base64` or `tts --ouput f.wav` doesn't silently no-op.
 // This never fails the run — a missing entry just costs a spurious warning.
 const KNOWN_FLAGS = new Set<string>([
-  "about", "action", "action-id", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
+  "about", "action", "action-id", "action-type", "active", "actor", "add-to-new-agents", "administrative-area", "after", "a2a-agent", "agent-id", "agent-name", "agent-number",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
-  "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
+  "attachment", "audio", "audio-enabled", "audio-url", "auto-fetch-calls-enabled", "auto-sync-prompt-enabled", "auto-update-dropoff-nodes", "auto-update-topic-nodes", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
-  "allowed-domains", "collection-id", "comfort-noise", "command-id", "company-name", "component", "conference-id",
+  "allowed-domains", "collection-id", "comfort-noise", "command-id", "company-name", "component", "concurrency-limit", "contact-number", "conference-id",
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
   "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
-  "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
+  "destination-version-id", "destinations", "digits", "dimensions", "disable-cache", "display-order",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "enum-value", "eval-type", "event-id", "expected-outcome-prompt", "extra-instructions",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
-  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
+  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "first-message", "flag", "folder-path", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
-  "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
+  "forward-of-message-id", "frequency", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
-  "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
+  "generate-expected-outcomes", "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "idle-timeout-seconds", "ignore-suppression", "image", "include-observation",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
-  "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
-  "json", "language", "last-message-at", "lifetime-seconds", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
-  "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
+  "inter-digit-timeout-millis", "interactive", "interrupt", "inbound", "inbound-phone-number", "invoice-document-id", "join-at",
+  "json", "language", "last-message-at", "lifetime-seconds", "limit", "livecrawl", "llm-max-tokens", "llm-model", "llm-system-prompt", "llm-temperature", "loa-document-id", "locality", "location", "max-age",
+  "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens", "metric-id",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
-  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
+  "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn", "num-metrics", "num-scenarios",
   "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
-  "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
+  "observability-enabled", "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-auto-call", "outbound-phone-number", "outbound-voice-profile-id",
+  "output", "output-file", "output-type", "page", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
-  "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
+  "payment-token", "personality-id", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type", "progress-id", "prompt",
   "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
-  "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
+  "query", "queue-name", "reaction", "reason", "record", "recording-id", "region", "result-id",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
-  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
+  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout", "search",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
-  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
+  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sampling-enabled", "sandbox-mode", "scenario-id", "scenario-ids", "scenario-type", "scenarios", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
-  "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
+  "should-create-conversation", "sim-card-group-id", "sim-card-id", "simulation-enabled", "sip-address", "sip-call-id", "sip-endpoint", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "telnyx-agent-target", "telnyx-conversation-channel", "telnyx-end-user-target", "temperature", "template-id", "template-language", "template-name", "template-variables",
-  "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
+  "test-id", "test-profile", "test-profile-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
