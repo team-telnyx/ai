@@ -29,8 +29,10 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts",
-    "clean": "rm -rf dist"
+    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && npm run test:inference-journey",
+    "clean": "rm -rf dist",
+    "test:inference-journey": "node --test tests/inference-journey.test.mjs",
+    "check:inference-journey": "node scripts/inference-journey.mjs"
   },
   "keywords": [
     "telnyx",
