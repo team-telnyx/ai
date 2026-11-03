@@ -482,6 +482,10 @@ completed, not that carrier review is complete.
 **One command: zero to AI assistant on a phone number.**
 
 Creates an AI assistant, buys a voice-capable number, and wires them together.
+New assistants use the API's current model, voice (TTS), and transcription (STT)
+defaults; the command does not pin a model or override speech settings. Retrieve
+the assistant to inspect the resolved configuration before relying on a specific
+model or voice. Existing assistants keep their configured settings.
 
 ```bash
 telnyx-agent setup-ai
@@ -489,7 +493,30 @@ telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
 telnyx-agent setup-ai --name "Support Bot" --json
 ```
 
-Output: `{ assistant_id, phone_number, test_command }`
+Output includes `{ assistant_id, assistant_name, phone_number, phone_number_id, texml_app_id, test_command, ready, steps }`.
+
+To resume with known resources, supply their IDs (the phone number may also be E.164):
+
+```bash
+telnyx-agent setup-ai --assistant-id assistant-uuid --phone-number-id number-uuid --texml-app-id app-uuid --json
+```
+
+Supplied resources are read and validated before provisioning. An existing number
+must be unassigned or already assigned to the selected app; the app must be active
+and route `GET` to `https://api.telnyx.com/v2/ai/assistants/{assistant_id}/texml`.
+The TeXML API does not expose an `ai_assistant_id` field. The command reuses the
+assistant's `telephony_settings.default_texml_app_id` when no app is supplied,
+and creates an app only if neither is available. An app using the legacy `/call`
+URL or `POST` method is rejected; inspect and correct its routing separately.
+Do not combine an existing assistant with `--name` or `--instructions`; update
+it separately. Omitted assistants and numbers are created,
+so a fresh invocation still creates paid resources. This is explicit resumption,
+not server-side idempotency or automatic crash recovery.
+
+Failure output preserves `assistant_id`, `phone_number`, `phone_number_id`,
+`texml_app_id`, and `number_order_id` when known. Reconcile any timed-out create or
+number order before resuming: a missing ID does not prove the operation failed.
+`ready: true` means number assignment was confirmed, not that a live call passed.
 
 ### `telnyx-agent setup-whatsapp`
 
