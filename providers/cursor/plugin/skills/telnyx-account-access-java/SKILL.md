@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.97.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.97.0")
 ```
 
 ## Setup
@@ -198,7 +198,7 @@ ActionValidateParams params = ActionValidateParams.builder()
 ActionValidateResponse response = client.addresses().actions().validate(params);
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 
@@ -474,3 +474,15 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialCreateToken
 
 String response = client.telephonyCredentials().createToken("550e8400-e29b-41d4-a716-446655440000");
 ```
+
+## Retrieve token material.
+
+Returns the material a server needs to mint login tokens for the credential locally, with no request per token: `kid`, `tel_token` and `signing_secret`. The same material is in the response of `POST /telephony_credentials`. Treat it like the SIP password.
+
+`GET /telephony_credentials/{id}/token_material`
+
+```java
+var response = client.telephonyCredentials().retrieveTokenMaterial("550e8400-e29b-41d4-a716-446655440000");
+```
+
+Returns: `kid` (string), `signing_secret` (string), `tel_token` (string)
