@@ -3,7 +3,6 @@ import { pathToFileURL } from "node:url";
 
 const BASE = "https://api.telnyx.com/v2/ai/openai";
 const MAX_BYTES = 1024 * 1024;
-const MAX_TOKENS = 1024;
 const TIMEOUT_MS = 60_000;
 
 function requireValue(condition, message) {
@@ -112,7 +111,7 @@ export async function runInferenceJourney({ enabled, apiKey, model, fetchImpl = 
   const report = {
     schema_version: 1, journey: "inference-tool-loop", status: "failed",
     started_at: new Date().toISOString(), model: model || null,
-    limits: { max_requests: 3, max_completion_requests: 2, max_tokens_per_completion: MAX_TOKENS, timeout_ms_per_request: TIMEOUT_MS, max_response_bytes: MAX_BYTES, retries: 0 },
+    limits: { max_requests: 3, max_completion_requests: 2, max_tokens_per_completion: null, timeout_ms_per_request: TIMEOUT_MS, max_response_bytes: MAX_BYTES, retries: 0 },
     checks: [],
   };
   if (!enabled) return { ...report, status: "skipped", reason: "Set RUN_INFERENCE_JOURNEY=true to allow two billable completions" };
@@ -153,7 +152,9 @@ export async function runInferenceJourney({ enabled, apiKey, model, fetchImpl = 
       name: "lookup_verification", description: "Look up a verification code for a reference.",
       parameters: { type: "object", properties: { reference: { type: "string", enum: ["win-the-bot"] } }, required: ["reference"], additionalProperties: false },
     } }];
-    const common = { model, stream: true, max_tokens: MAX_TOKENS };
+    // Telnyx rejects tools together with max_tokens or max_completion_tokens,
+    // including tool_choice: "none". Leave output limits to the service.
+    const common = { model, stream: true };
     const first = await step("streamed-tool-call", "/chat/completions", { ...common, messages, tools, tool_choice: "required" }, async (response) => {
       const completion = await readCompletion(response);
       requireValue(completion.finish_reason === "tool_calls", "Expected tool_calls finish reason");

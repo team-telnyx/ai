@@ -54,7 +54,11 @@ function fixture({ first = toolEvents(), wrongAnswer = false, missingModel = fal
     assert.ok(init.signal instanceof AbortSignal);
     if (httpError) return new Response("Do not leak secret-key", { status: httpError });
     if (url.endsWith("/models")) return Response.json({ data: missingModel ? [] : [{ id: "fixture-model" }] });
-    assert.equal(body.max_tokens, 1024);
+    // Match Telnyx's contract: tools cannot be combined with either token cap,
+    // even on the final request where tool_choice is "none".
+    if (body.tools?.length && ["max_tokens", "max_completion_tokens"].some((key) => Object.hasOwn(body, key))) {
+      return new Response("Tools cannot be combined with an output token cap", { status: 400 });
+    }
     assert.equal(body.stream, true);
     if (requests.length === 2) return stream(first);
     const assistant = body.messages.at(-2);
@@ -78,6 +82,15 @@ it("verifies discovery → streamed tool call → correlated tool result → fin
   assert.equal(api.requests[0].url, "https://api.telnyx.com/v2/ai/openai/models");
   assert.equal(api.requests[1].body.tool_choice, "required");
   assert.equal(api.requests[2].body.tool_choice, "none");
+  for (const { body } of api.requests.slice(1)) {
+    assert.equal(body.tools.length, 1);
+    assert.equal(Object.hasOwn(body, "max_tokens"), false);
+    assert.equal(Object.hasOwn(body, "max_completion_tokens"), false);
+  }
+  assert.equal(report.limits.max_tokens_per_completion, null);
+  assert.equal(report.limits.max_completion_requests, 2);
+  assert.equal(report.limits.timeout_ms_per_request, 60_000);
+  assert.equal(report.limits.max_response_bytes, 1024 * 1024);
   assert.doesNotMatch(JSON.stringify(report), /secret-key|Private reasoning|verification_code/);
 });
 

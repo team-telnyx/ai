@@ -26,16 +26,22 @@ RUN_INFERENCE_JOURNEY=true TELNYX_INFERENCE_MODEL='<model-id>' \
 ```
 
 This is an opt-in, billable check: one model lookup and at most two completion
-requests, each capped at 1,024 output tokens (including reasoning), 60 seconds,
-and 1 MiB of response data. It follows no redirects and performs no retries.
-The prompt and tool response are synthetic; no customer content is used.
+requests, with client limits of 60 seconds and 1 MiB of response data per request.
+It follows no redirects and performs no retries. Telnyx rejects `tools` combined
+with `max_tokens` or `max_completion_tokens`, including when `tool_choice` is
+`none`, so neither completion sends a token cap. Output length uses the service
+and model defaults; the report records `max_tokens_per_completion: null`.
+Client time/byte limits do not enforce a token or spending cap. Use the account's
+[inference spending limits](https://developers.telnyx.com/docs/inference/spending-limits)
+to control spend. The prompt and tool response are synthetic; no customer
+content is used.
 
 The JSON report includes `schema_version`, `status`, per-stage elapsed time,
 HTTP status/request IDs, and completion usage when the server supplies it.
 Exit codes are `0` passed, `1` failed, and `2` skipped without opt-in. A missing
 key/model, HTTP error, missing streamed terminator, malformed tool call,
-exhausted token budget, or wrong final answer fails the check. Missing usage is
-reported as `null`, not zero cost. Raw prompts, responses, reasoning traces,
+provider output-length limit, or wrong final answer fails the check. Missing usage
+is reported as `null`, not zero cost. Raw prompts, responses, reasoning traces,
 and credentials are not included in the report.
 
 Offline parser and journey regressions run in normal CI:
