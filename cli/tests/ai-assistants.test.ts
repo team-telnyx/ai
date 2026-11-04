@@ -54,6 +54,14 @@ function requestBody() {
   set("--model", "model");
   set("--greeting", "greeting");
   set("--version-name", "version_name");
+  const insightModel = flag("--insight-settings.model");
+  const piiRedaction = flag("--privacy-settings.pii-redaction");
+  if (insightModel !== undefined) {
+    body.insight_settings = { ...(body.insight_settings || {}), model: insightModel };
+  }
+  if (piiRedaction !== undefined) {
+    body.privacy_settings = { ...(body.privacy_settings || {}), pii_redaction: piiRedaction };
+  }
   const tags = flags("--tag");
   const toolIds = flags("--tool-id");
   const a2aAgents = flags("--a2a-agent").map((value) => JSON.parse(value));
@@ -290,6 +298,31 @@ describe("AI assistant lifecycle action commands", () => {
     assert.deepEqual(request.body.telephony_settings, { fallback_destination: "sip:support@example.com" });
   });
 
+  it("maps v0.34 insight and PII controls to the exact nested create flags", () => {
+    const fake = setupFakeTelnyx({ version: "0.34.0" });
+    const result = runAgent([
+      "create-ai-assistant",
+      "--name", "Concierge",
+      "--instructions", "Help callers",
+      "--insight-model", "zai-org/GLM-5.3-Flash",
+      "--pii-redaction", "redact",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [[
+      "ai:assistants", "create",
+      "--name", "Concierge",
+      "--instructions", "Help callers",
+      "--insight-settings.model", "zai-org/GLM-5.3-Flash",
+      "--privacy-settings.pii-redaction", "redact",
+      "--format", "json",
+    ]]);
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body.insight_settings, { model: "zai-org/GLM-5.3-Flash" });
+    assert.deepEqual(request.body.privacy_settings, { pii_redaction: "redact" });
+  });
+
   it("updates repeated A2A JSON objects and the abnormal-end fallback destination", () => {
     const fake = setupFakeTelnyx({ version: "0.32.0" });
     const billingAgent = '{"name":"billing","url":"https://billing.example.com"}';
@@ -312,6 +345,29 @@ describe("AI assistant lifecycle action commands", () => {
       "--telephony-settings.fallback-destination", "+13125550100",
       "--format", "json",
     ]]);
+  });
+
+  it("maps v0.34 insight and PII controls to the exact nested update flags", () => {
+    const fake = setupFakeTelnyx({ version: "0.34.0" });
+    const result = runAgent([
+      "update-ai-assistant",
+      "--id", "assistant-1",
+      "--insight-model", "meta-llama/Llama-3.3-70B-Instruct",
+      "--pii-redaction", "disabled",
+      "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [[
+      "ai:assistants", "update",
+      "--assistant-id", "assistant-1",
+      "--insight-settings.model", "meta-llama/Llama-3.3-70B-Instruct",
+      "--privacy-settings.pii-redaction", "disabled",
+      "--format", "json",
+    ]]);
+    const [request] = loggedRequests(fake.requestLogPath);
+    assert.deepEqual(request.body.insight_settings, { model: "meta-llama/Llama-3.3-70B-Instruct" });
+    assert.deepEqual(request.body.privacy_settings, { pii_redaction: "disabled" });
   });
 
   it("clears all A2A agents through an explicit update-only flag", () => {
@@ -353,6 +409,24 @@ describe("AI assistant lifecycle action commands", () => {
     }
   });
 
+  it("requires Go CLI v0.34 before dispatching insight and PII controls", () => {
+    const guardedCases = [
+      [
+        "create-ai-assistant", "--name", "Concierge", "--instructions", "Help callers",
+        "--insight-model", "zai-org/GLM-5.3-Flash", "--json",
+      ],
+      ["update-ai-assistant", "--id", "assistant-1", "--pii-redaction", "redact", "--json"],
+    ];
+
+    for (const args of guardedCases) {
+      const fake = setupFakeTelnyx({ version: "0.33.0" });
+      const result = runAgent(args, fake.env);
+      assert.equal(result.status, 1);
+      assert.match(JSON.parse(result.stdout).error, /requires >= 0\.34\.0/);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+  });
+
   it("keeps existing assistant fields compatible with Go CLI versions before v0.32", () => {
     const fake = setupFakeTelnyx({ version: "0.31.0" });
     const result = runAgent([
@@ -378,6 +452,8 @@ describe("AI assistant lifecycle action commands", () => {
       ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--fallback-destination", "--json"],
       ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--clear-a2a-agents", "--json"],
       ["update-ai-assistant", "--id", "assistant-1", "--a2a-agent", '{"name":"billing"}', "--clear-a2a-agents", "--json"],
+      ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--insight-model", "model-one", "--json"],
+      ["update-ai-assistant", "--id", "assistant-1", "--pii-redaction", "enabled", "--json"],
     ];
 
     for (const args of invalidCases) {
@@ -385,6 +461,27 @@ describe("AI assistant lifecycle action commands", () => {
       const result = runAgent(args, fake.env);
       assert.notEqual(result.status, 0, `expected ${args.join(" ")} to fail`);
       assert.ok(JSON.parse(result.stdout).error);
+      assert.deepEqual(loggedArgs(fake.logPath), []);
+    }
+  });
+
+  it("reports the documented insight-model and pii-redaction enums before dispatch", () => {
+    const invalidCases = [
+      [
+        ["create-ai-assistant", "--name", "Concierge", "--instructions", "Help", "--insight-model", "model-one", "--json"],
+        "--insight-model must be one of: zai-org/GLM-5.3-Flash, meta-llama/Llama-3.3-70B-Instruct",
+      ],
+      [
+        ["update-ai-assistant", "--id", "assistant-1", "--pii-redaction", "enabled", "--json"],
+        "--pii-redaction must be one of: disabled, redact",
+      ],
+    ] as const;
+
+    for (const [args, expectedError] of invalidCases) {
+      const fake = setupFakeTelnyx();
+      const result = runAgent([...args], fake.env);
+      assert.notEqual(result.status, 0, `expected ${args.join(" ")} to fail`);
+      assert.equal(JSON.parse(result.stdout).error, expectedError);
       assert.deepEqual(loggedArgs(fake.logPath), []);
     }
   });
@@ -763,11 +860,16 @@ describe("AI assistant lifecycle action commands", () => {
     assert.match(help.stdout, /--a2a-agent <json> Repeatable A2A delegation-agent JSON object/);
     assert.match(help.stdout, /--fallback-destination <destination> Transfer destination for abnormal voice-assistant ends/);
     assert.match(help.stdout, /--clear-a2a-agents Clear all A2A delegation agents/);
+    assert.match(help.stdout, /--insight-model <model> Insight model: zai-org\/GLM-5\.3-Flash\|meta-llama\/Llama-3\.3-70B-Instruct/);
+    assert.match(help.stdout, /--pii-redaction <mode> Stored-conversation PII redaction: disabled\|redact/);
+    assert.match(help.stdout, /redact assistants cannot be used for SMS\/WhatsApp/);
 
     const assistantsCapability = capabilities.api_capabilities["🤖 AI"].find(
       (capability: { name: string }) => capability.name === "Assistants",
     );
     assert.match(assistantsCapability.description, /A2A delegation agents.*v0\.32/);
+    assert.match(assistantsCapability.description, /PII redaction.*v0\.34/);
+    assert.match(assistantsCapability.description, /redacted assistants cannot be used for SMS\/WhatsApp/);
     const actions = assistantsCapability.actions;
     assert.deepEqual(actions, [
       "list_ai_assistants",
@@ -777,6 +879,8 @@ describe("AI assistant lifecycle action commands", () => {
       "delete_ai_assistant",
       "configure_ai_assistant_a2a_agents",
       "set_ai_assistant_fallback_destination",
+      "set_ai_assistant_insight_model",
+      "set_ai_assistant_pii_redaction",
       "enhance_ai_assistant_instructions",
       "chat_ai_assistant",
       "send_ai_assistant_sms",
