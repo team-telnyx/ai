@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { basename } from "node:path";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const STATUS_TIMEOUT_MS = 45000;
@@ -271,6 +272,16 @@ export function supportsSqlDatabaseExport(): boolean {
   }
 }
 
+/** Detect the v0.5.15 export size guarantee from export's own help text. */
+export function supportsLargeSqlDatabaseExport(): boolean {
+  try {
+    const out = runEdge(["storage", "sqldb", "export", "--help"]);
+    return /\bstorage\s+sqldb\s+export\s+<[^>]+>/i.test(out) && /\b4\s*GiB\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect the released `execute --file -` standard-input import form. */
 export function supportsSqlStdinImport(): boolean {
   try {
@@ -278,6 +289,40 @@ export function supportsSqlStdinImport(): boolean {
     return /\bstorage\s+sqldb\s+execute\s+<[^>]+>/i.test(out) &&
       /--remote\b/i.test(out) &&
       /--file[^\r\n]*-\s*(?:means|for|reads?\s+from)?\s*(?:standard input|stdin)\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the v0.5.12 local SQL workflow from each command's own help surface. */
+export function supportsLocalSqlWorkflow(): boolean {
+  const hasFlags = (args: string[], flags: string[]): boolean => {
+    try {
+      const out = runEdge(args);
+      return flags.every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+    } catch {
+      return false;
+    }
+  };
+  const execute = hasFlags(["storage", "sqldb", "execute", "--help"], ["local", "persist-to"]);
+  const migrationsList = hasFlags(["storage", "sqldb", "migrations", "list", "--help"], ["local"]);
+  const migrationsApply = hasFlags(["storage", "sqldb", "migrations", "apply", "--help"], ["local"]);
+  return execute && migrationsList && migrationsApply;
+}
+
+/**
+ * Detect the current-main SQL dump import lifecycle from import and status help.
+ * It deliberately remains separate from execute --file: imports are storage
+ * backed and have different size and non-atomic failure semantics.
+ */
+export function supportsSqlDatabaseImport(): boolean {
+  try {
+    const start = runEdge(["storage", "sqldb", "import", "--help"]);
+    const status = runEdge(["storage", "sqldb", "import", "status", "--help"]);
+    return /\bstorage\s+sqldb\s+import\s+<database>/i.test(start) &&
+      ["file", "from-export", "yes", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(start)) &&
+      /\b100\s*MiB\b/i.test(start) &&
+      /\bimport\s+status\s+<database>\s+<import_id>/i.test(status) && /--json\b/i.test(status);
   } catch {
     return false;
   }
@@ -331,6 +376,101 @@ export function supportsActorMetrics(): boolean {
     const out = runEdge(["actors", "metrics", "--help"]);
     return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
       ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect historical StatefulActor logs without mistaking function logs for them. */
+export function supportsActorLogs(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) &&
+      /--type\b[^\r\n]*(?:\bruntime\b[^\r\n]*\binvocations\b|\binvocations\b[^\r\n]*\bruntime\b)/i.test(out) &&
+      ["type", "instance", "since", "last", "json"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the live actor-log stream directly rather than inferring it from history. */
+export function supportsActorLiveLogTail(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) && /--tail\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect v0.5.8 stored-state actor metrics while retaining the earlier metrics probe. */
+export function supportsActorStorageMetrics(): boolean {
+  try {
+    const out = runEdge(["actors", "metrics", "--help"]);
+    return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out)) &&
+      /stored\s+state/i.test(out) && /\b90h\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the complete local umbrella-project development command surface. */
+export function supportsLocalDev(): boolean {
+  try {
+    const out = runEdge(["dev", "--help"]);
+    return /^Usage:\s+\S+\s+dev(?:\s|\[|$)/im.test(out) &&
+      ["from-dir", "port", "no-watch", "generate-only"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Detect the v0.5.13 verified self-update only for the released binary name.
+ * Development binaries deliberately cannot replace themselves.
+ */
+export function supportsSelfUpdate(): boolean {
+  if (basename(resolveEdgeBinary()) !== "telnyx-edge") return false;
+  try {
+    const out = runEdge(["update", "--help"]);
+    return /^Usage:\s+telnyx-edge\s+update(?:\s|\[|$)/im.test(out) && /--yes\b/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect every v0.5.14 tunnel lifecycle command from its own help surface. */
+export function supportsTunnelLifecycle(): boolean {
+  try {
+    const create = runEdge(["tunnel", "create", "--help"]);
+    const run = runEdge(["tunnel", "run", "--help"]);
+    const get = runEdge(["tunnel", "get", "--help"]);
+    const list = runEdge(["tunnel", "list", "--help"]);
+    const rotate = runEdge(["tunnel", "rotate-token", "--help"]);
+    const remove = runEdge(["tunnel", "delete", "--help"]);
+    return /\btunnel\s+create\s+<name>(?:\s|\[|$)/i.test(create) && /\btoken\b/i.test(create) &&
+      /\btunnel\s+run(?:\s|\[|$)/i.test(run) && /--token\b/i.test(run) &&
+      /\btunnel\s+get\s+<name\|id>(?:\s|\[|$)/i.test(get) &&
+      /\btunnel\s+list(?:\s|\[|$)/i.test(list) &&
+      /\btunnel\s+rotate-token\s+<name\|id>(?:\s|\[|$)/i.test(rotate) && /\btoken\b/i.test(rotate) &&
+      /\btunnel\s+delete\s+<name\|id>(?:\s|\[|$)/i.test(remove);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the v0.5.14 network-route lifecycle including tunnel-backed add. */
+export function supportsNetworkTunnelRoutes(): boolean {
+  try {
+    const add = runEdge(["network", "route", "add", "--help"]);
+    const list = runEdge(["network", "route", "list", "--help"]);
+    const remove = runEdge(["network", "route", "delete", "--help"]);
+    return /\bnetwork\s+route\s+add\s+<network>\s+<cidr>(?:\s|\[|$)/i.test(add) && /--tunnel\b/i.test(add) &&
+      /\bnetwork\s+route\s+list\s+<network>(?:\s|\[|$)/i.test(list) &&
+      /\bnetwork\s+route\s+delete\s+<route-id>(?:\s|\[|$)/i.test(remove);
   } catch {
     return false;
   }

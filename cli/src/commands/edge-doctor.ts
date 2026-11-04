@@ -10,7 +10,10 @@ import {
   getEdgeHelp,
   getEdgeRootStatus,
   getEdgeVersion,
+  supportsActorLiveLogTail,
+  supportsActorLogs,
   supportsActorMetrics,
+  supportsActorStorageMetrics,
   supportsActorInstances,
   supportsApiKeyAuth,
   supportsCustomDomains,
@@ -27,14 +30,21 @@ import {
   supportsRuntimeLogs,
   supportsLiveLogTail,
   supportsLogExport,
+  supportsLocalDev,
+  supportsLocalSqlWorkflow,
   supportsSecretsAdd,
   supportsShip,
   supportsShipStatus,
   supportsSqlBoundParameters,
+  supportsLargeSqlDatabaseExport,
   supportsSqlDatabaseExport,
+  supportsSqlDatabaseImport,
   supportsSqlDatabases,
   supportsSqlStdinImport,
   supportsStatefulActors,
+  supportsSelfUpdate,
+  supportsTunnelLifecycle,
+  supportsNetworkTunnelRoutes,
   supportsTypes,
 } from "../edge-cli.ts";
 
@@ -60,6 +70,10 @@ interface EdgeDoctorResult {
   inspect_supported: boolean;
   actor_instances_supported: boolean;
   actor_metrics_supported: boolean;
+  actor_logs_supported: boolean;
+  actor_live_log_tail_supported: boolean;
+  actor_storage_metrics_supported: boolean;
+  local_dev_supported: boolean;
   reset_func_supported: boolean;
   reset_func_noninteractive_confirmation_supported: boolean;
   noninteractive_confirmation_supported: boolean;
@@ -69,8 +83,14 @@ interface EdgeDoctorResult {
   sql_databases_supported: boolean;
   sql_bound_parameters_supported: boolean;
   sql_database_export_supported: boolean;
+  large_sql_database_export_supported: boolean;
   sql_stdin_import_supported: boolean;
+  local_sql_workflow_supported: boolean;
+  sql_database_import_supported: boolean;
   custom_domains_supported: boolean;
+  self_update_supported: boolean;
+  tunnel_lifecycle_supported: boolean;
+  network_tunnel_routes_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -98,6 +118,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let inspectSupported = false;
   let actorInstancesSupported = false;
   let actorMetricsSupported = false;
+  let actorLogsSupported = false;
+  let actorLiveLogTailSupported = false;
+  let actorStorageMetricsSupported = false;
+  let localDevSupported = false;
   let resetFuncSupported = false;
   let resetFuncNoninteractiveConfirmationSupported = false;
   let noninteractiveConfirmationSupported = false;
@@ -107,8 +131,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlDatabasesSupported = false;
   let sqlBoundParametersSupported = false;
   let sqlDatabaseExportSupported = false;
+  let largeSqlDatabaseExportSupported = false;
   let sqlStdinImportSupported = false;
+  let localSqlWorkflowSupported = false;
+  let sqlDatabaseImportSupported = false;
   let customDomainsSupported = false;
+  let selfUpdateSupported = false;
+  let tunnelLifecycleSupported = false;
+  let networkTunnelRoutesSupported = false;
 
   try {
     getEdgeHelp();
@@ -142,6 +172,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
     actorMetricsSupported = supportsActorMetrics();
+    actorLogsSupported = supportsActorLogs();
+    actorLiveLogTailSupported = supportsActorLiveLogTail();
+    actorStorageMetricsSupported = supportsActorStorageMetrics();
+    localDevSupported = supportsLocalDev();
     resetFuncSupported = supportsResetFunc();
     resetFuncNoninteractiveConfirmationSupported = supportsResetFuncNonInteractiveConfirmation();
     noninteractiveConfirmationSupported = supportsNonInteractiveConfirmation();
@@ -151,8 +185,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlDatabasesSupported = supportsSqlDatabases();
     sqlBoundParametersSupported = supportsSqlBoundParameters();
     sqlDatabaseExportSupported = supportsSqlDatabaseExport();
+    largeSqlDatabaseExportSupported = supportsLargeSqlDatabaseExport();
     sqlStdinImportSupported = supportsSqlStdinImport();
+    localSqlWorkflowSupported = supportsLocalSqlWorkflow();
+    sqlDatabaseImportSupported = supportsSqlDatabaseImport();
     customDomainsSupported = supportsCustomDomains();
+    selfUpdateSupported = supportsSelfUpdate();
+    tunnelLifecycleSupported = supportsTunnelLifecycle();
+    networkTunnelRoutesSupported = supportsNetworkTunnelRoutes();
 
     checks.push({
       name: "API-key auth supported",
@@ -254,6 +294,34 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "actors metrics --help did not advertise <type> usage with --since and --json",
     });
     checks.push({
+      name: "Actor historical logs",
+      ok: actorLogsSupported,
+      detail: actorLogsSupported
+        ? "actors logs <type> supports runtime/invocation filters, instances, history windows, and JSON"
+        : "actors logs --help did not advertise <type> usage with --type, --instance, --since, --last, and --json",
+    });
+    checks.push({
+      name: "Live actor-log tail",
+      ok: actorLiveLogTailSupported,
+      detail: actorLiveLogTailSupported
+        ? "actors logs <type> --tail is available"
+        : "actors logs --help did not advertise <type> usage with --tail",
+    });
+    checks.push({
+      name: "Actor stored-state metrics",
+      ok: actorStorageMetricsSupported,
+      detail: actorStorageMetricsSupported
+        ? "actors metrics <type> identifies stored state and its 90h maximum window"
+        : "actors metrics --help did not identify stored state and a 90h maximum window",
+    });
+    checks.push({
+      name: "Local actor development",
+      ok: localDevSupported,
+      detail: localDevSupported
+        ? "dev supports --from-dir, --port, --no-watch, and --generate-only"
+        : "dev --help did not advertise its usage with --from-dir, --port, --no-watch, and --generate-only",
+    });
+    checks.push({
       name: "Failed-function reset",
       ok: resetFuncSupported,
       detail: resetFuncSupported ? "reset-func <function-name> is available" : "reset-func --help capability not detected",
@@ -313,6 +381,13 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "storage sqldb export --help did not advertise the complete export surface",
     });
     checks.push({
+      name: "Large SQL database export",
+      ok: largeSqlDatabaseExportSupported,
+      detail: largeSqlDatabaseExportSupported
+        ? "storage sqldb export advertises exports up to 4 GiB"
+        : "storage sqldb export --help did not advertise the 4 GiB export limit",
+    });
+    checks.push({
       name: "SQL standard-input import",
       ok: sqlStdinImportSupported,
       detail: sqlStdinImportSupported
@@ -320,11 +395,47 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "storage sqldb execute --help did not advertise --file - standard-input input",
     });
     checks.push({
+      name: "Local SQL workflow",
+      ok: localSqlWorkflowSupported,
+      detail: localSqlWorkflowSupported
+        ? "execute supports --local/--persist-to and migrations list/apply support --local"
+        : "SQL help did not advertise execute --local/--persist-to and migrations list/apply --local",
+    });
+    checks.push({
+      name: "SQL database import (current main)",
+      ok: sqlDatabaseImportSupported,
+      detail: sqlDatabaseImportSupported
+        ? "storage sqldb import supports --file, --from-export, --yes, --json, and import status"
+        : "storage sqldb import help did not advertise the complete current-main import and status lifecycle",
+    });
+    checks.push({
       name: "Custom domains",
       ok: customDomainsSupported,
       detail: customDomainsSupported
         ? "domains add/verify/list/delete and cert upload are available with non-interactive deletion"
         : "custom-domain help surfaces did not advertise the complete lifecycle, certificate paths, and delete --yes",
+    });
+    checks.push({
+      name: "Verified self-update",
+      ok: selfUpdateSupported,
+      detail: selfUpdateSupported
+        ? "update --yes is available from the released telnyx-edge binary"
+        : "update --yes was not detected, or this is not a released binary named telnyx-edge",
+    });
+
+    checks.push({
+      name: "Tunnel lifecycle",
+      ok: tunnelLifecycleSupported,
+      detail: tunnelLifecycleSupported
+        ? "tunnel create/run/get/list/rotate-token/delete are available"
+        : "tunnel help did not advertise the complete create/run/get/list/rotate-token/delete lifecycle",
+    });
+    checks.push({
+      name: "Network tunnel routes",
+      ok: networkTunnelRoutesSupported,
+      detail: networkTunnelRoutesSupported
+        ? "network route add/list/delete supports --tunnel"
+        : "network route help did not advertise add/list/delete with --tunnel",
     });
 
     try {
@@ -402,7 +513,9 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !shipSupported && "ship",
     ].filter((value): value is string => Boolean(value));
     nextSteps = [
-      `Upgrade telnyx-edge: the executable setup handoffs require ${missing.join(", ")}.`,
+      selfUpdateSupported
+        ? `Upgrade telnyx-edge with verified self-update: telnyx-edge update --yes. The executable setup handoffs require ${missing.join(", ")}.`
+        : `Upgrade telnyx-edge from https://github.com/team-telnyx/edge-compute/releases: the executable setup handoffs require ${missing.join(", ")}.`,
       "Verify each missing command or flag on its own --help surface, then rerun telnyx-agent edge-doctor.",
     ];
   } else {
@@ -420,6 +533,18 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     }
     if (actorMetricsSupported) {
       nextSteps.push("Summarize actor traffic and resources with: telnyx-edge actors metrics <type> --since 24h");
+    }
+    if (actorStorageMetricsSupported) {
+      nextSteps.push("Review actor stored-state aggregates (90h maximum) with: telnyx-edge actors metrics <type> --since 24h");
+    }
+    if (actorLogsSupported) {
+      nextSteps.push("Read actor history with: telnyx-edge actors logs <type> --since 10m --last 200");
+    }
+    if (actorLiveLogTailSupported) {
+      nextSteps.push("Tail live actor logs with: telnyx-edge actors logs <type> --tail");
+    }
+    if (localDevSupported) {
+      nextSteps.push("Run an umbrella project locally with: telnyx-edge dev --from-dir ./<project-dir>");
     }
     if (shipStatusSupported) {
       nextSteps.push("Diagnose the latest ship before resetting it: telnyx-edge ship status <function-name> --logs");
@@ -460,11 +585,24 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlDatabaseExportSupported) {
       nextSteps.push("Export a remote SQL database with: telnyx-edge storage sqldb export <database> --remote --output ./database.sql");
     }
+    if (largeSqlDatabaseExportSupported) {
+      nextSteps.push("Export SQL dumps up to 4 GiB with: telnyx-edge storage sqldb export <database> --remote --output ./database.sql");
+    }
     if (sqlDatabaseExportSupported && sqlStdinImportSupported) {
       nextSteps.push("Copy SQL data only to an empty/disposable destination (imports can partially modify it on failure): telnyx-edge storage sqldb export <source-database> --remote --output - | telnyx-edge storage sqldb execute <destination-database> --remote --file -");
     }
+    if (localSqlWorkflowSupported) {
+      nextSteps.push("Run local SQL with Docker (separate from deployed data): telnyx-edge storage sqldb execute <database> --local --command \"SELECT 1\"");
+    }
+    if (sqlDatabaseImportSupported) {
+      nextSteps.push("Import a SQL dump up to 100 MiB (non-atomic across batches): telnyx-edge storage sqldb import <database> --file ./database.sql");
+      nextSteps.push("Resume watching a SQL import with: telnyx-edge storage sqldb import status <database> <import-id>");
+    }
     if (customDomainsSupported) {
       nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
+    }
+    if (tunnelLifecycleSupported && networkTunnelRoutesSupported) {
+      nextSteps.push("Route a private CIDR to a local service with: telnyx-edge tunnel create <name>; telnyx-edge network route add <network> <cidr> --tunnel <name>; telnyx-edge tunnel run --token <token>");
     }
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
@@ -483,11 +621,23 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlDatabasesSupported && "remote SQL execution",
       !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
       !sqlDatabaseExportSupported && "SQL database export",
+      !largeSqlDatabaseExportSupported && "large SQL export (4 GiB)",
       !sqlStdinImportSupported && "SQL standard-input import",
+      !localSqlWorkflowSupported && "local SQL workflow",
+      !sqlDatabaseImportSupported && "SQL database import (current main)",
       !customDomainsSupported && "custom domains",
       !actorMetricsSupported && "actor metrics",
+      !actorStorageMetricsSupported && "actor stored-state metrics (90h maximum)",
+      !actorLogsSupported && "actor historical logs",
+      !actorLiveLogTailSupported && "live actor-log tail",
+      !localDevSupported && "local dev",
+      !tunnelLifecycleSupported && "tunnel lifecycle",
+      !networkTunnelRoutesSupported && "network tunnel routes",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
+      nextSteps.push(selfUpdateSupported
+        ? "Upgrade the released CLI with verified self-update: telnyx-edge update --yes"
+        : "Download the latest telnyx-edge release from https://github.com/team-telnyx/edge-compute/releases (self-update requires a released binary named telnyx-edge).");
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
     }
   }
@@ -514,6 +664,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
     actor_metrics_supported: actorMetricsSupported,
+    actor_logs_supported: actorLogsSupported,
+    actor_live_log_tail_supported: actorLiveLogTailSupported,
+    actor_storage_metrics_supported: actorStorageMetricsSupported,
+    local_dev_supported: localDevSupported,
     reset_func_supported: resetFuncSupported,
     reset_func_noninteractive_confirmation_supported: resetFuncNoninteractiveConfirmationSupported,
     noninteractive_confirmation_supported: noninteractiveConfirmationSupported,
@@ -523,8 +677,14 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_databases_supported: sqlDatabasesSupported,
     sql_bound_parameters_supported: sqlBoundParametersSupported,
     sql_database_export_supported: sqlDatabaseExportSupported,
+    large_sql_database_export_supported: largeSqlDatabaseExportSupported,
     sql_stdin_import_supported: sqlStdinImportSupported,
+    local_sql_workflow_supported: localSqlWorkflowSupported,
+    sql_database_import_supported: sqlDatabaseImportSupported,
     custom_domains_supported: customDomainsSupported,
+    self_update_supported: selfUpdateSupported,
+    tunnel_lifecycle_supported: tunnelLifecycleSupported,
+    network_tunnel_routes_supported: networkTunnelRoutesSupported,
     checks,
     next_steps: nextSteps,
   };
