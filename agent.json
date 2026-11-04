@@ -58,12 +58,10 @@
       "name": "AI Voice Assistants",
       "description": "Deploy AI-powered voice assistants that answer calls with custom personalities and tools.",
       "guide": "/guides/ai-assistants.md",
-      "cli": "telnyx assistant create --name 'Support Bot'",
+      "cli": "telnyx ai:assistants create --name 'Support Bot' --instructions 'You are a helpful assistant.'",
       "api": "POST /v2/ai/assistants",
       "docs": "https://developers.telnyx.com/docs/ai/assistants",
-      "requires": [
-        "phone_number"
-      ]
+      "requires": []
     },
     {
       "id": "ai_inference",
