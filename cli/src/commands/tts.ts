@@ -43,6 +43,14 @@ const OUTPUT_TYPE_MAP: Record<string, string> = {
   base64_output: "base64_output",
 };
 const VALID_TEXT_TYPES = ["text", "ssml"] as const;
+const VALID_TELNYX_RESPONSE_FORMATS = ["pcm", "wav", "mp3"] as const;
+const VALID_TELNYX_SAMPLING_RATES = [8000, 22050, 24000] as const;
+
+interface TelnyxTtsSettings {
+  voice_speed?: number;
+  response_format?: string;
+  sampling_rate?: number;
+}
 
 interface TtsResult {
   text: string;
@@ -52,6 +60,7 @@ interface TtsResult {
   audio_data?: string;
   has_audio_data: boolean;
   output_file?: string;
+  telnyx?: TelnyxTtsSettings;
 }
 
 /**
@@ -81,6 +90,9 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
   const outputTypeFlag = (flags["output-type"] as string) || "base64";
   const textType = (flags["text-type"] as string) || "text";
   const disableCache = flags["disable-cache"] === true;
+  const voiceSpeedFlag = flags["voice-speed"];
+  const responseFormatFlag = flags["response-format"];
+  const samplingRateFlag = flags["sampling-rate"];
   // Optional: write the decoded audio straight to a playable file.
   const outputFile = (flags.output as string) || (flags["output-file"] as string) || "";
 
@@ -111,6 +123,43 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
     process.exit(1);
   }
 
+  const voiceSpeed = parseFiniteNumber(voiceSpeedFlag, "--voice-speed");
+  const samplingRate = parseSamplingRate(samplingRateFlag);
+  const responseFormat = responseFormatFlag === undefined ? undefined : String(responseFormatFlag);
+
+  if (responseFormat !== undefined && !VALID_TELNYX_RESPONSE_FORMATS.includes(responseFormat as (typeof VALID_TELNYX_RESPONSE_FORMATS)[number])) {
+    printError(
+      `Invalid --response-format "${responseFormat}". Valid: ${VALID_TELNYX_RESPONSE_FORMATS.join(", ")}`,
+    );
+    process.exit(1);
+  }
+
+  if (samplingRate !== undefined) {
+    if (responseFormat !== "pcm") {
+      printError("--sampling-rate requires --response-format pcm");
+      process.exit(1);
+    }
+    if (!VALID_TELNYX_SAMPLING_RATES.includes(samplingRate as (typeof VALID_TELNYX_SAMPLING_RATES)[number])) {
+      printError(
+        `Invalid --sampling-rate "${samplingRate}". Valid: ${VALID_TELNYX_SAMPLING_RATES.join(", ")} (with --response-format pcm)`,
+      );
+      process.exit(1);
+    }
+  }
+
+  // Only infer a model from an explicit Telnyx namespace. Other voice IDs are
+  // provider-defined, so the API remains their compatibility authority.
+  if (voice.startsWith("Telnyx.Sukhan.")) {
+    if (voiceSpeed !== undefined) {
+      printError("--voice-speed is not supported for Telnyx.Sukhan voices");
+      process.exit(1);
+    }
+    if (responseFormat === "wav") {
+      printError("--response-format wav is not supported for Telnyx.Sukhan voices; use pcm or mp3");
+      process.exit(1);
+    }
+  }
+
   try {
     if (!jsonOutput) {
       console.log("\n🔊 Generating speech...\n");
@@ -131,6 +180,11 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
     // Only send provider when the voice id does not already namespace it.
     if (!voiceIsNamespaced) body.provider = provider;
     if (disableCache) body.disable_cache = true;
+    const telnyx: TelnyxTtsSettings = {};
+    if (voiceSpeed !== undefined) telnyx.voice_speed = voiceSpeed;
+    if (responseFormat !== undefined) telnyx.response_format = responseFormat;
+    if (samplingRate !== undefined) telnyx.sampling_rate = samplingRate;
+    if (Object.keys(telnyx).length > 0) body.telnyx = telnyx;
 
     const client = new TelnyxClient();
     const response = await client.post("/text-to-speech/speech", body);
@@ -153,6 +207,7 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
       audio_data: audioData,
       has_audio_data: hasAudioData,
       ...(writtenFile ? { output_file: writtenFile } : {}),
+      ...(Object.keys(telnyx).length > 0 ? { telnyx } : {}),
     };
 
     if (jsonOutput) {
@@ -165,6 +220,9 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
         Language: language,
       };
       if (voice) details["Voice"] = voice;
+      if (voiceSpeed !== undefined) details["Voice Speed"] = voiceSpeed;
+      if (responseFormat !== undefined) details["Response Format"] = responseFormat;
+      if (samplingRate !== undefined) details["Sampling Rate"] = samplingRate;
       if (hasAudioData) {
         details["Audio Data"] = `${audioData!.length} chars (base64)`;
       }
@@ -180,6 +238,25 @@ export async function ttsCommand(flags: Record<string, string | boolean>): Promi
     }
     process.exit(1);
   }
+}
+
+function parseFiniteNumber(value: string | boolean | undefined, flag: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(parsed)) {
+    printError(`${flag} must be a finite number`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+function parseSamplingRate(value: string | boolean | undefined): number | undefined {
+  const samplingRate = parseFiniteNumber(value, "--sampling-rate");
+  if (samplingRate !== undefined && !Number.isInteger(samplingRate)) {
+    printError("--sampling-rate must be an integer");
+    process.exit(1);
+  }
+  return samplingRate;
 }
 
 function errorMsg(err: unknown): string {
