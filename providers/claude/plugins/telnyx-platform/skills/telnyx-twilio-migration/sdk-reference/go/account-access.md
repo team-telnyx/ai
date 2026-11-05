@@ -193,7 +193,7 @@ Optional: `administrative_area` (string), `extended_address` (string), `locality
 	fmt.Printf("%+v\n", response.Data)
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 
@@ -511,3 +511,22 @@ Create an Access Token (JWT) for the credential.
 	}
 	fmt.Printf("%+v\n", response)
 ```
+
+## Retrieve token material.
+
+Returns the material a server needs to mint login tokens for the credential locally, with no request per token: `kid`, `tel_token` and `signing_secret`. The same material is in the response of `POST /telephony_credentials`. Treat it like the SIP password.
+
+`GET /telephony_credentials/{id}/token_material`
+
+```go
+	response, err := client.TelephonyCredentials.GetTokenMaterial(
+		context.Background(),
+		"id",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", response.Data)
+```
+
+Returns: `kid` (string), `signing_secret` (string), `tel_token` (string)

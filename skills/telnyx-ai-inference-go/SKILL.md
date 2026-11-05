@@ -397,7 +397,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Delete a conversation
 
-Delete a specific conversation by its ID.
+Delete a specific conversation by its ID. Permanently deletes the conversation and its associated data: the conversation's messages, its insight generation results, any conversation memories, and its webhook request logs. Recordings are not deleted — recordings are managed separately through the /v2/recordings endpoints. This action cannot be undone.
 
 `DELETE /ai/conversations/{conversation_id}`
 
@@ -423,6 +423,23 @@ Retrieve insights for a specific conversation
 ```
 
 Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
+## Delete a conversation's insight generation results
+
+Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself.
+
+`DELETE /ai/conversations/{conversation_id}/conversations-insights/{insight_id}`
+
+```go
+	err := client.AI.Conversations.DeleteDelete(
+		context.Background(),
+		"conversation_id",
+		"insight_id",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+```
 
 ## Create Message
 
@@ -836,7 +853,7 @@ Generate synthesized speech audio from text input. Returns audio in the requeste
 
 `POST /text-to-speech/speech`
 
-Optional: `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `humain` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, resemble, xai, humain, soniox), `resemble` (object), `soniox` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
+Optional: `assemblyai` (object), `aws` (object), `azure` (object), `disable_cache` (boolean), `elevenlabs` (object), `humain` (object), `language` (string), `minimax` (object), `output_type` (enum: binary_output, base64_output), `provider` (enum: aws, telnyx, azure, elevenlabs, minimax, resemble, xai, humain, soniox, assemblyai), `resemble` (object), `soniox` (object), `telnyx` (object), `text` (string), `text_type` (enum: text, ssml), `voice` (string), `voice_settings` (object), `xai` (object)
 
 ```go
 	response, err := client.TextToSpeech.Generate(context.Background(), telnyx.TextToSpeechGenerateParams{})
