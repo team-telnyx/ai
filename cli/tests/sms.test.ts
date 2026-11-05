@@ -18,7 +18,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
 const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
+function setupFakeTelnyx(version = "0.34.0"): { fakeTelnyx: string; logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-sms-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -38,7 +38,9 @@ function flags(f) { const out = []; for (let i = 0; i < command.length; i++) { i
 
 // Realistic Telnyx message resources: delivery state is reported per
 // recipient in data.to[].status — there is NO top-level status field.
-if (command[0] === "messages" && command[1] === "send") {
+if (command[0] === "--version") {
+  console.log("telnyx version ${version}");
+} else if (command[0] === "messages" && command[1] === "send") {
   console.log(JSON.stringify({ data: { id: "msg-123", record_type: "message", type: flag("--type"), from: { phone_number: flag("--from"), carrier: "", line_type: "" }, to: [{ phone_number: flag("--to"), status: "queued", carrier: "", line_type: "" }] } }));
 } else if (command[0] === "messages" && command[1] === "send-number-pool") {
   console.log(JSON.stringify({ data: { id: "pool-123", record_type: "message", type: flag("--type"), from: { phone_number: "+131****0099" }, to: [{ phone_number: flag("--to"), status: "queued" }] } }));
@@ -140,6 +142,7 @@ interface RecordedRequest {
   method: string;
   path: string;
   body: Record<string, unknown> | undefined;
+  headers: Record<string, string | string[] | undefined>;
 }
 
 interface MockApi {
@@ -162,6 +165,7 @@ function startMockApi(responder: RouteResponder): Promise<MockApi> {
           method: req.method ?? "GET",
           path: parsed.pathname,
           body: raw ? (JSON.parse(raw) as Record<string, unknown>) : undefined,
+          headers: req.headers,
         };
         requests.push(record);
         const out = responder(record);
@@ -262,6 +266,59 @@ describe("SMS action commands", () => {
     assertFlagValue(sendCall, "--messaging-profile-id", "prof-1");
     assertFlagValue(sendCall, "--webhook-url", "https://example.com/wh");
     assertFlagValue(sendCall, "--subject", "Sub");
+  });
+
+  it("send-sms forwards --idempotency-key through every wrapped Go CLI sender action", () => {
+    const cases = [
+      {
+        args: ["--from", "+14155550100", "--to", "+14155550101", "--text", "phone"],
+        action: "send",
+        key: "phone-retry-1",
+      },
+      {
+        args: ["--messaging-profile-id", "prof-pool", "--to", "+14155550101", "--text", "pool"],
+        action: "send-number-pool",
+        key: "pool-retry-1",
+      },
+      {
+        args: ["--from", "MyCompany", "--messaging-profile-id", "prof-alpha", "--to", "+14155550101", "--text", "alpha"],
+        action: "send-with-alphanumeric-sender",
+        key: "alpha-retry-1",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fake = setupFakeTelnyx();
+      runAgent(["send-sms", ...testCase.args, "--idempotency-key", testCase.key, "--json"], fake.env);
+
+      const calls = readLoggedArgs(fake.logPath);
+      assert.deepEqual(calls[0], ["--version"]);
+      const sendCall = calls.find((args) => args.slice(0, 2).join(" ") === `messages ${testCase.action}`);
+      assert.ok(sendCall, `should call messages ${testCase.action}`);
+      assertFlagValue(sendCall, "--idempotency-key", testCase.key);
+      assert.equal(
+        readFileSync(fake.logPath, "utf8"),
+        calls.map((args) => JSON.stringify(args)).join("\n") + "\n",
+        "the argv mock log must contain newline-terminated JSON records",
+      );
+    }
+  });
+
+  it("send-sms enforces Go CLI v0.34+ only when --idempotency-key is used", () => {
+    const fake = setupFakeTelnyx("0.33.0");
+
+    runAgent(["send-sms", "--from", "+14155550100", "--to", "+14155550101", "--text", "legacy", "--json"], fake.env);
+    const beforeKeyCalls = readLoggedArgs(fake.logPath);
+    assert.equal(beforeKeyCalls.length, 1);
+    assert.deepEqual(beforeKeyCalls[0].slice(0, 2), ["messages", "send"]);
+
+    runAgentExpectingFailure(
+      ["send-sms", "--from", "+14155550100", "--to", "+14155550101", "--text", "retry", "--idempotency-key", "retry-1", "--json"],
+      fake.env,
+      /requires >= 0\.34\.0/,
+    );
+    const calls = readLoggedArgs(fake.logPath);
+    assert.deepEqual(calls.at(-1), ["--version"]);
   });
 
   it("send-sms without --from sends from a number pool with exact generated CLI argv", () => {
@@ -411,6 +468,7 @@ describe("SMS action commands", () => {
       assert.equal(reqRec.body?.media_urls, undefined);
       // The group-MMS schema does not accept messaging_profile_id.
       assert.equal(reqRec.body?.messaging_profile_id, undefined);
+      assert.equal(reqRec.headers["idempotency-key"], undefined);
     } finally {
       await mock.close();
     }
@@ -450,6 +508,33 @@ describe("SMS action commands", () => {
       assert.equal(data.type, "MMS");
       assert.deepEqual(mock.requests[0].body?.media_urls, ["https://example.com/cat.png"]);
       assert.equal(mock.requests[0].body?.text, undefined);
+    } finally {
+      await mock.close();
+    }
+  });
+
+  it("send-group-mms sends --idempotency-key as the Idempotency-Key header", async () => {
+    const mock = await startMockApi((req) => {
+      if (req.method === "POST" && req.path === "/messages/group_mms") {
+        return { json: { data: { id: "grp-idempotent", type: "MMS", from: { phone_number: req.body?.from }, to: [] } } };
+      }
+      return undefined;
+    });
+    try {
+      const { status, stdout } = await runAgentAsync(
+        [
+          "send-group-mms",
+          "--from", "+131****0000",
+          "--to", "+131****0001,+131****0002",
+          "--text", "Group retry",
+          "--idempotency-key", "group-retry-1",
+          "--json",
+        ],
+        restEnv(mock),
+      );
+      assert.equal(status, 0, stdout);
+      assert.equal(mock.requests.length, 1);
+      assert.equal(mock.requests[0].headers["idempotency-key"], "group-retry-1");
     } finally {
       await mock.close();
     }
@@ -604,6 +689,7 @@ describe("SMS action commands", () => {
     assert.match(out, /sms-status/);
     assert.match(out, /number pool/);
     assert.match(out, /alphanumeric sender ID/);
+    assert.match(out, /--idempotency-key <key>\s+Retry-safe key for send-sms and send-group-mms/);
   });
 
   it("capabilities registers number-pool and alphanumeric SMS actions", () => {
@@ -612,5 +698,6 @@ describe("SMS action commands", () => {
     const actions = data.api_capabilities["📱 Messaging"][0].actions;
     assert.ok(actions.includes("send_sms_from_number_pool"));
     assert.ok(actions.includes("send_sms_with_alphanumeric_sender"));
+    assert.match(data.api_capabilities["📱 Messaging"][0].description, /idempotency keys.*v0\.34\+/i);
   });
 });
