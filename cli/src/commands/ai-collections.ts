@@ -6,7 +6,11 @@
  * spelling. Documents and response metadata are preserved for downstream agents.
  */
 
-import { telnyxCli, TelnyxCLIError } from "../telnyx-cli.ts";
+import {
+  resolveAiCollectionRetrieveDocumentsResource,
+  telnyxCli,
+  TelnyxCLIError,
+} from "../telnyx-cli.ts";
 import { outputJson, printError, printSuccess } from "../utils/output.ts";
 
 type Flags = Record<string, string | boolean>;
@@ -26,7 +30,7 @@ const MINIMUM_COLLECTIONS_CLI_VERSION = "0.27.0";
 export async function searchAiCollectionCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
   const collectionId = collectionIdFlag(flags, jsonOutput);
-  const args = ["ai:collections", "retrieve-documents", "--slug", collectionId];
+  const args = ["retrieve-documents", "--slug", collectionId];
 
   const query = optionalStringFlag(flags, "query");
   if (query !== undefined) args.push("--query", query);
@@ -62,7 +66,8 @@ export async function searchAiCollectionCommand(flags: Flags): Promise<void> {
   }
 
   try {
-    const response = await telnyxCli(args, {
+    const resource = await resolveAiCollectionRetrieveDocumentsResource(MINIMUM_COLLECTIONS_CLI_VERSION);
+    const response = await telnyxCli([resource, ...args], {
       minimumVersion: MINIMUM_COLLECTIONS_CLI_VERSION,
     });
     presentCollectionSearch(normalizeCollectionSearch(response, collectionId, query), jsonOutput);

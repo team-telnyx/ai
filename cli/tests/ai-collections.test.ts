@@ -4,16 +4,29 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const cliRoot = join(__dirname, "..");
-const cliBin = join(cliRoot, "bin", "telnyx-agent.ts");
 
-function setupFakeTelnyx(version = "0.27.0"): { logPath: string; env: NodeJS.ProcessEnv } {
+type CollectionResource = "ai:collections" | "ai:knowledge:collections";
+
+interface FakeTelnyxOptions {
+  version?: string;
+  resource?: CollectionResource;
+  advertiseResourceInHelp?: boolean;
+  failRequest?: boolean;
+}
+
+function setupFakeTelnyx({
+  version = "0.27.0",
+  resource = "ai:collections",
+  advertiseResourceInHelp = true,
+  failRequest = false,
+}: FakeTelnyxOptions = {}): { logPath: string; env: NodeJS.ProcessEnv } {
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-agent-ai-collections-"));
   const binDir = join(tempDir, "bin");
   const logPath = join(tempDir, "args.jsonl");
@@ -23,12 +36,27 @@ function setupFakeTelnyx(version = "0.27.0"): { logPath: string; env: NodeJS.Pro
   writeFileSync(fakeTelnyx, `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
-if (args[0] === "--version") { console.log("telnyx version ${version}"); process.exit(0); }
 fs.appendFileSync(process.env.TELNYX_FAKE_ARGS_LOG, JSON.stringify(args) + "\\n");
+const resource = ${JSON.stringify(resource)};
+const advertiseResourceInHelp = ${JSON.stringify(advertiseResourceInHelp)};
+const failRequest = ${JSON.stringify(failRequest)};
+if (args[0] === "--version") { console.log("telnyx version ${version}"); process.exit(0); }
+if ((args[0] === "ai:collections" || args[0] === "ai:knowledge:collections") && args[1] === "--help") {
+  if (advertiseResourceInHelp && args[0] === resource) {
+    console.log("COMMANDS:\\n  retrieve-documents  Retrieve documents");
+    process.exit(0);
+  }
+  console.error("No help topic for " + args[0]);
+  process.exit(3);
+}
 function flag(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; }
-if (args[0] !== "ai:collections" || args[1] !== "retrieve-documents") {
+if (args[0] !== resource || args[1] !== "retrieve-documents") {
   console.error("unexpected command: " + args.join(" "));
   process.exit(2);
+}
+if (failRequest) {
+  console.error("retrieval failed");
+  process.exit(9);
 }
 const collection = flag("--slug");
 const query = flag("--query");
@@ -75,7 +103,7 @@ console.log(JSON.stringify({
       ...process.env,
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
-      TELNYX_API_KEY: "KEY_fake_test",
+      TELNYX_API_KEY: undefined,
     },
   };
 }
@@ -83,9 +111,10 @@ console.log(JSON.stringify({
 function runAgent(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
+  root = cliRoot,
 ): { stdout: string; stderr: string; status: number } {
-  const result = spawnSync(process.execPath, ["--import", "tsx", cliBin, ...args], {
-    cwd: cliRoot,
+  const result = spawnSync(process.execPath, ["--import", "tsx", join(root, "bin", "telnyx-agent.ts"), ...args], {
+    cwd: root,
     encoding: "utf8",
     env,
     timeout: 30_000,
@@ -103,12 +132,6 @@ function loggedArgs(logPath: string): string[][] {
   assert.ok(contents.endsWith("\n"), "mock binary must terminate its JSONL record with a real newline");
   assert.equal(contents.includes("\\n"), false, "mock binary must not log a literal escaped newline");
   return contents.trimEnd().split("\n").map((line) => JSON.parse(line));
-}
-
-function assertFlag(args: string[], name: string, expected: string): void {
-  const index = args.indexOf(name);
-  assert.notEqual(index, -1, `expected ${name} in ${args.join(" ")}`);
-  assert.equal(args[index + 1], expected);
 }
 
 describe("AI collection document retrieval", () => {
@@ -149,22 +172,28 @@ describe("AI collection document retrieval", () => {
       total_results: 2,
     });
 
-    const [args] = loggedArgs(fake.logPath);
-    assert.deepEqual(args.slice(0, 4), [
+    const requestArgs = [
       "ai:collections", "retrieve-documents", "--slug", "support-transcripts",
+      "--query", "customer billing problem",
+      "--retrieval-type", "hybrid",
+      "--top-k", "10",
+      "--page-number", "2",
+      "--page-size", "25",
+      "--sources", "voice,message",
+      "--filter", filter,
+      "--format", "json",
+    ];
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
+      ["ai:knowledge:collections", "--help"],
+      ["ai:collections", "--help"],
+      ["--version"],
+      requestArgs,
     ]);
-    assertFlag(args, "--query", "customer billing problem");
-    assertFlag(args, "--retrieval-type", "hybrid");
-    assertFlag(args, "--top-k", "10");
-    assertFlag(args, "--page-number", "2");
-    assertFlag(args, "--page-size", "25");
-    assertFlag(args, "--sources", "voice,message");
-    assertFlag(args, "--filter", filter);
-    assert.deepEqual(args.slice(-2), ["--format", "json"]);
   });
 
-  it("accepts the generated --slug spelling and omits optional flags for catalog listing", () => {
-    const fake = setupFakeTelnyx();
+  it("preserves the v0.30 legacy namespace for generated --slug catalog listings", () => {
+    const fake = setupFakeTelnyx({ version: "0.30.0" });
     const result = runAgent([
       "search-ai-collection", "--slug", "support-transcripts", "--json",
     ], fake.env);
@@ -173,14 +202,17 @@ describe("AI collection document retrieval", () => {
     const output = JSON.parse(result.stdout);
     assert.equal(output.query, null);
     assert.equal(output.documents[0].score, 0);
-    const [args] = loggedArgs(fake.logPath);
-    assert.deepEqual(args, [
-      "ai:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json",
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
+      ["ai:knowledge:collections", "--help"],
+      ["ai:collections", "--help"],
+      ["--version"],
+      ["ai:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],
     ]);
   });
 
   it("enforces the command-scoped v0.27 minimum without changing the platform pin", () => {
-    const fake = setupFakeTelnyx("0.26.9");
+    const fake = setupFakeTelnyx({ version: "0.26.9" });
     const result = runAgent([
       "search-ai-collection", "--collection-id", "support-transcripts", "--json",
     ], fake.env);
@@ -189,7 +221,130 @@ describe("AI collection document retrieval", () => {
     const error = JSON.parse(result.stdout).error;
     assert.match(error, /0\.26\.9/);
     assert.match(error, /requires >= 0\.27\.0/);
-    assert.deepEqual(loggedArgs(fake.logPath), []);
+    assert.deepEqual(loggedArgs(fake.logPath), [["--version"]]);
+  });
+
+  it("uses a minimum-compatible PATH binary for resource resolution and retrieval", () => {
+    const isolatedRoot = mkdtempSync(join(cliRoot, ".ai-collections-vendor-path-"));
+    const vendor = join(isolatedRoot, "vendor", "telnyx");
+    const pathDir = join(isolatedRoot, "path");
+    const pathBinary = join(pathDir, "telnyx");
+    const vendorLog = join(isolatedRoot, "vendor.jsonl");
+    const pathLog = join(isolatedRoot, "path.jsonl");
+    cpSync(join(cliRoot, "src"), join(isolatedRoot, "src"), { recursive: true });
+    cpSync(join(cliRoot, "bin"), join(isolatedRoot, "bin"), { recursive: true });
+    cpSync(join(cliRoot, "package.json"), join(isolatedRoot, "package.json"));
+    mkdirSync(dirname(vendor), { recursive: true });
+    mkdirSync(pathDir, { recursive: true });
+    writeFileSync(vendor, `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(process.env.TELNYX_FAKE_VENDOR_LOG, JSON.stringify(args) + "\\n");
+if (args[0] === "--version") console.log("telnyx version 0.26.9");
+`);
+    writeFileSync(pathBinary, `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(process.env.TELNYX_FAKE_PATH_LOG, JSON.stringify(args) + "\\n");
+if (args[0] === "--version") { console.log("telnyx version 0.31.0"); process.exit(0); }
+if (args[0] === "ai:knowledge:collections" && args[1] === "--help") {
+  console.log("COMMANDS:\\n  retrieve-documents  Retrieve documents");
+  process.exit(0);
+}
+if (args[0] !== "ai:knowledge:collections" || args[1] !== "retrieve-documents") process.exit(2);
+console.log(JSON.stringify({ data: [], meta: { collection_slug: "support-transcripts" } }));
+`);
+    chmodSync(vendor, 0o755);
+    chmodSync(pathBinary, 0o755);
+
+    try {
+      const result = runAgent(
+        ["search-ai-collection", "--collection-id", "support-transcripts", "--json"],
+        {
+          ...process.env,
+          TELNYX_API_KEY: undefined,
+          TELNYX_CLI_PATH: undefined,
+          TELNYX_FAKE_VENDOR_LOG: vendorLog,
+          TELNYX_FAKE_PATH_LOG: pathLog,
+          PATH: `${pathDir}:${process.env.PATH ?? ""}`,
+        },
+        isolatedRoot,
+      );
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.equal(JSON.parse(result.stdout).collection_id, "support-transcripts");
+      assert.deepEqual(loggedArgs(vendorLog), [["--version"], ["--version"]]);
+      assert.deepEqual(loggedArgs(pathLog), [
+        ["--version"],
+        ["ai:knowledge:collections", "--help"],
+        ["--version"],
+        ["ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],
+      ]);
+    } finally {
+      rmSync(isolatedRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the v0.31 knowledge namespace with exact new-target argv", () => {
+    const fake = setupFakeTelnyx({
+      version: "0.31.0",
+      resource: "ai:knowledge:collections",
+    });
+    const result = runAgent([
+      "search-ai-collection", "--collection-id", "support-transcripts", "--query", "billing", "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).count, 2);
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
+      ["ai:knowledge:collections", "--help"],
+      ["--version"],
+      [
+        "ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts",
+        "--query", "billing", "--format", "json",
+      ],
+    ]);
+  });
+
+  it("uses v0.31 as a conservative fallback when both help probes fail", () => {
+    const fake = setupFakeTelnyx({
+      version: "0.31.0",
+      resource: "ai:knowledge:collections",
+      advertiseResourceInHelp: false,
+    });
+    const result = runAgent([
+      "search-ai-collection", "--collection-id", "support-transcripts", "--json",
+    ], fake.env);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
+      ["ai:knowledge:collections", "--help"],
+      ["ai:collections", "--help"],
+      ["--version"],
+      ["--version"],
+      ["ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],
+    ]);
+  });
+
+  it("does not retry another resource when retrieval itself fails", () => {
+    const fake = setupFakeTelnyx({
+      version: "0.31.0",
+      resource: "ai:knowledge:collections",
+      failRequest: true,
+    });
+    const result = runAgent([
+      "search-ai-collection", "--collection-id", "support-transcripts", "--json",
+    ], fake.env);
+
+    assert.notEqual(result.status, 0);
+    assert.match(JSON.parse(result.stdout).error, /retrieval failed/);
+    assert.deepEqual(loggedArgs(fake.logPath), [
+      ["--version"],
+      ["ai:knowledge:collections", "--help"],
+      ["--version"],
+      ["ai:knowledge:collections", "retrieve-documents", "--slug", "support-transcripts", "--format", "json"],
+    ]);
   });
 
   it("rejects invalid IDs, retrieval methods, limits, sources, and filters before dispatch", () => {
