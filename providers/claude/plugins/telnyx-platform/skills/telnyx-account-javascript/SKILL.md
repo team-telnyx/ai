@@ -215,20 +215,6 @@ console.log(userTags.data);
 
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
 
-## Create a stored payment transaction
-
-Create a transaction that charges a stored payment method on the account.
-
-`POST /v2/payment/stored_payment_transactions` — Required: `amount`
-
-```javascript
-const response = await client.payment.createStoredPaymentTransaction({ amount: '120.00' });
-
-console.log(response.data);
-```
-
-Returns: `amount_cents` (integer), `amount_currency` (string), `auto_recharge` (boolean), `created_at` (date-time), `id` (string), `processor_status` (string), `record_type` (enum: transaction), `transaction_processing_type` (enum: stored_payment)
-
 ## List webhook deliveries
 
 Lists webhook_deliveries for the authenticated user
