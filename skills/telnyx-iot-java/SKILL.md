@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.97.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.97.0")
 ```
 
 ## Setup
@@ -1011,85 +1011,6 @@ ActionStopResponse response = client.storage().migrations().actions().stop("");
 ```
 
 Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
-
-## List Mobile Voice Connections
-
-Retrieve a paginated list of mobile voice connections on your account.
-
-`GET /v2/mobile_voice_connections`
-
-```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListPage;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionListParams;
-
-MobileVoiceConnectionListPage page = client.mobileVoiceConnections().list();
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Create a Mobile Voice Connection
-
-Creates a new mobile voice connection with the provided configuration and returns the created connection.
-
-`POST /v2/mobile_voice_connections`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionCreateResponse;
-
-MobileVoiceConnectionCreateResponse mobileVoiceConnection = client.mobileVoiceConnections().create();
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Retrieve a Mobile Voice Connection
-
-Retrieve the details of a specific mobile voice connection.
-
-`GET /v2/mobile_voice_connections/{id}`
-
-```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionRetrieveResponse;
-
-MobileVoiceConnectionRetrieveResponse mobileVoiceConnection = client.mobileVoiceConnections().retrieve("550e8400-e29b-41d4-a716-446655440000");
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Update a Mobile Voice Connection
-
-Update the settings of a specific mobile voice connection.
-
-`PATCH /v2/mobile_voice_connections/{id}`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
-
-```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionUpdateResponse;
-
-MobileVoiceConnectionUpdateResponse mobileVoiceConnection = client.mobileVoiceConnections().update("550e8400-e29b-41d4-a716-446655440000");
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Delete a Mobile Voice Connection
-
-Delete a mobile voice connection from your account.
-
-`DELETE /v2/mobile_voice_connections/{id}`
-
-```java
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteParams;
-import com.telnyx.sdk.models.mobilevoiceconnections.MobileVoiceConnectionDeleteResponse;
-
-MobileVoiceConnectionDeleteResponse mobileVoiceConnection = client.mobileVoiceConnections().delete("550e8400-e29b-41d4-a716-446655440000");
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Get all wireless regions
 
