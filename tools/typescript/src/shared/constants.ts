@@ -444,7 +444,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         },
         model: {
           type: "string",
-          description: "Model to use for the assistant. Use 'telnyx ai models' or GET /v2/ai/models to list available models. Note: not all inference models work for assistants (e.g. Meta-Llama-3.1-8B-Instruct does not).",
+          description: "Model to use for the assistant. Use GET /v2/ai/models to list available models. Note: not all inference models work for assistants (e.g. Meta-Llama-3.1-8B-Instruct does not).",
         },
         instructions: {
           type: "string",
