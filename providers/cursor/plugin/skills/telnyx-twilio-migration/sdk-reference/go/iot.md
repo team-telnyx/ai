@@ -138,6 +138,94 @@ This API fetches information about a bulk SIM card action. A bulk SIM card actio
 
 Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
 
+## List Mobile Voice Connections
+
+Retrieve a paginated list of mobile voice connections on your account.
+
+`GET /mobile_voice_connections`
+
+```go
+	page, err := client.MobileVoiceConnections.List(context.Background(), telnyx.MobileVoiceConnectionListParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", page)
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Create a Mobile Voice Connection
+
+Creates a new mobile voice connection with the provided configuration and returns the created connection.
+
+`POST /mobile_voice_connections`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.New(context.Background(), telnyx.MobileVoiceConnectionNewParams{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Retrieve a Mobile Voice Connection
+
+Retrieve the details of a specific mobile voice connection.
+
+`GET /mobile_voice_connections/{id}`
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Get(context.Background(), "id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Update a Mobile Voice Connection
+
+Update the settings of a specific mobile voice connection.
+
+`PATCH /mobile_voice_connections/{id}`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Update(
+		context.Background(),
+		"id",
+		telnyx.MobileVoiceConnectionUpdateParams{},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Delete a Mobile Voice Connection
+
+Delete a mobile voice connection from your account.
+
+`DELETE /mobile_voice_connections/{id}`
+
+```go
+	mobileVoiceConnection, err := client.MobileVoiceConnections.Delete(context.Background(), "id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
 ## List OTA updates
 
 Retrieve a paginated list of over-the-air (OTA) update operations for your SIM cards.
@@ -1087,94 +1175,6 @@ Stops the specified in-progress storage migration and returns the updated migrat
 ```
 
 Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
-
-## List Mobile Voice Connections
-
-Retrieve a paginated list of mobile voice connections on your account.
-
-`GET /v2/mobile_voice_connections`
-
-```go
-	page, err := client.MobileVoiceConnections.List(context.Background(), telnyx.MobileVoiceConnectionListParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Create a Mobile Voice Connection
-
-Creates a new mobile voice connection with the provided configuration and returns the created connection.
-
-`POST /v2/mobile_voice_connections`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-```go
-	mobileVoiceConnection, err := client.MobileVoiceConnections.New(context.Background(), telnyx.MobileVoiceConnectionNewParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Retrieve a Mobile Voice Connection
-
-Retrieve the details of a specific mobile voice connection.
-
-`GET /v2/mobile_voice_connections/{id}`
-
-```go
-	mobileVoiceConnection, err := client.MobileVoiceConnections.Get(context.Background(), "id")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Update a Mobile Voice Connection
-
-Update the settings of a specific mobile voice connection.
-
-`PATCH /v2/mobile_voice_connections/{id}`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
-
-```go
-	mobileVoiceConnection, err := client.MobileVoiceConnections.Update(
-		context.Background(),
-		"id",
-		telnyx.MobileVoiceConnectionUpdateParams{},
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Delete a Mobile Voice Connection
-
-Delete a mobile voice connection from your account.
-
-`DELETE /v2/mobile_voice_connections/{id}`
-
-```go
-	mobileVoiceConnection, err := client.MobileVoiceConnections.Delete(context.Background(), "id")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", mobileVoiceConnection.Data)
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Get all wireless regions
 

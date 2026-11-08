@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.97.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.97.0")
 ```
 
 ## Setup
@@ -148,7 +148,7 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialListParams;
 TelephonyCredentialListPage page = client.telephonyCredentials().list();
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Create a credential
 
@@ -168,7 +168,7 @@ TelephonyCredentialCreateParams params = TelephonyCredentialCreateParams.builder
 TelephonyCredentialCreateResponse telephonyCredential = client.telephonyCredentials().create(params);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Get a credential
 
@@ -183,7 +183,7 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialRetrieveRes
 TelephonyCredentialRetrieveResponse telephonyCredential = client.telephonyCredentials().retrieve("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -200,7 +200,7 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialUpdateRespo
 TelephonyCredentialUpdateResponse telephonyCredential = client.telephonyCredentials().update("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Delete a credential
 
@@ -215,4 +215,4 @@ import com.telnyx.sdk.models.telephonycredentials.TelephonyCredentialDeleteRespo
 TelephonyCredentialDeleteResponse telephonyCredential = client.telephonyCredentials().delete("550e8400-e29b-41d4-a716-446655440000");
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
