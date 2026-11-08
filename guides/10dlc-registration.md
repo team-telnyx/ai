@@ -11,8 +11,13 @@
 ## Quick Start
 
 ```bash
-# Using the Telnyx CLI (recommended)
-telnyx 10dlc wizard
+# Using the Telnyx Agent CLI (recommended): creates the brand and campaign in one step
+telnyx-agent setup-10dlc \
+  --phone +1XXXXXXXXXX \
+  --email you@example.com \
+  --brand-name "My Business" \
+  --website https://example.com/sms-opt-in \
+  --sample-message "My Business: Your update is ready. Reply STOP to opt out."
 
 # Or via API:
 # 1. Create brand
