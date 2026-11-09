@@ -5,12 +5,22 @@ from __future__ import annotations
 import json
 import time
 from typing import Any
+from urllib.parse import quote
 
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 
+# Characters left literal inside a path segment. "/" is kept so S3-style object
+# keys ("reports/2026/a.pdf") and "+" so E.164 numbers round-trip unchanged;
+# everything else that would terminate or corrupt the path ("?", "#", "%", space,
+# non-ASCII) is percent-encoded. Mirrors encodePathParam in the TypeScript core.
+_PATH_SAFE = "/+:@"
+
+
+def _encode_path_param(value: Any) -> str:
+    return quote(str(value), safe=_PATH_SAFE)
 
 class ToolkitCore:
     """Core toolkit that maps tool names to API calls.
@@ -94,7 +104,7 @@ class ToolkitCore:
             for key in list(normalized.keys()):
                 placeholder = f"{{{key}}}"
                 if placeholder in path:
-                    path = path.replace(placeholder, str(normalized.pop(key)))
+                    path = path.replace(placeholder, _encode_path_param(normalized.pop(key)))
 
         if method == "GET":
             # Convert nested params to query params with filter[] syntax

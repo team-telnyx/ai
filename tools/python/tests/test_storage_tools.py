@@ -5,7 +5,15 @@ Cloud Storage bucket/object management is S3-compatible and has no
 sub-resources (presigned URL, SSL certificate, usage). These tests pin that.
 """
 
+import json
+
+import httpx
+import pytest
+import respx
+
+from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
+from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore, _encode_path_param
 
 # Tools removed because their routes never existed (AI-3949). Keeping the names
 # here makes an accidental re-introduction fail loudly.
@@ -46,3 +54,27 @@ def test_create_presigned_url_matches_openapi_contract() -> None:
 def test_storage_category_contains_only_real_routes() -> None:
     storage_tools = {n for n, t in TOOL_DEFINITIONS.items() if t["category"] == "storage"}
     assert storage_tools == {"create_presigned_url"}
+
+
+class TestPathParamEncoding:
+    """Path placeholders are percent-encoded so a value containing "?", "#", "%"
+    or whitespace cannot terminate or corrupt the route (Codex review on #590)."""
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_object_key_with_reserved_chars_reaches_presigned_route(self) -> None:
+        core = ToolkitCore(client=TelnyxAPIClient(api_key="test-key"))
+        route = respx.post(
+            "https://api.telnyx.com/v2/storage/buckets/my-bucket/reports/2026/why%3F%231.pdf/presigned_url"
+        ).mock(return_value=httpx.Response(200, json={"data": {"presigned_url": "https://x"}}))
+        await core.run_tool_async(
+            "create_presigned_url", {"bucket_name": "my-bucket", "key": "reports/2026/why?#1.pdf", "ttl": 60}
+        )
+        assert route.called
+        req = route.calls.last.request
+        assert req.url.query == b"" and req.url.fragment == ""
+        assert json.loads(req.content) == {"ttl": 60}
+
+    def test_encoding_keeps_plus_and_slash_literal(self) -> None:
+        assert _encode_path_param("+15551234567") == "+15551234567"
+        assert _encode_path_param("a/b c#d?e%f") == "a/b%20c%23d%3Fe%25f"

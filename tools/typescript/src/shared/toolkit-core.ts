@@ -7,6 +7,20 @@ import { TOOL_DEFINITIONS, type ToolDefinition } from "./constants.js";
 import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
 
+
+// Characters left literal inside a path segment. "/" is kept so S3-style object
+// keys ("reports/2026/a.pdf") and "+" so E.164 numbers round-trip unchanged;
+// everything else that would terminate or corrupt the path ("?", "#", "%", space,
+// non-ASCII) is percent-encoded. Mirrors _encode_path_param in the Python core.
+export function encodePathParam(value: unknown): string {
+  return encodeURIComponent(String(value))
+    .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/%2F/gi, "/")
+    .replace(/%2B/gi, "+")
+    .replace(/%3A/gi, ":")
+    .replace(/%40/gi, "@");
+}
+
 export class ToolkitCore {
   private readonly client: TelnyxAPIClient;
   private readonly telemetry: TelemetryReporter;
@@ -124,7 +138,7 @@ export class ToolkitCore {
       for (const key of Object.keys(normalized)) {
         const placeholder = `{${key}}`;
         if (path.includes(placeholder)) {
-          path = path.replace(placeholder, String(normalized[key]));
+          path = path.replace(placeholder, encodePathParam(normalized[key]));
           delete normalized[key];
         }
       }
