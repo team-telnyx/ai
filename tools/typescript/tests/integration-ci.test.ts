@@ -213,7 +213,7 @@ describe("TypeScript SDK — Read-Only API", () => {
     assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (not JSON:API), got ${Object.keys(body)}`);
     }
   });
 
@@ -223,7 +223,7 @@ describe("TypeScript SDK — Read-Only API", () => {
     assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (10DLC is not JSON:API), got ${Object.keys(body)}`);
     }
   });
 
@@ -499,7 +499,7 @@ describe("TypeScript SDK — Read-Only API", () => {
     assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (not JSON:API), got ${Object.keys(body)}`);
     }
   });
 

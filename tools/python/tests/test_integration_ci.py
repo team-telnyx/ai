@@ -280,8 +280,9 @@ class TestReadonly:
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            # These endpoints are not JSON:API: results come back under `records`.
+            assert "records" in data, data
+            assert isinstance(data["records"], list)
 
     def test_readonly_list_10dlc_campaigns(self):
         """GET /v2/10dlc/campaign (brandId required) returns a list or valid error."""
@@ -295,8 +296,8 @@ class TestReadonly:
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            assert "records" in data, data  # 10DLC is not JSON:API
+            assert isinstance(data["records"], list)
 
     # ─── New tools: IoT / Wireless ───────────────────────────────
 
@@ -686,8 +687,9 @@ class TestReadonly:
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            # These endpoints are not JSON:API: results come back under `records`.
+            assert "records" in data, data
+            assert isinstance(data["records"], list)
 
     # ─── New tools: Detail Records ───────────────────────────────
 
