@@ -3253,8 +3253,7 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
                 },
                 "provider": {
                     "type": "string",
-                    "description": "TTS provider.",
-                    "enum": ["telnyx", "aws", "azure", "elevenlabs", "minimax", "resemble"],
+                    "description": "TTS provider, e.g. 'telnyx', 'aws', 'azure', 'elevenlabs', 'minimax', 'resemble', 'xai', 'humain', 'soniox'. Usually inferred from the voice identifier.",
                 },
                 "language": {
                     "type": "string",
@@ -3268,12 +3267,11 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
                 },
                 "output_type": {
                     "type": "string",
-                    "description": "Audio output encoding.",
-                    "enum": ["binary_output", "base64_output"],
-                    "default": "base64_output",
+                    "description": "Must be 'base64_output': the toolkit parses JSON responses, and the API's default (binary audio) cannot be returned through a tool call.",
+                    "enum": ["base64_output"],
                 },
             },
-            "required": ["text"],
+            "required": ["text", "output_type"],
         },
         "method": "POST",
         "path": "/text-to-speech/speech",

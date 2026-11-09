@@ -14,7 +14,7 @@ Forty-one tool definitions targeted REST routes that do not exist (the API retur
 - **Port-out** — `list_portout_orders`, `get_portout_order`, `list_portout_comments`, `create_portout_comment`, `list_portout_documents`, `upload_portout_document`, `list_portout_rejection_codes` → `/portouts/…`. Rejection codes are per order: `portout_id` is now required. Document upload takes `documents[]` of `{type, document_id}`.
 - **Voice clones / designs** — `list_voice_clones`, `create_voice_clone`, `list_voice_designs`, `create_voice_design`, `get_voice_design` → `/voice_clones`, `/voice_designs`. Clone creation requires `voice_design_id`, `language`, `gender`; design creation requires `text` and `prompt`.
 - **Toll-free verification** — `list_toll_free_verifications`, `create_toll_free_verification` → `/messaging_tollfree/verification/requests`. Body is camelCase; list requires `page` and `page_size`.
-- **TTS** — `text_to_speech` → `/text-to-speech/speech`.
+- **TTS** — `text_to_speech` → `/text-to-speech/speech`. `output_type` is now required and must be `base64_output` (the API's binary default cannot be returned through a tool call); the `provider` enum is removed so newer providers (`xai`, `humain`, `soniox`) are accepted.
 - **Reporting** — `list_detail_records` → `/detail_records`; `filter_record_type` is required.
 - **WhatsApp** — `get_whatsapp_template` → `/whatsapp/message_templates/{id}`.
 - **Networking** — `list_network_interfaces` → `/networks/{network_id}/network_interfaces`; `network_id` is required.

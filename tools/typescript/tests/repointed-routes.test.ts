@@ -92,3 +92,12 @@ async function assertExecutor(): Promise<void> {
 
 await assertExecutor();
 console.log("Re-pointed route and flat query-mode tests passed");
+
+// text_to_speech: the API defaults to binary audio and the client parses JSON,
+// so output_type must be required and limited to base64_output.
+{
+  const tts = TOOL_DEFINITIONS.text_to_speech;
+  assert.ok(tts.parameters.required.includes("output_type"));
+  assert.deepEqual(tts.parameters.properties.output_type.enum, ["base64_output"]);
+  assert.equal(tts.parameters.properties.provider.enum, undefined);
+}

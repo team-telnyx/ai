@@ -115,3 +115,13 @@ class TestFlatQueryMode:
         assert route.called
         assert "network_id" not in dict(route.calls.last.request.url.params)
         assert json.loads(result) == {"data": []}
+
+
+def test_text_to_speech_cannot_request_binary_audio() -> None:
+    """The API defaults to binary audio and the toolkit parses JSON, so a tool
+    call must always send output_type=base64_output (Codex review on #591)."""
+    tool = TOOL_DEFINITIONS["text_to_speech"]
+    out = tool["parameters"]["properties"]["output_type"]
+    assert "output_type" in tool["parameters"]["required"]
+    assert out["enum"] == ["base64_output"]
+    assert "enum" not in tool["parameters"]["properties"]["provider"]  # provider list is open-ended
