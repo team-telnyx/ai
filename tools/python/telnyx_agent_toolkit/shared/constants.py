@@ -984,46 +984,6 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
         "path": "/ai/assistants/{assistant_id}",
         "category": "ai",
     },
-    # ─── Storage ─────────────────────────────────────────────────
-    "list_storage_buckets": {
-        "name": "list_storage_buckets",
-        "description": "List storage buckets on the account.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "page_size": {
-                    "type": "integer",
-                    "description": "Number of results per page.",
-                    "default": 20,
-                },
-            },
-            "required": [],
-        },
-        "method": "GET",
-        "path": "/storage/buckets",
-        "category": "storage",
-    },
-    "create_storage_bucket": {
-        "name": "create_storage_bucket",
-        "description": "Create a new storage bucket.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Name for the storage bucket.",
-                },
-                "region": {
-                    "type": "string",
-                    "description": "Region for the bucket (e.g. 'us-central-1').",
-                },
-            },
-            "required": ["name"],
-        },
-        "method": "POST",
-        "path": "/storage/buckets",
-        "category": "storage",
-    },
     # ─── AI Models ───────────────────────────────────────────────
     "list_ai_models": {
         "name": "list_ai_models",
@@ -1685,24 +1645,6 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
         "path": "/networks",
         "category": "networking",
     },
-    # ─── Storage (delete) ────────────────────────────────────────
-    "delete_storage_bucket": {
-        "name": "delete_storage_bucket",
-        "description": "Delete a storage bucket.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "bucket_name": {
-                    "type": "string",
-                    "description": "Name of the storage bucket to delete.",
-                },
-            },
-            "required": ["bucket_name"],
-        },
-        "method": "DELETE",
-        "path": "/storage/buckets/{bucket_name}",
-        "category": "storage",
-    },
     # ─── Fax ─────────────────────────────────────────────────────
     "list_faxes": {
         "name": "list_faxes",
@@ -1761,57 +1703,15 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
         "path": "/faxes/{id}",
         "category": "fax",
     },
-    # ─── Storage Objects ─────────────────────────────────────────
-    "upload_storage_object": {
-        "name": "upload_storage_object",
-        "description": "Upload an object to a storage bucket (S3-compatible PUT).",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "bucket_name": {
-                    "type": "string",
-                    "description": "Name of the storage bucket.",
-                },
-                "key": {
-                    "type": "string",
-                    "description": "Object key (path) within the bucket.",
-                },
-                "content_type": {
-                    "type": "string",
-                    "description": "MIME type of the object.",
-                    "default": "application/octet-stream",
-                },
-            },
-            "required": ["bucket_name", "key"],
-        },
-        "method": "PUT",
-        "path": "/storage/buckets/{bucket_name}/{key}",
-        "category": "storage",
-    },
-    "get_storage_object": {
-        "name": "get_storage_object",
-        "description": "Retrieve an object from a storage bucket.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "bucket_name": {
-                    "type": "string",
-                    "description": "Name of the storage bucket.",
-                },
-                "key": {
-                    "type": "string",
-                    "description": "Object key (path) within the bucket.",
-                },
-            },
-            "required": ["bucket_name", "key"],
-        },
-        "method": "GET",
-        "path": "/storage/buckets/{bucket_name}/{key}",
-        "category": "storage",
-    },
+    # ─── Storage (presigned URL) ─────────────────────────────────
+    # Bucket and object management is S3-compatible (https://<region>.telnyxcloudstorage.com);
+    # the presigned-URL endpoint is the only bucket-scoped REST route the toolkit exposes.
     "create_presigned_url": {
         "name": "create_presigned_url",
-        "description": "Create a presigned URL for uploading or downloading a storage object.",
+        "description": (
+            "Create a time-limited presigned URL for a Cloud Storage object. "
+            "The URL can be used to download (GET) or upload (PUT) the object without further authentication."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
@@ -1823,22 +1723,16 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
                     "type": "string",
                     "description": "Object key (path) within the bucket.",
                 },
-                "method": {
-                    "type": "string",
-                    "description": "HTTP method for the presigned URL.",
-                    "enum": ["GET", "PUT"],
-                    "default": "GET",
-                },
-                "expires_in": {
+                "ttl": {
                     "type": "integer",
-                    "description": "URL expiration time in seconds.",
+                    "description": "Time to live of the URL in seconds (1 to 604800).",
                     "default": 3600,
                 },
             },
             "required": ["bucket_name", "key"],
         },
         "method": "POST",
-        "path": "/storage/buckets/{bucket_name}/presigned_url",
+        "path": "/storage/buckets/{bucket_name}/{key}/presigned_url",
         "category": "storage",
     },
     # ─── Porting (create order) ──────────────────────────────────

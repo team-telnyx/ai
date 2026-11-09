@@ -135,14 +135,18 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  it("list_storage_buckets returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list storage buckets", `${BASE}/storage/buckets?page[size]=1`);
+  it("storage presigned_url route exists (buckets/objects are S3-only)", async (t) => {
+    // Any outcome is fine except the gateway's route-level 404 (error 10005).
+    const r = await readonlyFetch(t, "storage presigned url route",
+      `${BASE}/storage/buckets/ci-integration-test-no-such-bucket/probe.txt/presigned_url`,
+      { method: "POST", body: JSON.stringify({ ttl: 60 }) });
     if (!r) return;
-    // Storage may not be enabled on all accounts
-    assert.ok([200, 403, 404].includes(r.status), `Expected 200/403/404, got ${r.status}`);
-    if (r.status === 200) {
+    if (r.status === 404) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      const detail = (body.errors ?? []).map((e: any) => e.detail ?? "").join(" ");
+      assert.ok(!detail.includes("URL could not be found"), `presigned_url route does not exist: ${detail}`);
+    } else {
+      assert.ok([200, 201, 400, 403, 422].includes(r.status), `Unexpected ${r.status}`);
     }
   });
 
@@ -565,7 +569,7 @@ describe("TypeScript SDK — Toolkit Classes", () => {
     );
     const count = Object.keys(TOOL_DEFINITIONS).length;
 
-    assert.equal(count, 211, `Expected 211 tools, got ${count}`);
+    assert.equal(count, 206, `Expected 206 tools, got ${count}`);
 
   });
 
@@ -665,7 +669,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const tools = toolkit.getOpenAITools();
     assert.ok(tools.length > 0, "Should have at least one tool");
 
-    assert.ok(tools.length < 211, `Should have fewer than 211 tools, got ${tools.length}`);
+    assert.ok(tools.length < 206, `Should have fewer than 206 tools, got ${tools.length}`);
 
   });
 
@@ -674,7 +678,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const toolkit = new TelnyxAgentToolkit(API_KEY!);
     const tools = toolkit.getOpenAITools();
 
-    assert.equal(tools.length, 211, `Expected 211 tools, got ${tools.length}`);
+    assert.equal(tools.length, 206, `Expected 206 tools, got ${tools.length}`);
 
   });
 });
