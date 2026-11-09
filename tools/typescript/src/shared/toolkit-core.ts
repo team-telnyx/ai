@@ -8,17 +8,18 @@ import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
 
 
-// Characters left literal inside a path segment. "/" is kept so S3-style object
-// keys ("reports/2026/a.pdf") and "+" so E.164 numbers round-trip unchanged;
-// everything else that would terminate or corrupt the path ("?", "#", "%", space,
-// non-ASCII) is percent-encoded. Mirrors _encode_path_param in the Python core.
+// Characters left literal inside a path segment: the RFC 3986 `pchar` set
+// (unreserved + sub-delims + ":" / "@") plus "/" so S3-style object keys
+// ("reports/2026/a.pdf") pass through. Only characters that would terminate or
+// corrupt the path ("?", "#", "%", space, non-ASCII, controls) are
+// percent-encoded. Mirrors _encode_path_param in the Python core.
 export function encodePathParam(value: unknown): string {
-  return encodeURIComponent(String(value))
-    .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
-    .replace(/%2F/gi, "/")
-    .replace(/%2B/gi, "+")
-    .replace(/%3A/gi, ":")
-    .replace(/%40/gi, "@");
+  // encodeURIComponent already leaves unreserved + !'()* literal; restore the
+  // remaining sub-delims and ":" "@" "/" that it encodes.
+  return encodeURIComponent(String(value)).replace(
+    /%(2F|3A|40|24|26|2B|2C|3B|3D)/gi,
+    (m) => decodeURIComponent(m),
+  );
 }
 
 export class ToolkitCore {

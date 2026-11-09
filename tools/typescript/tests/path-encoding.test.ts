@@ -8,9 +8,12 @@ import assert from "node:assert/strict";
 import type { TelnyxAPIClient } from "../src/shared/api-client.js";
 import { ToolkitCore, encodePathParam } from "../src/shared/toolkit-core.js";
 
+// unreserved, sub-delims, ":" "@" and "/" pass through unchanged
 assert.equal(encodePathParam("+15551234567"), "+15551234567");
+assert.equal(encodePathParam("a:b@c!d$e&f'g(h)i*j+k,l;m=n/o-p_q.r~s"), "a:b@c!d$e&f'g(h)i*j+k,l;m=n/o-p_q.r~s");
+// path terminators / corrupters are encoded (identical to Python urllib.parse.quote)
 assert.equal(encodePathParam("a/b c#d?e%f"), "a/b%20c%23d%3Fe%25f");
-assert.equal(encodePathParam("x(y)*z!"), "x%28y%29%2Az%21"); // matches Python urllib.parse.quote
+assert.equal(encodePathParam("ü[1]"), "%C3%BC%5B1%5D");
 
 class MockClient {
   readonly apiKey = "test-key";

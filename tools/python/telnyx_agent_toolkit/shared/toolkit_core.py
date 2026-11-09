@@ -12,11 +12,12 @@ from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefiniti
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 
-# Characters left literal inside a path segment. "/" is kept so S3-style object
-# keys ("reports/2026/a.pdf") and "+" so E.164 numbers round-trip unchanged;
-# everything else that would terminate or corrupt the path ("?", "#", "%", space,
-# non-ASCII) is percent-encoded. Mirrors encodePathParam in the TypeScript core.
-_PATH_SAFE = "/+:@"
+# Characters left literal inside a path segment: the RFC 3986 `pchar` set
+# (unreserved + sub-delims + ":" / "@") plus "/" so S3-style object keys
+# ("reports/2026/a.pdf") pass through. Only characters that would terminate or
+# corrupt the path ("?", "#", "%", space, non-ASCII, controls) are
+# percent-encoded. Mirrors encodePathParam in the TypeScript core.
+_PATH_SAFE = "/:@!$&'()*+,;="
 
 
 def _encode_path_param(value: Any) -> str:

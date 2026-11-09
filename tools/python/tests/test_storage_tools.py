@@ -75,6 +75,10 @@ class TestPathParamEncoding:
         assert req.url.query == b"" and req.url.fragment == ""
         assert json.loads(req.content) == {"ttl": 60}
 
-    def test_encoding_keeps_plus_and_slash_literal(self) -> None:
+    def test_encoding_keeps_rfc3986_pchar_literal(self) -> None:
+        # unreserved, sub-delims, ":" "@" and "/" pass through unchanged
         assert _encode_path_param("+15551234567") == "+15551234567"
+        assert _encode_path_param("a:b@c!d$e&f'g(h)i*j+k,l;m=n/o-p_q.r~s") == "a:b@c!d$e&f'g(h)i*j+k,l;m=n/o-p_q.r~s"
+        # path terminators / corrupters are encoded
         assert _encode_path_param("a/b c#d?e%f") == "a/b%20c%23d%3Fe%25f"
+        assert _encode_path_param("ü[1]") == "%C3%BC%5B1%5D"
