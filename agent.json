@@ -69,7 +69,7 @@
       "id": "ai_inference",
       "name": "AI Inference",
       "description": "LLM chat completions and embeddings via OpenAI-compatible API.",
-      "cli": "telnyx-agent ai-chat --message 'Hello'",
+      "cli": "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"Hello\"}'",
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
       "requires": []
@@ -141,7 +141,7 @@
       "id": "storage",
       "name": "Cloud Storage",
       "description": "S3-compatible object storage for media, recordings, and files.",
-      "cli": "aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
+      "cli": "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
       "api": "S3-compatible API at https://<region>.telnyxcloudstorage.com (AWS CLI/SDK; Telnyx API key as both access and secret key)",
       "docs": "https://developers.telnyx.com/docs/storage",
       "requires": []
@@ -274,6 +274,7 @@
       "fax-refresh",
       "fax-send",
       "fax-status",
+      "fund-account",
       "get-ai-assistant",
       "get-ai-assistant-scheduled-event",
       "get-ai-assistant-test-run",
@@ -348,7 +349,6 @@
       "setup-voice",
       "setup-whatsapp",
       "setup-wireguard",
-      "ship",
       "sms-status",
       "speak-in-meeting",
       "status",
@@ -374,7 +374,8 @@
       "web-research",
       "web-research-status",
       "web-search",
-      "whatsapp-send"
+      "whatsapp-send",
+      "whatsapp-templates"
     ],
     "underlying": {
       "package": "telnyx-cli (Go)",
@@ -401,7 +402,7 @@
       {
         "name": "Chat with AI",
         "commands": [
-          "telnyx-agent ai-chat --message 'What can Telnyx do?'"
+          "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"What can Telnyx do?\"}'"
         ]
       },
       {
@@ -419,8 +420,8 @@
       {
         "name": "Store a file",
         "commands": [
-          "aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
-          "aws s3 cp ./file.txt s3://my-bucket/file.txt --endpoint-url https://us-central-1.telnyxcloudstorage.com"
+          "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
+          "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 cp ./file.txt s3://my-bucket/file.txt --endpoint-url https://us-central-1.telnyxcloudstorage.com"
         ]
       }
     ]
