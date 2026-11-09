@@ -64,7 +64,7 @@ Common error codes: `401` invalid API key, `403` insufficient permissions,
 
 ## List portout requests
 
-Returns the portout requests according to filters
+Returns the portout requests according to filters. Carrier Port Out API available. Please contact porting@telnyx.com.
 
 `GET /portouts`
 
