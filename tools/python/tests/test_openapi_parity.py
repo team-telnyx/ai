@@ -25,47 +25,10 @@ from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
 SPEC_URL = "https://raw.githubusercontent.com/team-telnyx/openapi/master/openapi/spec3.json"
 SPEC_CACHE = Path(os.environ.get("TELNYX_OPENAPI_SPEC", Path(__file__).parent / ".cache" / "spec3.json"))
 
-# Tools whose routes return 404 live and are absent from the spec. AI-3951.
-KNOWN_PHANTOM_ROUTES: dict[str, str] = {
-    name: "AI-3951"
-    for name in (
-        "list_messages",
-        "list_10dlc_brands",
-        "create_10dlc_brand",
-        "get_10dlc_brand",
-        "list_10dlc_campaigns",
-        "get_10dlc_campaign",
-        "assign_10dlc_campaign",
-        "list_verify_profiles",
-        "create_verify_profile",
-        "get_verify_profile",
-        "list_e911_addresses",
-        "create_e911_address",
-        "update_e911_address",
-        "delete_e911_address",
-        "list_portout_orders",
-        "get_portout_order",
-        "list_portout_comments",
-        "create_portout_comment",
-        "list_portout_documents",
-        "upload_portout_document",
-        "list_portout_rejection_codes",
-        "list_network_interfaces",
-        "bulk_lookup_numbers",
-        "update_mission_step",
-        "text_to_speech",
-        "list_voice_clones",
-        "create_voice_clone",
-        "get_voice_clone",
-        "list_voice_designs",
-        "create_voice_design",
-        "get_voice_design",
-        "list_toll_free_verifications",
-        "create_toll_free_verification",
-        "list_detail_records",
-        "get_whatsapp_template",
-    )
-}
+# Tools whose routes return 404 live and are absent from the spec. All 35
+# original entries were fixed or removed in AI-3951; add new entries only with
+# a ticket.
+KNOWN_PHANTOM_ROUTES: dict[str, str] = {}
 
 # Routes that exist live (401 unauthenticated) but are missing from the public
 # spec. Not toolkit bugs; tracked with the spec owners via AI-3951.

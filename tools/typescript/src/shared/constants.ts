@@ -27,6 +27,8 @@ export interface ToolDefinition {
   method: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
   path: string;
   category: string;
+  /** "flat": send GET args as literal query keys (no page[]/filter[] rewriting). */
+  query_mode?: "flat";
 }
 
 export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
@@ -1080,76 +1082,86 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   },
 
   // ─── Messages ────────────────────────────────────────────────
-  list_messages: {
-    name: "list_messages",
-    description: "List messages sent and received on the account.",
-    parameters: {
-      type: "object",
-      properties: {
-        page_size: {
-          type: "integer",
-          description: "Number of results per page.",
-          default: 20,
-        },
-        page_number: {
-          type: "integer",
-          description: "Page number to retrieve.",
-          default: 1,
-        },
-      },
-      required: [],
-    },
-    method: "GET",
-    path: "/messages",
-    category: "messaging",
-  },
-
   // ─── 10DLC Compliance ────────────────────────────────────────
   list_10dlc_brands: {
     name: "list_10dlc_brands",
-    description: "List registered 10DLC brands on the account.",
+    description: "List 10DLC brands registered on the account.",
     parameters: {
       type: "object",
       properties: {
-        page_size: {
+        page: {
           type: "integer",
-          description: "Number of results per page.",
-          default: 20,
-        },
-        page_number: {
-          type: "integer",
-          description: "Page number to retrieve.",
+          description: "Page number.",
           default: 1,
+        },
+        recordsPerPage: {
+          type: "integer",
+          description: "Results per page.",
+          default: 10,
+        },
+        displayName: {
+          type: "string",
+          description: "Filter by brand display name.",
+        },
+        entityType: {
+          type: "string",
+          description: "Filter by entity type.",
+          enum: ["PRIVATE_PROFIT", "PUBLIC_PROFIT", "NON_PROFIT", "GOVERNMENT", "SOLE_PROPRIETOR"],
+        },
+        state: {
+          type: "string",
+          description: "Filter by state.",
+        },
+        country: {
+          type: "string",
+          description: "Filter by ISO country code.",
         },
       },
       required: [],
     },
     method: "GET",
-    path: "/10dlc/brands",
+    path: "/10dlc/brand",
     category: "10dlc",
+    query_mode: "flat",
   },
-
   create_10dlc_brand: {
     name: "create_10dlc_brand",
-    description: "Register a new 10DLC brand for A2P messaging compliance.",
+    description: "Register a new 10DLC brand (the business sending A2P messages).",
     parameters: {
       type: "object",
       properties: {
-        display_name: {
+        entityType: {
           type: "string",
-          description: "Display name of the brand.",
+          description: "Legal entity type.",
+          enum: ["PRIVATE_PROFIT", "PUBLIC_PROFIT", "NON_PROFIT", "GOVERNMENT", "SOLE_PROPRIETOR"],
         },
-        entity_type: {
+        displayName: {
           type: "string",
-          description: "Entity type (e.g. 'PRIVATE_PROFIT', 'PUBLIC_PROFIT', 'NON_PROFIT').",
+          description: "Brand display name.",
+        },
+        country: {
+          type: "string",
+          description: "ISO country code, e.g. 'US'.",
+        },
+        email: {
+          type: "string",
+          description: "Brand contact email.",
+        },
+        vertical: {
+          type: "string",
+          description: "Industry vertical, e.g. 'TECHNOLOGY', 'RETAIL', 'HEALTHCARE'.",
+        },
+        companyName: {
+          type: "string",
+          description: "Legal company name (required for non-sole-proprietor brands).",
         },
         ein: {
           type: "string",
-          description: "Employer Identification Number.",
+          description: "Tax ID / EIN.",
         },
         phone: {
           type: "string",
-          description: "Brand contact phone number.",
+          description: "Brand phone number in E.164.",
         },
         street: {
           type: "string",
@@ -1161,78 +1173,97 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         },
         state: {
           type: "string",
-          description: "State code (e.g. 'NY').",
+          description: "State or region.",
         },
-        zip: {
+        postalCode: {
           type: "string",
-          description: "ZIP code.",
-        },
-        country: {
-          type: "string",
-          description: "Country code (e.g. 'US').",
+          description: "Postal code.",
         },
         website: {
           type: "string",
           description: "Brand website URL.",
         },
-        vertical: {
+        firstName: {
           type: "string",
-          description: "Business vertical (e.g. 'TECHNOLOGY', 'RETAIL').",
+          description: "Contact first name (sole proprietors).",
         },
-        alt_business_id_type: {
+        lastName: {
           type: "string",
-          description: "Alternate business ID type (e.g. 'DUNS', 'LEI').",
+          description: "Contact last name (sole proprietors).",
+        },
+        stockSymbol: {
+          type: "string",
+          description: "Stock symbol (public companies).",
+        },
+        stockExchange: {
+          type: "string",
+          description: "Stock exchange (public companies).",
+        },
+        isReseller: {
+          type: "boolean",
+          description: "Whether the brand is a reseller.",
+        },
+        webhookURL: {
+          type: "string",
+          description: "Webhook URL for brand status updates.",
         },
       },
-      required: ["display_name", "entity_type", "ein", "phone", "street", "city", "state", "zip", "country", "website", "vertical", "alt_business_id_type"],
+      required: ["entityType", "displayName", "country", "email", "vertical"],
     },
     method: "POST",
-    path: "/10dlc/brands",
+    path: "/10dlc/brand",
     category: "10dlc",
   },
-
   get_10dlc_brand: {
     name: "get_10dlc_brand",
-    description: "Get details of a specific 10DLC brand.",
+    description: "Get a 10DLC brand by ID.",
     parameters: {
       type: "object",
       properties: {
         brand_id: {
           type: "string",
-          description: "The ID of the brand to retrieve.",
+          description: "Brand ID.",
         },
       },
       required: ["brand_id"],
     },
     method: "GET",
-    path: "/10dlc/brands/{brand_id}",
+    path: "/10dlc/brand/{brand_id}",
     category: "10dlc",
   },
-
   list_10dlc_campaigns: {
     name: "list_10dlc_campaigns",
-    description: "List 10DLC campaigns on the account.",
+    description: "List 10DLC campaigns for a brand.",
     parameters: {
       type: "object",
       properties: {
-        page_size: {
-          type: "integer",
-          description: "Number of results per page.",
-          default: 20,
+        brandId: {
+          type: "string",
+          description: "Brand ID to list campaigns for.",
         },
-        page_number: {
+        page: {
           type: "integer",
-          description: "Page number to retrieve.",
+          description: "Page number.",
           default: 1,
         },
+        recordsPerPage: {
+          type: "integer",
+          description: "Results per page.",
+          default: 10,
+        },
+        sort: {
+          type: "string",
+          description: "Sort field; prefix with '-' for descending.",
+          default: "-createdAt",
+        },
       },
-      required: [],
+      required: ["brandId"],
     },
     method: "GET",
-    path: "/10dlc/campaigns",
+    path: "/10dlc/campaign",
     category: "10dlc",
+    query_mode: "flat",
   },
-
   create_10dlc_campaign: {
     name: "create_10dlc_campaign",
     description: "Create a new 10DLC campaign for A2P messaging.",
@@ -1282,44 +1313,42 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
 
   get_10dlc_campaign: {
     name: "get_10dlc_campaign",
-    description: "Get details of a specific 10DLC campaign.",
+    description: "Get a 10DLC campaign by ID.",
     parameters: {
       type: "object",
       properties: {
         campaign_id: {
           type: "string",
-          description: "The ID of the campaign to retrieve.",
+          description: "Campaign ID.",
         },
       },
       required: ["campaign_id"],
     },
     method: "GET",
-    path: "/10dlc/campaigns/{campaign_id}",
+    path: "/10dlc/campaign/{campaign_id}",
     category: "10dlc",
   },
-
   assign_10dlc_campaign: {
     name: "assign_10dlc_campaign",
     description: "Assign a phone number to a 10DLC campaign.",
     parameters: {
       type: "object",
       properties: {
-        campaign_id: {
+        phoneNumber: {
           type: "string",
-          description: "The campaign ID to assign the number to.",
+          description: "Phone number in E.164 format.",
         },
-        phone_number: {
+        campaignId: {
           type: "string",
-          description: "Phone number to assign (E.164 format).",
+          description: "Campaign ID to assign the number to.",
         },
       },
-      required: ["campaign_id", "phone_number"],
+      required: ["phoneNumber", "campaignId"],
     },
     method: "POST",
-    path: "/10dlc/campaigns/{campaign_id}/phone_numbers",
+    path: "/10dlc/phone_number_campaigns",
     category: "10dlc",
   },
-
   // ─── IoT / Wireless ──────────────────────────────────────────
   get_sim_card: {
     name: "get_sim_card",
@@ -1424,7 +1453,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   // ─── Verify ──────────────────────────────────────────────────
   list_verify_profiles: {
     name: "list_verify_profiles",
-    description: "List verification profiles on the account.",
+    description: "List Verify profiles.",
     parameters: {
       type: "object",
       properties: {
@@ -1438,65 +1467,87 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        filter_name: {
+          type: "string",
+          description: "Filter by profile name.",
+        },
       },
       required: [],
     },
     method: "GET",
-    path: "/verify/profiles",
+    path: "/verify_profiles",
     category: "verify",
   },
-
   create_verify_profile: {
     name: "create_verify_profile",
-    description: "Create a new verification profile.",
+    description: "Create a Verify profile for sending verification codes.",
     parameters: {
       type: "object",
       properties: {
         name: {
           type: "string",
-          description: "Name for the verify profile.",
+          description: "Profile name.",
         },
-        default_timeout_secs: {
-          type: "integer",
-          description: "Default timeout in seconds for verification codes.",
-          default: 300,
+        language: {
+          type: "string",
+          description: "Language code for verification messages, e.g. 'en-US'.",
         },
-        messaging_enabled: {
+        webhook_url: {
+          type: "string",
+          description: "Webhook URL for verification events.",
+        },
+        webhook_failover_url: {
+          type: "string",
+          description: "Failover webhook URL.",
+        },
+        sms: {
+          type: "object",
+          description: "SMS channel settings: app_name, code_length, default_verification_timeout_secs, whitelisted_destinations, messaging_template_id, alpha_sender.",
+        },
+        call: {
+          type: "object",
+          description: "Voice call channel settings: app_name, code_length, default_verification_timeout_secs, whitelisted_destinations, messaging_template_id.",
+        },
+        flashcall: {
+          type: "object",
+          description: "Flashcall channel settings: app_name, default_verification_timeout_secs, whitelisted_destinations.",
+        },
+        whatsapp: {
+          type: "object",
+          description: "WhatsApp channel settings: waba_id, sender_phone_number, template_id, default_verification_timeout_secs, whitelisted_destinations.",
+        },
+        daily_spend_limit: {
+          type: "number",
+          description: "Daily spend limit in USD.",
+        },
+        daily_spend_limit_enabled: {
           type: "boolean",
-          description: "Whether SMS verification is enabled.",
-          default: true,
-        },
-        rcs_enabled: {
-          type: "boolean",
-          description: "Whether RCS verification is enabled.",
-          default: false,
+          description: "Whether the daily spend limit is enforced.",
         },
       },
       required: ["name"],
     },
     method: "POST",
-    path: "/verify/profiles",
+    path: "/verify_profiles",
     category: "verify",
   },
-
   get_verify_profile: {
     name: "get_verify_profile",
-    description: "Get details of a specific verification profile.",
+    description: "Get a Verify profile by ID.",
     parameters: {
       type: "object",
       properties: {
-        profile_id: {
+        verify_profile_id: {
           type: "string",
-          description: "The ID of the verify profile to retrieve.",
+          description: "Verify profile ID.",
         },
       },
-      required: ["profile_id"],
+      required: ["verify_profile_id"],
     },
     method: "GET",
-    path: "/verify/profiles/{profile_id}",
+    path: "/verify_profiles/{verify_profile_id}",
     category: "verify",
   },
-
   // ─── Porting ─────────────────────────────────────────────────
   check_portability: {
     name: "check_portability",
@@ -1544,7 +1595,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   // ─── E911 ────────────────────────────────────────────────────
   list_e911_addresses: {
     name: "list_e911_addresses",
-    description: "List emergency (E911) addresses on the account.",
+    description: "List dynamic emergency (E911) addresses.",
     parameters: {
       type: "object",
       properties: {
@@ -1558,57 +1609,80 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        filter_status: {
+          type: "string",
+          description: "Filter by status.",
+          enum: ["pending", "activated", "rejected"],
+        },
+        filter_country_code: {
+          type: "string",
+          description: "Filter by country code.",
+        },
       },
       required: [],
     },
     method: "GET",
-    path: "/e911_addresses",
+    path: "/dynamic_emergency_addresses",
     category: "e911",
   },
-
   create_e911_address: {
     name: "create_e911_address",
-    description: "Create a new emergency (E911) address.",
+    description: "Create a dynamic emergency (E911) address.",
     parameters: {
       type: "object",
       properties: {
-        first_name: {
+        house_number: {
           type: "string",
-          description: "First name of the address contact.",
+          description: "House number.",
         },
-        last_name: {
+        house_suffix: {
           type: "string",
-          description: "Last name of the address contact.",
+          description: "House number suffix.",
         },
-        street_address: {
+        street_pre_directional: {
           type: "string",
-          description: "Street address.",
+          description: "Directional prefix, e.g. 'N'.",
         },
-        city: {
+        street_name: {
+          type: "string",
+          description: "Street name.",
+        },
+        street_suffix: {
+          type: "string",
+          description: "Street suffix, e.g. 'St', 'Ave'.",
+        },
+        street_post_directional: {
+          type: "string",
+          description: "Directional suffix.",
+        },
+        extended_address: {
+          type: "string",
+          description: "Apartment, suite, floor, etc.",
+        },
+        locality: {
           type: "string",
           description: "City.",
         },
-        state: {
+        administrative_area: {
           type: "string",
-          description: "State code (e.g. 'NY').",
+          description: "State or province.",
         },
-        zip: {
+        postal_code: {
           type: "string",
-          description: "ZIP code.",
+          description: "Postal code.",
         },
         country_code: {
           type: "string",
-          description: "Country code (e.g. 'US').",
-          default: "US",
+          description: "Country code.",
+          enum: ["US", "CA", "PR"],
         },
       },
-      required: ["first_name", "last_name", "street_address", "city", "state", "zip", "country_code"],
+      required: ["house_number", "street_name", "locality", "administrative_area", "postal_code", "country_code"],
     },
     method: "POST",
-    path: "/e911_addresses",
+    path: "/dynamic_emergency_addresses",
     category: "e911",
   },
-
   // ─── Billing ─────────────────────────────────────────────────
   list_billing_groups: {
     name: "list_billing_groups",
@@ -2345,7 +2419,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   // ─── Port-Out ────────────────────────────────────────────────
   list_portout_orders: {
     name: "list_portout_orders",
-    description: "List port-out orders on the account.",
+    description: "List port-out requests (numbers leaving Telnyx).",
     parameters: {
       type: "object",
       properties: {
@@ -2359,132 +2433,159 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        filter_status: {
+          type: "string",
+          description: "Filter by status.",
+          enum: ["pending", "authorized", "ported", "rejected", "rejected-pending", "canceled"],
+        },
+        filter_phone_number: {
+          type: "string",
+          description: "Filter by phone number.",
+        },
+        filter_carrier_name: {
+          type: "string",
+          description: "Filter by gaining carrier name.",
+        },
+        filter_support_key: {
+          type: "string",
+          description: "Filter by support key.",
+        },
       },
       required: [],
     },
     method: "GET",
-    path: "/portout_orders",
+    path: "/portouts",
     category: "portout",
   },
-
   get_portout_order: {
     name: "get_portout_order",
-    description: "Retrieve details of a specific port-out order.",
+    description: "Get a port-out request by ID.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the port-out order.",
+          description: "Port-out request ID.",
         },
       },
       required: ["id"],
     },
     method: "GET",
-    path: "/portout_orders/{id}",
+    path: "/portouts/{id}",
     category: "portout",
   },
-
   list_portout_comments: {
     name: "list_portout_comments",
-    description: "List comments on a specific port-out order.",
+    description: "List comments on a port-out request.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the port-out order.",
+          description: "Port-out request ID.",
         },
       },
       required: ["id"],
     },
     method: "GET",
-    path: "/portout_orders/{id}/comments",
+    path: "/portouts/{id}/comments",
     category: "portout",
   },
-
   create_portout_comment: {
     name: "create_portout_comment",
-    description: "Add a comment to a port-out order.",
+    description: "Add a comment to a port-out request.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the port-out order.",
+          description: "Port-out request ID.",
         },
         body: {
           type: "string",
-          description: "The comment text.",
+          description: "Comment text.",
         },
       },
       required: ["id", "body"],
     },
     method: "POST",
-    path: "/portout_orders/{id}/comments",
+    path: "/portouts/{id}/comments",
     category: "portout",
   },
-
   list_portout_documents: {
     name: "list_portout_documents",
-    description: "List documents for a specific port-out order.",
+    description: "List supporting documents attached to a port-out request.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the port-out order.",
+          description: "Port-out request ID.",
         },
       },
       required: ["id"],
     },
     method: "GET",
-    path: "/portout_orders/{id}/documents",
+    path: "/portouts/{id}/supporting_documents",
     category: "portout",
   },
-
   upload_portout_document: {
     name: "upload_portout_document",
-    description:
-      "Upload a document to a port-out order. " +
-      "Provide the port-out order ID and base64-encoded file contents.",
+    description: "Attach previously uploaded documents (by document ID) to a port-out request.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the port-out order.",
+          description: "Port-out request ID.",
         },
-        file_content: {
-          type: "string",
-          description:
-            "Base64-encoded file contents to upload.",
-        },
-        filename: {
-          type: "string",
-          description: "Optional filename for the uploaded document.",
+        documents: {
+          type: "array",
+          description: "Documents to attach.",
+          items: {
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                enum: ["loa", "invoice"],
+                description: "Document type.",
+              },
+              document_id: {
+                type: "string",
+                description: "ID of an uploaded document.",
+              },
+            },
+            required: ["type", "document_id"],
+          },
         },
       },
-      required: ["id", "file_content"],
+      required: ["id", "documents"],
     },
     method: "POST",
-    path: "/portout_orders/{id}/documents",
+    path: "/portouts/{id}/supporting_documents",
     category: "portout",
   },
-
   list_portout_rejection_codes: {
     name: "list_portout_rejection_codes",
-    description: "List rejection codes available for port-out orders.",
+    description: "List the rejection codes that can be applied to a specific port-out request.",
     parameters: {
       type: "object",
-      properties: {},
-      required: [],
+      properties: {
+        portout_id: {
+          type: "string",
+          description: "Port-out request ID.",
+        },
+        filter_code: {
+          type: "string",
+          description: "Filter to a specific rejection code.",
+        },
+      },
+      required: ["portout_id"],
     },
     method: "GET",
-    path: "/portout_orders/rejection_codes",
+    path: "/portouts/rejections/{portout_id}",
     category: "portout",
   },
-
   list_portout_events: {
     name: "list_portout_events",
     description: "List all port-out events.",
@@ -2505,62 +2606,23 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   },
 
   // ─── E911 (update/delete) ────────────────────────────────────
-  update_e911_address: {
-    name: "update_e911_address",
-    description: "Update an existing emergency (E911) address.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          description: "The ID of the E911 address to update.",
-        },
-        street_address: {
-          type: "string",
-          description: "Street address.",
-        },
-        city: {
-          type: "string",
-          description: "City.",
-        },
-        state: {
-          type: "string",
-          description: "State code (e.g. 'NY').",
-        },
-        postal_code: {
-          type: "string",
-          description: "Postal/ZIP code.",
-        },
-        country_code: {
-          type: "string",
-          description: "Country code (e.g. 'US').",
-        },
-      },
-      required: ["id"],
-    },
-    method: "PATCH",
-    path: "/e911_addresses/{id}",
-    category: "e911",
-  },
-
   delete_e911_address: {
     name: "delete_e911_address",
-    description: "Delete an emergency (E911) address.",
+    description: "Delete a dynamic emergency (E911) address.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the E911 address to delete.",
+          description: "Dynamic emergency address ID.",
         },
       },
       required: ["id"],
     },
     method: "DELETE",
-    path: "/e911_addresses/{id}",
+    path: "/dynamic_emergency_addresses/{id}",
     category: "e911",
   },
-
   // ─── Billing (update/delete) ─────────────────────────────────
   update_billing_group: {
     name: "update_billing_group",
@@ -2649,13 +2711,13 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
 
   list_network_interfaces: {
     name: "list_network_interfaces",
-    description: "List network interfaces, optionally filtered by network.",
+    description: "List interfaces attached to a network.",
     parameters: {
       type: "object",
       properties: {
         network_id: {
           type: "string",
-          description: "Filter by network ID.",
+          description: "Network ID.",
         },
         page_size: {
           type: "integer",
@@ -2667,34 +2729,26 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
-      },
-      required: [],
-    },
-    method: "GET",
-    path: "/network_interfaces",
-    category: "networking",
-  },
-
-  // ─── Lookup (bulk) ───────────────────────────────────────────
-  bulk_lookup_numbers: {
-    name: "bulk_lookup_numbers",
-    description: "Look up information about multiple phone numbers in bulk.",
-    parameters: {
-      type: "object",
-      properties: {
-        phone_numbers: {
-          type: "array",
-          items: { type: "string" },
-          description: "List of phone numbers to look up (E.164 format).",
+        filter_name: {
+          type: "string",
+          description: "Filter by interface name.",
+        },
+        filter_type: {
+          type: "string",
+          description: "Filter by interface type.",
+        },
+        filter_status: {
+          type: "string",
+          description: "Filter by status.",
         },
       },
-      required: ["phone_numbers"],
+      required: ["network_id"],
     },
-    method: "POST",
-    path: "/number_lookup",
-    category: "lookup",
+    method: "GET",
+    path: "/networks/{network_id}/network_interfaces",
+    category: "networking",
   },
-
+  // ─── Lookup (bulk) ───────────────────────────────────────────
   // ─── Messages (get single) ───────────────────────────────────
   get_message: {
     name: "get_message",
@@ -2867,35 +2921,6 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
     },
     method: "POST",
     path: "/ai/missions/{mission_id}/runs/{run_id}/plan",
-    category: "missions",
-  },
-  update_mission_step: {
-    name: "update_mission_step",
-    description: "Update the status of a step in a mission run plan.",
-    parameters: {
-      type: "object",
-      properties: {
-        mission_id: {
-          type: "string",
-          description: "The ID of the mission.",
-        },
-        run_id: {
-          type: "string",
-          description: "The ID of the run.",
-        },
-        step_id: {
-          type: "string",
-          description: "The ID of the step to update.",
-        },
-        status: {
-          type: "string",
-          description: "New status for the step.",
-        },
-      },
-      required: ["mission_id", "run_id", "step_id", "status"],
-    },
-    method: "PUT",
-    path: "/ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}",
     category: "missions",
   },
   log_mission_event: {
@@ -3312,28 +3337,44 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   },
   text_to_speech: {
     name: "text_to_speech",
-    description:
-      "Generate speech audio from text using Telnyx AI. Note: the primary TTS interface may be WebSocket-based; this REST endpoint is provided for simple use cases.",
+    description: "Generate speech audio from text.",
     parameters: {
       type: "object",
       properties: {
         text: {
           type: "string",
-          description: "Text to convert to speech.",
+          description: "Text to synthesize.",
         },
         voice: {
           type: "string",
-          description: "Voice ID to use for speech generation.",
+          description: "Voice identifier as provider.model.voice_id or provider.voice_id, e.g. 'Telnyx.Bayan.Ahmed', 'azure.en-US-AvaMultilingualNeural'. Use the TTS voices endpoint to discover voices.",
         },
-        model: {
+        provider: {
           type: "string",
-          description: "TTS model to use.",
+          description: "TTS provider.",
+          enum: ["telnyx", "aws", "azure", "elevenlabs", "minimax", "resemble"],
+        },
+        language: {
+          type: "string",
+          description: "Language code, e.g. 'en-US'.",
+        },
+        text_type: {
+          type: "string",
+          description: "Input format.",
+          enum: ["text", "ssml"],
+          default: "text",
+        },
+        output_type: {
+          type: "string",
+          description: "Audio output encoding.",
+          enum: ["binary_output", "base64_output"],
+          default: "base64_output",
         },
       },
       required: ["text"],
     },
     method: "POST",
-    path: "/ai/generate",
+    path: "/text-to-speech/speech",
     category: "tts",
   },
   generate_embeddings: {
@@ -4192,7 +4233,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   // ─── Voice Clones ──────────────────────────────────────────
   list_voice_clones: {
     name: "list_voice_clones",
-    description: "List AI voice clones on the account.",
+    description: "List voice clones.",
     parameters: {
       type: "object",
       properties: {
@@ -4206,55 +4247,70 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        filter_name: {
+          type: "string",
+          description: "Filter by name.",
+        },
+        filter_provider: {
+          type: "string",
+          description: "Filter by provider.",
+        },
+        filter_model_id: {
+          type: "string",
+          description: "Filter by model ID.",
+        },
+        sort: {
+          type: "string",
+          description: "Sort field; prefix with '-' for descending.",
+          default: "-created_at",
+        },
       },
       required: [],
     },
     method: "GET",
-    path: "/ai/voice_clones",
+    path: "/voice_clones",
     category: "voice",
   },
   create_voice_clone: {
     name: "create_voice_clone",
-    description: "Create a new AI voice clone.",
+    description: "Create a voice clone from an existing voice design.",
     parameters: {
       type: "object",
       properties: {
         name: {
           type: "string",
-          description: "The name of the voice clone.",
+          description: "Name for the voice clone.",
         },
-        description: {
+        voice_design_id: {
           type: "string",
-          description: "A description of the voice clone.",
+          description: "Voice design to clone from.",
+        },
+        language: {
+          type: "string",
+          description: "Language code, e.g. 'en-US'.",
+        },
+        gender: {
+          type: "string",
+          description: "Voice gender.",
+          enum: ["male", "female", "neutral"],
+        },
+        provider: {
+          type: "string",
+          description: "Voice provider.",
+          enum: ["telnyx", "minimax"],
+          default: "telnyx",
         },
       },
-      required: ["name"],
+      required: ["name", "voice_design_id", "language", "gender"],
     },
     method: "POST",
-    path: "/ai/voice_clones",
-    category: "voice",
-  },
-  get_voice_clone: {
-    name: "get_voice_clone",
-    description: "Get details of a specific AI voice clone.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          description: "The ID of the voice clone.",
-        },
-      },
-      required: ["id"],
-    },
-    method: "GET",
-    path: "/ai/voice_clones/{id}",
+    path: "/voice_clones",
     category: "voice",
   },
   // ─── Voice Designs ─────────────────────────────────────────
   list_voice_designs: {
     name: "list_voice_designs",
-    description: "List AI voice designs on the account.",
+    description: "List voice designs.",
     parameters: {
       type: "object",
       properties: {
@@ -4268,61 +4324,83 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        filter_name: {
+          type: "string",
+          description: "Filter by name.",
+        },
+        sort: {
+          type: "string",
+          description: "Sort field; prefix with '-' for descending.",
+          default: "-created_at",
+        },
       },
       required: [],
     },
     method: "GET",
-    path: "/ai/voice_designs",
+    path: "/voice_designs",
     category: "voice",
   },
   create_voice_design: {
     name: "create_voice_design",
-    description: "Create a new AI voice design.",
+    description: "Create a voice design from a text prompt, or add a version to an existing design.",
     parameters: {
       type: "object",
       properties: {
+        text: {
+          type: "string",
+          description: "Sample text the designed voice will speak.",
+        },
+        prompt: {
+          type: "string",
+          description: "Natural-language description of the desired voice.",
+        },
         name: {
           type: "string",
-          description: "The name of the voice design.",
+          description: "Name for a new voice design.",
         },
-        description: {
+        voice_design_id: {
           type: "string",
-          description: "A description of the voice design.",
+          description: "Existing design ID to add a version to.",
         },
-        gender: {
+        language: {
           type: "string",
-          description: "The gender of the voice.",
+          description: "Language code, e.g. 'en-US'.",
         },
-        age: {
+        provider: {
           type: "string",
-          description: "The age range of the voice.",
+          description: "Voice provider.",
+          enum: ["telnyx", "minimax"],
         },
-        accent: {
-          type: "string",
-          description: "The accent of the voice.",
+        temperature: {
+          type: "number",
+          description: "Sampling temperature.",
         },
       },
-      required: ["name"],
+      required: ["text", "prompt"],
     },
     method: "POST",
-    path: "/ai/voice_designs",
+    path: "/voice_designs",
     category: "voice",
   },
   get_voice_design: {
     name: "get_voice_design",
-    description: "Get details of a specific AI voice design.",
+    description: "Get a voice design by ID.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "The ID of the voice design.",
+          description: "Voice design ID.",
+        },
+        version: {
+          type: "integer",
+          description: "Specific version to retrieve (defaults to latest).",
         },
       },
       required: ["id"],
     },
     method: "GET",
-    path: "/ai/voice_designs/{id}",
+    path: "/voice_designs/{id}",
     category: "voice",
   },
   // ─── Fine Tuning ───────────────────────────────────────────
@@ -4390,63 +4468,223 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   // ─── Toll-Free Verification ─────────────────────────────────
   list_toll_free_verifications: {
     name: "list_toll_free_verifications",
-    description: "List toll-free verification requests on the account.",
+    description: "List toll-free verification requests.",
     parameters: {
       type: "object",
       properties: {
-        page_size: {
+        page: {
           type: "integer",
-          description: "Number of results per page.",
-          default: 20,
-        },
-        page_number: {
-          type: "integer",
-          description: "Page number to retrieve.",
+          description: "Page number (1-based).",
           default: 1,
         },
-      },
-      required: [],
-    },
-    method: "GET",
-    path: "/toll_free_verification_requests",
-    category: "messaging",
-  },
-  create_toll_free_verification: {
-    name: "create_toll_free_verification",
-    description: "Create a new toll-free verification request.",
-    parameters: {
-      type: "object",
-      properties: {
-        phone_number_id: {
+        page_size: {
+          type: "integer",
+          description: "Results per page.",
+          default: 20,
+        },
+        status: {
           type: "string",
-          description: "The ID of the toll-free phone number to verify.",
+          description: "Filter by verification status.",
+        },
+        phone_number: {
+          type: "string",
+          description: "Filter by phone number.",
         },
         business_name: {
           type: "string",
-          description: "The business name for verification.",
+          description: "Filter by business name.",
         },
-        corporate_url: {
+        date_start: {
           type: "string",
-          description: "The corporate website URL.",
+          description: "Filter from date (ISO 8601).",
         },
-        use_case: {
+        date_end: {
           type: "string",
-          description: "The intended use case for the toll-free number.",
+          description: "Filter to date (ISO 8601).",
         },
       },
-      required: ["phone_number_id", "business_name", "use_case"],
+      required: ["page", "page_size"],
+    },
+    method: "GET",
+    path: "/messaging_tollfree/verification/requests",
+    category: "verify",
+    query_mode: "flat",
+  },
+  create_toll_free_verification: {
+    name: "create_toll_free_verification",
+    description: "Submit a toll-free number verification request.",
+    parameters: {
+      type: "object",
+      properties: {
+        businessName: {
+          type: "string",
+          description: "Legal business name.",
+        },
+        corporateWebsite: {
+          type: "string",
+          description: "Business website URL.",
+        },
+        businessAddr1: {
+          type: "string",
+          description: "Business address line 1.",
+        },
+        businessAddr2: {
+          type: "string",
+          description: "Business address line 2.",
+        },
+        businessCity: {
+          type: "string",
+          description: "City.",
+        },
+        businessState: {
+          type: "string",
+          description: "State.",
+        },
+        businessZip: {
+          type: "string",
+          description: "Postal code.",
+        },
+        businessContactFirstName: {
+          type: "string",
+          description: "Contact first name.",
+        },
+        businessContactLastName: {
+          type: "string",
+          description: "Contact last name.",
+        },
+        businessContactEmail: {
+          type: "string",
+          description: "Contact email.",
+        },
+        businessContactPhone: {
+          type: "string",
+          description: "Contact phone in E.164.",
+        },
+        messageVolume: {
+          type: "string",
+          description: "Expected monthly message volume.",
+          enum: ["10", "100", "1,000", "10,000", "100,000", "250,000", "500,000", "750,000", "1,000,000", "5,000,000", "10,000,000+"],
+        },
+        phoneNumbers: {
+          type: "array",
+          description: "Toll-free numbers to verify.",
+          items: {
+            type: "object",
+            properties: {
+              phoneNumber: {
+                type: "string",
+                description: "E.164 number.",
+              },
+            },
+            required: ["phoneNumber"],
+          },
+        },
+        useCase: {
+          type: "string",
+          description: "Messaging use case, e.g. '2FA', 'App Notifications', 'Customer Care', 'General Marketing'.",
+        },
+        useCaseSummary: {
+          type: "string",
+          description: "Description of how messages are used.",
+        },
+        productionMessageContent: {
+          type: "string",
+          description: "Example production message.",
+        },
+        optInWorkflow: {
+          type: "string",
+          description: "How recipients opt in.",
+        },
+        optInWorkflowImageURLs: {
+          type: "array",
+          description: "Screenshots of the opt-in flow.",
+          items: {
+            type: "object",
+            properties: {
+              url: {
+                type: "string",
+                description: "Image URL.",
+              },
+            },
+            required: ["url"],
+          },
+        },
+        additionalInformation: {
+          type: "string",
+          description: "Any additional information for the reviewer.",
+        },
+        isvReseller: {
+          type: "string",
+          description: "ISV/reseller details, if applicable.",
+        },
+        webhookUrl: {
+          type: "string",
+          description: "Webhook URL for status updates.",
+        },
+      },
+      required: [
+        "businessName",
+        "corporateWebsite",
+        "businessAddr1",
+        "businessCity",
+        "businessState",
+        "businessZip",
+        "businessContactFirstName",
+        "businessContactLastName",
+        "businessContactEmail",
+        "businessContactPhone",
+        "messageVolume",
+        "phoneNumbers",
+        "useCase",
+        "useCaseSummary",
+        "productionMessageContent",
+        "optInWorkflow",
+        "optInWorkflowImageURLs",
+        "additionalInformation",
+      ],
     },
     method: "POST",
-    path: "/toll_free_verification_requests",
-    category: "messaging",
+    path: "/messaging_tollfree/verification/requests",
+    category: "verify",
   },
   // ─── Detail Records ─────────────────────────────────────────
   list_detail_records: {
     name: "list_detail_records",
-    description: "List CDR (Call Detail Record) report requests.",
+    description: "Search detail records (CDRs/MDRs and other usage records) for a record type and date range.",
     parameters: {
       type: "object",
       properties: {
+        filter_record_type: {
+          type: "string",
+          description: "Record type to search.",
+          enum: [
+            "ai-voice-assistant",
+            "amd",
+            "call-control",
+            "conference",
+            "conference-participant",
+            "embedding",
+            "fax",
+            "inference",
+            "inference-speech-to-text",
+            "media_storage",
+            "media-streaming",
+            "messaging",
+            "noise-suppression",
+            "recording",
+            "sip-trunking",
+            "siprec-client",
+            "stt",
+            "tts",
+            "verify",
+            "webrtc",
+            "wireless",
+          ],
+        },
+        filter_date_range: {
+          type: "string",
+          description: "Relative date range, e.g. 'today', 'yesterday', 'last_week', 'this_month'.",
+        },
         page_size: {
           type: "integer",
           description: "Number of results per page.",
@@ -4457,11 +4695,15 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Page number to retrieve.",
           default: 1,
         },
+        sort: {
+          type: "string",
+          description: "Sort field; prefix with '-' for descending.",
+        },
       },
-      required: [],
+      required: ["filter_record_type"],
     },
     method: "GET",
-    path: "/reports/cdr_requests",
+    path: "/detail_records",
     category: "reporting",
   },
   // ─── WhatsApp ─────────────────────────────────────────────────
@@ -4598,20 +4840,19 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
   },
   get_whatsapp_template: {
     name: "get_whatsapp_template",
-    description:
-      "Get details of a specific WhatsApp message template by its Telnyx UUID.",
+    description: "Get a WhatsApp message template by ID.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "Telnyx template UUID.",
+          description: "Message template ID.",
         },
       },
       required: ["id"],
     },
     method: "GET",
-    path: "/whatsapp_message_templates/{id}",
+    path: "/whatsapp/message_templates/{id}",
     category: "whatsapp",
   },
   list_whatsapp_phone_numbers: {
@@ -4743,7 +4984,6 @@ export const PERMISSION_MAP: Record<string, string> = {
   "ai.update_assistant": "update_assistant",
   "ai.delete_assistant": "delete_assistant",
   "ai.list_ai_models": "list_ai_models",
-  "messaging.list_messages": "list_messages",
   // 10DLC
   "10dlc.list_10dlc_brands": "list_10dlc_brands",
   "10dlc.create_10dlc_brand": "create_10dlc_brand",
@@ -4820,7 +5060,6 @@ export const PERMISSION_MAP: Record<string, string> = {
   // Porting (create)
   "porting.create_porting_order": "create_porting_order",
   // E911 (update/delete)
-  "e911.update_e911_address": "update_e911_address",
   "e911.delete_e911_address": "delete_e911_address",
   // Billing (update/delete)
   "billing.update_billing_group": "update_billing_group",
@@ -4830,7 +5069,6 @@ export const PERMISSION_MAP: Record<string, string> = {
   "networking.delete_network": "delete_network",
   "networking.list_network_interfaces": "list_network_interfaces",
   // Lookup (bulk)
-  "lookup.bulk_lookup_numbers": "bulk_lookup_numbers",
   // Messages (get single)
   "messaging.get_message": "get_message",
   // Missions
@@ -4841,7 +5079,6 @@ export const PERMISSION_MAP: Record<string, string> = {
   "missions.get_mission_run": "get_mission_run",
   "missions.update_mission_run": "update_mission_run",
   "missions.create_mission_plan": "create_mission_plan",
-  "missions.update_mission_step": "update_mission_step",
   "missions.log_mission_event": "log_mission_event",
   // Insights
   "insights.create_insight": "create_insight",
@@ -4917,7 +5154,6 @@ export const PERMISSION_MAP: Record<string, string> = {
   // Voice (clones, designs)
   "voice.list_voice_clones": "list_voice_clones",
   "voice.create_voice_clone": "create_voice_clone",
-  "voice.get_voice_clone": "get_voice_clone",
   "voice.list_voice_designs": "list_voice_designs",
   "voice.create_voice_design": "create_voice_design",
   "voice.get_voice_design": "get_voice_design",

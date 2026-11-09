@@ -162,7 +162,7 @@ const expectedRequired: Record<(typeof TOOL_NAMES)[number], string[]> = {
 };
 
 function assertDefinitions(): void {
-  assert.equal(Object.keys(TOOL_DEFINITIONS).length, 206);
+  assert.equal(Object.keys(TOOL_DEFINITIONS).length, 201);
 
   for (const name of TOOL_NAMES) {
     const definition = TOOL_DEFINITIONS[name];

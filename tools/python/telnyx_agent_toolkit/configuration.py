@@ -55,7 +55,6 @@ class ActionPermissions(BaseModel):
     update_assistant: bool = False
     delete_assistant: bool = False
     list_ai_models: bool = False
-    list_messages: bool = False
     # 10DLC
     list_10dlc_brands: bool = False
     create_10dlc_brand: bool = False
@@ -180,7 +179,6 @@ _PERMISSION_MAP: dict[tuple[str, str], str] = {
     ("ai", "update_assistant"): "update_assistant",
     ("ai", "delete_assistant"): "delete_assistant",
     ("ai", "list_ai_models"): "list_ai_models",
-    ("messaging", "list_messages"): "list_messages",
     # 10DLC
     ("10dlc", "list_10dlc_brands"): "list_10dlc_brands",
     ("10dlc", "create_10dlc_brand"): "create_10dlc_brand",

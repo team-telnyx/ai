@@ -146,6 +146,13 @@ export class ToolkitCore {
     }
 
     if (method === "GET") {
+      if (toolDef.query_mode === "flat") {
+        // Endpoint uses literal query keys (e.g. page, page_size, recordsPerPage).
+        return await this.client.get(
+          path,
+          Object.keys(normalized).length > 0 ? (normalized as Record<string, string | number | boolean>) : undefined,
+        );
+      }
       // Convert nested params to query params with filter[] syntax
       const params: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(normalized)) {

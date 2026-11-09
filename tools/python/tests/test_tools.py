@@ -28,8 +28,8 @@ class TestToolDefinitions:
             assert "category" in tool_def, f"{name} missing 'category'"
             assert tool_def["name"] == name
 
-    def test_206_tools_defined(self) -> None:
-        assert len(TOOL_DEFINITIONS) == 206
+    def test_201_tools_defined(self) -> None:
+        assert len(TOOL_DEFINITIONS) == 201
 
     def test_tool_categories(self) -> None:
         categories = {t["category"] for t in TOOL_DEFINITIONS.values()}
@@ -64,11 +64,6 @@ class TestToolDefinitions:
         assert "list_ai_models" in TOOL_DEFINITIONS
         assert TOOL_DEFINITIONS["list_ai_models"]["method"] == "GET"
         assert TOOL_DEFINITIONS["list_ai_models"]["path"] == "/ai/models"
-
-    def test_list_messages_tool(self) -> None:
-        assert "list_messages" in TOOL_DEFINITIONS
-        assert TOOL_DEFINITIONS["list_messages"]["method"] == "GET"
-        assert TOOL_DEFINITIONS["list_messages"]["path"] == "/messages"
 
     def test_payment_tools(self) -> None:
         for name in ["get_payment_quote", "submit_payment"]:
@@ -112,7 +107,7 @@ class TestToolDefinitions:
             assert TOOL_DEFINITIONS[name]["category"] == "portout"
 
     def test_e911_tools(self) -> None:
-        for name in ["list_e911_addresses", "create_e911_address", "update_e911_address", "delete_e911_address"]:
+        for name in ["list_e911_addresses", "create_e911_address", "delete_e911_address"]:
             assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
             assert TOOL_DEFINITIONS[name]["category"] == "e911"
 
@@ -136,11 +131,6 @@ class TestToolDefinitions:
             assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
             assert TOOL_DEFINITIONS[name]["category"] == "fax"
 
-    def test_bulk_lookup_tool(self) -> None:
-        assert "bulk_lookup_numbers" in TOOL_DEFINITIONS
-        assert TOOL_DEFINITIONS["bulk_lookup_numbers"]["method"] == "POST"
-        assert TOOL_DEFINITIONS["bulk_lookup_numbers"]["category"] == "lookup"
-
     def test_get_message_tool(self) -> None:
         assert "get_message" in TOOL_DEFINITIONS
         assert TOOL_DEFINITIONS["get_message"]["method"] == "GET"
@@ -148,7 +138,7 @@ class TestToolDefinitions:
         assert TOOL_DEFINITIONS["get_message"]["category"] == "messaging"
 
     def test_mission_tools(self) -> None:
-        for name in ["create_mission", "get_mission", "list_missions", "create_mission_run", "get_mission_run", "update_mission_run", "create_mission_plan", "update_mission_step", "log_mission_event"]:
+        for name in ["create_mission", "get_mission", "list_missions", "create_mission_run", "get_mission_run", "update_mission_run", "create_mission_plan", "log_mission_event"]:
             assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
             assert TOOL_DEFINITIONS[name]["category"] == "missions"
 
