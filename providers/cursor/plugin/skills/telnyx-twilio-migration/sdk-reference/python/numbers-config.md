@@ -90,6 +90,20 @@ print(messaging_numbers_bulk_update.data)
 
 Returns: `failed` (array[string]), `order_id` (uuid), `pending` (array[string]), `record_type` (enum: messaging_numbers_bulk_update), `success` (array[string])
 
+## List Mobile Phone Numbers
+
+Retrieve a paginated list of mobile phone numbers on your account.
+
+`GET /mobile_phone_numbers`
+
+```python
+page = client.mobile_phone_numbers.list()
+page = page.data[0]
+print(page.id)
+```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+
 ## List mobile phone numbers with messaging settings
 
 Returns mobile phone numbers with their current messaging configuration.
@@ -103,6 +117,37 @@ print(page.id)
 ```
 
 Returns: `country_code` (string), `created_at` (date-time), `features` (object), `id` (string), `messaging_product` (string), `messaging_profile_id` (string | null), `organization_id` (string), `phone_number` (string), `record_type` (enum: messaging_phone_number, messaging_settings), `tags` (array[string]), `traffic_type` (string), `type` (enum: longcode), `updated_at` (date-time)
+
+## Retrieve a Mobile Phone Number
+
+Retrieve the details of a specific mobile phone number.
+
+`GET /mobile_phone_numbers/{id}`
+
+```python
+mobile_phone_number = client.mobile_phone_numbers.retrieve("550e8400-e29b-41d4-a716-446655440000",
+)
+print(mobile_phone_number.data)
+```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
+
+## Update a Mobile Phone Number
+
+Update the settings of a specific mobile phone number.
+
+`PATCH /mobile_phone_numbers/{id}`
+
+Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `customer_reference` (string | null), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
+
+```python
+mobile_phone_number = client.mobile_phone_numbers.update(
+    id="550e8400-e29b-41d4-a716-446655440000",
+)
+print(mobile_phone_number.data)
+```
+
+Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
 
 ## Retrieve a mobile phone number with messaging settings
 
@@ -409,48 +454,3 @@ print(voice.data)
 ```
 
 Returns: `call_forwarding` (object), `call_recording` (object), `cnam_listing` (object), `connection_id` (string), `customer_reference` (string), `emergency` (object), `id` (string), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `media_features` (object), `phone_number` (string), `record_type` (string), `tech_prefix_enabled` (boolean), `translated_number` (string), `usage_payment_method` (enum: pay-per-minute, channel)
-
-## List Mobile Phone Numbers
-
-Retrieve a paginated list of mobile phone numbers on your account.
-
-`GET /v2/mobile_phone_numbers`
-
-```python
-page = client.mobile_phone_numbers.list()
-page = page.data[0]
-print(page.id)
-```
-
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
-
-## Retrieve a Mobile Phone Number
-
-Retrieve the details of a specific mobile phone number.
-
-`GET /v2/mobile_phone_numbers/{id}`
-
-```python
-mobile_phone_number = client.mobile_phone_numbers.retrieve("550e8400-e29b-41d4-a716-446655440000",
-)
-print(mobile_phone_number.data)
-```
-
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)
-
-## Update a Mobile Phone Number
-
-Update the settings of a specific mobile phone number.
-
-`PATCH /v2/mobile_phone_numbers/{id}`
-
-Optional: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `customer_reference` (string | null), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `noise_suppression` (boolean), `outbound` (object), `tags` (array[string])
-
-```python
-mobile_phone_number = client.mobile_phone_numbers.update(
-    id="550e8400-e29b-41d4-a716-446655440000",
-)
-print(mobile_phone_number.data)
-```
-
-Returns: `call_forwarding` (object), `call_recording` (object), `caller_id_name_enabled` (boolean), `cnam_listing` (object), `connection_id` (string | null), `connection_name` (string | null), `connection_type` (string | null), `country_iso_alpha2` (string), `created_at` (date-time), `customer_reference` (string | null), `id` (string), `inbound` (object), `inbound_call_screening` (enum: disabled, reject_calls, flag_calls), `mobile_voice_enabled` (boolean), `noise_suppression` (enum: inbound, outbound, both, disabled), `outbound` (object), `phone_number` (string), `record_type` (string), `sim_card_id` (uuid), `status` (string), `tags` (array[string]), `updated_at` (date-time)

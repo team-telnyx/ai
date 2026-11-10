@@ -318,7 +318,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Delete a conversation
 
-Delete a specific conversation by its ID.
+Delete a specific conversation by its ID. Permanently deletes the conversation and its associated data: the conversation's messages, its insight generation results, any conversation memories, and its webhook request logs. Recordings are not deleted — recordings are managed separately through the /v2/recordings endpoints. This action cannot be undone.
 
 `DELETE /ai/conversations/{conversation_id}`
 
@@ -341,6 +341,18 @@ puts(response)
 ```
 
 Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
+## Delete a conversation's insight generation results
+
+Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself.
+
+`DELETE /ai/conversations/{conversation_id}/conversations-insights/{insight_id}`
+
+```ruby
+response = client.ai.conversations.delete_delete("550e8400-e29b-41d4-a716-446655440000", "insight_id")
+
+puts(response)
+```
 
 ## Create Message
 
