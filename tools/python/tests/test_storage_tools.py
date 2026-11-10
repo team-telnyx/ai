@@ -6,6 +6,7 @@ sub-resources (presigned URL, SSL certificate, usage). These tests pin that.
 """
 
 import json
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -82,3 +83,18 @@ class TestPathParamEncoding:
         # path terminators / corrupters are encoded
         assert _encode_path_param("a/b c#d?e%f") == "a/b%20c%23d%3Fe%25f"
         assert _encode_path_param("ü[1]") == "%C3%BC%5B1%5D"
+
+    @pytest.mark.parametrize("key", [".", "..", "./a", "../a", "a/.", "a/..", "reports/../invoice.pdf", "reports/./invoice.pdf"])
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_dot_segments_are_rejected_before_http(self, key: str) -> None:
+        core = ToolkitCore(client=TelnyxAPIClient(api_key="test-key"))
+        result = json.loads(await core.run_tool_async(
+            "create_presigned_url", {"bucket_name": "my-bucket", "key": key}
+        ))
+        assert "dot-only path segments" in result.get("error", "")
+        assert len(respx.calls) == 0
+
+    @pytest.mark.parametrize("key", ["a..b.pdf", ".hidden", "...", "a//b", "reports/%2e%2e/invoice.pdf"])
+    def test_non_dot_segments_remain_supported(self, key: str) -> None:
+        assert _encode_path_param(key) == quote(key, safe="/:@!$&'()*+,;=")

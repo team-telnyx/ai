@@ -14,9 +14,15 @@ import { TelemetryReporter } from "./telemetry.js";
 // corrupt the path ("?", "#", "%", space, non-ASCII, controls) are
 // percent-encoded. Mirrors _encode_path_param in the Python core.
 export function encodePathParam(value: unknown): string {
+  const text = String(value);
+  // fetch normalizes these even with %2E escapes. Refuse rather than sign a
+  // different object; percent-encoded input is literal and encoded again below.
+  if (text.split("/").some((segment) => segment === "." || segment === "..")) {
+    throw new Error("Path parameters containing dot-only path segments ('.' or '..') are not supported");
+  }
   // encodeURIComponent already leaves unreserved + !'()* literal; restore the
   // remaining sub-delims and ":" "@" "/" that it encodes.
-  return encodeURIComponent(String(value)).replace(
+  return encodeURIComponent(text).replace(
     /%(2F|3A|40|24|26|2B|2C|3B|3D)/gi,
     (m) => decodeURIComponent(m),
   );

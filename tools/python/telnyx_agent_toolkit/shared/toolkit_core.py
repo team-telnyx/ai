@@ -21,7 +21,12 @@ _PATH_SAFE = "/:@!$&'()*+,;="
 
 
 def _encode_path_param(value: Any) -> str:
-    return quote(str(value), safe=_PATH_SAFE)
+    text = str(value)
+    # HTTP clients normalize these even when the dots are encoded as %2E.
+    # Refuse instead of signing a different object than the caller requested.
+    if any(segment in (".", "..") for segment in text.split("/")):
+        raise ValueError("Path parameters containing dot-only path segments ('.' or '..') are not supported")
+    return quote(text, safe=_PATH_SAFE)
 
 class ToolkitCore:
     """Core toolkit that maps tool names to API calls.

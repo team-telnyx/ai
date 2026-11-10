@@ -31,4 +31,41 @@ assert.deepEqual(client.calls.at(-1), {
   path: "/storage/buckets/my-bucket/reports/2026/why%3F%231.pdf/presigned_url",
   body: { ttl: 60 },
 });
-console.log("Path parameter encoding tests passed");
+// Exercise the actual API client and fetch URL parser, not just MockClient.
+const { createServer } = await import("node:http");
+const { TelnyxAPIClient: RealClient } = await import("../src/shared/api-client.js");
+const requests: string[] = [];
+const server = createServer((req, res) => {
+  requests.push(req.url ?? "");
+  res.setHeader("Content-Type", "application/json");
+  res.end('{"data":{}}');
+});
+await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+try {
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const realCore = new ToolkitCore(new RealClient("test-key", {
+    baseUrl: `http://127.0.0.1:${address.port}/v2`,
+  }));
+  // Positive controls prove this fixture actually sends requests through fetch.
+  for (const key of ["reports/2026/a.pdf", ".hidden", "a..b.pdf", "...", "a//b", "reports/%2e%2e/invoice.pdf"]) {
+    const before = requests.length;
+    const result = JSON.parse(await realCore.runTool("create_presigned_url", {
+      bucket_name: "my-bucket", key, ttl: 60,
+    }));
+    assert.equal(result.error, undefined);
+    assert.equal(requests.length, before + 1);
+    assert.equal(requests.at(-1), `/v2/storage/buckets/my-bucket/${encodePathParam(key)}/presigned_url`);
+  }
+  for (const key of [".", "..", "./a", "../a", "a/.", "a/..", "reports/../invoice.pdf", "reports/./invoice.pdf"]) {
+    const before = requests.length;
+    const result = JSON.parse(await realCore.runTool("create_presigned_url", {
+      bucket_name: "my-bucket", key,
+    }));
+    assert.match(result.error ?? "", /dot-only path segments/);
+    assert.equal(requests.length, before, "unsafe key must never reach HTTP");
+  }
+} finally {
+  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}
+console.log("Path parameter encoding and real fetch transport tests passed");
