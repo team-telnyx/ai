@@ -33,6 +33,14 @@ jobs:
       - name: Verify SKILL_COUNT markers match on-disk count
         run: ./scripts/check-skill-count.sh
 
+  cli-syntax-check:
+    name: Check — No deprecated CLI command syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify docs and manifests use telnyx-agent / Go telnyx CLI syntax
+        run: ./scripts/check-cli-syntax.sh
+
   unit-tests:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest

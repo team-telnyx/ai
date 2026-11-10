@@ -44,6 +44,27 @@ describe("agent.json validity", () => {
     }
   });
 
+  it("lists exactly the telnyx-agent commands in cli/src/index.ts COMMANDS", () => {
+    // cli.commands is hand-maintained; keep it equal to the dispatch table so
+    // agents are never told about commands that print "Unknown command".
+    const indexSrc = readFileSync(join(ROOT, "cli", "src", "index.ts"), "utf-8");
+    const start = indexSrc.indexOf("const COMMANDS: Record<string,");
+    assert.ok(start >= 0, "cli/src/index.ts: COMMANDS map not found");
+    const open = indexSrc.indexOf("= {", start);
+    const body = indexSrc.slice(open, indexSrc.indexOf("\n};", open));
+    const dispatchKeys = [...body.matchAll(/^\s{2}"?([a-z0-9-]+)"?:/gm)].map((m) => m[1]).sort();
+    assert.ok(dispatchKeys.length > 50, "COMMANDS map parsed too few keys");
+
+    const manifestCommands = [...agentJson.cli.commands].sort();
+    assert.deepEqual(
+      manifestCommands,
+      dispatchKeys,
+      "agent.json cli.commands must match the COMMANDS keys in cli/src/index.ts"
+    );
+    assert.equal(agentJson.cli.package, "@telnyx/agent-cli");
+    assert.equal(agentJson.cli.binary, "telnyx-agent");
+  });
+
   it("keeps canonical RCS discovery synchronized", () => {
     const rcs = agentJson.capabilities.find((capability: any) => capability.id === "rcs");
     assert.ok(rcs, "agent.json missing RCS capability");

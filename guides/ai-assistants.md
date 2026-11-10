@@ -58,7 +58,7 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
 | `instructions` | string | System prompt / personality |
 | `voice.provider` | string | `telnyx` or `elevenlabs` |
 | `voice.settings.voice_id` | string | Voice identifier |
-| `model` | string | LLM model — use `GET /v2/ai/models` or `telnyx ai models` to list available models. Not all inference models work for assistants. |
+| `model` | string | LLM model — use `GET /v2/ai/models` to list available models. Not all inference models work for assistants. |
 | `greeting` | string | Initial greeting message |
 | `hold_music_url` | string | Music to play on hold |
 
