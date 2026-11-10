@@ -28,8 +28,8 @@ class TestToolDefinitions:
             assert "category" in tool_def, f"{name} missing 'category'"
             assert tool_def["name"] == name
 
-    def test_211_tools_defined(self) -> None:
-        assert len(TOOL_DEFINITIONS) == 211
+    def test_206_tools_defined(self) -> None:
+        assert len(TOOL_DEFINITIONS) == 206
 
     def test_tool_categories(self) -> None:
         categories = {t["category"] for t in TOOL_DEFINITIONS.values()}
@@ -59,11 +59,6 @@ class TestToolDefinitions:
         for name in ["get_assistant", "update_assistant", "delete_assistant"]:
             assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
             assert TOOL_DEFINITIONS[name]["category"] == "ai"
-
-    def test_new_storage_tools(self) -> None:
-        for name in ["list_storage_buckets", "create_storage_bucket"]:
-            assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
-            assert TOOL_DEFINITIONS[name]["category"] == "storage"
 
     def test_list_ai_models_tool(self) -> None:
         assert "list_ai_models" in TOOL_DEFINITIONS
@@ -140,16 +135,6 @@ class TestToolDefinitions:
         for name in ["list_faxes", "get_fax", "delete_fax"]:
             assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
             assert TOOL_DEFINITIONS[name]["category"] == "fax"
-
-    def test_delete_storage_bucket_tool(self) -> None:
-        assert "delete_storage_bucket" in TOOL_DEFINITIONS
-        assert TOOL_DEFINITIONS["delete_storage_bucket"]["method"] == "DELETE"
-        assert TOOL_DEFINITIONS["delete_storage_bucket"]["category"] == "storage"
-
-    def test_storage_object_tools(self) -> None:
-        for name in ["upload_storage_object", "get_storage_object", "create_presigned_url"]:
-            assert name in TOOL_DEFINITIONS, f"Missing tool: {name}"
-            assert TOOL_DEFINITIONS[name]["category"] == "storage"
 
     def test_bulk_lookup_tool(self) -> None:
         assert "bulk_lookup_numbers" in TOOL_DEFINITIONS

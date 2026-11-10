@@ -256,21 +256,31 @@ class TestReadonly:
             assert "data" in data
             assert isinstance(data["data"], list)
 
-    def test_readonly_list_storage_buckets(self):
-        """GET /v2/storage/buckets returns a list or valid error."""
-        r = _readonly_get(
-            f"{BASE_URL}/storage/buckets",
-            what="list storage buckets",
-            params={"page[size]": 1},
+    def test_readonly_storage_presigned_url_route_exists(self):
+        """POST /v2/storage/buckets/{bucket}/{key}/presigned_url is a real route.
+
+        Cloud Storage buckets/objects are S3-only; this is the only bucket-scoped
+        REST route the toolkit exposes (AI-3949). We use a bucket we do not own,
+        so any outcome is acceptable except the gateway's route-level 404
+        (error 10005 "The requested resource or URL could not be found."),
+        which would mean the toolkit path is wrong again.
+        """
+        r = _readonly_request(
+            "POST",
+            f"{BASE_URL}/storage/buckets/{RESOURCE_PREFIX}no-such-bucket/probe.txt/presigned_url",
+            what="storage presigned url route",
+            headers=HEADERS,
+            json={"ttl": 60},
         )
-        # Storage may not be enabled on all accounts
-        assert r.status_code in (200, 403, 404), (
-            f"Expected 200/403/404, got {r.status_code}"
-        )
-        if r.status_code == 200:
-            data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+        if r.status_code == 404:
+            detail = " ".join(e.get("detail", "") for e in r.json().get("errors", []))
+            assert "URL could not be found" not in detail, (
+                f"presigned_url route does not exist: {r.text}"
+            )
+        else:
+            assert r.status_code in (200, 201, 400, 403, 422), (
+                f"Unexpected {r.status_code}: {r.text}"
+            )
 
     def test_readonly_list_messages_with_meta(self):
         """GET /v2/messages verifies meta pagination shape when available."""
@@ -951,41 +961,6 @@ class TestWrite:
                 httpx.delete(
                     f"{BASE_URL}/verify/profiles/{profile_id}", headers=HEADERS
                 )
-
-    def test_write_storage_bucket_lifecycle(self):
-        """Create → list → delete storage bucket (if storage available)."""
-        import time
-
-        bucket_name = f"{RESOURCE_PREFIX}bucket-{int(time.time())}"
-        try:
-            # Create
-            r = httpx.post(
-                f"{BASE_URL}/storage/buckets",
-                headers=HEADERS,
-                json={"name": bucket_name},
-            )
-            if r.status_code in (403, 404):
-                pytest.skip("Storage not available on this account")
-            assert r.status_code in (200, 201), (
-                f"Create failed: {r.status_code} {r.text}"
-            )
-
-            # List and verify
-            r2 = httpx.get(
-                f"{BASE_URL}/storage/buckets",
-                headers=HEADERS,
-                params={"page[size]": 100},
-            )
-            assert r2.status_code == 200
-            buckets = r2.json()["data"]
-            assert any(b["name"] == bucket_name for b in buckets), (
-                f"Bucket {bucket_name} not found in list"
-            )
-
-        finally:
-            httpx.delete(
-                f"{BASE_URL}/storage/buckets/{bucket_name}", headers=HEADERS
-            )
 
 
 class TestWriteNumberLifecycle:

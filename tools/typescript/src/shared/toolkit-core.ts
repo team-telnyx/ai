@@ -7,6 +7,21 @@ import { TOOL_DEFINITIONS, type ToolDefinition } from "./constants.js";
 import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
 
+
+// Characters left literal inside a path segment: the RFC 3986 `pchar` set
+// (unreserved + sub-delims + ":" / "@") plus "/" so S3-style object keys
+// ("reports/2026/a.pdf") pass through. Only characters that would terminate or
+// corrupt the path ("?", "#", "%", space, non-ASCII, controls) are
+// percent-encoded. Mirrors _encode_path_param in the Python core.
+export function encodePathParam(value: unknown): string {
+  // encodeURIComponent already leaves unreserved + !'()* literal; restore the
+  // remaining sub-delims and ":" "@" "/" that it encodes.
+  return encodeURIComponent(String(value)).replace(
+    /%(2F|3A|40|24|26|2B|2C|3B|3D)/gi,
+    (m) => decodeURIComponent(m),
+  );
+}
+
 export class ToolkitCore {
   private readonly client: TelnyxAPIClient;
   private readonly telemetry: TelemetryReporter;
@@ -124,7 +139,7 @@ export class ToolkitCore {
       for (const key of Object.keys(normalized)) {
         const placeholder = `{${key}}`;
         if (path.includes(placeholder)) {
-          path = path.replace(placeholder, String(normalized[key]));
+          path = path.replace(placeholder, encodePathParam(normalized[key]));
           delete normalized[key];
         }
       }
