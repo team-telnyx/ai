@@ -219,14 +219,14 @@ function assertDefinitions(): void {
   assert.deepEqual(relay.properties.languages.items, {
     type: "object",
     properties: {
-      language: { type: "string" },
-      speech_model: { type: "string" },
-      transcription_engine: { type: "string", enum: CONVERSATION_RELAY_TRANSCRIPTION_ENGINES },
-      transcription_engine_config: { type: "object" },
-      transcription_provider: { type: "string" },
-      tts_provider: { type: "string" },
-      voice: { type: "string" },
-      voice_settings: { type: "object" },
+      language: { type: "string", description: "BCP 47 language tag." },
+      speech_model: { type: "string", description: "Legacy speech recognition model." },
+      transcription_engine: { type: "string", enum: CONVERSATION_RELAY_TRANSCRIPTION_ENGINES, description: "Speech recognition engine." },
+      transcription_engine_config: { type: "object", description: "Speech recognition settings." },
+      transcription_provider: { type: "string", description: "Legacy transcription provider." },
+      tts_provider: { type: "string", description: "Text-to-speech provider." },
+      voice: { type: "string", description: "Voice identifier." },
+      voice_settings: { type: "object", description: "Voice settings for this language." },
     },
     required: ["language"],
   });

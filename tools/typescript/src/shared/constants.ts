@@ -2815,6 +2815,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         page_size: {
           type: "integer",
           description: "Number of results per page.",
+          default: 20,
         },
       },
       required: [],
@@ -2888,8 +2889,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Summary of the run result.",
         },
         result_payload: {
-          type: "string",
-          description: "Structured result payload (JSON string).",
+          type: "object",
+          description: "Structured result payload.",
         },
       },
       required: ["mission_id", "run_id"],
@@ -2914,6 +2915,14 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         },
         steps: {
           type: "array",
+          items: {
+            type: "object",
+            properties: {
+              step_id: { type: "string" },
+              description: { type: "string" },
+              sequence: { type: "integer" },
+            },
+          },
           description: "List of plan steps.",
         },
       },
@@ -2950,8 +2959,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Optional step ID this event relates to.",
         },
         payload: {
-          type: "string",
-          description: "Optional structured event payload (JSON string).",
+          type: "object",
+          description: "Optional structured event payload.",
         },
       },
       required: ["mission_id", "run_id", "type", "summary"],
@@ -2976,8 +2985,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Instructions for extracting the insight.",
         },
         json_schema: {
-          type: "string",
-          description: "JSON schema for the insight output (JSON string).",
+          type: "object",
+          description: "JSON schema for the insight output.",
         },
       },
       required: ["name", "instructions"],
@@ -3012,6 +3021,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         page_size: {
           type: "integer",
           description: "Number of results per page.",
+          default: 20,
         },
       },
       required: [],
@@ -3140,8 +3150,8 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
           description: "Optional step ID to associate.",
         },
         dynamic_variables: {
-          type: "string",
-          description: "Dynamic variables to pass to the assistant (JSON string).",
+          type: "object",
+          description: "Dynamic variables to pass to the assistant.",
         },
       },
       required: ["assistant_id", "to", "from_", "scheduled_at_fixed_datetime"],
@@ -3253,6 +3263,7 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         page_size: {
           type: "integer",
           description: "Number of results per page.",
+          default: 25,
         },
       },
       required: [],
@@ -3441,10 +3452,12 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
         page_size: {
           type: "integer",
           description: "Number of results per page.",
+          default: 20,
         },
         page_number: {
           type: "integer",
           description: "Page number to retrieve.",
+          default: 1,
         },
       },
       required: [],

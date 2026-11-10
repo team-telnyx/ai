@@ -132,6 +132,8 @@ class ToolkitCore:
             return await self._client.get_async(path, params=params if params else None)
         elif method == "POST":
             return await self._client.post_async(path, json=normalized)
+        elif method == "PATCH":
+            return await self._client.patch_async(path, json=normalized)
         elif method == "DELETE":
             return await self._client.delete_async(path)
         else:

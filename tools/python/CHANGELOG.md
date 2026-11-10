@@ -2,6 +2,12 @@
 
 ## 0.4.0 (unreleased)
 
+### Fixed — Python/TypeScript definition parity (AI-3977)
+
+- CI now compares all tool-definition fields across languages, including nested schemas, defaults and descriptions. TypeScript's four conflicting JSON-string parameters now match Python's object schemas.
+- Added minimal PATCH client/dispatch support for `update_mission_run` and connected offline object-payload regressions through the OpenAI adapter, shared Pydantic validation and real HTTP client.
+- See `../TOOL_DEFINITION_PARITY.md` for the source contract decision, strict-mode limits and pre-existing scheduled-event body limitations. No package version bump or live API mutation is included.
+
 ### Fixed — tools that could never succeed
 
 Forty-one tool definitions targeted REST routes that do not exist (the API returned 404 on every call). Each was verified against the public OpenAPI spec and the live API.

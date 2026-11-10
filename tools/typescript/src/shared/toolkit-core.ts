@@ -179,6 +179,8 @@ export class ToolkitCore {
       );
     } else if (method === "POST") {
       return await this.client.post(path, normalized);
+    } else if (method === "PATCH") {
+      return await this.client.patch(path, normalized);
     } else if (method === "DELETE") {
       return await this.client.delete(path);
     } else {

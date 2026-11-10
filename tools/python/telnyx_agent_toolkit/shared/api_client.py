@@ -96,6 +96,17 @@ class TelnyxAPIClient:
         response = await client.post(path, json=json)
         return await self._handle_response(response)
 
+    async def patch_async(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Async PATCH request."""
+        client = await self._get_async_client()
+        response = await client.patch(path, json=json)
+        return await self._handle_response(response)
+
     async def delete_async(
         self,
         path: str,
