@@ -54,11 +54,7 @@ class ActionPermissions(BaseModel):
     get_assistant: bool = False
     update_assistant: bool = False
     delete_assistant: bool = False
-    list_storage_buckets: bool = False
-    create_storage_bucket: bool = False
-    delete_storage_bucket: bool = False
     list_ai_models: bool = False
-    list_messages: bool = False
     # 10DLC
     list_10dlc_brands: bool = False
     create_10dlc_brand: bool = False
@@ -182,11 +178,7 @@ _PERMISSION_MAP: dict[tuple[str, str], str] = {
     ("ai", "get_assistant"): "get_assistant",
     ("ai", "update_assistant"): "update_assistant",
     ("ai", "delete_assistant"): "delete_assistant",
-    ("storage", "list_storage_buckets"): "list_storage_buckets",
-    ("storage", "create_storage_bucket"): "create_storage_bucket",
-    ("storage", "delete_storage_bucket"): "delete_storage_bucket",
     ("ai", "list_ai_models"): "list_ai_models",
-    ("messaging", "list_messages"): "list_messages",
     # 10DLC
     ("10dlc", "list_10dlc_brands"): "list_10dlc_brands",
     ("10dlc", "create_10dlc_brand"): "create_10dlc_brand",
