@@ -169,20 +169,6 @@ class TestReadonly:
         assert "data" in data
         assert isinstance(data["data"], list)
 
-    def test_readonly_list_messages(self):
-        """GET /v2/messages returns a list (or 404 if no messages exist)."""
-        r = _readonly_get(
-            f"{BASE_URL}/messages",
-            what="list messages",
-            params={"page[size]": 1},
-        )
-        # The messages list endpoint may return 404 on accounts with no message history
-        assert r.status_code in (200, 404), f"Unexpected status: {r.status_code}"
-        if r.status_code == 200:
-            data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
-
     def test_readonly_ai_chat_completion(self):
         """POST /v2/ai/chat/completions works with a tiny request."""
         r = _readonly_post(
@@ -241,15 +227,15 @@ class TestReadonly:
         assert isinstance(data["data"], list)
 
     def test_readonly_list_verify_profiles(self):
-        """GET /v2/verify/profiles returns a list or valid error."""
+        """GET /v2/verify_profiles returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/verify/profiles",
+            f"{BASE_URL}/verify_profiles",
             what="list verify profiles",
             params={"page[size]": 1},
         )
         # Some accounts may not have verify access
-        assert r.status_code in (200, 403, 404), (
-            f"Expected 200/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 403, 422), (
+            f"Expected 200/400/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
@@ -282,49 +268,36 @@ class TestReadonly:
                 f"Unexpected {r.status_code}: {r.text}"
             )
 
-    def test_readonly_list_messages_with_meta(self):
-        """GET /v2/messages verifies meta pagination shape when available."""
-        r = _readonly_get(
-            f"{BASE_URL}/messages",
-            what="list messages with meta",
-            params={"page[size]": 1},
-        )
-        if r.status_code == 200:
-            data = r.json()
-            assert "data" in data
-            assert "meta" in data
-
-    # ─── New tools: 10DLC ────────────────────────────────────────
-
     def test_readonly_list_10dlc_brands(self):
-        """GET /v2/10dlc/brands returns a list or valid error."""
+        """GET /v2/10dlc/brand returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/10dlc/brands",
+            f"{BASE_URL}/10dlc/brand",
             what="list 10dlc brands",
-            params={"page[size]": 1},
+            params={"page": 1, "recordsPerPage": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            # These endpoints are not JSON:API: results come back under `records`.
+            assert "records" in data, data
+            assert isinstance(data["records"], list)
 
     def test_readonly_list_10dlc_campaigns(self):
-        """GET /v2/10dlc/campaigns returns a list or valid error."""
+        """GET /v2/10dlc/campaign (brandId required) returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/10dlc/campaigns",
+            f"{BASE_URL}/10dlc/campaign",
             what="list 10dlc campaigns",
-            params={"page[size]": 1},
+            params={"brandId": f"{RESOURCE_PREFIX}no-such-brand", "page": 1, "recordsPerPage": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            assert "records" in data, data  # 10DLC is not JSON:API
+            assert isinstance(data["records"], list)
 
     # ─── New tools: IoT / Wireless ───────────────────────────────
 
@@ -363,14 +336,14 @@ class TestReadonly:
     # ─── New tools: E911 ─────────────────────────────────────────
 
     def test_readonly_list_e911_addresses(self):
-        """GET /v2/e911_addresses returns a list or valid error."""
+        """GET /v2/dynamic_emergency_addresses returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/e911_addresses",
+            f"{BASE_URL}/dynamic_emergency_addresses",
             what="list e911 addresses",
             params={"page[size]": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
@@ -652,14 +625,14 @@ class TestReadonly:
     # ─── New tools: Voice Clones ─────────────────────────────────
 
     def test_list_voice_clones_readonly(self):
-        """GET /v2/ai/voice_clones returns a list or valid error."""
+        """GET /v2/voice_clones returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/ai/voice_clones",
+            f"{BASE_URL}/voice_clones",
             what="list voice clones",
             params={"page[size]": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
@@ -669,14 +642,14 @@ class TestReadonly:
     # ─── New tools: Voice Designs ────────────────────────────────
 
     def test_list_voice_designs_readonly(self):
-        """GET /v2/ai/voice_designs returns a list or valid error."""
+        """GET /v2/voice_designs returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/ai/voice_designs",
+            f"{BASE_URL}/voice_designs",
             what="list voice designs",
             params={"page[size]": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
@@ -703,31 +676,32 @@ class TestReadonly:
     # ─── New tools: Toll-Free Verification ───────────────────────
 
     def test_list_toll_free_verifications_readonly(self):
-        """GET /v2/toll_free_verification_requests returns a list or valid error."""
+        """GET /v2/messaging_tollfree/verification/requests returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/toll_free_verification_requests",
+            f"{BASE_URL}/messaging_tollfree/verification/requests",
             what="list toll free verifications",
-            params={"page[size]": 1},
+            params={"page": 1, "page_size": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
+            # These endpoints are not JSON:API: results come back under `records`.
+            assert "records" in data, data
+            assert isinstance(data["records"], list)
 
     # ─── New tools: Detail Records ───────────────────────────────
 
     def test_list_detail_records_readonly(self):
-        """GET /v2/reports/cdr_requests returns a list or valid error."""
+        """GET /v2/detail_records returns a list or valid error."""
         r = _readonly_get(
-            f"{BASE_URL}/reports/cdr_requests",
+            f"{BASE_URL}/detail_records",
             what="list detail records",
-            params={"page[size]": 1},
+            params={"filter[record_type]": "messaging", "page[size]": 1},
         )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
+        assert r.status_code in (200, 400, 401, 403, 422), (
+            f"Expected 200/400/401/403/422 (never a route 404), got {r.status_code}"
         )
         if r.status_code == 200:
             data = r.json()
@@ -938,11 +912,11 @@ class TestWrite:
         profile_id = None
         try:
             r = httpx.post(
-                f"{BASE_URL}/verify/profiles",
+                f"{BASE_URL}/verify_profiles",
                 headers=HEADERS,
                 json={"name": f"{RESOURCE_PREFIX}verify-profile"},
             )
-            if r.status_code in (403, 404):
+            if r.status_code == 403:
                 pytest.skip("Verify not available on this account")
             assert r.status_code in (200, 201), (
                 f"Create failed: {r.status_code} {r.text}"
@@ -952,14 +926,14 @@ class TestWrite:
 
             # Verify it exists
             r2 = httpx.get(
-                f"{BASE_URL}/verify/profiles/{profile_id}", headers=HEADERS
+                f"{BASE_URL}/verify_profiles/{profile_id}", headers=HEADERS
             )
             assert r2.status_code == 200
 
         finally:
             if profile_id:
                 httpx.delete(
-                    f"{BASE_URL}/verify/profiles/{profile_id}", headers=HEADERS
+                    f"{BASE_URL}/verify_profiles/{profile_id}", headers=HEADERS
                 )
 
 

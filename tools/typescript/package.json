@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts",
+    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts && tsx tests/repointed-routes.test.ts",
     "clean": "rm -rf dist"
   },
   "keywords": [

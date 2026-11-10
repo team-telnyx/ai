@@ -93,7 +93,7 @@ class ToolkitCore:
         path = tool_def["path"]
 
         # Normalize from_ → from for API calls
-        normalized = {}
+        normalized: dict[str, Any] = {}
         for k, v in args.items():
             if v is None:
                 continue
@@ -108,6 +108,9 @@ class ToolkitCore:
                     path = path.replace(placeholder, _encode_path_param(normalized.pop(key)))
 
         if method == "GET":
+            if tool_def.get("query_mode") == "flat":
+                # Endpoint uses literal query keys (e.g. page, page_size, recordsPerPage).
+                return await self._client.get_async(path, params=normalized or None)
             # Convert nested params to query params with filter[] syntax
             params: dict[str, Any] = {}
             for k, v in normalized.items():

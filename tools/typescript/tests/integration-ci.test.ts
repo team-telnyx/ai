@@ -125,10 +125,10 @@ describe("TypeScript SDK — Read-Only API", () => {
   });
 
   it("list_verify_profiles returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list verify profiles", `${BASE}/verify/profiles?page[size]=1`);
+    const r = await readonlyFetch(t, "list verify profiles", `${BASE}/verify_profiles?page[size]=1`);
     if (!r) return;
     // Some accounts may not have verify access
-    assert.ok([200, 403, 404].includes(r.status), `Expected 200/403/404, got ${r.status}`);
+    assert.ok([200, 400, 403, 422].includes(r.status), `Expected 200/400/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
       assert.ok(Array.isArray(body.data));
@@ -199,16 +199,6 @@ describe("TypeScript SDK — Read-Only API", () => {
     );
   });
 
-  it("list_messages returns list or 404", async (t) => {
-    const r = await readonlyFetch(t, "list messages", `${BASE}/messages?page[size]=1`);
-    if (!r) return;
-    assert.ok([200, 404].includes(r.status), `Expected 200/404, got ${r.status}`);
-    if (r.status === 200) {
-      const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
-    }
-  });
-
   it("number_lookup endpoint is reachable", async (t) => {
     const r = await readonlyFetch(t, "number lookup", `${BASE}/number_lookup/+18005551234`);
     if (!r) return;
@@ -218,22 +208,22 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: 10DLC ────────────────────────────────────────
 
   it("list_10dlc_brands returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list 10dlc brands", `${BASE}/10dlc/brands?page[size]=1`);
+    const r = await readonlyFetch(t, "list 10dlc brands", `${BASE}/10dlc/brand?page=1&recordsPerPage=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (not JSON:API), got ${Object.keys(body)}`);
     }
   });
 
   it("list_10dlc_campaigns returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list 10dlc campaigns", `${BASE}/10dlc/campaigns?page[size]=1`);
+    const r = await readonlyFetch(t, "list 10dlc campaigns", `${BASE}/10dlc/campaign?brandId=ci-integration-test-no-such-brand&page=1&recordsPerPage=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (10DLC is not JSON:API), got ${Object.keys(body)}`);
     }
   });
 
@@ -264,9 +254,9 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: E911 ─────────────────────────────────────────
 
   it("list_e911_addresses returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list e911 addresses", `${BASE}/e911_addresses?page[size]=1`);
+    const r = await readonlyFetch(t, "list e911 addresses", `${BASE}/dynamic_emergency_addresses?page[size]=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
       assert.ok(Array.isArray(body.data));
@@ -468,9 +458,9 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: Voice Clones ─────────────────────────────────
 
   it("list_voice_clones returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list voice clones", `${BASE}/ai/voice_clones?page[size]=1`);
+    const r = await readonlyFetch(t, "list voice clones", `${BASE}/voice_clones?page[size]=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
       assert.ok(Array.isArray(body.data));
@@ -480,9 +470,9 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: Voice Designs ────────────────────────────────
 
   it("list_voice_designs returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list voice designs", `${BASE}/ai/voice_designs?page[size]=1`);
+    const r = await readonlyFetch(t, "list voice designs", `${BASE}/voice_designs?page[size]=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
       assert.ok(Array.isArray(body.data));
@@ -504,21 +494,21 @@ describe("TypeScript SDK — Read-Only API", () => {
   // ─── New tools: Toll-Free Verification ───────────────────────
 
   it("list_toll_free_verifications returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list toll free verifications", `${BASE}/toll_free_verification_requests?page[size]=1`);
+    const r = await readonlyFetch(t, "list toll free verifications", `${BASE}/messaging_tollfree/verification/requests?page=1&page_size=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
+      assert.ok(Array.isArray(body.records), `expected records[] (not JSON:API), got ${Object.keys(body)}`);
     }
   });
 
   // ─── New tools: Detail Records ───────────────────────────────
 
   it("list_detail_records returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list detail records", `${BASE}/reports/cdr_requests?page[size]=1`);
+    const r = await readonlyFetch(t, "list detail records", `${BASE}/detail_records?filter[record_type]=messaging&page[size]=1`);
     if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
+    assert.ok([200, 400, 401, 403, 422].includes(r.status), `Expected 200/400/401/403/422 (never a route 404), got ${r.status}`);
     if (r.status === 200) {
       const body = (await r.json()) as any;
       assert.ok(Array.isArray(body.data));
@@ -569,7 +559,7 @@ describe("TypeScript SDK — Toolkit Classes", () => {
     );
     const count = Object.keys(TOOL_DEFINITIONS).length;
 
-    assert.equal(count, 206, `Expected 206 tools, got ${count}`);
+    assert.equal(count, 201, `Expected 201 tools, got ${count}`);
 
   });
 
@@ -669,7 +659,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const tools = toolkit.getOpenAITools();
     assert.ok(tools.length > 0, "Should have at least one tool");
 
-    assert.ok(tools.length < 206, `Should have fewer than 206 tools, got ${tools.length}`);
+    assert.ok(tools.length < 201, `Should have fewer than 201 tools, got ${tools.length}`);
 
   });
 
@@ -678,7 +668,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const toolkit = new TelnyxAgentToolkit(API_KEY!);
     const tools = toolkit.getOpenAITools();
 
-    assert.equal(tools.length, 206, `Expected 206 tools, got ${tools.length}`);
+    assert.equal(tools.length, 201, `Expected 201 tools, got ${tools.length}`);
 
   });
 });
@@ -825,12 +815,12 @@ if (RUN_WRITE_TESTS) {
     it("verify profile lifecycle: create → verify → delete (if available)", async () => {
       let profileId: string | null = null;
       try {
-        const r = await fetch(`${BASE}/verify/profiles`, {
+        const r = await fetch(`${BASE}/verify_profiles`, {
           method: "POST",
           headers,
           body: JSON.stringify({ name: `${RESOURCE_PREFIX}ts-verify-profile` }),
         });
-        if (r.status === 403 || r.status === 404) {
+        if (r.status === 403) {
           console.log("  ⏭ Verify not available on this account — skipping");
           return;
         }
@@ -839,11 +829,11 @@ if (RUN_WRITE_TESTS) {
         profileId = data.id;
 
         // Verify
-        const r2 = await fetch(`${BASE}/verify/profiles/${profileId}`, { headers });
+        const r2 = await fetch(`${BASE}/verify_profiles/${profileId}`, { headers });
         assert.equal(r2.status, 200);
       } finally {
         if (profileId) {
-          await fetch(`${BASE}/verify/profiles/${profileId}`, { method: "DELETE", headers });
+          await fetch(`${BASE}/verify_profiles/${profileId}`, { method: "DELETE", headers });
         }
       }
     });
