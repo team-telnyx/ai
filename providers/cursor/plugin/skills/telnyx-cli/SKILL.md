@@ -51,7 +51,7 @@ telnyx --help
 telnyx messages --help
 
 # Full usage for a specific command
-telnyx messages create --help
+telnyx messages send --help
 ```
 
 ## Command Structure
@@ -69,7 +69,7 @@ Resources match API paths. Actions are `list`, `create`, `get`, `update`, `delet
 ### Send an SMS
 
 ```bash
-telnyx messages create \
+telnyx messages send \
   --from +15551234567 \
   --to +15559876543 \
   --text "Hello from the CLI"
@@ -100,7 +100,7 @@ telnyx number-orders create \
 ### Make an outbound call
 
 ```bash
-telnyx calls create \
+telnyx calls dial \
   --connection-id 1234567890 \
   --from +15551234567 \
   --to +15559876543
@@ -115,15 +115,15 @@ telnyx sim-cards list --page-size 10
 ### Create an AI assistant
 
 ```bash
-telnyx assistants create \
+telnyx ai:assistants create \
   --name "Support Agent" \
-  --model telnyx_ai
+  --instructions "Help customers with their orders"
 ```
 
 ### Check account balance
 
 ```bash
-telnyx balance get
+telnyx balance retrieve
 ```
 
 ## Output Formats

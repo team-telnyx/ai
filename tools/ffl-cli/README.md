@@ -62,7 +62,7 @@ friction-report watchdog --skill <SKILLNAME> --team <TEAM> -- <your-command-here
 2. **CLI tools:**
    ```bash
    friction-report watchdog --skill telnyx-cli --team numbers -- \
-     telnyx number list --limit 10
+     telnyx-agent list-phone-numbers --page-size 10
    ```
 
 3. **API calls (curl):**
