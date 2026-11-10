@@ -27,6 +27,7 @@
 |-------|------|
 | `body` | object |
 | `cc` | array[object] |
+| `child_message_id` | uuid |
 | `completed_at` | date-time |
 | `cost` | object \| null |
 | `cost_breakdown` | object \| null |
@@ -39,6 +40,7 @@
 | `messaging_profile_id` | string |
 | `num_chars` | integer |
 | `organization_id` | uuid |
+| `parent_message_id` | uuid |
 | `parts` | integer |
 | `received_at` | date-time |
 | `record_type` | enum: message |
@@ -166,6 +168,7 @@
 | `features` | object \| null |
 | `health_webhook_url` | url |
 | `id` | uuid |
+| `mm7_metadata` | object \| null |
 | `mms_fall_back_to_sms` | boolean |
 | `mms_transcoding` | boolean |
 | `mobile_only` | boolean |
@@ -375,6 +378,8 @@
 | `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
 | `data.payload.template_id` | string | Telnyx ID of the WhatsApp template used by the message, when known. |
 | `data.payload.template_name` | string | Name of the WhatsApp template used by the message. |
+| `data.payload.parent_message_id` | uuid | Identifies the original request's message when server-side SMS chunking (`auto_chunk_long_messages` on the messaging ... |
+| `data.payload.child_message_id` | uuid | Identifies the next chunk when server-side SMS chunking (`auto_chunk_long_messages` on the messaging profile) split t... |
 | `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
 | `meta.delivered_to` | url | The webhook URL the event was delivered to. |
 
