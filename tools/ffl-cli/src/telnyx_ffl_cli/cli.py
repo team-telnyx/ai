@@ -49,7 +49,7 @@ Examples:
     --api-key YOUR_API_KEY
 
   # Watchdog mode (auto-detect friction)
-  friction-report watchdog --skill telnyx-cli --team numbers -- telnyx number list
+  friction-report watchdog --skill telnyx-cli --team numbers -- telnyx-agent list-phone-numbers
 
 Output:
   Reports saved to: ~/.openclaw/friction-logs/friction-*.yaml

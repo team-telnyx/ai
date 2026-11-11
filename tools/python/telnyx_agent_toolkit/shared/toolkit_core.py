@@ -5,12 +5,28 @@ from __future__ import annotations
 import json
 import time
 from typing import Any
+from urllib.parse import quote
 
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 
+# Characters left literal inside a path segment: the RFC 3986 `pchar` set
+# (unreserved + sub-delims + ":" / "@") plus "/" so S3-style object keys
+# ("reports/2026/a.pdf") pass through. Only characters that would terminate or
+# corrupt the path ("?", "#", "%", space, non-ASCII, controls) are
+# percent-encoded. Mirrors encodePathParam in the TypeScript core.
+_PATH_SAFE = "/:@!$&'()*+,;="
+
+
+def _encode_path_param(value: Any) -> str:
+    text = str(value)
+    # HTTP clients normalize these even when the dots are encoded as %2E.
+    # Refuse instead of signing a different object than the caller requested.
+    if any(segment in (".", "..") for segment in text.split("/")):
+        raise ValueError("Path parameters containing dot-only path segments ('.' or '..') are not supported")
+    return quote(text, safe=_PATH_SAFE)
 
 class ToolkitCore:
     """Core toolkit that maps tool names to API calls.
@@ -82,7 +98,7 @@ class ToolkitCore:
         path = tool_def["path"]
 
         # Normalize from_ → from for API calls
-        normalized = {}
+        normalized: dict[str, Any] = {}
         for k, v in args.items():
             if v is None:
                 continue
@@ -94,9 +110,12 @@ class ToolkitCore:
             for key in list(normalized.keys()):
                 placeholder = f"{{{key}}}"
                 if placeholder in path:
-                    path = path.replace(placeholder, str(normalized.pop(key)))
+                    path = path.replace(placeholder, _encode_path_param(normalized.pop(key)))
 
         if method == "GET":
+            if tool_def.get("query_mode") == "flat":
+                # Endpoint uses literal query keys (e.g. page, page_size, recordsPerPage).
+                return await self._client.get_async(path, params=normalized or None)
             # Convert nested params to query params with filter[] syntax
             params: dict[str, Any] = {}
             for k, v in normalized.items():

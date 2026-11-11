@@ -18,7 +18,7 @@
       "name": "SMS & MMS",
       "description": "Send and receive SMS/MMS worldwide. A2P, P2P, toll-free, short codes.",
       "guide": "/guides/sms-messaging.md",
-      "cli": "telnyx message send --from +15551234567 --to +15559876543 --text 'Hello'",
+      "cli": "telnyx-agent send-sms --from +15551234567 --to +15559876543 --text 'Hello'",
       "api": "POST /v2/messages",
       "docs": "https://developers.telnyx.com/docs/messaging",
       "requires": [
@@ -45,7 +45,7 @@
       "name": "Voice & Call Control",
       "description": "Programmable voice calls with real-time call control, conferencing, IVR, recording.",
       "guide": "/guides/voice-call-control.md",
-      "cli": "telnyx call dial --from +15551234567 --to +15559876543",
+      "cli": "telnyx-agent call-dial --connection-id <id> --from +15551234567 --to +15559876543",
       "api": "POST /v2/calls",
       "docs": "https://developers.telnyx.com/docs/voice",
       "requires": [
@@ -67,7 +67,7 @@
       "id": "ai_inference",
       "name": "AI Inference",
       "description": "LLM chat completions and embeddings via OpenAI-compatible API.",
-      "cli": "telnyx ai chat 'Hello'",
+      "cli": "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"Hello\"}'",
       "api": "POST /v2/ai/chat/completions",
       "docs": "https://developers.telnyx.com/docs/ai/inference",
       "requires": []
@@ -98,7 +98,7 @@
       "name": "Phone Numbers",
       "description": "Search, buy, and manage phone numbers in 140+ countries.",
       "guide": "/guides/phone-numbers.md",
-      "cli": "telnyx number search --country US --json",
+      "cli": "telnyx-agent search-phone-numbers --country US --json",
       "api": "GET /v2/available_phone_numbers",
       "docs": "https://developers.telnyx.com/docs/numbers",
       "requires": []
@@ -119,7 +119,7 @@
       "id": "fax",
       "name": "Fax",
       "description": "Send and receive faxes programmatically.",
-      "cli": "telnyx fax send --to +15551234567 --media-url https://example.com/doc.pdf",
+      "cli": "telnyx-agent fax-send --connection-id <id> --from <your-number> --to +15551234567 --media-url https://example.com/doc.pdf",
       "api": "POST /v2/faxes",
       "docs": "https://developers.telnyx.com/docs/fax",
       "requires": [
@@ -130,7 +130,7 @@
       "id": "iot",
       "name": "IoT & Wireless",
       "description": "Manage SIM cards, eSIMs, data plans, and global connectivity for IoT devices.",
-      "cli": "telnyx sim list --json",
+      "cli": "telnyx-agent list-sim-cards --json",
       "api": "GET /v2/sim_cards",
       "docs": "https://developers.telnyx.com/docs/wireless",
       "requires": []
@@ -139,8 +139,8 @@
       "id": "storage",
       "name": "Cloud Storage",
       "description": "S3-compatible object storage for media, recordings, and files.",
-      "cli": "telnyx storage bucket create --name my-bucket",
-      "api": "POST /v2/storage/buckets",
+      "cli": "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
+      "api": "S3-compatible API at https://<region>.telnyxcloudstorage.com (AWS CLI/SDK; Telnyx API key as both access and secret key)",
       "docs": "https://developers.telnyx.com/docs/storage",
       "requires": []
     },
@@ -176,7 +176,7 @@
       "name": "10DLC Registration",
       "description": "Register brands and campaigns for US A2P messaging compliance.",
       "guide": "/guides/10dlc-registration.md",
-      "cli": "telnyx 10dlc wizard",
+      "cli": "telnyx-agent setup-10dlc --phone +1XXXXXXXXXX --email you@example.com --brand-name 'My Business' --website https://example.com/sms-opt-in --sample-message 'My Business: Reply STOP to opt out.'",
       "api": "POST /v2/10dlc/brand",
       "docs": "https://developers.telnyx.com/docs/messaging/10dlc",
       "requires": []
@@ -220,226 +220,215 @@
     }
   ],
   "cli": {
-    "package": "@telnyx/api-cli",
-    "version": "1.1.0",
-    "install": "npm install -g @telnyx/api-cli",
+    "package": "@telnyx/agent-cli",
+    "binary": "telnyx-agent",
+    "install": "npm install -g @telnyx/agent-cli",
+    "auth": "export TELNYX_API_KEY=YOUR_KEY",
     "global_flags": [
-      "--json",
-      "-o table|json|csv|tsv|ids",
-      "-v",
-      "-p <profile>"
+      "--json"
     ],
-    "topics": {
-      "10dlc": [
-        "brand list",
-        "brand get",
-        "brand create",
-        "brand delete",
-        "campaign list",
-        "campaign get",
-        "campaign create",
-        "campaign delete",
-        "campaign submit",
-        "assign",
-        "usecases",
-        "verticals",
-        "wizard"
-      ],
-      "ai": [
-        "chat",
-        "embed",
-        "models"
-      ],
-      "assistant": [
-        "create",
-        "delete",
-        "get",
-        "list",
-        "call"
-      ],
-      "auth": [
-        "setup",
-        "status",
-        "whoami"
-      ],
-      "billing": [
-        "balance",
-        "group list",
-        "group get",
-        "group create",
-        "group delete"
-      ],
-      "call": [
-        "dial",
-        "hangup",
-        "list",
-        "speak",
-        "transfer"
-      ],
-      "connection": [
-        "create",
-        "delete",
-        "get",
-        "list"
-      ],
-      "debugger": [
-        "get",
-        "list"
-      ],
-      "e911": [
-        "address list",
-        "address get",
-        "address create",
-        "address delete",
-        "assign"
-      ],
-      "fax": [
-        "send",
-        "get",
-        "list",
-        "delete"
-      ],
-      "lookup": [
-        "number"
-      ],
-      "message": [
-        "send",
-        "get",
-        "list"
-      ],
-      "messaging-profile": [
-        "create",
-        "delete",
-        "get",
-        "list"
-      ],
-      "number": [
-        "search",
-        "order",
-        "get",
-        "list",
-        "update",
-        "delete"
-      ],
-      "porting": [
-        "check",
-        "order list",
-        "order get",
-        "order create",
-        "order update",
-        "order delete",
-        "order submit",
-        "order cancel",
-        "order activate",
-        "phone-numbers",
-        "comments",
-        "documents",
-        "events",
-        "requirements"
-      ],
-      "profile": [
-        "list",
-        "use",
-        "delete"
-      ],
-      "sim": [
-        "enable",
-        "disable",
-        "get",
-        "list"
-      ],
-      "storage": [
-        "bucket list",
-        "bucket get",
-        "bucket create",
-        "bucket delete",
-        "object list",
-        "object get",
-        "object put",
-        "object delete",
-        "presign"
-      ],
-      "usage": [
-        "report",
-        "options"
-      ],
-      "verify": [
-        "send",
-        "check",
-        "profile list",
-        "profile get",
-        "profile create",
-        "profile delete",
-        "template list",
-        "template get",
-        "template create"
-      ],
-      "video": [
-        "room list",
-        "room get",
-        "room create",
-        "room delete",
-        "session list",
-        "session get",
-        "recording list",
-        "recording get",
-        "recording delete"
-      ],
-      "voice-profile": [
-        "create",
-        "delete",
-        "get",
-        "list"
-      ]
+    "discover": "telnyx-agent capabilities --json",
+    "commands": [
+      "activate-porting-order",
+      "add-ai-conversation-message",
+      "ai-anthropic-message",
+      "ai-chat",
+      "ai-embed",
+      "attach-porting-document",
+      "buy-phone-number",
+      "call-control",
+      "call-dial",
+      "call-pay",
+      "call-status",
+      "cancel-ai-assistant-scheduled-event",
+      "cancel-porting-order",
+      "capabilities",
+      "chat-ai-assistant",
+      "conference-control",
+      "create-ai-assistant",
+      "create-ai-assistant-scheduled-event",
+      "create-ai-conversation",
+      "create-call-queue",
+      "create-conference",
+      "create-meeting-artifact",
+      "create-meeting-session",
+      "create-messaging-profile",
+      "create-portout-comment",
+      "create-telephony-credential-token",
+      "delete-ai-assistant",
+      "delete-ai-conversation",
+      "delete-messaging-profile",
+      "disable-sim-card",
+      "edge-doctor",
+      "email-forward",
+      "email-reply",
+      "email-reply-all",
+      "email-send",
+      "enable-sim-card",
+      "end-meeting-session",
+      "end-room-session",
+      "enhance-ai-assistant-instructions",
+      "fax-cancel",
+      "fax-refresh",
+      "fax-send",
+      "fax-status",
+      "fund-account",
+      "get-ai-assistant",
+      "get-ai-assistant-scheduled-event",
+      "get-ai-assistant-test-run",
+      "get-ai-conversation",
+      "get-call-queue",
+      "get-call-recording",
+      "get-conference",
+      "get-document",
+      "get-meeting-artifact",
+      "get-meeting-recordings",
+      "get-meeting-session",
+      "get-meeting-transcript",
+      "get-messaging-profile",
+      "get-porting-order",
+      "get-portout-order",
+      "get-queued-call",
+      "get-recording-transcription",
+      "get-room-participant",
+      "get-room-session",
+      "get-voice-connection",
+      "get-wireguard-peer-config",
+      "kick-room-participants",
+      "list-active-calls",
+      "list-ai-assistant-scheduled-events",
+      "list-ai-assistant-test-runs",
+      "list-ai-assistants",
+      "list-ai-conversations",
+      "list-call-queues",
+      "list-call-recordings",
+      "list-conference-participants",
+      "list-conferences",
+      "list-documents",
+      "list-faxes",
+      "list-meeting-artifacts",
+      "list-meeting-sessions",
+      "list-messaging-profiles",
+      "list-phone-numbers",
+      "list-porting-documents",
+      "list-porting-orders",
+      "list-portout-comments",
+      "list-portout-orders",
+      "list-portout-rejection-codes",
+      "list-queued-calls",
+      "list-recording-transcriptions",
+      "list-room-participants",
+      "list-room-sessions",
+      "list-sim-card-actions",
+      "list-sim-cards",
+      "list-voice-connections",
+      "lookup-number",
+      "mute-room-participants",
+      "rcs-capabilities",
+      "rcs-send",
+      "remove-queued-call",
+      "retrieve-sim-card",
+      "retrieve-sim-card-action",
+      "schedule-sms",
+      "search-ai-collection",
+      "search-phone-numbers",
+      "send-ai-assistant-sms",
+      "send-group-mms",
+      "send-meeting-chat",
+      "send-sms",
+      "setup-10dlc",
+      "setup-ai",
+      "setup-edge-mcp",
+      "setup-edge-webhook",
+      "setup-iot",
+      "setup-porting",
+      "setup-sms",
+      "setup-verify",
+      "setup-voice",
+      "setup-whatsapp",
+      "setup-wireguard",
+      "sms-status",
+      "speak-in-meeting",
+      "status",
+      "stop-meeting-speaking",
+      "storage-sql-query",
+      "stt",
+      "stt-providers",
+      "submit-porting-order",
+      "test-ai-assistant-tool",
+      "trigger-ai-assistant-test-run",
+      "tts",
+      "tts-voices",
+      "unmute-room-participants",
+      "update-ai-assistant",
+      "update-ai-conversation",
+      "update-messaging-profile",
+      "update-porting-order",
+      "update-portout-status",
+      "upload-document",
+      "verify-check",
+      "verify-send",
+      "web-contents",
+      "web-research",
+      "web-research-status",
+      "web-search",
+      "whatsapp-send",
+      "whatsapp-templates"
+    ],
+    "underlying": {
+      "package": "telnyx-cli (Go)",
+      "binary": "telnyx",
+      "version": "0.32.0",
+      "syntax": "telnyx <resource[:subresource]> <command> [flags]",
+      "note": "Vendored by @telnyx/agent-cli for endpoints without a telnyx-agent wrapper. Not the deprecated @telnyx/api-cli, which also installed a `telnyx` binary with different syntax.",
+      "repo": "https://github.com/team-telnyx/telnyx-cli"
     }
   },
   "quickstart": {
     "signup": "curl -s https://telnyx.com/agent-signup.md",
     "signup_guide": "https://telnyx.com/agent-signup.md",
-    "install": "npm install -g @telnyx/api-cli",
-    "auth": "telnyx auth setup --api-key YOUR_KEY",
+    "install": "npm install -g @telnyx/agent-cli",
+    "auth": "export TELNYX_API_KEY=YOUR_KEY",
     "hello_world": [
       {
         "name": "Send an SMS",
         "commands": [
-          "telnyx messaging-profile create --name 'My Profile' --json",
-          "telnyx number search --country US --type long_code --json",
-          "telnyx number order --phone-number +1XXXXXXXXXX --json",
-          "telnyx message send --from +1XXXXXXXXXX --to +15559876543 --text 'Hello from Telnyx!'"
+          "telnyx-agent setup-sms --country US --json",
+          "telnyx-agent send-sms --from <phone_number from setup-sms> --to +15559876543 --text 'Hello from Telnyx!'"
         ]
       },
       {
         "name": "Chat with AI",
         "commands": [
-          "telnyx ai chat 'What can Telnyx do?'"
+          "telnyx-agent ai-chat --message '{\"role\":\"user\",\"content\":\"What can Telnyx do?\"}'"
         ]
       },
       {
         "name": "Search for numbers",
         "commands": [
-          "telnyx number search --country US --state CA --json"
+          "telnyx-agent search-phone-numbers --country US --administrative-area CA --json"
         ]
       },
       {
         "name": "Create an AI assistant",
         "commands": [
-          "telnyx assistant create --name 'Support Bot' --json"
+          "telnyx-agent create-ai-assistant --name 'Support Bot' --instructions 'You are a helpful assistant.' --json"
         ]
       },
       {
         "name": "Store a file",
         "commands": [
-          "telnyx storage bucket create --name my-bucket --json",
-          "telnyx storage object put --bucket my-bucket --key file.txt --file ./file.txt"
+          "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
+          "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 cp ./file.txt s3://my-bucket/file.txt --endpoint-url https://us-central-1.telnyxcloudstorage.com"
         ]
       }
     ]
   },
   "sdks": {
     "cli": {
-      "name": "@telnyx/api-cli",
-      "install": "npm install -g @telnyx/api-cli",
-      "docs": "https://github.com/team-telnyx/telnyx-cli"
+      "name": "@telnyx/agent-cli",
+      "install": "npm install -g @telnyx/agent-cli",
+      "docs": "https://github.com/team-telnyx/ai/tree/main/cli"
     },
     "python": {
       "name": "telnyx",

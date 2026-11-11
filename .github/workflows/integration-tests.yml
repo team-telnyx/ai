@@ -33,6 +33,14 @@ jobs:
       - name: Verify SKILL_COUNT markers match on-disk count
         run: ./scripts/check-skill-count.sh
 
+  cli-syntax-check:
+    name: Check — No deprecated CLI command syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify docs and manifests use telnyx-agent / Go telnyx CLI syntax
+        run: ./scripts/check-cli-syntax.sh
+
   unit-tests:
     name: Unit Tests (no API key)
     runs-on: ubuntu-latest
@@ -48,7 +56,7 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Python unit tests
         working-directory: tools/python
-        run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_langchain_toolkit.py tests/test_crewai_toolkit.py tests/test_shared_schema.py tests/test_x402.py tests/test_rcs_call_control_tools.py -v
+        run: pytest tests/test_tools.py tests/test_configuration.py tests/test_api_client.py tests/test_openai_toolkit.py tests/test_langchain_toolkit.py tests/test_crewai_toolkit.py tests/test_shared_schema.py tests/test_x402.py tests/test_rcs_call_control_tools.py tests/test_storage_tools.py tests/test_openapi_parity.py tests/test_repointed_routes.py -v
 
       # TypeScript compilation
       - uses: actions/setup-node@v7

@@ -482,6 +482,10 @@ completed, not that carrier review is complete.
 **One command: zero to AI assistant on a phone number.**
 
 Creates an AI assistant, buys a voice-capable number, and wires them together.
+New assistants use the API's current model, voice (TTS), and transcription (STT)
+defaults; the command does not pin a model or override speech settings. Retrieve
+the assistant to inspect the resolved configuration before relying on a specific
+model or voice. Existing assistants keep their configured settings.
 
 ```bash
 telnyx-agent setup-ai
@@ -489,7 +493,30 @@ telnyx-agent setup-ai --instructions "You are a pizza ordering bot"
 telnyx-agent setup-ai --name "Support Bot" --json
 ```
 
-Output: `{ assistant_id, phone_number, test_command }`
+Output includes `{ assistant_id, assistant_name, phone_number, phone_number_id, texml_app_id, test_command, ready, steps }`.
+
+To resume with known resources, supply their IDs (the phone number may also be E.164):
+
+```bash
+telnyx-agent setup-ai --assistant-id assistant-uuid --phone-number-id number-uuid --texml-app-id app-uuid --json
+```
+
+Supplied resources are read and validated before provisioning. An existing number
+must be unassigned or already assigned to the selected app; the app must be active
+and route `GET` to `https://api.telnyx.com/v2/ai/assistants/{assistant_id}/texml`.
+The TeXML API does not expose an `ai_assistant_id` field. The command reuses the
+assistant's `telephony_settings.default_texml_app_id` when no app is supplied,
+and creates an app only if neither is available. An app using the legacy `/call`
+URL or `POST` method is rejected; inspect and correct its routing separately.
+Do not combine an existing assistant with `--name` or `--instructions`; update
+it separately. Omitted assistants and numbers are created,
+so a fresh invocation still creates paid resources. This is explicit resumption,
+not server-side idempotency or automatic crash recovery.
+
+Failure output preserves `assistant_id`, `phone_number`, `phone_number_id`,
+`texml_app_id`, and `number_order_id` when known. Reconcile any timed-out create or
+number order before resuming: a missing ID does not prove the operation failed.
+`ready: true` means number assignment was confirmed, not that a live call passed.
 
 ### `telnyx-agent setup-whatsapp`
 
@@ -874,11 +901,16 @@ npm test
 CI adds further live-network coverage. Inspect each job's test selection before
 treating its label as a safety boundary:
 
-- **API Read-Only Tests** is a legacy job name, not a mutation guarantee. Its
-  CLI `integration-ci` suite runs with a repository secret and invokes
-  `setup-iot`, `setup-wireguard`, and `setup-verify`; depending on account state,
-  those cases can create resources, enable or reassign a SIM, and rely on only
-  partial best-effort cleanup.
+- **API Read-Only Tests** runs the CLI's `help`, `status`, and `capabilities`
+  through its packaged launcher. The CLI suite does not invoke setup/funding
+  commands or perform cleanup, and partial status-query failures fail the suite.
+  Telemetry and friction reporting are disabled in every CLI subprocess.
+  `integration-ci-readonly.test.ts` runs this same suite against a local API
+  with an allowlisted environment and checks every request is an expected GET.
+  A preloaded TCP guard is inherited by Node descendants and fails before any
+  connection outside that server, including reporter POSTs and HTTP redirects.
+  The job also runs SDK/guide tests separately, including billable inference/lookup probes; its name is
+  not a promise of zero cost.
 - **API Write + Cleanup Tests** adds the explicitly write-gated coverage with
   `RUN_WRITE_TESTS=true`. It creates and cleans up real resources and runs only
   on pushes to `main` or an explicitly enabled manual workflow dispatch.
