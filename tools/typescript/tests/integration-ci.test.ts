@@ -479,18 +479,6 @@ describe("TypeScript SDK — Read-Only API", () => {
     }
   });
 
-  // ─── New tools: Fine Tuning ──────────────────────────────────
-
-  it("list_fine_tuning_jobs returns array or valid error", async (t) => {
-    const r = await readonlyFetch(t, "list fine tuning jobs", `${BASE}/ai/fine_tuning/jobs?page[size]=1`);
-    if (!r) return;
-    assert.ok([200, 401, 403, 404].includes(r.status), `Expected 200/401/403/404, got ${r.status}`);
-    if (r.status === 200) {
-      const body = (await r.json()) as any;
-      assert.ok(Array.isArray(body.data));
-    }
-  });
-
   // ─── New tools: Toll-Free Verification ───────────────────────
 
   it("list_toll_free_verifications returns array or valid error", async (t) => {
@@ -559,7 +547,7 @@ describe("TypeScript SDK — Toolkit Classes", () => {
     );
     const count = Object.keys(TOOL_DEFINITIONS).length;
 
-    assert.equal(count, 201, `Expected 201 tools, got ${count}`);
+    assert.equal(count, 198, `Expected 198 tools, got ${count}`);
 
   });
 
@@ -659,7 +647,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const tools = toolkit.getOpenAITools();
     assert.ok(tools.length > 0, "Should have at least one tool");
 
-    assert.ok(tools.length < 201, `Should have fewer than 201 tools, got ${tools.length}`);
+    assert.ok(tools.length < 198, `Should have fewer than 198 tools, got ${tools.length}`);
 
   });
 
@@ -668,7 +656,7 @@ describe("TypeScript SDK — Toolkit with Configuration", () => {
     const toolkit = new TelnyxAgentToolkit(API_KEY!);
     const tools = toolkit.getOpenAITools();
 
-    assert.equal(tools.length, 201, `Expected 201 tools, got ${tools.length}`);
+    assert.equal(tools.length, 198, `Expected 198 tools, got ${tools.length}`);
 
   });
 });

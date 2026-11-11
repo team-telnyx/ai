@@ -656,23 +656,6 @@ class TestReadonly:
             assert "data" in data
             assert isinstance(data["data"], list)
 
-    # ─── New tools: Fine Tuning ──────────────────────────────────
-
-    def test_list_fine_tuning_jobs_readonly(self):
-        """GET /v2/ai/fine_tuning/jobs returns a list or valid error."""
-        r = _readonly_get(
-            f"{BASE_URL}/ai/fine_tuning/jobs",
-            what="list fine tuning jobs",
-            params={"page[size]": 1},
-        )
-        assert r.status_code in (200, 401, 403, 404), (
-            f"Expected 200/401/403/404, got {r.status_code}"
-        )
-        if r.status_code == 200:
-            data = r.json()
-            assert "data" in data
-            assert isinstance(data["data"], list)
-
     # ─── New tools: Toll-Free Verification ───────────────────────
 
     def test_list_toll_free_verifications_readonly(self):
