@@ -46,9 +46,8 @@ curl -X POST "https://api.telnyx.com/v2/ai/assistants" \
 |-----------|------|-------------|
 | `name` | string | Assistant name |
 | `instructions` | string | System prompt / personality |
-| `voice.provider` | string | `telnyx` or `elevenlabs` |
-| `voice.settings.voice_id` | string | Voice identifier |
-| `model` | string | LLM model — use `GET /v2/ai/models` to list available models. Not all inference models work for assistants. |
+| `voice_settings` | object | Optional voice configuration; see the current API reference for supported providers and fields. |
+| `model` | string | Optional. Omit it to use the current assistant default. Inference-model availability does not imply assistant support; an unsupported explicit model is rejected at creation. |
 | `greeting` | string | Initial greeting message |
 
 **Response:**
@@ -91,6 +90,10 @@ curl "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \
 ### Update Assistant
 
 **`POST /v2/ai/assistants/{id}`**
+
+Both `POST` and `PATCH` are supported for assistant updates. These examples use
+`POST`, the method documented in the public API reference; `PATCH` is also
+supported by the service and gateway.
 
 ```bash
 curl -X POST "https://api.telnyx.com/v2/ai/assistants/{assistant_id}" \

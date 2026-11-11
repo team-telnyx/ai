@@ -423,6 +423,101 @@ describe("Edge Compute v0.5.2 guide regression", () => {
   });
 });
 
+describe("AI assistant guide contract regression", () => {
+  const guide = readFileSync(join(GUIDES_DIR, "ai-assistants.md"), "utf-8");
+  const capability = agentJson.capabilities.find((c: any) => c.id === "ai_assistants");
+
+  it("keeps assistant creation independent of PSTN provisioning", () => {
+    assert.deepEqual(capability.requires, []);
+    assert.match(capability.cli, /^telnyx-agent create-ai-assistant /);
+    assert.match(guide, /phone number only when using PSTN/);
+    assert.match(guide, /## Test Without a Phone Number/);
+  });
+
+  it("documents POST examples without incorrectly excluding supported PATCH updates", () => {
+    const section = guide.split("### Update Assistant")[1]?.split("### Delete Assistant")[0];
+    assert.ok(section);
+    assert.match(section, /\*\*`POST \/v2\/ai\/assistants\/\{id\}`\*\*/);
+    assert.match(section, /Both `POST` and `PATCH` are supported/);
+    assert.doesNotMatch(section, /PATCH[^\n]*(unsupported|invalid|does not work)/i);
+  });
+
+  it("keeps stale model, inline voice and nonexistent toolkit examples out", () => {
+    assert.doesNotMatch(guide, /meta-llama\/Llama-3\.3|en-US-Neural2|telnyx\s+ai\s+models/);
+    assert.doesNotMatch(guide, /from telnyx_agent_toolkit import TelnyxToolkit|knowledge_base_ids|ai\/knowledge_bases/);
+    assert.match(guide, /payload\.get\("data", payload\)/);
+    assert.match(guide, /payload\.data \?\? payload/);
+    assert.match(guide, /metadata->assistant_id=eq\.\$ASSISTANT_ID/);
+  });
+
+  it("keeps executable Python examples syntactically valid without making API calls", () => {
+    const blocks = [...guide.matchAll(/```python\n([\s\S]*?)\n```/g)];
+    assert.ok(blocks.length > 0);
+    for (const [, code] of blocks) {
+      const parsed = spawnSync("python3", ["-c", "import ast,sys; ast.parse(sys.stdin.read())"], {
+        input: code, encoding: "utf8", timeout: 10000,
+      });
+      assert.equal(parsed.status, 0, parsed.stderr);
+    }
+  });
+
+  it("runs the documented wiring only when synthetic resource/routing guards pass", () => {
+    const section = guide.split("## Wiring to a Phone Number")[1];
+    const code = /```bash\n([\s\S]*?)\n```/.exec(section ?? "")?.[1];
+    assert.ok(code);
+    assert.match(code, /\/texml/);
+    assert.match(guide, /not atomic with concurrent number updates/);
+    const fixture = `
+      curl() {
+        case " $* " in
+          *" -X PATCH "*)
+            printf 'FIXTURE_PATCH_ATTEMPT\\n' >&2
+            if [ "$SCENARIO" = patch_failure ]; then return 22; fi
+            if [ "$SCENARIO" = wrong_result ]; then
+              printf '%s' '{"data":{"id":"YOUR_PHONE_NUMBER_RESOURCE_ID","connection_id":"wrong-app"}}'
+            else
+              printf '%s' '{"data":{"id":"YOUR_PHONE_NUMBER_RESOURCE_ID","connection_id":"fixture-app"}}'
+            fi ;;
+          *"/ai/assistants/YOUR_ASSISTANT_ID "*)
+            if [ "$SCENARIO" = missing_app ]; then printf '%s' '{}'; else
+              printf '%s' '{"data":{"telephony_settings":{"default_texml_app_id":"fixture-app"}}}'
+            fi ;;
+          *"/texml_applications/fixture-app "*)
+            case "$SCENARIO" in
+              inactive) printf '%s' '{"data":{"id":"fixture-app","active":false,"voice_url":"https://api.telnyx.com/v2/ai/assistants/YOUR_ASSISTANT_ID/texml","voice_method":"GET"}}' ;;
+              wrong_route) printf '%s' '{"data":{"id":"fixture-app","active":true,"voice_url":"https://example.invalid/elsewhere","voice_method":"GET"}}' ;;
+              wrong_method) printf '%s' '{"data":{"id":"fixture-app","active":true,"voice_url":"https://api.telnyx.com/v2/ai/assistants/YOUR_ASSISTANT_ID/texml","voice_method":"POST"}}' ;;
+              *) printf '%s' '{"data":{"id":"fixture-app","active":true,"voice_url":"https://api.telnyx.com/v2/ai/assistants/YOUR_ASSISTANT_ID/texml","voice_method":"GET"}}' ;;
+            esac ;;
+          *"/phone_numbers/YOUR_PHONE_NUMBER_RESOURCE_ID "*)
+            case "$SCENARIO" in
+              assigned_elsewhere) printf '%s' '{"data":{"id":"YOUR_PHONE_NUMBER_RESOURCE_ID","connection_id":"other-app"}}' ;;
+              already_assigned) printf '%s' '{"data":{"id":"YOUR_PHONE_NUMBER_RESOURCE_ID","connection_id":"fixture-app"}}' ;;
+              *) printf '%s' '{"data":{"id":"YOUR_PHONE_NUMBER_RESOURCE_ID","connection_id":null}}' ;;
+            esac ;;
+          *) printf 'UNEXPECTED_FIXTURE_REQUEST\\n' >&2; return 99 ;;
+        esac
+      }
+    `;
+    for (const scenario of ["unassigned", "already_assigned", "missing_app", "inactive", "wrong_route", "wrong_method", "assigned_elsewhere", "patch_failure", "wrong_result"]) {
+      const result = spawnSync("bash", ["-c", fixture + "\n" + code], {
+        env: { PATH: process.env.PATH!, SCENARIO: scenario, TELNYX_API_KEY: "fixture-not-a-credential" },
+        encoding: "utf8", timeout: 10000,
+      });
+      assert.equal(result.error, undefined, `${scenario}: ${result.error}`);
+      assert.doesNotMatch(result.stderr, /UNEXPECTED_FIXTURE_REQUEST/, scenario);
+      const patchCount = result.stderr.split("FIXTURE_PATCH_ATTEMPT").length - 1;
+      if (["unassigned", "already_assigned"].includes(scenario)) {
+        assert.equal(result.status, 0, `${scenario}: ${result.stderr}`);
+        assert.equal(patchCount, 1, scenario);
+      } else {
+        assert.notEqual(result.status, 0, scenario);
+        assert.equal(patchCount, ["patch_failure", "wrong_result"].includes(scenario) ? 1 : 0, scenario);
+      }
+    }
+  });
+});
+
 describe("guide content requirements", () => {
   for (const file of guideFiles) {
     const filepath = join(GUIDES_DIR, file);
