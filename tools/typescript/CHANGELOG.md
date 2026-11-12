@@ -2,6 +2,14 @@
 
 ## 0.4.0 (unreleased)
 
+### Removed — retired fine-tuning job management (AI-4102)
+
+- Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.
+- **Migration / breaking change:** remove these job-management keys from agent action configuration and saved tool-call plans; there is no supported public job-management replacement. Explicit stale action keys no longer enable a tool, and direct calls return the existing `Unknown tool` error without an HTTP request. Default agents no longer advertise these tools.
+- This is not removal of fine-tuned model serving, inference/chat, assistant APIs, or model discovery. Those surfaces are unchanged; discovering a model is not a replacement for creating a training job.
+- Catalog count for this change: **201 → 198**, matching in Python and TypeScript. Removed the corresponding obsolete live-route probes; added offline absence/configuration/zero-dispatch regressions. The public-spec parity guard and its allowlists are unchanged.
+- Package manifests remain `0.3.0`; `0.4.0` is still unreleased. No registry publication is included.
+
 ### Fixed — tools that could never succeed
 
 Forty-one tool definitions targeted REST routes that do not exist (the API returned 404 on every call). Each was verified against the public OpenAPI spec and the live API.
@@ -33,7 +41,7 @@ Tool count: 211 → 201.
 
 ### Breaking changes
 
-- Removed tools above. None ever returned anything other than 404, so no working integration is affected.
+- Removed phantom-route tools in the route-repair section above. Those routes returned 404; the separately retired fine-tuning job-management tools and their migration are documented in their own section.
 - Parameter names changed on the re-pointed tools where the API contract differs (notably `create_10dlc_brand`, `create_e911_address`, `create_toll_free_verification`, `create_voice_clone`, `create_presigned_url`). Agents that read tool schemas at runtime pick up the new shapes automatically.
 
 ### Tests
