@@ -16,6 +16,9 @@ on:
           - 'false'
           - 'true'
 
+permissions:
+  contents: read
+
 jobs:
   skills-sync-check:
     name: Check — Skills in sync
