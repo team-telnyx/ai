@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const scratch = mkdtempSync(join(tmpdir(), 'telnyx-esm-'));
-function run(command, args, cwd) {
+function run(command, args, cwd, expectedStatus = 0) {
   const result = spawnSync(command, args, {
     cwd, encoding: 'utf8', timeout: 180_000,
     env: { ...process.env, TELNYX_FRICTION_ENABLED: 'false' },
@@ -16,7 +16,7 @@ function run(command, args, cwd) {
   process.stdout.write(result.stdout ?? '');
   process.stderr.write(result.stderr ?? '');
   assert.ifError(result.error);
-  assert.equal(result.status, 0, `${command} ${args.join(' ')} failed`);
+  assert.equal(result.status, expectedStatus, `${command} ${args.join(' ')} failed`);
   return result.stdout;
 }
 function consumer(name, peers, source) {
@@ -30,6 +30,36 @@ function consumer(name, peers, source) {
 }
 let tarball;
 try {
+  // Enter the credential-gated integration runner without service access. API
+  // outcomes are synthetic here; this regression covers adapter classification.
+  const integrationProbe = join(scratch, 'integration-entrypoint.mts');
+  writeFileSync(integrationProbe, `
+    import { ToolkitCore } from ${JSON.stringify(join(root, 'src/shared/toolkit-core.ts'))};
+    process.env.TELNYX_API_KEY = 'offline-integration-fixture';
+    globalThis.fetch = async () => { throw new Error('HTTP forbidden in offline integration fixture'); };
+    ToolkitCore.prototype.runTool = async () => JSON.stringify({ data: [] });
+    const { TelnyxAgentToolkit } = await import(${JSON.stringify(join(root, 'src/index.ts'))});
+    const scenario = process.argv[2] ?? 'missing';
+    for (const [method, peer] of [['getVercelAITools', 'ai'], ['getLangChainTools', '@langchain/core/tools']]) {
+      TelnyxAgentToolkit.prototype[method] = () => {
+        const message = scenario === 'initialization' ? 'peer initialization failed'
+          : "Cannot find module '" + (scenario === 'transitive' ? 'missing-peer-internal' : peer) + "'";
+        const cause = new Error(message);
+        if (scenario !== 'initialization') cause.code = 'MODULE_NOT_FOUND';
+        throw new Error('Unable to load optional peer synchronously', { cause });
+      };
+    }
+    await import(${JSON.stringify(join(root, 'tests/integration.test.ts'))});
+  `);
+  const integrationOutput = run(join(root, 'node_modules/.bin/tsx'), [integrationProbe], root);
+  assert.match(integrationOutput, /ai\/zod not installed \(skipped\)/);
+  assert.match(integrationOutput, /langchain not installed \(skipped\)/);
+  assert.match(integrationOutput, /Failed:\s+0/);
+  for (const failure of ['initialization', 'transitive']) {
+    const output = run(join(root, 'node_modules/.bin/tsx'), [integrationProbe, failure], root, 1);
+    assert.match(output, /Failed:\s+2/);
+    assert.match(output, /Skipped:\s+0/);
+  }
   run(process.execPath, ['--version'], root);
   run('npm', ['--version'], root);
   run('npm', ['run', 'build'], root);

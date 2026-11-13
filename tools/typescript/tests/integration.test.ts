@@ -33,6 +33,15 @@ function loadApiKey(): string {
   return "";
 }
 
+function isMissingOptionalPeer(error: unknown, peers: readonly string[]): boolean {
+  const cause = error instanceof Error ? error.cause : undefined;
+  if (!(cause instanceof Error) || (cause as NodeJS.ErrnoException).code !== "MODULE_NOT_FOUND") {
+    return false;
+  }
+  const firstLine = cause.message.split("\n", 1)[0];
+  return peers.some((peer) => firstLine === `Cannot find module '${peer}'`);
+}
+
 const API_KEY = loadApiKey();
 
 function header(text: string): void {
@@ -318,7 +327,7 @@ async function run(): Promise<void> {
     passed++;
   } catch (e) {
     const msg = String(e);
-    if (msg.includes("Cannot find module") || msg.includes("required")) {
+    if (isMissingOptionalPeer(e, ["ai", "zod"])) {
       result("getVercelAITools", true, "ai/zod not installed (skipped)");
       skipped++;
     } else {
@@ -339,7 +348,7 @@ async function run(): Promise<void> {
     passed++;
   } catch (e) {
     const msg = String(e);
-    if (msg.includes("Cannot find module") || msg.includes("required")) {
+    if (isMissingOptionalPeer(e, ["@langchain/core/tools", "zod"])) {
       result("getLangChainTools", true, "langchain not installed (skipped)");
       skipped++;
     } else {
