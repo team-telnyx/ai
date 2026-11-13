@@ -4,11 +4,16 @@
  * Formats tools as DynamicStructuredTool instances from @langchain/core.
  */
 
+import { createRequire } from "node:module";
+
 import type { ToolDefinition } from "../shared/constants.js";
 import type { ToolkitCore } from "../shared/toolkit-core.js";
 import { buildToolParametersZodSchema } from "../shared/tool-parameters-zod.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Keep the public factory synchronous without relying on a global CJS require.
+const require = createRequire(import.meta.url);
 
 export class LangChainToolkit {
   private readonly core: ToolkitCore;
@@ -29,18 +34,20 @@ export class LangChainToolkit {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       DynamicStructuredTool = require("@langchain/core/tools").DynamicStructuredTool;
-    } catch {
+    } catch (cause) {
       throw new Error(
-        "LangChain is required for LangChain tools. Install with: npm install @langchain/core",
+        "Unable to load LangChain synchronously. If missing, install with: npm install @langchain/core; otherwise check the cause and use a compatible synchronous SDK version.",
+        { cause },
       );
     }
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       z = require("zod").z;
-    } catch {
+    } catch (cause) {
       throw new Error(
-        "Zod is required for LangChain tools. Install with: npm install zod",
+        "Unable to load Zod synchronously for LangChain tools. If missing, install with: npm install zod; otherwise check the cause.",
+        { cause },
       );
     }
 

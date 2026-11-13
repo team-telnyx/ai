@@ -4,11 +4,16 @@
  * Formats tools for use with `generateText({ tools: {...} })` from the `ai` package.
  */
 
+import { createRequire } from "node:module";
+
 import type { ToolDefinition } from "../shared/constants.js";
 import type { ToolkitCore } from "../shared/toolkit-core.js";
 import { buildToolParametersZodSchema } from "../shared/tool-parameters-zod.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Keep the public factory synchronous without relying on a global CJS require.
+const require = createRequire(import.meta.url);
 
 export class VercelAIToolkit {
   private readonly core: ToolkitCore;
@@ -29,18 +34,20 @@ export class VercelAIToolkit {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       tool = require("ai").tool;
-    } catch {
+    } catch (cause) {
       throw new Error(
-        "Vercel AI SDK is required for Vercel AI tools. Install with: npm install ai",
+        "Unable to load Vercel AI SDK synchronously. If missing, install with: npm install ai; otherwise check the cause and use a compatible synchronous SDK version.",
+        { cause },
       );
     }
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       z = require("zod").z;
-    } catch {
+    } catch (cause) {
       throw new Error(
-        "Zod is required for Vercel AI tools. Install with: npm install zod",
+        "Unable to load Zod synchronously for Vercel AI tools. If missing, install with: npm install zod; otherwise check the cause.",
+        { cause },
       );
     }
 

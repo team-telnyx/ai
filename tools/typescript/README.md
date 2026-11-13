@@ -26,9 +26,24 @@ npm install @telnyx/agent-toolkit
 
 # Plus your framework of choice:
 npm install openai                    # For OpenAI
-npm install ai zod                    # For Vercel AI SDK
-npm install @langchain/core zod       # For LangChain.js
+npm install ai@4.3.19 zod@3.25.76     # Tested Vercel AI SDK adapter
+npm install @langchain/core@0.3.79 zod@3.25.76  # Tested LangChain.js adapter
 ```
+
+### Optional adapter loading
+
+`getVercelAITools()` and `getLangChainTools()` (and the adapter classes'
+`getTools()`) remain synchronous: they return tools, not promises. Optional peers
+are loaded lazily using a module-local Node `createRequire`, including Zod;
+importing the core or adapter subpaths does not require any optional peers.
+Load failures retain the original exception as `error.cause` and identify the
+installation command without assuming every failure means a missing package.
+
+The installed native-ESM regression suite uses the exact versions above. The
+Vercel adapter uses AI SDK 4's `parameters` contract; this repair does not add
+newer SDK-major support. A peer that requires asynchronous ESM initialization
+cannot be loaded by these synchronous factories. Use a compatible synchronous
+peer version; awaiting a synchronous factory does not change module loading.
 
 ## Quick Start
 

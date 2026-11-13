@@ -82,6 +82,9 @@ jobs:
       - name: TypeScript adapter contract tests
         working-directory: tools/typescript
         run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts && npx tsx tests/object-payloads.test.ts && npx tsx tests/compositions.test.ts && npx tsx tests/s3-storage.test.ts && npx tsx tests/s3-sdk.test.ts
+      - name: TypeScript installed optional adapter tests
+        working-directory: tools/typescript
+        run: node tests/optional-adapters.test.mjs
       - name: Install CLI deps
         working-directory: cli
         run: npm ci
