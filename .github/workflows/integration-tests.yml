@@ -98,6 +98,51 @@ jobs:
       - name: Guide structural tests
         run: npx tsx --test tests/guides.test.ts
 
+  toolkit-runtime:
+    name: Toolkit runtime (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.20.2', '22']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install, build and run offline toolkit contracts
+        working-directory: tools/typescript
+        run: |
+          npm ci --engine-strict
+          npm run build
+          npm test
+          sh tests/packed-runtime.sh
+
+  toolkit-unsupported-runtime:
+    name: Toolkit rejects Node 18
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '18'
+      - name: Verify engine-strict rejects the packed toolkit
+        working-directory: tools/typescript
+        run: |
+          fixture=$(mktemp -d)
+          tarball=$(npm pack --pack-destination "$fixture" --silent)
+          cd "$fixture"
+          npm init -y
+          if npm install --engine-strict --omit=optional --ignore-scripts --no-audit --no-fund "$fixture/$tarball" > install.log 2>&1; then
+            cat install.log
+            exit 1
+          fi
+          cat install.log
+          grep -q 'EBADENGINE' install.log
+          grep -q '@telnyx/agent-toolkit' install.log
+
   api-readonly:
     name: API Read-Only Tests
     runs-on: ubuntu-latest

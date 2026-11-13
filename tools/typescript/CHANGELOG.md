@@ -18,9 +18,14 @@
   read-only slice. See [contract decisions](../removed-tool-decisions.md), including
   the newly documented Missions status/metadata PATCH contract. No versions bumped.
 
+### Breaking — minimum Node runtime
+
+- Raised `engines.node` from `>=18.0.0` to `>=20.20.2` for the entire TypeScript toolkit, including REST-only use, to satisfy the optional S3 SDK requirement and use a tested patched baseline. Consumers below Node 20.20.2 must upgrade before adopting this unreleased change; no registry release or version bump is included.
+- Added minimum-runtime installation, packed-consumer and offline S3 checks. Optional dependency installation and `storage: true` remain separate opt-ins.
+
 ### Added — optional S3 storage tools (AI-3950)
 
-- Opt-in `storage: true` adds the five bucket/object tools via optional `@aws-sdk/client-s3` (Node 20+), not the REST catalog. Regional endpoints and credentials follow the Telnyx S3 contract.
+- Opt-in `storage: true` adds the five bucket/object tools via optional `@aws-sdk/client-s3` (Node 20.20.2+), not the REST catalog. Regional endpoints and credentials follow the Telnyx S3 contract.
 - Upload accepts explicit UTF-8 or canonical base64; downloads return base64. Inline objects are limited to 1 MiB, streams are closed, and dot-only key segments are refused without normalization.
 - Offline SDK contracts are tested; authenticated bucket lifecycle validation and toolkit-owner sign-off remain separate release gates.
 

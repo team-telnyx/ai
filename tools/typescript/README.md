@@ -8,13 +8,18 @@ TypeScript toolkit for integrating Telnyx APIs with AI agent frameworks. Provide
 
 ## Features
 
-- **Zero runtime dependencies** — core uses native `fetch()` (Node 18+)
+- **Zero runtime dependencies** — core uses native `fetch()` (Node 20.20.2+)
 - **18 Telnyx API tools** — messaging, voice, numbers, AI, fax, IoT, verification, lookup
 - **Framework adapters** — OpenAI, Vercel AI SDK, LangChain.js
 - **Permission filtering** — restrict which tools are available to the agent
 - **TypeScript strict mode** — full type safety throughout
 
 ## Installation
+
+**Requires Node.js 20.20.2 or newer**, including REST-only consumers. This minimum
+satisfies the optional S3 SDK requirement and is the patched baseline exercised
+by runtime CI. Users on Node 18/19 or older Node 20 patches must upgrade before
+adopting this unreleased change.
 
 ```bash
 npm install @telnyx/agent-toolkit
@@ -27,11 +32,12 @@ npm install @langchain/core zod       # For LangChain.js
 
 ## Quick Start
 
-### Optional Cloud Storage (S3, Node 20+)
+### Optional Cloud Storage (S3, Node 20.20.2+)
 
 Install `npm install @aws-sdk/client-s3@^3.1166.0` alongside the toolkit and
 set `storage: true`. The SDK is an optional peer, loaded only when executing
-an S3 tool; the REST-only package keeps its existing Node 18+ requirement.
+an S3 tool; installing it remains optional, but the toolkit requires Node 20.20.2+
+whether or not storage is enabled.
 
 ```typescript
 import { TelnyxAgentToolkit } from "@telnyx/agent-toolkit";
