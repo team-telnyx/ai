@@ -5,8 +5,16 @@
 ### Fixed — Python/TypeScript definition parity (AI-3977)
 
 - CI now compares all tool-definition fields across languages, including nested schemas, defaults and descriptions. TypeScript's four conflicting JSON-string parameters now match Python's object schemas.
-- Added minimal PATCH client/dispatch support for `update_mission_run` and connected offline object-payload regressions through the OpenAI adapter, shared Pydantic validation and real HTTP client.
+- Added minimal PATCH client/dispatch support for `update_mission_run` (including a sync `patch()` wrapper matching the existing GET/POST/DELETE convenience methods) and connected offline object-payload regressions through the OpenAI adapter, shared Pydantic validation and real HTTP client.
 - See `../TOOL_DEFINITION_PARITY.md` for the source contract decision, strict-mode limits and pre-existing scheduled-event body limitations. No package version bump or live API mutation is included.
+
+### Removed — retired fine-tuning job management (AI-4102)
+
+- Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.
+- **Migration / breaking change:** remove these job-management keys from agent action configuration and saved tool-call plans; there is no supported public job-management replacement. Explicit stale action keys no longer enable a tool, and direct calls return the existing `Unknown tool` error without an HTTP request. Default agents no longer advertise these tools.
+- This is not removal of fine-tuned model serving, inference/chat, assistant APIs, or model discovery. Those surfaces are unchanged; discovering a model is not a replacement for creating a training job.
+- Catalog count for this change: **201 → 198**, matching in Python and TypeScript. Removed the corresponding obsolete live-route probes; added offline absence/configuration/zero-dispatch regressions. The public-spec parity guard and its allowlists are unchanged.
+- Package manifests remain `0.3.0`; `0.4.0` is still unreleased. No registry publication is included.
 
 ### Fixed — tools that could never succeed
 
@@ -39,7 +47,7 @@ Tool count: 211 → 201.
 
 ### Breaking changes
 
-- Removed tools above. None ever returned anything other than 404, so no working integration is affected.
+- Removed phantom-route tools in the route-repair section above. Those routes returned 404; the separately retired fine-tuning job-management tools and their migration are documented in their own section.
 - Parameter names changed on the re-pointed tools where the API contract differs (notably `create_10dlc_brand`, `create_e911_address`, `create_toll_free_verification`, `create_voice_clone`, `create_presigned_url`). Agents that read tool schemas at runtime pick up the new shapes automatically.
 
 ### Tests

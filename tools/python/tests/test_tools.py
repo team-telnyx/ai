@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 
+from telnyx_agent_toolkit.configuration import TelnyxAgentToolkit
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
 from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore
@@ -15,6 +16,29 @@ from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore
 def core() -> ToolkitCore:
     client = TelnyxAPIClient(api_key="test-key", base_url="https://api.telnyx.com/v2")
     return ToolkitCore(client=client)
+
+
+@pytest.mark.parametrize("name", [
+    "list_fine_tuning_jobs", "create_fine_tuning_job", "get_fine_tuning_job",
+])
+@pytest.mark.asyncio
+async def test_retired_fine_tuning_jobs_are_not_exposed_or_dispatched(name: str, core: ToolkitCore) -> None:
+    """AI-4102: retired job-management routes are not serving/inference APIs."""
+    assert name not in TOOL_DEFINITIONS
+
+    assert not any(t["path"].startswith("/ai/fine_tuning/jobs") for t in TOOL_DEFINITIONS.values())
+    default = TelnyxAgentToolkit(api_key="test-key")
+    assert name not in {t["name"] for t in default.enabled_tools}
+    assert name not in {t["function"]["name"] for t in default.get_openai_tools()}
+    explicit = TelnyxAgentToolkit(api_key="test-key", configuration={
+        "actions": {"ai": {name: True, "chat": True}},
+    })
+    assert [t["name"] for t in explicit.enabled_tools] == ["ai_chat"]
+    with respx.mock(assert_all_called=False) as router:
+        result = json.loads(await core.run_tool_async(name, {"id": "retired", "model": "retired", "training_file": "retired"}))
+        assert result == {"error": f"Unknown tool: {name}"}
+        assert len(router.calls) == 0
+    assert {"ai_chat", "list_ai_models", "get_assistant"} <= TOOL_DEFINITIONS.keys()
 
 
 class TestToolDefinitions:
@@ -28,8 +52,8 @@ class TestToolDefinitions:
             assert "category" in tool_def, f"{name} missing 'category'"
             assert tool_def["name"] == name
 
-    def test_201_tools_defined(self) -> None:
-        assert len(TOOL_DEFINITIONS) == 201
+    def test_198_tools_defined(self) -> None:
+        assert len(TOOL_DEFINITIONS) == 198
 
     def test_tool_categories(self) -> None:
         categories = {t["category"] for t in TOOL_DEFINITIONS.values()}

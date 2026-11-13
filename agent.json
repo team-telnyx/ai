@@ -61,9 +61,7 @@
       "cli": "telnyx-agent create-ai-assistant --name 'Support Bot' --instructions 'You are a helpful assistant.'",
       "api": "POST /v2/ai/assistants",
       "docs": "https://developers.telnyx.com/docs/ai/assistants",
-      "requires": [
-        "phone_number"
-      ]
+      "requires": []
     },
     {
       "id": "ai_inference",

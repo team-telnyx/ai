@@ -4305,68 +4305,6 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
         "path": "/voice_designs/{id}",
         "category": "voice",
     },
-    # ─── Fine Tuning ───────────────────────────────────────────
-    "list_fine_tuning_jobs": {
-        "name": "list_fine_tuning_jobs",
-        "description": "List AI fine-tuning jobs on the account.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "page_size": {
-                    "type": "integer",
-                    "description": "Number of results per page.",
-                    "default": 20,
-                },
-                "page_number": {
-                    "type": "integer",
-                    "description": "Page number to retrieve.",
-                    "default": 1,
-                },
-            },
-            "required": [],
-        },
-        "method": "GET",
-        "path": "/ai/fine_tuning/jobs",
-        "category": "ai",
-    },
-    "create_fine_tuning_job": {
-        "name": "create_fine_tuning_job",
-        "description": "Create a new AI fine-tuning job.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "model": {
-                    "type": "string",
-                    "description": "The base model to fine-tune.",
-                },
-                "training_file": {
-                    "type": "string",
-                    "description": "The ID or URL of the training file.",
-                },
-            },
-            "required": ["model", "training_file"],
-        },
-        "method": "POST",
-        "path": "/ai/fine_tuning/jobs",
-        "category": "ai",
-    },
-    "get_fine_tuning_job": {
-        "name": "get_fine_tuning_job",
-        "description": "Get details of a specific fine-tuning job.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string",
-                    "description": "The ID of the fine-tuning job.",
-                },
-            },
-            "required": ["id"],
-        },
-        "method": "GET",
-        "path": "/ai/fine_tuning/jobs/{id}",
-        "category": "ai",
-    },
     # ─── Toll-Free Verification ─────────────────────────────────
     "list_toll_free_verifications": {
         "name": "list_toll_free_verifications",

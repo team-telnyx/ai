@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { TelnyxAgentToolkit } from "../src/index.js";
 
 import type { TelnyxAPIClient } from "../src/shared/api-client.js";
 import { TOOL_DEFINITIONS, PERMISSION_MAP } from "../src/shared/constants.js";
@@ -162,7 +163,7 @@ const expectedRequired: Record<(typeof TOOL_NAMES)[number], string[]> = {
 };
 
 function assertDefinitions(): void {
-  assert.equal(Object.keys(TOOL_DEFINITIONS).length, 201);
+  assert.equal(Object.keys(TOOL_DEFINITIONS).length, 198);
 
   for (const name of TOOL_NAMES) {
     const definition = TOOL_DEFINITIONS[name];
@@ -387,6 +388,32 @@ async function assertExecution(): Promise<void> {
   assert.equal(client.requests.length, 0);
 }
 
+async function assertRetiredFineTuningJobs(): Promise<void> {
+  // AI-4102 removes retired job management, not serving/inference surfaces.
+  const retired = ["list_fine_tuning_jobs", "create_fine_tuning_job", "get_fine_tuning_job"];
+  const client = new MockClient();
+  const core = new ToolkitCore(client as unknown as TelnyxAPIClient);
+  const defaultToolkit = new TelnyxAgentToolkit("test-key");
+  for (const name of retired) {
+    assert.equal(TOOL_DEFINITIONS[name], undefined, `${name} must not be defined`);
+    assert.equal(PERMISSION_MAP[`ai.${name}`], undefined);
+    assert.ok(!Object.values(PERMISSION_MAP).includes(name));
+    assert.ok(!defaultToolkit.enabledTools.some((tool) => tool.name === name));
+    assert.ok(!defaultToolkit.getOpenAITools().some((tool) => (tool.function as { name: string }).name === name));
+    const explicit = new TelnyxAgentToolkit("test-key", {
+      configuration: { actions: { ai: { [name]: true, chat: true } } },
+    });
+    assert.deepEqual(explicit.enabledTools.map((tool) => tool.name), ["ai_chat"]);
+    assert.deepEqual(JSON.parse(await core.runTool(name, { id: "retired", model: "retired", training_file: "retired" })), {
+      error: `Unknown tool: ${name}`,
+    });
+    assert.equal(client.requests.length, 0);
+  }
+  assert.ok(!Object.values(TOOL_DEFINITIONS).some((tool) => tool.path.startsWith("/ai/fine_tuning/jobs")));
+  for (const name of ["ai_chat", "list_ai_models", "get_assistant"]) assert.ok(TOOL_DEFINITIONS[name]);
+}
+
+await assertRetiredFineTuningJobs();
 assertDefinitions();
 await assertExecution();
-console.log("RCS and live Call Control atomic tool tests passed");
+console.log("RCS, Call Control and retired fine-tuning tool tests passed");
