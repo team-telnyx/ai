@@ -2,6 +2,12 @@
 
 ## 0.4.0 (unreleased)
 
+### Fixed — Python/TypeScript definition parity (AI-3977)
+
+- Reconciled all 11 divergent definitions, including pagination defaults, plan-step item schemas and nested Conversation Relay descriptions. CI now compares every definition field across languages rather than only tool names.
+- `result_payload`, mission-event `payload`, insight `json_schema` and scheduled-call `dynamic_variables` now consistently expose objects. **TypeScript callers must pass objects, not JSON strings.** The insight API also supports a string form, but both toolkits deliberately expose the object form.
+- Added minimal PATCH dispatch/client support so `update_mission_run` actually reaches HTTP. Offline regressions cover the four object fields through real OpenAI adapters/cores/clients and shared Pydantic/Zod validation. See `../TOOL_DEFINITION_PARITY.md` for contract boundaries and known pre-existing scheduled-event limitations.
+
 ### Removed — retired fine-tuning job management (AI-4102)
 
 - Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.

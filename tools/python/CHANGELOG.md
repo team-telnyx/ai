@@ -2,6 +2,12 @@
 
 ## 0.4.0 (unreleased)
 
+### Fixed — Python/TypeScript definition parity (AI-3977)
+
+- CI now compares all tool-definition fields across languages, including nested schemas, defaults and descriptions. TypeScript's four conflicting JSON-string parameters now match Python's object schemas.
+- Added minimal PATCH client/dispatch support for `update_mission_run` (including a sync `patch()` wrapper matching the existing GET/POST/DELETE convenience methods) and connected offline object-payload regressions through the OpenAI adapter, shared Pydantic validation and real HTTP client.
+- See `../TOOL_DEFINITION_PARITY.md` for the source contract decision, strict-mode limits and pre-existing scheduled-event body limitations. No package version bump or live API mutation is included.
+
 ### Removed — retired fine-tuning job management (AI-4102)
 
 - Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.

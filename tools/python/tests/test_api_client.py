@@ -103,3 +103,12 @@ class TestTelnyxAPIClient:
         )
         result = client.post("/messages", json={"to": "+1234", "text": "Test"})
         assert result["data"]["id"] == "msg-456"
+
+    @respx.mock
+    def test_sync_patch(self, client: TelnyxAPIClient) -> None:
+        """AI-3977 follow-up: sync patch() must mirror get/post/delete wrappers."""
+        respx.patch("https://api.telnyx.com/v2/ai/mission_runs/run-1").mock(
+            return_value=httpx.Response(200, json={"data": {"id": "run-1", "status": "updated"}})
+        )
+        result = client.patch("/ai/mission_runs/run-1", json={"status": "completed"})
+        assert result["data"]["id"] == "run-1"

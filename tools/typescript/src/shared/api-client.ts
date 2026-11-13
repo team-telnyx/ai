@@ -135,6 +135,25 @@ export class TelnyxAPIClient {
     }
   }
 
+  async patch(
+    path: string,
+    json?: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        method: "PATCH",
+        headers: this.getHeaders(),
+        body: json ? JSON.stringify(json) : undefined,
+        signal: controller.signal,
+      });
+      return await this.handleResponse(response);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   async delete(path: string): Promise<Record<string, unknown>> {
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();

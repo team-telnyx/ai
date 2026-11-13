@@ -96,6 +96,17 @@ class TelnyxAPIClient:
         response = await client.post(path, json=json)
         return await self._handle_response(response)
 
+    async def patch_async(
+        self,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Async PATCH request."""
+        client = await self._get_async_client()
+        response = await client.patch(path, json=json)
+        return await self._handle_response(response)
+
     async def delete_async(
         self,
         path: str,
@@ -112,6 +123,10 @@ class TelnyxAPIClient:
     def post(self, path: str, *, json: dict[str, Any] | None = None) -> dict[str, Any]:
         """Sync POST request (convenience wrapper)."""
         return _run_sync(self.post_async(path, json=json))
+
+    def patch(self, path: str, *, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Sync PATCH request (convenience wrapper)."""
+        return _run_sync(self.patch_async(path, json=json))
 
     def delete(self, path: str) -> dict[str, Any]:
         """Sync DELETE request (convenience wrapper)."""
