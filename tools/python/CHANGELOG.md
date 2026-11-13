@@ -8,6 +8,16 @@
 - Added minimal PATCH client/dispatch support for `update_mission_run` (including a sync `patch()` wrapper matching the existing GET/POST/DELETE convenience methods) and connected offline object-payload regressions through the OpenAI adapter, shared Pydantic validation and real HTTP client.
 - See `../TOOL_DEFINITION_PARITY.md` for the source contract decision, strict-mode limits and pre-existing scheduled-event body limitations. No package version bump or live API mutation is included.
 
+### Added — read-only compositions (AI-3974 subset)
+
+- Restore `bulk_lookup_numbers` using bounded single-number GET lookups; ordered
+  per-item success/error results, duplicate preservation and preflight limits.
+- Restore `get_voice_clone` as a bounded paginated exact-id search, distinguishing
+  exhausted from incomplete scans; no unsupported GET-by-id or id filter.
+- Keep `list_messages`, E911 update and mission step mutation unavailable in this
+  read-only slice. See [contract decisions](../removed-tool-decisions.md), including
+  the newly documented Missions status/metadata PATCH contract. No versions bumped.
+
 ### Removed — retired fine-tuning job management (AI-4102)
 
 - Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.
@@ -34,18 +44,25 @@ Forty-one tool definitions targeted REST routes that do not exist (the API retur
 - **Networking** — `list_network_interfaces` → `/networks/{network_id}/network_interfaces`; `network_id` is required.
 - **Storage** — `create_presigned_url` → `/storage/buckets/{bucket_name}/{key}/presigned_url` with `ttl` (seconds).
 
-**Removed (11) — no REST equivalent exists:**
+**Previously removed phantom REST definitions (10):**
 
 - Cloud Storage bucket/object tools (`list_storage_buckets`, `create_storage_bucket`, `delete_storage_bucket`, `upload_storage_object`, `get_storage_object`). Bucket and object management is S3-compatible; use an S3 client against `https://<region>.telnyxcloudstorage.com` with your Telnyx API key as both access and secret key.
 - `list_messages`, `bulk_lookup_numbers`, `update_e911_address`, `get_voice_clone`, `update_mission_step`.
 
-Tool count: 211 → 201.
+Prior route fixes reduced the tool count from 211 to 201, and retirement of
+fine-tuning job management reduced it to 198. The two read-only compositions
+above bring the current count to 200; their former phantom REST
+routes remain removed. The other three non-storage names remain unavailable
+in this slice; see the contract decisions above for the newer Missions PATCH evidence.
 
 ### Changed
 
 - Tool definitions may set `query_mode: "flat"` to send GET arguments as literal query keys. Used by 10DLC and toll-free verification, whose pagination is not JSON:API. Default behaviour (`page_*` → `page[*]`, `filter_*` → `filter[*]`) is unchanged.
 
 ### Breaking changes
+
+- The former REST definitions above are removed. The two restored names now use
+  the explicitly documented composition contracts, not their former REST routes.
 
 - Removed phantom-route tools in the route-repair section above. Those routes returned 404; the separately retired fine-tuning job-management tools and their migration are documented in their own section.
 - Parameter names changed on the re-pointed tools where the API contract differs (notably `create_10dlc_brand`, `create_e911_address`, `create_toll_free_verification`, `create_voice_clone`, `create_presigned_url`). Agents that read tool schemas at runtime pick up the new shapes automatically.

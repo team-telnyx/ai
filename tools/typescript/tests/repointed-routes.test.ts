@@ -8,9 +8,9 @@ import type { TelnyxAPIClient } from "../src/shared/api-client.js";
 import { TOOL_DEFINITIONS } from "../src/shared/constants.js";
 import { ToolkitCore } from "../src/shared/toolkit-core.js";
 
-const REMOVED = ["list_messages", "bulk_lookup_numbers", "update_e911_address", "get_voice_clone", "update_mission_step"];
+const REMOVED = ["list_messages", "update_e911_address", "update_mission_step"];
 for (const name of REMOVED) {
-  assert.ok(!(name in TOOL_DEFINITIONS), `${name} has no REST route and must stay removed (AI-3974)`);
+  assert.ok(!(name in TOOL_DEFINITIONS), `${name} is not restored by the AI-3974 read-only subset`);
 }
 
 const REPOINTED: Record<string, [string, string]> = {
