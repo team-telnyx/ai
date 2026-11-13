@@ -8,13 +8,18 @@ TypeScript toolkit for integrating Telnyx APIs with AI agent frameworks. Provide
 
 ## Features
 
-- **Zero runtime dependencies** — core uses native `fetch()` (Node 18+)
+- **Zero runtime dependencies** — core uses native `fetch()` (Node 20.20.2+)
 - **18 Telnyx API tools** — messaging, voice, numbers, AI, fax, IoT, verification, lookup
 - **Framework adapters** — OpenAI, Vercel AI SDK, LangChain.js
 - **Permission filtering** — restrict which tools are available to the agent
 - **TypeScript strict mode** — full type safety throughout
 
 ## Installation
+
+**Requires Node.js 20.20.2 or newer**, including REST-only consumers. This minimum
+satisfies the optional S3 SDK requirement and is the patched baseline exercised
+by runtime CI. Users on Node 18/19 or older Node 20 patches must upgrade before
+adopting this unreleased change.
 
 ```bash
 npm install @telnyx/agent-toolkit
@@ -26,6 +31,67 @@ npm install @langchain/core zod       # For LangChain.js
 ```
 
 ## Quick Start
+
+### Optional Cloud Storage (S3, Node 20.20.2+)
+
+Install `npm install @aws-sdk/client-s3@^3.1166.0` alongside the toolkit and
+set `storage: true`. The SDK is an optional peer, loaded only when executing
+an S3 tool; installing it remains optional, but the toolkit requires Node 20.20.2+
+whether or not storage is enabled.
+
+```typescript
+import { TelnyxAgentToolkit } from "@telnyx/agent-toolkit";
+
+const toolkit = new TelnyxAgentToolkit(process.env.TELNYX_API_KEY!, {
+  storage: true,
+  configuration: { actions: { storage: {
+    list_storage_buckets: true,
+    get_storage_object: true,
+  } } },
+});
+const result = await toolkit.core.runTool("get_storage_object", {
+  bucket_name: "my-bucket", key: "reports/hello.txt", region: "us-central-1",
+});
+```
+
+The separate S3 catalog contains `list_storage_buckets`,
+`create_storage_bucket`, `delete_storage_bucket`, `upload_storage_object`, and
+`get_storage_object`. These use AWS SDK v3 commands, never fictitious
+`/v2/storage/buckets` routes. Every call accepts `region` (default
+`us-central-1`): `us-central-1`, `us-east-1`, `us-west-1`, `eu-central-1`,
+`ap-southeast-1`, or `ca-central-1`. Endpoints are fixed to
+`https://<region>.telnyxcloudstorage.com`, independent of `baseUrl`.
+The supplied toolkit API key is both S3 access key and secret key; AWS
+credential providers/profiles are not used. Current SDK checksum defaults are
+retained; older SDK versions are outside this optional peer range. See the
+[quick start](https://developers.telnyx.com/docs/cloud-storage/quick-start) and
+[Node SDK example](https://developers.telnyx.com/docs/cloud-storage/sdk/node).
+
+Bucket operations except list require `bucket_name`; object operations also
+require literal `key` (1–1024 UTF-8 bytes). Keys are never path-normalized:
+slashes, repeated slashes, percent signs, spaces, Unicode, `?`, and `#` remain
+literal SDK keys. Dot-only segments (`.`/`..`) and invalid Unicode are refused.
+Upload additionally requires string `content` and explicit `content_encoding`
+(`utf-8` or canonical padded `base64`); optional `content_type` defaults to
+`application/octet-stream`. Upload **overwrites** an existing object at that key.
+No filename, Buffer/stream, URL fetch, or arbitrary binary serialization is accepted.
+
+Results are JSON strings containing `{ data: ... }` or `{ error: "..." }`.
+Create/delete return `bucket_name`; list returns `buckets` containing `name`
+and a nullable `continuation_token` from a single SDK response. Upload returns
+`bucket_name`, `key`, nullable `etag`, and `size_bytes`. Download adds `content`
+(always base64), `content_encoding: "base64"`, and nullable `content_type`.
+Both directions are capped at **1 MiB decoded**. Downloads are consumed
+incrementally and closed; oversized objects fail without partial output.
+Use a dedicated S3 client for large objects/multipart or listing pagination.
+Delete never empties a bucket or removes objects. Without an actions map,
+`storage: true` advertises all five. Actions filter tool exposure, not direct
+core authority; scope credentials and require agent approval for mutations.
+
+The storage tests are **offline SDK/local contracts**, not authenticated
+Telnyx lifecycle acceptance. Live create/list/upload/read/empty/delete validation,
+regional/checksum compatibility and toolkit-owner sign-off remain separate gates
+requiring explicit scoped authorization. These tests never touch production buckets.
 
 ### OpenAI
 

@@ -16,6 +16,9 @@ on:
           - 'false'
           - 'true'
 
+permissions:
+  contents: read
+
 jobs:
   skills-sync-check:
     name: Check — Skills in sync
@@ -54,9 +57,17 @@ jobs:
       - name: Install Python deps
         working-directory: tools/python
         run: pip install -e ".[dev]"
-      - name: Python unit tests
+      - name: Python unit tests (core, no storage SDK)
         working-directory: tools/python
-        run: pytest --ignore=tests/test_integration.py --ignore=tests/test_integration_ci.py --ignore=tests/test_e2e_telemetry.py -v
+        run: |
+          python -c "import importlib.util; assert importlib.util.find_spec('boto3') is None"
+          pytest --ignore=tests/test_integration.py --ignore=tests/test_integration_ci.py --ignore=tests/test_e2e_telemetry.py -v
+      - name: Python optional storage SDK contracts (offline)
+        working-directory: tools/python
+        run: |
+          pip install -e ".[storage]"
+          python -c "import boto3"
+          pytest tests/test_s3_storage.py tests/test_s3_sdk.py -v
 
       # TypeScript compilation
       - uses: actions/setup-node@v7
@@ -70,7 +81,7 @@ jobs:
         run: npx tsc --noEmit
       - name: TypeScript adapter contract tests
         working-directory: tools/typescript
-        run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts && npx tsx tests/object-payloads.test.ts && npx tsx tests/compositions.test.ts
+        run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts && npx tsx tests/object-payloads.test.ts && npx tsx tests/compositions.test.ts && npx tsx tests/s3-storage.test.ts && npx tsx tests/s3-sdk.test.ts
       - name: Install CLI deps
         working-directory: cli
         run: npm ci
@@ -89,6 +100,51 @@ jobs:
       # Guide structural tests
       - name: Guide structural tests
         run: npx tsx --test tests/guides.test.ts
+
+  toolkit-runtime:
+    name: Toolkit runtime (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.20.2', '22']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install, build and run offline toolkit contracts
+        working-directory: tools/typescript
+        run: |
+          npm ci --engine-strict
+          npm run build
+          npm test
+          sh tests/packed-runtime.sh
+
+  toolkit-unsupported-runtime:
+    name: Toolkit rejects Node 18
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '18'
+      - name: Verify engine-strict rejects the packed toolkit
+        working-directory: tools/typescript
+        run: |
+          fixture=$(mktemp -d)
+          tarball=$(npm pack --pack-destination "$fixture" --silent)
+          cd "$fixture"
+          npm init -y
+          if npm install --engine-strict --omit=optional --ignore-scripts --no-audit --no-fund "$fixture/$tarball" > install.log 2>&1; then
+            cat install.log
+            exit 1
+          fi
+          cat install.log
+          grep -q 'EBADENGINE' install.log
+          grep -q '@telnyx/agent-toolkit' install.log
 
   api-readonly:
     name: API Read-Only Tests

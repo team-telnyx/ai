@@ -138,10 +138,10 @@
     {
       "id": "storage",
       "name": "Cloud Storage",
-      "description": "S3-compatible object storage for media, recordings, and files.",
+      "description": "S3-compatible object storage for media, recordings, and files. Python and TypeScript agent toolkits offer optional S3-backed bucket/object tools with explicit storage opt-in and the AWS S3 SDK; inline objects are limited to 1 MiB.",
       "cli": "AWS_ACCESS_KEY_ID=$TELNYX_API_KEY AWS_SECRET_ACCESS_KEY=$TELNYX_API_KEY aws s3 mb s3://my-bucket --endpoint-url https://us-central-1.telnyxcloudstorage.com",
       "api": "S3-compatible API at https://<region>.telnyxcloudstorage.com (AWS CLI/SDK; Telnyx API key as both access and secret key)",
-      "docs": "https://developers.telnyx.com/docs/storage",
+      "docs": "https://developers.telnyx.com/docs/cloud-storage/quick-start",
       "requires": []
     },
     {

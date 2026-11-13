@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
+from telnyx_agent_toolkit.shared.storage import STORAGE_TOOL_DEFINITIONS
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore
 
@@ -292,6 +293,7 @@ class TelnyxAgentToolkit:
         telemetry_endpoint: str | None = None,
         friction_endpoint: str | None = None,
         friction_enabled: bool | None = None,
+        storage: bool = False,
     ) -> None:
         if isinstance(configuration, dict):
             self._config = TelnyxConfig(**configuration)
@@ -303,14 +305,18 @@ class TelnyxAgentToolkit:
         self._client = TelnyxAPIClient(api_key=api_key, base_url=base_url)
         self._telemetry = TelemetryReporter(endpoint=telemetry_endpoint)
         self._friction = FrictionReporter(endpoint=friction_endpoint, enabled=friction_enabled)
-        self._core = ToolkitCore(client=self._client, telemetry=self._telemetry, friction=self._friction)
+        self._catalog = {**TOOL_DEFINITIONS, **(STORAGE_TOOL_DEFINITIONS if storage else {})}
+        self._core = ToolkitCore(
+            client=self._client, telemetry=self._telemetry,
+            friction=self._friction, storage=storage,
+        )
         self._enabled_tools = self._resolve_enabled_tools()
 
     def _resolve_enabled_tools(self) -> list[ToolDefinition]:
         """Resolve which tools are enabled based on configuration."""
         if not self._config.actions:
             # No config = all tools enabled
-            return list(TOOL_DEFINITIONS.values())
+            return list(self._catalog.values())
 
         enabled: list[ToolDefinition] = []
         seen: set[str] = set()
@@ -321,10 +327,10 @@ class TelnyxAgentToolkit:
                 # Try permission map first (short key like "list" → "list_phone_numbers")
                 tool_name = _PERMISSION_MAP.get((category, action_key))
                 # Fall back to action_key as literal tool name
-                if tool_name is None and action_key in TOOL_DEFINITIONS:
+                if tool_name is None and action_key in self._catalog:
                     tool_name = action_key
-                if tool_name and tool_name in TOOL_DEFINITIONS and tool_name not in seen:
-                    enabled.append(TOOL_DEFINITIONS[tool_name])
+                if tool_name and tool_name in self._catalog and tool_name not in seen:
+                    enabled.append(self._catalog[tool_name])
                     seen.add(tool_name)
         return enabled
 

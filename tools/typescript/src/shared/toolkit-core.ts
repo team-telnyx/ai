@@ -7,6 +7,7 @@ import { TelnyxAPIClient } from "./api-client.js";
 import { TOOL_DEFINITIONS, type ToolDefinition } from "./constants.js";
 import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
+import { STORAGE_TOOL_DEFINITIONS, StorageExecutor } from "./storage.js";
 
 
 // Characters left literal inside a path segment: the RFC 3986 `pchar` set
@@ -33,11 +34,13 @@ export class ToolkitCore {
   private readonly client: TelnyxAPIClient;
   private readonly telemetry: TelemetryReporter;
   private readonly friction: FrictionReporter;
+  private readonly storage?: StorageExecutor;
 
-  constructor(client: TelnyxAPIClient, telemetry?: TelemetryReporter, friction?: FrictionReporter) {
+  constructor(client: TelnyxAPIClient, telemetry?: TelemetryReporter, friction?: FrictionReporter, storage = false) {
     this.client = client;
     this.telemetry = telemetry ?? new TelemetryReporter();
     this.friction = friction ?? new FrictionReporter();
+    this.storage = storage ? new StorageExecutor(client.apiKey) : undefined;
   }
 
   getClient(): TelnyxAPIClient {
@@ -51,6 +54,13 @@ export class ToolkitCore {
     toolName: string,
     args: Record<string, unknown>,
   ): Promise<string> {
+    if (this.storage && Object.hasOwn(STORAGE_TOOL_DEFINITIONS, toolName)) {
+      try {
+        return JSON.stringify(await this.storage.execute(toolName, args));
+      } catch (error) {
+        return JSON.stringify({ error: error instanceof Error ? error.message : String(error) });
+      }
+    }
     const toolDef = TOOL_DEFINITIONS[toolName];
     if (!toolDef) {
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });

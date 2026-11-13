@@ -11,6 +11,7 @@ from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.compositions import execute_composition
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
+from telnyx_agent_toolkit.shared.storage import STORAGE_TOOL_DEFINITIONS, StorageExecutor
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 
 # Characters left literal inside a path segment: the RFC 3986 `pchar` set
@@ -41,10 +42,12 @@ class ToolkitCore:
         client: TelnyxAPIClient,
         telemetry: TelemetryReporter | None = None,
         friction: FrictionReporter | None = None,
+        storage: bool = False,
     ) -> None:
         self._client = client
         self._telemetry = telemetry or TelemetryReporter()
         self._friction = friction or FrictionReporter()
+        self._storage = StorageExecutor(client.api_key) if storage else None
 
     @property
     def client(self) -> TelnyxAPIClient:
@@ -52,6 +55,12 @@ class ToolkitCore:
 
     async def run_tool_async(self, tool_name: str, arguments: dict[str, Any]) -> str:
         """Execute a tool by name with the given arguments. Returns JSON string."""
+        if self._storage is not None and tool_name in STORAGE_TOOL_DEFINITIONS:
+            try:
+                return json.dumps(await self._storage.execute(tool_name, arguments))
+            except Exception as exc:
+                # S3 failures must not be reported as fictitious REST routes.
+                return json.dumps({"error": str(exc)})
         tool_def = TOOL_DEFINITIONS.get(tool_name)
         if tool_def is None:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})

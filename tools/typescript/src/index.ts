@@ -23,6 +23,7 @@ import {
   type ToolDefinition,
 } from "./shared/constants.js";
 import { ToolkitCore } from "./shared/toolkit-core.js";
+import { STORAGE_TOOL_DEFINITIONS } from "./shared/storage.js";
 import { FrictionReporter } from "./shared/friction.js";
 import { TelemetryReporter } from "./shared/telemetry.js";
 import { OpenAIToolkit } from "./openai/toolkit.js";
@@ -40,6 +41,7 @@ export interface TelnyxConfig {
 }
 
 export interface TelnyxAgentToolkitOptions {
+  storage?: boolean;
   configuration?: TelnyxConfig;
   baseUrl?: string;
   telemetryEndpoint?: string;
@@ -68,6 +70,7 @@ export class TelnyxAgentToolkit {
   private readonly client: TelnyxAPIClient;
   private readonly _core: ToolkitCore;
   private readonly _enabledTools: ToolDefinition[];
+  private readonly catalog: Record<string, ToolDefinition>;
 
   constructor(apiKey: string, options: TelnyxAgentToolkitOptions = {}) {
     this.config = options.configuration ?? {};
@@ -76,14 +79,15 @@ export class TelnyxAgentToolkit {
     });
     const telemetry = new TelemetryReporter(options.telemetryEndpoint);
     const friction = new FrictionReporter(options.frictionEndpoint, options.frictionEnabled);
-    this._core = new ToolkitCore(this.client, telemetry, friction);
+    this.catalog = { ...TOOL_DEFINITIONS, ...(options.storage ? STORAGE_TOOL_DEFINITIONS : {}) };
+    this._core = new ToolkitCore(this.client, telemetry, friction, options.storage);
     this._enabledTools = this.resolveEnabledTools();
   }
 
   private resolveEnabledTools(): ToolDefinition[] {
     const actions = this.config.actions;
     if (!actions || Object.keys(actions).length === 0) {
-      return Object.values(TOOL_DEFINITIONS);
+      return Object.values(this.catalog);
     }
 
     const enabled: ToolDefinition[] = [];
@@ -95,12 +99,12 @@ export class TelnyxAgentToolkit {
 
         let toolName = PERMISSION_MAP[`${category}.${actionKey}`];
 
-        if (!toolName && actionKey in TOOL_DEFINITIONS) {
+        if (!toolName && actionKey in this.catalog) {
           toolName = actionKey;
         }
 
-        if (toolName && toolName in TOOL_DEFINITIONS && !seen.has(toolName)) {
-          enabled.push(TOOL_DEFINITIONS[toolName]);
+        if (toolName && toolName in this.catalog && !seen.has(toolName)) {
+          enabled.push(this.catalog[toolName]);
           seen.add(toolName);
         }
       }
