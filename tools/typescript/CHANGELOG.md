@@ -23,6 +23,7 @@
 - **Verify dispatch:** `verify_phone` preserves its existing arguments and omitted-type SMS default, but now selects POST `/verifications/sms`, `/verifications/call`, or `/verifications/whatsapp`. Routing-only `type` is not sent in the body. Invalid/unsupported types return a local JSON error without HTTP; no flashcall option was added. The deprecated collection POST silently selected SMS even when callers requested another channel.
 - **Breaking SIM argument rename:** `get_sim_card_data_usage` now requires `filter_sim_card_id` instead of `sim_card_id` so the request sends `filter[sim_card_id]`. There is no legacy-key alias.
 - **MDR schema migration:** `create_usage_report` declares arrays for `directions` and `record_types`, e.g. `["inbound"]` and `["completed"]`, instead of scalar strings. Existing enum strings are unchanged; deployed enum casing/scalar coercion is not qualified.
+- **MDR adapter validation:** the shared Zod converter preserves string-array `items.enum`, so Vercel AI and LangChain schemas reject invalid direction/record-type entries while retaining optional filters and valid arrays.
 - See [migration notes](../MIGRATION.md) for before/after arguments and Verify behavior. These corrections are backed by inspected service source, pinned public OpenAPI and intercepted-client tests, **not** authenticated API execution or owner sign-off. Five other method/path spec gaps remain tracked under AI-4013; full API-contract reconciliation and release approval are still outstanding.
 
 ### Breaking — minimum Node runtime

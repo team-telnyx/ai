@@ -117,4 +117,18 @@ assert.equal(
   "ordinary enum behavior must remain enforced",
 );
 
-console.log("OpenAI and shared Zod anyOf adapter tests passed");
+// PR #599 P2: both framework adapters use this shared schema converter.
+const usageSchema = buildToolParametersZodSchema(z, TOOL_DEFINITIONS.create_usage_report.parameters);
+const dates = { start_date: "2026-11-01", end_date: "2026-11-02" };
+assert.ok(usageSchema.safeParse(dates).success, "report filters remain optional");
+for (const [field, invalid] of [["directions", "sideways"], ["record_types", "unknown"]]) {
+  const allowed = TOOL_DEFINITIONS.create_usage_report.parameters.properties[field].items!.enum as string[];
+  assert.ok(usageSchema.safeParse({ ...dates, [field]: allowed }).success);
+  assert.ok(usageSchema.safeParse({ ...dates, [field]: [] }).success);
+  for (const value of [[invalid], [allowed[0], invalid], allowed[0], [1], [null]]) {
+    assert.equal(usageSchema.safeParse({ ...dates, [field]: value }).success, false,
+      `${field} must reject invalid enum items and non-array/non-string input: ${JSON.stringify(value)}`);
+  }
+}
+
+console.log("OpenAI and shared Zod anyOf/array-enum adapter tests passed");
