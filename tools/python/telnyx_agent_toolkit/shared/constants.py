@@ -568,7 +568,7 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
     },
     "verify_phone": {
         "name": "verify_phone",
-        "description": "Start a phone number verification (send a verification code via SMS or call).",
+        "description": "Start a phone number verification (send a verification code via SMS, call, or WhatsApp).",
         "parameters": {
             "type": "object",
             "properties": {
@@ -595,7 +595,7 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
             "required": ["phone_number", "verify_profile_id"],
         },
         "method": "POST",
-        "path": "/verifications",
+        "path": "/verifications/{type}",
         "category": "verify",
     },
     "verify_code": {
@@ -3390,12 +3390,12 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
         "parameters": {
             "type": "object",
             "properties": {
-                "sim_card_id": {
+                "filter_sim_card_id": {
                     "type": "string",
                     "description": "The ID of the SIM card.",
                 },
             },
-            "required": ["sim_card_id"],
+            "required": ["filter_sim_card_id"],
         },
         "method": "GET",
         "path": "/network_daily_data_usage",
@@ -3936,14 +3936,14 @@ TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
                     "description": "End date for the report (ISO 8601 format).",
                 },
                 "directions": {
-                    "type": "string",
+                    "type": "array",
                     "description": "Filter by direction.",
-                    "enum": ["inbound", "outbound"],
+                    "items": {"type": "string", "enum": ["inbound", "outbound"]},
                 },
                 "record_types": {
-                    "type": "string",
+                    "type": "array",
                     "description": "Filter by record type.",
-                    "enum": ["incomplete", "completed", "errors"],
+                    "items": {"type": "string", "enum": ["incomplete", "completed", "errors"]},
                 },
             },
             "required": ["start_date", "end_date"],

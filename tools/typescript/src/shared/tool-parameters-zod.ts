@@ -23,9 +23,11 @@ function jsonSchemaPropertyToZod(
   if (Array.isArray(schemaType)) {
     zodType = z.union([z.string(), z.array(z.string())]);
   } else if (schemaType === "array") {
-    const itemsType =
-      (schema.items as Record<string, string> | undefined)?.type ?? "string";
-    if (itemsType === "object") {
+    const items = schema.items;
+    const itemsType = items?.type ?? "string";
+    if (itemsType === "string" && Array.isArray(items?.enum)) {
+      zodType = z.array(z.enum(items.enum as [string, ...string[]]));
+    } else if (itemsType === "object") {
       zodType = z.array(z.record(z.string(), z.unknown()));
     } else {
       zodType = z.array(z.string());

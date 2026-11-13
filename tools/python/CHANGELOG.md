@@ -24,6 +24,13 @@
 - Upload accepts explicit UTF-8 or canonical base64; downloads return base64. Inline objects are limited to 1 MiB, streams are closed, and dot-only key segments are refused without normalization.
 - Offline SDK contracts are tested; authenticated bucket lifecycle validation and toolkit-owner sign-off remain separate release gates.
 
+### AI-4013 — source-backed contract corrections and migration
+
+- **Verify dispatch:** `verify_phone` preserves its existing arguments and omitted-type SMS default, but now selects POST `/verifications/sms`, `/verifications/call`, or `/verifications/whatsapp`. Routing-only `type` is not sent in the body. Invalid/unsupported types return a local JSON error without HTTP; no flashcall option was added. The deprecated collection POST silently selected SMS even when callers requested another channel.
+- **Breaking SIM argument rename:** `get_sim_card_data_usage` now requires `filter_sim_card_id` instead of `sim_card_id` so the request sends `filter[sim_card_id]`. There is no legacy-key alias.
+- **MDR schema migration:** `create_usage_report` declares arrays for `directions` and `record_types`, e.g. `["inbound"]` and `["completed"]`, instead of scalar strings. Existing enum strings are unchanged; deployed enum casing/scalar coercion is not qualified.
+- See [migration notes](../MIGRATION.md) for before/after arguments and Verify behavior. These corrections are backed by inspected service source, pinned public OpenAPI and intercepted-client tests, **not** authenticated API execution or owner sign-off. Five other method/path spec gaps remain tracked under AI-4013; full API-contract reconciliation and release approval are still outstanding.
+
 ### Removed — retired fine-tuning job management (AI-4102)
 
 - Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.

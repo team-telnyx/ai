@@ -66,6 +66,14 @@ export class ToolkitCore {
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
+    // Reject routing input before telemetry/friction as well as API dispatch.
+    if (toolName === "verify_phone") {
+      const channel = Object.prototype.hasOwnProperty.call(args, "type") ? args.type : "sms";
+      if (typeof channel !== "string" || !["sms", "call", "whatsapp"].includes(channel)) {
+        return JSON.stringify({ error: "verify_phone type must be one of: sms, call, whatsapp" });
+      }
+    }
+
     const start = performance.now();
     try {
       const result = await this.executeTool(toolDef, args);
@@ -158,6 +166,12 @@ export class ToolkitCore {
       if (v === null || v === undefined) continue;
       const key = k === "from_" ? "from" : k;
       normalized[key] = v;
+    }
+
+    // The legacy collection POST ignores body type and always sends SMS.
+    // runTool validated the original input; only omission defaults.
+    if (toolDef.name === "verify_phone") {
+      normalized.type = Object.prototype.hasOwnProperty.call(args, "type") ? args.type : "sms";
     }
 
     // Handle path interpolation (e.g. /number_lookup/{phone_number})

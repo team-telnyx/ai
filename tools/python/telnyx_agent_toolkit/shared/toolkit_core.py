@@ -65,6 +65,12 @@ class ToolkitCore:
         if tool_def is None:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
+        # Reject routing input before telemetry/friction as well as API dispatch.
+        if tool_name == "verify_phone":
+            channel = arguments.get("type", "sms")
+            if not isinstance(channel, str) or channel not in ("sms", "call", "whatsapp"):
+                return json.dumps({"error": "verify_phone type must be one of: sms, call, whatsapp"})
+
         start = time.monotonic()
         try:
             result = await self._execute_tool(tool_def, arguments)
@@ -123,6 +129,11 @@ class ToolkitCore:
                 continue
             key = "from" if k == "from_" else k
             normalized[key] = v
+
+        # The legacy collection POST ignores body type and always sends SMS.
+        # run_tool_async validated the original input; only omission defaults.
+        if tool_def["name"] == "verify_phone":
+            normalized["type"] = args.get("type", "sms")
 
         # Handle path interpolation (e.g. /number_lookup/{phone_number})
         if "{" in path:
