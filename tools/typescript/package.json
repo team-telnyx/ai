@@ -1,7 +1,7 @@
 {
   "name": "@telnyx/agent-toolkit",
   "version": "0.3.0",
-  "description": "Telnyx Agent Toolkit for TypeScript \u2014 tools for OpenAI, Vercel AI SDK, and LangChain.js",
+  "description": "Telnyx Agent Toolkit for TypeScript — tools for OpenAI, Vercel AI SDK, and LangChain.js",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts && tsx tests/repointed-routes.test.ts && tsx tests/object-payloads.test.ts && tsx tests/compositions.test.ts",
+    "test": "tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts && tsx tests/repointed-routes.test.ts && tsx tests/object-payloads.test.ts && tsx tests/compositions.test.ts && tsx tests/s3-storage.test.ts && tsx tests/s3-sdk.test.ts",
     "test:parity": "tsx tests/definition-parity.test.ts",
     "clean": "rm -rf dist"
   },
@@ -56,12 +56,16 @@
     "url": "https://github.com/team-telnyx/ai/issues"
   },
   "peerDependencies": {
-    "openai": ">=4.0.0",
+    "@aws-sdk/client-s3": "^3.1166.0",
+    "@langchain/core": ">=0.2.0",
     "ai": ">=3.0.0",
-    "zod": ">=3.0.0",
-    "@langchain/core": ">=0.2.0"
+    "openai": ">=4.0.0",
+    "zod": ">=3.0.0"
   },
   "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
     "openai": {
       "optional": true
     },
@@ -76,9 +80,10 @@
     }
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@aws-sdk/client-s3": "^3.1166.0",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
     "zod": "^4.3.6"
   },
   "engines": {

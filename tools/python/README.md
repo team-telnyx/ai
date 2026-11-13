@@ -27,6 +27,70 @@ pip install telnyx-agent-toolkit[all]
 
 ## Quick Start
 
+### Optional Cloud Storage (S3)
+
+Install `pip install 'telnyx-agent-toolkit[storage]'` (also included in `[all]`).
+The core package does not import or require boto3 unless an S3 tool is executed.
+Enable the separate S3 catalog explicitly; the REST catalog is unchanged:
+
+```python
+import os
+from telnyx_agent_toolkit import TelnyxAgentToolkit
+
+toolkit = TelnyxAgentToolkit(
+    api_key=os.environ["TELNYX_API_KEY"],
+    storage=True,
+    configuration={"actions": {"storage": {
+        "list_storage_buckets": True,
+        "get_storage_object": True,
+    }}},
+)
+result = toolkit.core.run_tool("get_storage_object", {
+    "bucket_name": "my-bucket", "key": "reports/hello.txt",
+    "region": "us-central-1",
+})
+```
+
+The five tools are `list_storage_buckets`, `create_storage_bucket`,
+`delete_storage_bucket`, `upload_storage_object`, and `get_storage_object`.
+They use boto3, not `/v2/storage/buckets` REST routes. Every call accepts
+`region` (default `us-central-1`): `us-central-1`, `us-east-1`, `us-west-1`,
+`eu-central-1`, `ap-southeast-1`, or `ca-central-1`. The endpoint is fixed to
+`https://<region>.telnyxcloudstorage.com`, independent of `base_url`.
+The supplied toolkit API key is both S3 access key and secret key; AWS
+credential environment/profile discovery is not used. Current SDK checksum
+defaults are retained. See the official [quick start](https://developers.telnyx.com/docs/cloud-storage/quick-start)
+and [Python SDK example](https://developers.telnyx.com/docs/cloud-storage/sdk/python).
+
+Bucket operations except list require `bucket_name`; object operations also
+require literal `key` (1–1024 UTF-8 bytes). Keys are never path-normalized:
+slashes, repeated slashes, percent signs, spaces, Unicode, `?`, and `#` are
+passed as literal keys to the SDK. Dot-only segments (`.`/`..`) are refused.
+Uploads additionally require string `content` and explicit `content_encoding`
+(`utf-8` or canonical padded `base64`); optional `content_type` defaults to
+`application/octet-stream`. Uploading an existing key **overwrites** that object.
+No local filename, arbitrary bytes object, URL fetch, or stream is accepted.
+
+All results are JSON strings: `{ "data": ... }` or `{ "error": "..." }`.
+Create/delete return `bucket_name`; list returns `buckets` containing `name`
+and a nullable `continuation_token` from a single SDK response. Upload returns
+`bucket_name`, `key`, nullable `etag`, and `size_bytes`. Download returns
+those fields plus `content` (always base64), `content_encoding: "base64"`,
+and nullable `content_type`. Both directions are capped at **1 MiB decoded**;
+larger downloads fail without returning partial content and close the body.
+Use a dedicated S3 client for large objects/multipart or listing pagination.
+Missing SDKs produce an actionable install error; SDK failures remain errors.
+Delete does not empty a bucket or remove objects. `storage=True` with no action
+configuration advertises all five; actions filter the advertised tools, not
+the authority of direct core calls. Use appropriately scoped credentials and
+explicit agent approval for writes/deletes.
+
+Tests `test_s3_storage.py` and optional `test_s3_sdk.py` are **offline SDK/local
+contracts**, not authenticated Telnyx acceptance. Live create/list/upload/read/
+empty/delete lifecycle validation, region/checksum compatibility, and toolkit-owner
+sign-off remain required under separately scoped authorization. No production
+bucket lifecycle is run by these tests.
+
 ### OpenAI
 
 ```python

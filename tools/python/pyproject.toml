@@ -31,10 +31,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+storage = ["boto3>=1.36.0,<2"]
 openai = ["openai>=1.0.0"]
 langchain = ["langchain-core>=0.3.0"]
 crewai = ["crewai>=0.80.0"]
 all = [
+    "boto3>=1.36.0,<2",
     "openai>=1.0.0",
     "langchain-core>=0.3.0",
     "crewai>=0.80.0",

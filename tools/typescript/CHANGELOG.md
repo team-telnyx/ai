@@ -18,6 +18,12 @@
   read-only slice. See [contract decisions](../removed-tool-decisions.md), including
   the newly documented Missions status/metadata PATCH contract. No versions bumped.
 
+### Added — optional S3 storage tools (AI-3950)
+
+- Opt-in `storage: true` adds the five bucket/object tools via optional `@aws-sdk/client-s3` (Node 20+), not the REST catalog. Regional endpoints and credentials follow the Telnyx S3 contract.
+- Upload accepts explicit UTF-8 or canonical base64; downloads return base64. Inline objects are limited to 1 MiB, streams are closed, and dot-only key segments are refused without normalization.
+- Offline SDK contracts are tested; authenticated bucket lifecycle validation and toolkit-owner sign-off remain separate release gates.
+
 ### Removed — retired fine-tuning job management (AI-4102)
 
 - Removed `list_fine_tuning_jobs`, `create_fine_tuning_job` and `get_fine_tuning_job`, and their action mappings where present. These target the retired public `/ai/fine_tuning/jobs` API, whose reference was removed in `team-telnyx/developer-docs-mintlify#2146` (AI-3934). The current public OpenAPI spec no longer publishes these operations.

@@ -54,9 +54,17 @@ jobs:
       - name: Install Python deps
         working-directory: tools/python
         run: pip install -e ".[dev]"
-      - name: Python unit tests
+      - name: Python unit tests (core, no storage SDK)
         working-directory: tools/python
-        run: pytest --ignore=tests/test_integration.py --ignore=tests/test_integration_ci.py --ignore=tests/test_e2e_telemetry.py -v
+        run: |
+          python -c "import importlib.util; assert importlib.util.find_spec('boto3') is None"
+          pytest --ignore=tests/test_integration.py --ignore=tests/test_integration_ci.py --ignore=tests/test_e2e_telemetry.py -v
+      - name: Python optional storage SDK contracts (offline)
+        working-directory: tools/python
+        run: |
+          pip install -e ".[storage]"
+          python -c "import boto3"
+          pytest tests/test_s3_storage.py tests/test_s3_sdk.py -v
 
       # TypeScript compilation
       - uses: actions/setup-node@v7
@@ -70,7 +78,7 @@ jobs:
         run: npx tsc --noEmit
       - name: TypeScript adapter contract tests
         working-directory: tools/typescript
-        run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts && npx tsx tests/object-payloads.test.ts && npx tsx tests/compositions.test.ts
+        run: npx tsx tests/rcs-call-control.test.ts && npx tsx tests/adapter-anyof.test.ts && npx tsx tests/object-payloads.test.ts && npx tsx tests/compositions.test.ts && npx tsx tests/s3-storage.test.ts && npx tsx tests/s3-sdk.test.ts
       - name: Install CLI deps
         working-directory: cli
         run: npm ci
