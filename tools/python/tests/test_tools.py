@@ -378,7 +378,7 @@ class TestToolkitCore:
     @respx.mock
     @pytest.mark.asyncio
     async def test_verify_phone(self, core: ToolkitCore) -> None:
-        respx.post("https://api.telnyx.com/v2/verifications").mock(
+        respx.post("https://api.telnyx.com/v2/verifications/sms").mock(
             return_value=httpx.Response(200, json={
                 "data": {"id": "ver-123", "status": "pending"},
             })

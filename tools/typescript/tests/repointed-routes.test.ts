@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 
-import type { TelnyxAPIClient } from "../src/shared/api-client.js";
+import { TelnyxAPIClient } from "../src/shared/api-client.js";
 import { TOOL_DEFINITIONS } from "../src/shared/constants.js";
 import { ToolkitCore } from "../src/shared/toolkit-core.js";
 
@@ -88,6 +88,86 @@ async function assertExecutor(): Promise<void> {
   await core.runTool("list_network_interfaces", { network_id: "net-1", page_size: 1 });
   assert.equal(client.requests.at(-1)?.path, "/networks/net-1/network_interfaces");
   assert.deepEqual(client.requests.at(-1)?.value, { "page[size]": 1 });
+}
+
+// AI-4013: the wireless service scopes usage through filter.sim_card_id.
+{
+  const tool = TOOL_DEFINITIONS.get_sim_card_data_usage;
+  assert.ok(tool.parameters.required.includes("filter_sim_card_id"));
+  assert.equal(tool.parameters.properties.sim_card_id, undefined);
+  const client = new MockClient();
+  await new ToolkitCore(client as unknown as TelnyxAPIClient).runTool(
+    "get_sim_card_data_usage", { filter_sim_card_id: "sim-1" },
+  );
+  assert.deepEqual(client.requests.at(-1), {
+    method: "GET", path: "/network_daily_data_usage", value: { "filter[sim_card_id]": "sim-1" },
+  });
+}
+
+// AI-4013: MDR report filter collections must remain JSON arrays.
+{
+  const props = TOOL_DEFINITIONS.create_usage_report.parameters.properties;
+  for (const name of ["directions", "record_types"]) {
+    assert.equal(props[name].type, "array");
+    assert.equal(props[name].items?.type, "string");
+    assert.equal(props[name].enum, undefined);
+  }
+  const client = new MockClient();
+  const args = { start_date: "2026-11-01T00:00:00Z", end_date: "2026-11-02T00:00:00Z",
+    directions: ["inbound", "outbound"], record_types: ["completed"] };
+  await new ToolkitCore(client as unknown as TelnyxAPIClient).runTool("create_usage_report", args);
+  assert.deepEqual(client.requests.at(-1), {
+    method: "POST", path: "/reports/batch_mdr_reports", value: args,
+  });
+}
+
+// AI-4013: route selection must reach the real client's serialized HTTP body.
+// Source: messaging-monorepo 35a466e6 public/verifications.py:68-97,161-165;
+// schemas/verifications.py:34-51 (type is not a request-body field).
+{
+  const tool = TOOL_DEFINITIONS.verify_phone;
+  assert.equal(tool.method, "POST");
+  assert.equal(tool.path, "/verifications/{type}");
+  assert.deepEqual(tool.parameters.required, ["phone_number", "verify_profile_id"]);
+  assert.deepEqual(Object.keys(tool.parameters.properties).sort(),
+    ["phone_number", "verify_profile_id", "type", "timeout_secs"].sort());
+  assert.equal(tool.parameters.properties.type.type, "string");
+  assert.deepEqual(tool.parameters.properties.type.enum, ["sms", "call", "whatsapp"]);
+  assert.equal(tool.parameters.properties.type.default, "sms");
+
+  const originalFetch = globalThis.fetch;
+  const requests: { url: string; method?: string; body: unknown }[] = [];
+  globalThis.fetch = async (input, init) => {
+    requests.push({ url: String(input), method: init?.method, body: JSON.parse(String(init?.body)) });
+    return new Response(JSON.stringify({ data: { id: "verification-1" } }), { status: 200 });
+  };
+  try {
+    const core = new ToolkitCore(new TelnyxAPIClient("test-key"));
+    const body = { phone_number: "+15555550123", verify_profile_id: "profile-1", timeout_secs: 120 };
+    for (const channel of ["sms", "call", "whatsapp", undefined]) {
+      const args = { ...body, ...(channel === undefined ? {} : { type: channel }) };
+      const original = { ...args };
+      const count = requests.length;
+      assert.deepEqual(JSON.parse(await core.runTool("verify_phone", args)), { data: { id: "verification-1" } });
+      assert.equal(requests.length, count + 1);
+      assert.deepEqual(requests.at(-1), {
+        url: `https://api.telnyx.com/v2/verifications/${channel ?? "sms"}`, method: "POST", body,
+      });
+      assert.deepEqual(args, original);
+    }
+    let reportingCalls = 0;
+    const reporting = core as unknown as { reportTelemetry: () => void; reportFriction: () => void };
+    reporting.reportTelemetry = reporting.reportFriction = () => { reportingCalls += 1; };
+    for (const type of ["flashcall", "email", "SMS", "", "../sms", "sms?x=1", null, undefined, 1, false, [], {}]) {
+      const count = requests.length;
+      const result = JSON.parse(await core.runTool("verify_phone", { ...body, type }));
+      assert.match(result.error, /type must be one of: sms, call, whatsapp/);
+      assert.equal(requests.length, count, "invalid type must have zero HTTP requests");
+      assert.equal(reportingCalls, 0, "invalid type must return before telemetry/friction");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 }
 
 await assertExecutor();

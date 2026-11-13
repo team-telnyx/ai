@@ -2,6 +2,7 @@
 path they rely on."""
 
 import json
+from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -117,6 +118,40 @@ class TestFlatQueryMode:
         assert json.loads(result) == {"data": []}
 
 
+@respx.mock
+@pytest.mark.asyncio
+async def test_sim_usage_scopes_the_requested_sim(core: ToolkitCore) -> None:
+    # AI-4013: wireless-manager's validator reads filter.sim_card_id, not a
+    # top-level sim_card_id (6063c227, NetworkDailyDataUsageIndexValidator).
+    tool = TOOL_DEFINITIONS["get_sim_card_data_usage"]
+    assert "filter_sim_card_id" in tool["parameters"]["required"]
+    assert "sim_card_id" not in tool["parameters"]["properties"]
+    route = respx.get("https://api.telnyx.com/v2/network_daily_data_usage").mock(
+        return_value=httpx.Response(200, json={"data": []})
+    )
+    await core.run_tool_async("get_sim_card_data_usage", {"filter_sim_card_id": "sim-1"})
+    assert dict(route.calls.last.request.url.params) == {"filter[sim_card_id]": "sim-1"}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_mdr_report_filters_are_arrays(core: ToolkitCore) -> None:
+    # AI-4013: MdrPostDetailReportRequest at tdamonorepo 574700f9 uses
+    # EnumSet<Direction> and EnumSet<RecordType>, not scalar strings.
+    props = TOOL_DEFINITIONS["create_usage_report"]["parameters"]["properties"]
+    for name in ("directions", "record_types"):
+        assert props[name]["type"] == "array"
+        assert props[name]["items"]["type"] == "string"
+        assert "enum" not in props[name]
+    route = respx.post("https://api.telnyx.com/v2/reports/batch_mdr_reports").mock(
+        return_value=httpx.Response(200, json={"data": {"id": "report-1"}})
+    )
+    args = {"start_date": "2026-11-01T00:00:00Z", "end_date": "2026-11-02T00:00:00Z",
+            "directions": ["inbound", "outbound"], "record_types": ["completed"]}
+    await core.run_tool_async("create_usage_report", args)
+    assert json.loads(route.calls.last.request.content) == args
+
+
 def test_text_to_speech_cannot_request_binary_audio() -> None:
     """The API defaults to binary audio and the toolkit parses JSON, so a tool
     call must always send output_type=base64_output (Codex review on #591)."""
@@ -125,3 +160,60 @@ def test_text_to_speech_cannot_request_binary_audio() -> None:
     assert "output_type" in tool["parameters"]["required"]
     assert out["enum"] == ["base64_output"]
     assert "enum" not in tool["parameters"]["properties"]["provider"]  # provider list is open-ended
+
+
+# AI-4013: messaging-monorepo 35a466e6, public/verifications.py:68-97,
+# 161-165 and schemas/verifications.py:34-51. The legacy route ignores body type.
+def test_verify_schema_preserves_optional_sms_default() -> None:
+    tool = TOOL_DEFINITIONS["verify_phone"]
+    assert tool["method"] == "POST"
+    assert tool["path"] == "/verifications/{type}"
+    assert tool["parameters"]["required"] == ["phone_number", "verify_profile_id"]
+    assert set(tool["parameters"]["properties"]) == {
+        "phone_number", "verify_profile_id", "type", "timeout_secs"
+    }
+    channel = tool["parameters"]["properties"]["type"]
+    assert channel["type"] == "string"
+    assert channel["enum"] == ["sms", "call", "whatsapp"]
+    assert channel["default"] == "sms"
+
+
+@respx.mock
+@pytest.mark.asyncio
+@pytest.mark.parametrize("channel", ["sms", "call", "whatsapp", None])
+async def test_verify_channel_dispatch_and_actual_body(channel: str | None) -> None:
+    body = {"phone_number": "+15555550123", "verify_profile_id": "profile-1", "timeout_secs": 120}
+    args = dict(body)
+    if channel is not None:
+        args["type"] = channel
+    original = dict(args)
+    route = respx.post(f"https://api.telnyx.com/v2/verifications/{channel or 'sms'}").mock(
+        return_value=httpx.Response(200, json={"data": {"id": "verification-1"}})
+    )
+    core = ToolkitCore(TelnyxAPIClient(api_key="test-key"))
+    result = json.loads(await core.run_tool_async("verify_phone", args))
+    assert result == {"data": {"id": "verification-1"}}
+    assert route.call_count == 1
+    request = route.calls.last.request
+    assert request.method == "POST"
+    assert not request.url.query
+    assert json.loads(request.content) == body
+    assert args == original
+
+
+@respx.mock
+@pytest.mark.asyncio
+@pytest.mark.parametrize("channel", ["flashcall", "email", "SMS", "", "../sms", "sms?x=1", None, 1, False, [], {}])
+async def test_invalid_verify_channel_has_zero_http(channel: object) -> None:
+    # Catch any transport attempt, including an accidental legacy SMS fallback.
+    route = respx.route().mock(return_value=httpx.Response(200, json={"data": {}}))
+    telemetry, friction = Mock(), Mock()
+    core = ToolkitCore(TelnyxAPIClient(api_key="test-key"), telemetry=telemetry, friction=friction)
+    result = json.loads(await core.run_tool_async("verify_phone", {
+        "phone_number": "+15555550123", "verify_profile_id": "profile-1", "type": channel,
+    }))
+    assert "error" in result
+    assert "type must be one of: sms, call, whatsapp" in result["error"]
+    assert route.call_count == 0
+    telemetry.report.assert_not_called()
+    friction.report.assert_not_called()
