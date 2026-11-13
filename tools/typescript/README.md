@@ -1,5 +1,9 @@
 # @telnyx/agent-toolkit (TypeScript)
 
+Read-only composed tools `bulk_lookup_numbers` and `get_voice_clone` are available.
+See [removed-tool decisions and limits](../removed-tool-decisions.md) for exact result
+semantics, charging/bounds, and the three tools not restored in this slice.
+
 TypeScript toolkit for integrating Telnyx APIs with AI agent frameworks. Provides 18 pre-built tools for messaging, voice, AI, numbers, fax, IoT, and more.
 
 ## Features

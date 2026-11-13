@@ -23,9 +23,77 @@ class ToolDefinition(TypedDict):
     # "flat": send GET args as literal query keys (no page[]/filter[] rewriting).
     # Used by endpoints with non-JSON:API pagination such as 10DLC and toll-free verification.
     query_mode: NotRequired[Literal["flat"]]
+    # For compositions, method/path declare the underlying REST dependency.
+    execution: NotRequired[Literal["bulk_lookup_numbers", "get_voice_clone"]]
 
 
 TOOL_DEFINITIONS: dict[str, ToolDefinition] = {
+    "get_voice_clone": {
+        "name": "get_voice_clone",
+        "description": "Find a voice clone by exact id in paginated account voice clone listings. Returns the unchanged clone in data; exhaustion returns data null/status not_found, scan limit returns data null/status incomplete. Not a snapshot or direct GET-by-id.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Exact voice clone ID to find."
+                },
+                "page_size": {
+                    "type": "integer",
+                    "description": "Number of clones per page, from 1 to 250.",
+                    "default": 100
+                },
+                "max_pages": {
+                    "type": "integer",
+                    "description": "Maximum pages to scan, from 1 to 100.",
+                    "default": 20
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "method": "GET",
+        "path": "/voice_clones",
+        "category": "voice",
+        "execution": "get_voice_clone"
+    },
+    "bulk_lookup_numbers": {
+        "name": "bulk_lookup_numbers",
+        "description": "Look up 1-100 phone numbers with bounded concurrency (1-10, default 5). Each GET lookup may incur charges. Returns ordered results with phone_number and response or error; duplicates are separate lookups and partial failures are retained.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "phone_numbers": {
+                    "type": "array",
+                    "description": "Phone numbers in E.164 format; 1-100 entries, duplicates preserved.",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Optional lookup type applied to every number.",
+                    "enum": [
+                        "carrier",
+                        "caller-name"
+                    ]
+                },
+                "concurrency": {
+                    "type": "integer",
+                    "description": "Maximum concurrent requests, from 1 to 10.",
+                    "default": 5
+                }
+            },
+            "required": [
+                "phone_numbers"
+            ]
+        },
+        "method": "GET",
+        "path": "/number_lookup/{phone_number}",
+        "category": "lookup",
+        "execution": "bulk_lookup_numbers"
+    },
     # ─── Tier 1: Messaging & Numbers ──────────────────────────────
     "send_sms": {
         "name": "send_sms",

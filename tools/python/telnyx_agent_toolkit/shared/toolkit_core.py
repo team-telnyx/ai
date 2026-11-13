@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import quote
 
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
+from telnyx_agent_toolkit.shared.compositions import execute_composition
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
 from telnyx_agent_toolkit.shared.friction import FrictionReporter
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
@@ -94,6 +95,15 @@ class ToolkitCore:
 
     async def _execute_tool(self, tool_def: ToolDefinition, args: dict[str, Any]) -> dict[str, Any]:
         """Execute a single tool definition against the API."""
+        if execution := tool_def.get("execution"):
+            async def read_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+                dependency = TOOL_DEFINITIONS[name]
+                if dependency["method"] != "GET" or dependency.get("execution"):
+                    raise ValueError("Compositions require atomic GET dependencies")
+                return await self._execute_tool(dependency, arguments)
+
+            return await execute_composition(execution, args, read_tool)
+
         method = tool_def["method"]
         path = tool_def["path"]
 

@@ -29,9 +29,77 @@ export interface ToolDefinition {
   category: string;
   /** "flat": send GET args as literal query keys (no page[]/filter[] rewriting). */
   query_mode?: "flat";
+  /** method/path declare the underlying REST dependency, not a new route. */
+  execution?: "bulk_lookup_numbers" | "get_voice_clone";
 }
 
 export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
+  get_voice_clone: {
+    "name": "get_voice_clone",
+    "description": "Find a voice clone by exact id in paginated account voice clone listings. Returns the unchanged clone in data; exhaustion returns data null/status not_found, scan limit returns data null/status incomplete. Not a snapshot or direct GET-by-id.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Exact voice clone ID to find."
+        },
+        "page_size": {
+          "type": "integer",
+          "description": "Number of clones per page, from 1 to 250.",
+          "default": 100
+        },
+        "max_pages": {
+          "type": "integer",
+          "description": "Maximum pages to scan, from 1 to 100.",
+          "default": 20
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "method": "GET",
+    "path": "/voice_clones",
+    "category": "voice",
+    "execution": "get_voice_clone"
+  },
+  bulk_lookup_numbers: {
+    "name": "bulk_lookup_numbers",
+    "description": "Look up 1-100 phone numbers with bounded concurrency (1-10, default 5). Each GET lookup may incur charges. Returns ordered results with phone_number and response or error; duplicates are separate lookups and partial failures are retained.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "phone_numbers": {
+          "type": "array",
+          "description": "Phone numbers in E.164 format; 1-100 entries, duplicates preserved.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type": {
+          "type": "string",
+          "description": "Optional lookup type applied to every number.",
+          "enum": [
+            "carrier",
+            "caller-name"
+          ]
+        },
+        "concurrency": {
+          "type": "integer",
+          "description": "Maximum concurrent requests, from 1 to 10.",
+          "default": 5
+        }
+      },
+      "required": [
+        "phone_numbers"
+      ]
+    },
+    "method": "GET",
+    "path": "/number_lookup/{phone_number}",
+    "category": "lookup",
+    "execution": "bulk_lookup_numbers"
+  },
   // ─── Tier 1: Messaging & Numbers ──────────────────────────────
   send_sms: {
     name: "send_sms",
@@ -4909,6 +4977,7 @@ export const PERMISSION_MAP: Record<string, string> = {
   "ai.create_ai_assistant": "create_ai_assistant",
   "fax.send_fax": "send_fax",
   "lookup.lookup_number": "lookup_number",
+  "lookup.bulk_lookup_numbers": "bulk_lookup_numbers",
   "iot.list_sim_cards": "list_sim_cards",
   "verify.verify_phone": "verify_phone",
   "verify.verify_code": "verify_code",
@@ -5102,6 +5171,7 @@ export const PERMISSION_MAP: Record<string, string> = {
   "external_connections.delete_external_connection": "delete_external_connection",
   // Voice (clones, designs)
   "voice.list_voice_clones": "list_voice_clones",
+  "voice.get_voice_clone": "get_voice_clone",
   "voice.create_voice_clone": "create_voice_clone",
   "voice.list_voice_designs": "list_voice_designs",
   "voice.create_voice_design": "create_voice_design",

@@ -2,6 +2,7 @@
  * Core toolkit with tool execution engine.
  */
 
+import { executeComposition } from "./compositions.js";
 import { TelnyxAPIClient } from "./api-client.js";
 import { TOOL_DEFINITIONS, type ToolDefinition } from "./constants.js";
 import { FrictionReporter } from "./friction.js";
@@ -129,6 +130,15 @@ export class ToolkitCore {
     toolDef: ToolDefinition,
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
+    if (toolDef.execution) {
+      return executeComposition(toolDef.execution, args, async (name, arguments_) => {
+        const dependency = TOOL_DEFINITIONS[name];
+        if (dependency.method !== "GET" || dependency.execution) {
+          throw new Error("Compositions require atomic GET dependencies");
+        }
+        return this.executeTool(dependency, arguments_);
+      });
+    }
     const { method } = toolDef;
     let path = toolDef.path;
 

@@ -12,7 +12,7 @@ from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS
 from telnyx_agent_toolkit.shared.toolkit_core import ToolkitCore
 
 # Tools removed in AI-3951: no REST route exists (tracked for re-add in AI-3974).
-REMOVED_TOOLS = ["list_messages", "bulk_lookup_numbers", "update_e911_address", "get_voice_clone", "update_mission_step"]
+REMOVED_TOOLS = ["list_messages", "update_e911_address", "update_mission_step"]
 
 # name -> (method, path) per the OpenAPI spec
 REPOINTED = {

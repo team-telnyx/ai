@@ -31,6 +31,8 @@ class ActionPermissions(BaseModel):
     create_ai_assistant: bool = False
     send_fax: bool = False
     lookup_number: bool = False
+    bulk_lookup_numbers: bool = False
+    get_voice_clone: bool = False
     list_sim_cards: bool = False
     verify_phone: bool = False
     verify_code: bool = False
@@ -128,6 +130,8 @@ class ActionPermissions(BaseModel):
 
 # Map from (category, action_key) to tool name
 _PERMISSION_MAP: dict[tuple[str, str], str] = {
+    ("lookup", "bulk_lookup_numbers"): "bulk_lookup_numbers",
+    ("voice", "get_voice_clone"): "get_voice_clone",
     ("messaging", "send_sms"): "send_sms",
     ("messaging", "send_rcs_message"): "send_rcs_message",
     ("messaging", "check_rcs_capabilities"): "check_rcs_capabilities",
