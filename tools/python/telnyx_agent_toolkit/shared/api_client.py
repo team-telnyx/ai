@@ -124,6 +124,10 @@ class TelnyxAPIClient:
         """Sync POST request (convenience wrapper)."""
         return _run_sync(self.post_async(path, json=json))
 
+    def patch(self, path: str, *, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Sync PATCH request (convenience wrapper)."""
+        return _run_sync(self.patch_async(path, json=json))
+
     def delete(self, path: str) -> dict[str, Any]:
         """Sync DELETE request (convenience wrapper)."""
         return _run_sync(self.delete_async(path))
