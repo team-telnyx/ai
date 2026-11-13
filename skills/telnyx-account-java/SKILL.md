@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -218,6 +218,24 @@ AutoRechargePrefUpdateResponse autoRechargePref = client.payment().autoRechargeP
 
 Returns: `enabled` (boolean), `id` (string), `invoice_enabled` (boolean), `preference` (enum: credit_paypal, ach), `recharge_amount` (string), `record_type` (string), `threshold_amount` (string)
 
+## Create a stored payment transaction
+
+Create a transaction that charges a stored payment method on the account.
+
+`POST /payment/stored_payment_transactions` — Required: `amount`
+
+```java
+import com.telnyx.sdk.models.payment.PaymentCreateStoredPaymentTransactionParams;
+import com.telnyx.sdk.models.payment.PaymentCreateStoredPaymentTransactionResponse;
+
+PaymentCreateStoredPaymentTransactionParams params = PaymentCreateStoredPaymentTransactionParams.builder()
+    .amount("120.00")
+    .build();
+PaymentCreateStoredPaymentTransactionResponse response = client.payment().createStoredPaymentTransaction(params);
+```
+
+Returns: `amount_cents` (integer), `amount_currency` (string), `auto_recharge` (boolean), `created_at` (date-time), `id` (string), `processor_status` (string), `record_type` (enum: transaction), `transaction_processing_type` (enum: stored_payment)
+
 ## List User Tags
 
 Returns the user tags defined on your account, with support for filtering. Tags help organize resources such as phone numbers.
@@ -232,24 +250,6 @@ UserTagListResponse userTags = client.userTags().list();
 ```
 
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
-
-## Create a stored payment transaction
-
-Create a transaction that charges a stored payment method on the account.
-
-`POST /v2/payment/stored_payment_transactions` — Required: `amount`
-
-```java
-import com.telnyx.sdk.models.payment.PaymentCreateStoredPaymentTransactionParams;
-import com.telnyx.sdk.models.payment.PaymentCreateStoredPaymentTransactionResponse;
-
-PaymentCreateStoredPaymentTransactionParams params = PaymentCreateStoredPaymentTransactionParams.builder()
-    .amount("120.00")
-    .build();
-PaymentCreateStoredPaymentTransactionResponse response = client.payment().createStoredPaymentTransaction(params);
-```
-
-Returns: `amount_cents` (integer), `amount_currency` (string), `auto_recharge` (boolean), `created_at` (date-time), `id` (string), `processor_status` (string), `record_type` (enum: transaction), `transaction_processing_type` (enum: stored_payment)
 
 ## List webhook deliveries
 

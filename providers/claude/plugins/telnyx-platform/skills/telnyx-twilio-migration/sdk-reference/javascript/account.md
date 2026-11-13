@@ -189,6 +189,20 @@ console.log(autoRechargePref.data);
 
 Returns: `enabled` (boolean), `id` (string), `invoice_enabled` (boolean), `preference` (enum: credit_paypal, ach), `recharge_amount` (string), `record_type` (string), `threshold_amount` (string)
 
+## Create a stored payment transaction
+
+Create a transaction that charges a stored payment method on the account.
+
+`POST /payment/stored_payment_transactions` — Required: `amount`
+
+```javascript
+const response = await client.payment.createStoredPaymentTransaction({ amount: '120.00' });
+
+console.log(response.data);
+```
+
+Returns: `amount_cents` (integer), `amount_currency` (string), `auto_recharge` (boolean), `created_at` (date-time), `id` (string), `processor_status` (string), `record_type` (enum: transaction), `transaction_processing_type` (enum: stored_payment)
+
 ## List User Tags
 
 Returns the user tags defined on your account, with support for filtering. Tags help organize resources such as phone numbers.
@@ -202,20 +216,6 @@ console.log(userTags.data);
 ```
 
 Returns: `number_tags` (array[string]), `outbound_profile_tags` (array[string])
-
-## Create a stored payment transaction
-
-Create a transaction that charges a stored payment method on the account.
-
-`POST /v2/payment/stored_payment_transactions` — Required: `amount`
-
-```javascript
-const response = await client.payment.createStoredPaymentTransaction({ amount: '120.00' });
-
-console.log(response.data);
-```
-
-Returns: `amount_cents` (integer), `amount_currency` (string), `auto_recharge` (boolean), `created_at` (date-time), `id` (string), `processor_status` (string), `record_type` (enum: transaction), `transaction_processing_type` (enum: stored_payment)
 
 ## List webhook deliveries
 
