@@ -45,6 +45,17 @@
 - Catalog count for this change: **201 → 198**, matching in Python and TypeScript. Removed the corresponding obsolete live-route probes; added offline absence/configuration/zero-dispatch regressions. The public-spec parity guard and its allowlists are unchanged.
 - Package manifests remain `0.3.0`; `0.4.0` is still unreleased. No registry publication is included.
 
+### Fixed — native-ESM optional adapters
+
+- Vercel AI and LangChain factories use module-local Node `createRequire` for
+  their optional framework and Zod peers rather than a nonexistent global
+  `require`. Core imports remain peer-free and factory return types stay
+  synchronous. Load errors preserve their cause instead of claiming every
+  loading failure is a missing dependency.
+- Installed native-ESM tests exercise AI SDK 4.3.19, LangChain core 0.3.79 and
+  Zod 3.25.76. This is not a newer SDK-major compatibility migration. See the
+  README for the synchronous loading contract and tested dependency versions.
+
 ### Fixed — tools that could never succeed
 
 Forty-one tool definitions targeted REST routes that do not exist (the API returned 404 on every call). Each was verified against the public OpenAPI spec and the live API.

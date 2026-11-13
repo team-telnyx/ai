@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "node --test tests/runtime-contract.test.mjs && tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts && tsx tests/repointed-routes.test.ts && tsx tests/object-payloads.test.ts && tsx tests/compositions.test.ts && tsx tests/s3-storage.test.ts && tsx tests/s3-sdk.test.ts",
+    "test": "node --test tests/runtime-contract.test.mjs && tsx tests/integration.test.ts && tsx tests/rcs-call-control.test.ts && tsx tests/adapter-anyof.test.ts && tsx tests/path-encoding.test.ts && tsx tests/repointed-routes.test.ts && tsx tests/object-payloads.test.ts && tsx tests/compositions.test.ts && tsx tests/s3-storage.test.ts && tsx tests/s3-sdk.test.ts && node tests/optional-adapters.test.mjs",
     "test:parity": "tsx tests/definition-parity.test.ts",
     "clean": "rm -rf dist"
   },
