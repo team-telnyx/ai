@@ -388,7 +388,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Delete a conversation
 
-Delete a specific conversation by its ID.
+Delete a specific conversation by its ID. Permanently deletes the conversation and its associated data: the conversation's messages, its insight generation results, any conversation memories, and its webhook request logs. Recordings are not deleted — recordings are managed separately through the /v2/recordings endpoints. This action cannot be undone.
 
 `DELETE /ai/conversations/{conversation_id}`
 
@@ -410,6 +410,19 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/co
 ```
 
 Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
+## Delete a conversation's insight generation results
+
+Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself.
+
+`DELETE /ai/conversations/{conversation_id}/conversations-insights/{insight_id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/ai/conversations/550e8400-e29b-41d4-a716-446655440000/conversations-insights/{insight_id}"
+```
 
 ## Create Message
 
@@ -588,72 +601,6 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/em
 
 Returns: `created_at` (string), `finished_at` (string), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (uuid), `task_name` (string)
 
-## List fine tuning jobs
-
-Retrieve a list of all fine tuning jobs created by the user.
-
-`GET /ai/fine_tuning/jobs`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/fine_tuning/jobs"
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Create a fine tuning job
-
-Creates a new fine-tuning job that trains a model on the provided dataset, and returns the created job.
-
-`POST /ai/fine_tuning/jobs` — Required: `model`, `training_file`
-
-Optional: `hyperparameters` (object), `suffix` (string)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "model": "openai/gpt-4o",
-  "training_file": "training-data.jsonl",
-  "suffix": "string",
-  "hyperparameters": {
-    "n_epochs": 3
-  }
-}' \
-  "https://api.telnyx.com/v2/ai/fine_tuning/jobs"
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Get a fine tuning job
-
-Returns the details of a single fine-tuning job by its job_id, including its current status.
-
-`GET /ai/fine_tuning/jobs/{job_id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/fine_tuning/jobs/{job_id}"
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Cancel a fine tuning job
-
-Cancels the specified in-progress fine-tuning job and returns the updated job.
-
-`POST /ai/fine_tuning/jobs/{job_id}/cancel`
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/ai/fine_tuning/jobs/{job_id}/cancel"
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
 ## Get available models
 
 **Deprecated**: Use `GET /v2/ai/openai/models` instead. Returns the same `ModelsResponse` payload as the OpenAI-compatible endpoint — open-source LLMs hosted on Telnyx (e.g. `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.1-FP8`, `MiniMaxAI/MiniMax-M2.7`), embedding models, and fine-tuned models — kept around for backwards compatibility.
@@ -664,7 +611,7 @@ Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameter
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/ai/models"
 ```
 
-Returns: `base_model` (string | null), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
+Returns: `base_model` (string | null), `beta` (boolean), `context_length` (integer), `created` (date-time), `description` (string | null), `id` (string), `is_fine_tunable` (boolean), `is_vision_supported` (boolean), `languages` (array[string]), `license` (string), `max_completion_tokens` (integer | null), `object` (string), `organization` (string), `owned_by` (string), `parameters` (integer), `parameters_str` (string | null), `pricing` (object), `recommended_for_assistants` (boolean), `regions` (array[string]), `service_tiers` (array[string]), `task` (string), `tier` (enum: small, medium, large, unlisted)
 
 ## Create embeddings
 
@@ -986,7 +933,6 @@ curl \
     "language_boost": "string"
   },
   "resemble": {
-    "api_key": "string",
     "precision": "string",
     "sample_rate": "string",
     "format": "string"
