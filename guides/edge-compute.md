@@ -18,7 +18,7 @@ git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 ```
 
 ## Prerequisites and readiness
-1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). SQL databases require CLI v0.3.0 or newer.
+1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). The current release is v0.5.18; SQL databases require CLI v0.3.0 or newer.
 2. Authenticate interactively or with an API key stored by the CLI.
 3. Run the root status diagnostic. Unlike `auth status`, this validates configuration, credentials, and API connectivity.
 
@@ -382,30 +382,30 @@ telnyx-edge types
 `env.DB` is generated as `SqlDatabase` and requires `@telnyx/edge-runtime` **0.9.0 or newer**. Keep the runtime current rather than pinning it to an older CLI-era version.
 
 Do not confuse shared account SQLDB with actor-local SQL. `[storage.sqldb.DB]` exposes one account database as `env.DB` to any functions that bind the same UUID. `ctx.storage.sql` belongs to one StatefulActor instance, is reached only inside that actor, and has no `storage sqldb execute` or migration CLI surface.
-
-### SQL export and standard-input import (v0.5.1)
-Export creates SQL data for backup or a deliberate copy; it is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. Import executes schema and data statements, can partially modify the destination on failure, and is not a transactional restore. Use an empty/disposable destination, or review the SQL and back up the target first; never pipe blindly into a populated production database. Protect the output, verify the destination before importing, and do not combine `--no-data` with `--no-schema`.
+### SQL export and restore (v0.5.18)
+Export creates SQL data for backup or a deliberate copy; it is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. Use the job-based `storage sqldb import` command for normal restores: it accepts a local dump up to 100 MiB, or reuses a completed export of the same database with `--from-export`. Import executes schema and data statements in batches, can partially modify the destination on failure, and is not a transactional restore. Use an empty/disposable destination, or review the SQL and back up the target first. Protect the output, verify the destination before importing, and do not combine `--no-data` with `--no-schema`.
 ```bash
 telnyx-edge storage sqldb export "$SQLDB_ID" --remote --output ./database.sql
+# Normal restore: a local dump (up to 100 MiB) or completed same-database export.
+telnyx-edge storage sqldb import "$SQLDB_ID" --file ./database.sql
+telnyx-edge storage sqldb import "$SQLDB_ID" --from-export <export-id>
+# Deliberate small copy only: execute sends one request; keep it roughly <=4 MiB and use an empty/disposable destination.
 telnyx-edge storage sqldb export "$SOURCE_SQLDB_ID" --remote --output - | telnyx-edge storage sqldb execute "$DEST_SQLDB_ID" --remote --file -
 ```
+`execute --remote --file` (including the pipe above) is not the normal restore path: its single-request SQL script limit is roughly 4 MiB. Do not pipe blindly into a populated production database.
 ### Cloud Storage binding types (v0.2.4)
 
 CLI v0.2.4 added `[storage.cloudstorage.<name>]` manifest bindings and `CloudStorageBucket` output from `telnyx-edge types`. JavaScript/TypeScript scaffolds include the Cloud Storage dependencies.
-
 ```toml
 [storage.cloudstorage.ARCHIVE]
 bucket_name = "my-archive"
 region = "us-east-1"
 ```
-
 ```bash
 npm install @telnyx/edge-runtime@latest @aws-sdk/client-s3
 telnyx-edge types
 ```
-
 The generated `env.ARCHIVE` is a typed `CloudStorageBucket`. This is a runtime binding/type-generation feature; it is distinct from the `storage kv` control-plane commands.
-
 ## Stateful Actors
 
 Probe actor capabilities directly:
@@ -431,7 +431,7 @@ telnyx-edge inspect <function>
 The two inspect commands answer different questions:
 
 - `inspect <function>` shows one function and every declared binding (including actor owner/reference roles).
-- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Current upstream main also adds optional `actors metrics <type> --since 24h` (or `--json`) for request, error-rate, latency, byte, CPU, and memory aggregates; probe it when supporting released CLIs.
+- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Since v0.5.5, `actors metrics <type> --since 24h` (or `--json`) reports request, error-rate, latency, byte, CPU, and memory aggregates, and `actors logs <type>` reads recent runtime and invocation logs. Probe their help surfaces when supporting multiple CLI releases.
 ### v0.2.5 actor-instance support and limitations
 
 v0.2.5 added `actors instances <type>` and the instance count in `actors inspect <type>`. The instance command is intentionally limited:
