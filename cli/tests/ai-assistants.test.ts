@@ -72,7 +72,7 @@ function logRequest(method, body) {
   fs.appendFileSync(process.env.TELNYX_FAKE_REQUEST_LOG, JSON.stringify({ method, body }) + "\\n");
 }
 
-if (!["ai:assistants", "ai:assistants:tests:runs", "ai:assistants:tools"].includes(args[0])) {
+if (!["ai:assistants", "ai:assistants:tests", "ai:assistants:tests:runs", "ai:assistants:tests:test-suites", "ai:assistants:versions", "ai:assistants:tools"].includes(args[0])) {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
   process.exit(2);
 } else if (args[0] === "ai:assistants" && args[1] === "list") {
@@ -123,6 +123,36 @@ if (!["ai:assistants", "ai:assistants:tests:runs", "ai:assistants:tools"].includ
     ],
     meta: { total_results: 2 }
   }));
+} else if (args[0] === "ai:assistants:tests" && args[1] === "create") {
+  console.log(JSON.stringify({ data: {
+    id: "test-created", destination: flag("--destination"), instructions: flag("--instructions"), name: flag("--name"),
+    rubric: flags("--rubric").map((value) => JSON.parse(value)), test_suite: flag("--test-suite")
+  } }));
+} else if (args[0] === "ai:assistants:tests" && args[1] === "retrieve") {
+  console.log(JSON.stringify({ data: { id: flag("--test-id"), name: "Support eval", test_suite: "regression" } }));
+} else if (args[0] === "ai:assistants:tests" && args[1] === "update") {
+  console.log(JSON.stringify({ data: { id: flag("--test-id"), name: flag("--name") || "Support eval", test_suite: flag("--test-suite") } }));
+} else if (args[0] === "ai:assistants:tests" && args[1] === "list") {
+  console.log(JSON.stringify({ data: [
+    { id: "test-1", name: "Support eval", test_suite: "regression" },
+    { id: "test-2", name: "Billing eval", test_suite: "smoke" }
+  ], meta: { total_results: 2 } }));
+} else if (args[0] === "ai:assistants:tests" && args[1] === "delete") {
+  console.log(JSON.stringify({ data: { id: flag("--test-id") } }));
+} else if (args[0] === "ai:assistants:tests:test-suites" && args[1] === "list") {
+  console.log(JSON.stringify({ data: ["regression", "smoke"] }));
+} else if (args[0] === "ai:assistants:versions" && args[1] === "retrieve") {
+  console.log(JSON.stringify({ data: { id: flag("--version-id"), name: "Version one" } }));
+} else if (args[0] === "ai:assistants:versions" && args[1] === "list") {
+  console.log(JSON.stringify({ data: [
+    { id: "version-1", name: "Version one" }, { id: "version-2", name: "Version two" }
+  ] }));
+} else if (args[0] === "ai:assistants:versions" && args[1] === "update") {
+  console.log(JSON.stringify({ data: { id: flag("--version-id"), name: flag("--name") || "Version one" } }));
+} else if (args[0] === "ai:assistants:versions" && args[1] === "delete") {
+  console.log(JSON.stringify({ data: { id: flag("--version-id") } }));
+} else if (args[0] === "ai:assistants:versions" && args[1] === "promote") {
+  console.log(JSON.stringify({ data: { id: flag("--version-id"), name: "Version one", status: "main" } }));
 } else if (args[0] === "ai:assistants:tools" && args[1] === "test") {
   console.log(JSON.stringify({ data: { success: true, status_code: 200, response: "ok" } }));
 } else {
@@ -178,7 +208,10 @@ function loggedArgs(logPath: string): string[][] {
 
 function loggedRequests(logPath: string): Array<{ method: string; body: Record<string, unknown> }> {
   if (!existsSync(logPath)) return [];
-  return readFileSync(logPath, "utf8").trimEnd().split("\n").map((line) => JSON.parse(line));
+  const contents = readFileSync(logPath, "utf8");
+  assert.ok(contents.endsWith("\n"), "fake request log should terminate each JSON record with one newline");
+  assert.ok(!contents.endsWith("\n\n"), "fake request log should not write a blank JSONL record");
+  return contents.trimEnd().split("\n").map((line) => JSON.parse(line));
 }
 
 function assertFlag(args: string[], flag: string, value: string): void {
@@ -679,6 +712,111 @@ describe("AI assistant lifecycle action commands", () => {
     assert.deepEqual(args.slice(-2), ["--format", "raw"]);
   });
 
+  it("creates, retrieves, updates, lists, deletes, and groups assistant evaluation definitions", () => {
+    const rubric = '[{"name":"Accuracy","criteria":"Resolve the request"},{"name":"Empathy","criteria":"Acknowledge concern"}]';
+    const createdFake = setupFakeTelnyx();
+    const created = runAgent([
+      "create-ai-assistant-test", "--destination", "https://example.com/chat", "--instructions", "Resolve support issues",
+      "--name", "Support eval", "--rubric", rubric, "--description", "Release gate", "--max-duration-seconds", "90",
+      "--telnyx-conversation-channel", "web_chat", "--test-suite", "regression", "--idempotency-key", "eval-1", "--json",
+    ], createdFake.env);
+    assert.equal(created.status, 0, created.stderr);
+    assert.deepEqual(JSON.parse(created.stdout), {
+      test_id: "test-created",
+      test: {
+        id: "test-created", destination: "https://example.com/chat", instructions: "Resolve support issues", name: "Support eval",
+        rubric: [{ name: "Accuracy", criteria: "Resolve the request" }, { name: "Empathy", criteria: "Acknowledge concern" }], test_suite: "regression",
+      },
+    });
+    const [createArgs] = loggedArgs(createdFake.logPath);
+    assert.deepEqual(createArgs.slice(0, 2), ["ai:assistants:tests", "create"]);
+    assertFlag(createArgs, "--destination", "https://example.com/chat");
+    assertFlagValues(createArgs, "--rubric", ['{"name":"Accuracy","criteria":"Resolve the request"}', '{"name":"Empathy","criteria":"Acknowledge concern"}']);
+    assertFlag(createArgs, "--telnyx-conversation-channel", "web_chat");
+    assertFlag(createArgs, "--format", "json");
+
+    const retrievedFake = setupFakeTelnyx();
+    const retrieved = runAgent(["get-ai-assistant-test", "--test-id", "test-1", "--json"], retrievedFake.env);
+    assert.equal(retrieved.status, 0, retrieved.stderr);
+    assert.equal(JSON.parse(retrieved.stdout).test_id, "test-1");
+    assert.deepEqual(loggedArgs(retrievedFake.logPath)[0].slice(0, 2), ["ai:assistants:tests", "retrieve"]);
+
+    const updatedFake = setupFakeTelnyx();
+    const updated = runAgent(["update-ai-assistant-test", "--test-id", "test-1", "--name", "Updated eval", "--json"], updatedFake.env);
+    assert.equal(updated.status, 0, updated.stderr);
+    assert.equal(JSON.parse(updated.stdout).test.name, "Updated eval");
+    assert.deepEqual(loggedArgs(updatedFake.logPath)[0].slice(0, 2), ["ai:assistants:tests", "update"]);
+
+    const listedFake = setupFakeTelnyx();
+    const listed = runAgent(["list-ai-assistant-tests", "--destination", "https://example.com/chat", "--page-number", "2", "--page-size", "20", "--test-suite", "regression", "--max-items", "1", "--json"], listedFake.env);
+    assert.equal(listed.status, 0, listed.stderr);
+    assert.deepEqual(JSON.parse(listed.stdout), { count: 1, tests: [{ id: "test-1", name: "Support eval", test_suite: "regression" }], meta: { total_results: 2 } });
+    const listArgs = loggedArgs(listedFake.logPath)[0];
+    assert.deepEqual(listArgs.slice(0, 2), ["ai:assistants:tests", "list"]);
+    assertFlag(listArgs, "--destination", "https://example.com/chat");
+    assertFlag(listArgs, "--test-suite", "regression");
+    assertFlag(listArgs, "--max-items", "1");
+    assert.deepEqual(listArgs.slice(-2), ["--format", "raw"]);
+
+    const suitesFake = setupFakeTelnyx();
+    const suites = runAgent(["list-ai-assistant-test-suites", "--json"], suitesFake.env);
+    assert.equal(suites.status, 0, suites.stderr);
+    assert.deepEqual(JSON.parse(suites.stdout), { count: 2, test_suites: ["regression", "smoke"] });
+    assert.deepEqual(loggedArgs(suitesFake.logPath)[0], ["ai:assistants:tests:test-suites", "list", "--format", "raw"]);
+
+    const deletedFake = setupFakeTelnyx();
+    const rejected = runAgent(["delete-ai-assistant-test", "--test-id", "test-1", "--json"], deletedFake.env);
+    assert.notEqual(rejected.status, 0);
+    assert.deepEqual(loggedArgs(deletedFake.logPath), []);
+    const deleted = runAgent(["delete-ai-assistant-test", "--test-id", "test-1", "--confirm", "--json"], deletedFake.env);
+    assert.equal(deleted.status, 0, deleted.stderr);
+    assert.deepEqual(JSON.parse(deleted.stdout), { test_id: "test-1", deleted: true });
+    assert.ok(!loggedArgs(deletedFake.logPath)[0].includes("--confirm"));
+  });
+
+  it("retrieves, lists, updates, deletes, and promotes saved assistant versions", () => {
+    const getFake = setupFakeTelnyx();
+    const got = runAgent(["get-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--include-mcp-servers", "true", "--json"], getFake.env);
+    assert.equal(got.status, 0, got.stderr);
+    assert.deepEqual(JSON.parse(got.stdout), { assistant_id: "assistant-1", version_id: "version-1", version: { id: "version-1", name: "Version one" } });
+    const getArgs = loggedArgs(getFake.logPath)[0];
+    assert.deepEqual(getArgs.slice(0, 2), ["ai:assistants:versions", "retrieve"]);
+    assert.ok(getArgs.includes("--include-mcp-servers=true"));
+
+    const listFake = setupFakeTelnyx();
+    const listed = runAgent(["list-ai-assistant-versions", "--id", "assistant-1", "--json"], listFake.env);
+    assert.equal(listed.status, 0, listed.stderr);
+    assert.deepEqual(JSON.parse(listed.stdout), { assistant_id: "assistant-1", count: 2, versions: [{ id: "version-1", name: "Version one" }, { id: "version-2", name: "Version two" }] });
+    assert.deepEqual(loggedArgs(listFake.logPath)[0].slice(-2), ["--format", "raw"]);
+
+    const updateFake = setupFakeTelnyx();
+    const updated = runAgent(["update-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--name", "Version one updated", "--json"], updateFake.env);
+    assert.equal(updated.status, 0, updated.stderr);
+    assert.equal(JSON.parse(updated.stdout).version.name, "Version one updated");
+    assert.deepEqual(loggedArgs(updateFake.logPath)[0].slice(0, 2), ["ai:assistants:versions", "update"]);
+
+    const deleteFake = setupFakeTelnyx();
+    const rejected = runAgent(["delete-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--json"], deleteFake.env);
+    assert.notEqual(rejected.status, 0);
+    assert.deepEqual(loggedArgs(deleteFake.logPath), []);
+    const deleted = runAgent(["delete-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--confirm", "--json"], deleteFake.env);
+    assert.equal(deleted.status, 0, deleted.stderr);
+    assert.deepEqual(JSON.parse(deleted.stdout), { assistant_id: "assistant-1", version_id: "version-1", deleted: true });
+    assert.ok(!loggedArgs(deleteFake.logPath)[0].includes("--confirm"));
+
+    const promoteFake = setupFakeTelnyx();
+    const rejectedPromotion = runAgent(["promote-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--json"], promoteFake.env);
+    assert.notEqual(rejectedPromotion.status, 0);
+    assert.match(JSON.parse(rejectedPromotion.stdout).error, /--confirm is required/);
+    assert.deepEqual(loggedArgs(promoteFake.logPath), []);
+
+    const promoted = runAgent(["promote-ai-assistant-version", "--id", "assistant-1", "--version-id", "version-1", "--confirm", "--json"], promoteFake.env);
+    assert.equal(promoted.status, 0, promoted.stderr);
+    assert.equal(JSON.parse(promoted.stdout).version.status, "main");
+    assert.deepEqual(loggedArgs(promoteFake.logPath)[0].slice(0, 2), ["ai:assistants:versions", "promote"]);
+    assert.ok(!loggedArgs(promoteFake.logPath)[0].includes("--confirm"));
+  });
+
   it("tests an assistant webhook tool with JSON arguments and dynamic variables", () => {
     const fake = setupFakeTelnyx();
     const argumentsJson = '{"ticket_id":"ticket-1"}';
@@ -715,6 +853,11 @@ describe("AI assistant lifecycle action commands", () => {
       ["get-ai-assistant-test-run", "--test-id", "test-1", "--json"],
       ["list-ai-assistant-test-runs", "--test-id", "test-1", "--page-size", "0", "--json"],
       ["list-ai-assistant-test-runs", "--test-id", "test-1", "--max-items", "-2", "--json"],
+      ["list-ai-assistant-tests", "--page-size", "--json"],
+      ["list-ai-assistant-tests", "--max-items", "--json"],
+      ["create-ai-assistant-test", "--destination", "https://example.com/chat", "--instructions", "Evaluate", "--name", "Eval", "--rubric", "[]", "--json"],
+      ["update-ai-assistant-test", "--test-id", "test-1", "--json"],
+      ["list-ai-assistant-tests", "--telnyx-conversation-channel", "email", "--json"],
       ["test-ai-assistant-tool", "--id", "assistant-1", "--tool-id", "tool-1", "--arguments", "[]", "--json"],
     ];
 
@@ -734,6 +877,17 @@ describe("AI assistant lifecycle action commands", () => {
       "get-ai-assistant",
       "update-ai-assistant",
       "delete-ai-assistant",
+      "create-ai-assistant-test",
+      "get-ai-assistant-test",
+      "update-ai-assistant-test",
+      "list-ai-assistant-tests",
+      "delete-ai-assistant-test",
+      "list-ai-assistant-test-suites",
+      "get-ai-assistant-version",
+      "list-ai-assistant-versions",
+      "update-ai-assistant-version",
+      "delete-ai-assistant-version",
+      "promote-ai-assistant-version",
       "enhance-ai-assistant-instructions",
       "chat-ai-assistant",
       "send-ai-assistant-sms",
@@ -777,6 +931,17 @@ describe("AI assistant lifecycle action commands", () => {
       "delete_ai_assistant",
       "configure_ai_assistant_a2a_agents",
       "set_ai_assistant_fallback_destination",
+      "create_ai_assistant_test",
+      "get_ai_assistant_test",
+      "update_ai_assistant_test",
+      "list_ai_assistant_tests",
+      "delete_ai_assistant_test",
+      "list_ai_assistant_test_suites",
+      "get_ai_assistant_version",
+      "list_ai_assistant_versions",
+      "update_ai_assistant_version",
+      "delete_ai_assistant_version",
+      "promote_ai_assistant_version",
       "enhance_ai_assistant_instructions",
       "chat_ai_assistant",
       "send_ai_assistant_sms",

@@ -26,6 +26,13 @@ interface AddMessageResult {
   message: JsonRecord;
 }
 
+interface ConversationMessageListResult {
+  conversation_id: string;
+  count: number;
+  messages: JsonRecord[];
+  meta: JsonRecord;
+}
+
 interface DeleteConversationResult {
   conversation_id: string;
   deleted: true;
@@ -144,6 +151,43 @@ export async function addAiConversationMessageCommand(flags: Flags): Promise<voi
         Role: role,
       });
     }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** List messages (including tool calls) recorded for an AI conversation. */
+export async function listAiConversationMessagesCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const conversationId = conversationIdFlag(flags, jsonOutput);
+  const args = ["ai:conversations:messages", "list", "--conversation-id", conversationId];
+  addPositiveIntegerFlag(args, flags, "page-number", "--page-number", jsonOutput);
+  addPositiveIntegerFlag(args, flags, "page-size", "--page-size", jsonOutput);
+  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
+
+  try {
+    const response = await telnyxCli(args, { format: "raw" });
+    const envelope = asRecord(response);
+    const allMessages = responseDataRecords(response);
+    const messages = maxItems === undefined || maxItems === -1 ? allMessages : allMessages.slice(0, maxItems);
+    const result: ConversationMessageListResult = {
+      conversation_id: conversationId,
+      count: messages.length,
+      messages,
+      meta: asRecord(envelope.meta),
+    };
+    if (jsonOutput) {
+      outputJson(result);
+      return;
+    }
+    printSuccess("AI conversation messages retrieved!", { "Conversation ID": conversationId, Count: result.count });
+    for (const message of messages) {
+      const role = stringValue(message.role) || "(unknown role)";
+      const content = stringValue(message.content);
+      console.log(`  • ${role}${content ? ` — ${content}` : ""}`);
+    }
+    if (messages.length === 0) console.log("  (no messages returned)");
+    console.log();
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
   }
@@ -322,9 +366,29 @@ function addPositiveIntegerFlag(
   args.push(target, value);
 }
 
+function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number | undefined {
+  const value = optionalStringFlag(flags, "max-items");
+  if (value === undefined) {
+    if (flags["max-items"] !== undefined) fail("--max-items must be -1 or a non-negative integer", jsonOutput);
+    return undefined;
+  }
+  if (!/^(?:-1|\d+)$/.test(value)) fail("--max-items must be -1 or a non-negative integer", jsonOutput);
+  args.push("--max-items", value);
+  return Number(value);
+}
+
 function responseDataRecord(response: unknown): JsonRecord {
   const envelope = asRecord(response);
   return asRecord(envelope.data ?? response);
+}
+
+function responseDataRecords(response: unknown): JsonRecord[] {
+  const envelope = asRecord(response);
+  const data = Array.isArray(response) ? response : envelope.data;
+  if (!Array.isArray(data)) return [];
+  return data.filter(
+    (item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item),
+  );
 }
 
 function booleanFlagIsTrue(flags: Flags, key: string): boolean {

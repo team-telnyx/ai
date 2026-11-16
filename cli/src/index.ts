@@ -124,15 +124,26 @@ import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
   chatAiAssistantCommand,
   createAiAssistantCommand,
+  createAiAssistantTestCommand,
   deleteAiAssistantCommand,
+  deleteAiAssistantTestCommand,
+  deleteAiAssistantVersionCommand,
   enhanceAiAssistantInstructionsCommand,
+  getAiAssistantTestCommand,
   getAiAssistantTestRunCommand,
+  getAiAssistantVersionCommand,
   getAiAssistantCommand,
+  listAiAssistantTestsCommand,
+  listAiAssistantTestSuitesCommand,
   listAiAssistantTestRunsCommand,
+  listAiAssistantVersionsCommand,
   listAiAssistantsCommand,
+  promoteAiAssistantVersionCommand,
   sendAiAssistantSmsCommand,
   testAiAssistantToolCommand,
   triggerAiAssistantTestRunCommand,
+  updateAiAssistantTestCommand,
+  updateAiAssistantVersionCommand,
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
 import {
@@ -140,6 +151,7 @@ import {
   createAiConversationCommand,
   deleteAiConversationCommand,
   getAiConversationCommand,
+  listAiConversationMessagesCommand,
   listAiConversationsCommand,
   updateAiConversationCommand,
 } from "./commands/ai-conversations.ts";
@@ -318,6 +330,17 @@ Commands:
   get-ai-assistant  Retrieve an AI assistant by ID
   update-ai-assistant Update an AI assistant by ID
   delete-ai-assistant Delete an AI assistant by ID (requires --confirm)
+  create-ai-assistant-test Create an AI assistant evaluation definition
+  get-ai-assistant-test Retrieve an AI assistant evaluation definition
+  update-ai-assistant-test Update an AI assistant evaluation definition
+  list-ai-assistant-tests List AI assistant evaluation definitions
+  delete-ai-assistant-test Delete an AI assistant evaluation definition (requires --confirm)
+  list-ai-assistant-test-suites List available AI assistant evaluation suites
+  get-ai-assistant-version Retrieve one saved AI assistant version
+  list-ai-assistant-versions List saved AI assistant versions
+  update-ai-assistant-version Update a non-main AI assistant version
+  delete-ai-assistant-version Delete a non-main AI assistant version (requires --confirm)
+  promote-ai-assistant-version Promote a saved AI assistant version to production (requires --confirm)
   create-ai-assistant-scheduled-event Schedule a future AI assistant phone call or SMS
   get-ai-assistant-scheduled-event Retrieve one AI assistant scheduled event
   list-ai-assistant-scheduled-events List and filter an assistant's scheduled events
@@ -326,6 +349,7 @@ Commands:
   create-ai-conversation Create an AI conversation for assistant messages
   get-ai-conversation Retrieve one AI conversation by ID
   list-ai-conversations List AI conversations with optional filters
+  list-ai-conversation-messages List persisted messages and tool calls for an AI conversation
   update-ai-conversation Update AI conversation metadata
   add-ai-conversation-message Add a message to an AI conversation
   delete-ai-conversation Delete an AI conversation by ID (requires --confirm)
@@ -548,6 +572,8 @@ AI Conversation Flags:
   --metadata <json>      Conversation or message metadata object (create, update, add message)
   --created-at <filter>  Generated creation timestamp filter (list)
   --last-message-at <filter> Generated last-message timestamp filter (list)
+  --page-number / --page-size Positive pagination values (list-ai-conversation-messages)
+  --max-items <n>   Maximum messages returned; -1 means unlimited (list-ai-conversation-messages)
   --limit <n>            Maximum conversations returned (list)
   --order <filter>       Generated PostgREST ordering expression (list)
   --role <role>          Message role (add-ai-conversation-message — required)
@@ -896,6 +922,17 @@ AI Assistant Lifecycle Flags:
   --version-name    Human-readable version name (update only)
   --promote-to-main <bool> Promote the new version (update only)
   --confirm         Explicitly confirm deletion (delete only, required)
+
+AI Assistant Evaluation and Version Flags:
+  --test-id <id>    Assistant test ID (get, update, delete, and test runs)
+  --destination <value> Test conversation destination (create required; list/update optional)
+  --rubric <json>   Non-empty JSON array of {name, criteria} rubric objects (create required; update optional)
+  --max-duration-seconds <n> Positive test conversation duration limit
+  --telnyx-conversation-channel <channel> phone_call|web_call|sms_chat|web_chat (test create/update/list)
+  --test-suite <name> Test-suite assignment or filter (test create/update/list)
+  --version-id <id> Saved assistant version ID (get/update/delete/promote)
+  --include-mcp-servers <bool> Include MCP server configuration when retrieving a version
+  --confirm         Required safety confirmation for delete-ai-assistant-test and delete-ai-assistant-version; never forwarded
 
 AI Assistant Instruction Enhancement Flags (requires Telnyx Go CLI v0.30+):
   --assistant-id <id> Assistant ID to inspect and enhance (required)
@@ -1319,6 +1356,17 @@ const COMMANDS: Record<string, (
   "get-ai-assistant": getAiAssistantCommand,
   "update-ai-assistant": updateAiAssistantCommand,
   "delete-ai-assistant": deleteAiAssistantCommand,
+  "create-ai-assistant-test": createAiAssistantTestCommand,
+  "get-ai-assistant-test": getAiAssistantTestCommand,
+  "update-ai-assistant-test": updateAiAssistantTestCommand,
+  "list-ai-assistant-tests": listAiAssistantTestsCommand,
+  "delete-ai-assistant-test": deleteAiAssistantTestCommand,
+  "list-ai-assistant-test-suites": listAiAssistantTestSuitesCommand,
+  "get-ai-assistant-version": getAiAssistantVersionCommand,
+  "list-ai-assistant-versions": listAiAssistantVersionsCommand,
+  "update-ai-assistant-version": updateAiAssistantVersionCommand,
+  "delete-ai-assistant-version": deleteAiAssistantVersionCommand,
+  "promote-ai-assistant-version": promoteAiAssistantVersionCommand,
   "create-ai-assistant-scheduled-event": createAiAssistantScheduledEventCommand,
   "get-ai-assistant-scheduled-event": getAiAssistantScheduledEventCommand,
   "list-ai-assistant-scheduled-events": listAiAssistantScheduledEventsCommand,
@@ -1327,6 +1375,7 @@ const COMMANDS: Record<string, (
   "create-ai-conversation": createAiConversationCommand,
   "get-ai-conversation": getAiConversationCommand,
   "list-ai-conversations": listAiConversationsCommand,
+  "list-ai-conversation-messages": listAiConversationMessagesCommand,
   "update-ai-conversation": updateAiConversationCommand,
   "add-ai-conversation-message": addAiConversationMessageCommand,
   "delete-ai-conversation": deleteAiConversationCommand,
@@ -1373,7 +1422,7 @@ const KNOWN_FLAGS = new Set<string>([
   "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
-  "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
+  "destination", "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
@@ -1385,10 +1434,10 @@ const KNOWN_FLAGS = new Set<string>([
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
-  "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
+  "include-mcp-servers", "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
-  "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
+  "max-attempts", "max-duration-seconds", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
@@ -1402,7 +1451,7 @@ const KNOWN_FLAGS = new Set<string>([
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
-  "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
+  "role", "rubric", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
@@ -1411,12 +1460,12 @@ const KNOWN_FLAGS = new Set<string>([
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "telnyx-agent-target", "telnyx-conversation-channel", "telnyx-end-user-target", "temperature", "template-id", "template-language", "template-name", "template-variables",
-  "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
+  "test-id", "test-suite", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
-  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "version-id", "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
