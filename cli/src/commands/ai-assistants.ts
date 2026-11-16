@@ -56,6 +56,45 @@ export interface AiAssistantTestRunListResult {
   meta: JsonRecord;
 }
 
+export interface AiAssistantTestResult {
+  test_id: string;
+  test: JsonRecord;
+}
+
+export interface AiAssistantTestListResult {
+  count: number;
+  tests: JsonRecord[];
+  meta: JsonRecord;
+}
+
+export interface AiAssistantTestSuiteListResult {
+  count: number;
+  test_suites: string[];
+}
+
+export interface AiAssistantVersionResult {
+  assistant_id: string;
+  version_id: string;
+  version: JsonRecord;
+}
+
+export interface AiAssistantVersionListResult {
+  assistant_id: string;
+  count: number;
+  versions: JsonRecord[];
+}
+
+export interface DeleteAiAssistantTestResult {
+  test_id: string;
+  deleted: true;
+}
+
+export interface DeleteAiAssistantVersionResult {
+  assistant_id: string;
+  version_id: string;
+  deleted: true;
+}
+
 export interface AiAssistantToolTestResult {
   assistant_id: string;
   tool_id: string;
@@ -390,6 +429,232 @@ export async function listAiAssistantTestRunsCommand(flags: Flags): Promise<void
   }
 }
 
+/** Create a reusable assistant evaluation definition. */
+export async function createAiAssistantTestCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const args = [
+    "ai:assistants:tests", "create",
+    "--destination", requiredStringFlag(flags, "destination", jsonOutput),
+    "--instructions", requiredStringFlag(flags, "instructions", jsonOutput),
+    "--name", requiredStringFlag(flags, "name", jsonOutput),
+  ];
+  addJsonObjectArrayFlag(args, flags, "rubric", "--rubric", true, jsonOutput);
+  addMappedFlag(args, flags, "description", "--description");
+  addPositiveIntegerFlag(args, flags, "max-duration-seconds", "--max-duration-seconds", jsonOutput);
+  addTestChannelFlag(args, flags, jsonOutput);
+  addMappedFlag(args, flags, "test-suite", "--test-suite");
+  addMappedFlag(args, flags, "idempotency-key", "--idempotency-key");
+
+  try {
+    const response = await telnyxCli(args);
+    presentTest("AI assistant test created!", response, jsonOutput);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Retrieve one assistant evaluation definition. */
+export async function getAiAssistantTestCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const testId = requiredStringFlag(flags, "test-id", jsonOutput);
+  try {
+    const response = await telnyxCli(["ai:assistants:tests", "retrieve", "--test-id", testId]);
+    presentTest("AI assistant test retrieved!", response, jsonOutput, testId);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Update one assistant evaluation definition without triggering it. */
+export async function updateAiAssistantTestCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const testId = requiredStringFlag(flags, "test-id", jsonOutput);
+  const args = ["ai:assistants:tests", "update", "--test-id", testId];
+  addMappedFlag(args, flags, "description", "--description");
+  addMappedFlag(args, flags, "destination", "--destination");
+  addMappedFlag(args, flags, "instructions", "--instructions");
+  addPositiveIntegerFlag(args, flags, "max-duration-seconds", "--max-duration-seconds", jsonOutput);
+  addMappedFlag(args, flags, "name", "--name");
+  addJsonObjectArrayFlag(args, flags, "rubric", "--rubric", false, jsonOutput);
+  addTestChannelFlag(args, flags, jsonOutput);
+  addMappedFlag(args, flags, "test-suite", "--test-suite");
+  if (args.length === 4) fail("at least one AI assistant test field must be supplied for update", jsonOutput);
+
+  try {
+    const response = await telnyxCli(args);
+    presentTest("AI assistant test updated!", response, jsonOutput, testId);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** List assistant evaluation definitions in one parseable API envelope. */
+export async function listAiAssistantTestsCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const args = ["ai:assistants:tests", "list"];
+  addMappedFlag(args, flags, "destination", "--destination");
+  addPositiveIntegerFlag(args, flags, "page-number", "--page-number", jsonOutput);
+  addPositiveIntegerFlag(args, flags, "page-size", "--page-size", jsonOutput);
+  addTestChannelFlag(args, flags, jsonOutput);
+  addMappedFlag(args, flags, "test-suite", "--test-suite");
+  const maxItems = addMaxItemsFlag(args, flags, jsonOutput);
+
+  try {
+    const response = await telnyxCli(args, { format: "raw" });
+    const allTests = responseDataRecords(response);
+    const tests = maxItems === undefined || maxItems === -1 ? allTests : allTests.slice(0, maxItems);
+    const result: AiAssistantTestListResult = {
+      count: tests.length,
+      tests,
+      meta: asRecord(asRecord(response).meta),
+    };
+    presentTestList("AI assistant tests retrieved!", result, jsonOutput);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Delete an assistant test only after explicit acknowledgement. */
+export async function deleteAiAssistantTestCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const testId = requiredStringFlag(flags, "test-id", jsonOutput);
+  if (!booleanFlagIsTrue(flags, "confirm")) fail("--confirm is required to delete an AI assistant test", jsonOutput);
+  try {
+    await telnyxCli(["ai:assistants:tests", "delete", "--test-id", testId]);
+    const result: DeleteAiAssistantTestResult = { test_id: testId, deleted: true };
+    if (jsonOutput) outputJson(result);
+    else printSuccess("AI assistant test deleted!", { "Test ID": testId });
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** List the distinct evaluation-suite names available to the account. */
+export async function listAiAssistantTestSuitesCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  try {
+    const response = await telnyxCli(["ai:assistants:tests:test-suites", "list"], { format: "raw" });
+    const data = Array.isArray(response) ? response : asRecord(response).data;
+    const testSuites = Array.isArray(data) ? data.filter((item): item is string => typeof item === "string") : [];
+    const result: AiAssistantTestSuiteListResult = { count: testSuites.length, test_suites: testSuites };
+    if (jsonOutput) outputJson(result);
+    else {
+      printSuccess("AI assistant test suites retrieved!", { Count: result.count });
+      for (const suite of testSuites) console.log(`  • ${suite}`);
+      if (testSuites.length === 0) console.log("  (no test suites returned)");
+      console.log();
+    }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Retrieve a saved, immutable assistant version. */
+export async function getAiAssistantVersionCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const versionId = requiredStringFlag(flags, "version-id", jsonOutput);
+  const args = ["ai:assistants:versions", "retrieve", "--assistant-id", assistantId, "--version-id", versionId];
+  addBooleanFlag(args, flags, "include-mcp-servers", "--include-mcp-servers", jsonOutput);
+  try {
+    const response = await telnyxCli(args);
+    presentVersion("AI assistant version retrieved!", assistantId, response, jsonOutput, versionId);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** List all saved versions for an assistant. */
+export async function listAiAssistantVersionsCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  try {
+    const response = await telnyxCli([
+      "ai:assistants:versions", "list", "--assistant-id", assistantId,
+    ], { format: "raw" });
+    const versions = responseDataRecords(response);
+    const result: AiAssistantVersionListResult = { assistant_id: assistantId, count: versions.length, versions };
+    if (jsonOutput) outputJson(result);
+    else {
+      printSuccess("AI assistant versions retrieved!", { "Assistant ID": assistantId, Count: result.count });
+      for (const version of versions) {
+        const id = stringValue(version.id) || stringValue(version.version_id) || "(unknown)";
+        console.log(`  • ${stringValue(version.name) || id} — ${id}`);
+      }
+      if (versions.length === 0) console.log("  (no versions returned)");
+      console.log();
+    }
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Update a non-main saved assistant version. */
+export async function updateAiAssistantVersionCommand(
+  flags: Flags,
+  occurrences: Occurrences = {},
+): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const versionId = requiredStringFlag(flags, "version-id", jsonOutput);
+  const args = [
+    "ai:assistants:versions", "update", "--assistant-id", assistantId, "--version-id", versionId,
+  ];
+  addAssistantFields(args, flags, jsonOutput, undefined, occurrences);
+  addMappedFlag(args, flags, "name", "--name");
+  addMappedFlag(args, flags, "instructions", "--instructions");
+  addMappedFlag(args, flags, "version-name", "--version-name");
+  if (args.length === 6) fail("at least one AI assistant version field must be supplied for update", jsonOutput);
+
+  try {
+    const response = await telnyxCli(
+      args,
+      usesAiAssistantV032Controls(flags)
+        ? { minimumVersion: AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION }
+        : undefined,
+    );
+    presentVersion("AI assistant version updated!", assistantId, response, jsonOutput, versionId);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Delete a non-main saved assistant version after explicit acknowledgement. */
+export async function deleteAiAssistantVersionCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const versionId = requiredStringFlag(flags, "version-id", jsonOutput);
+  if (!booleanFlagIsTrue(flags, "confirm")) fail("--confirm is required to delete an AI assistant version", jsonOutput);
+  try {
+    await telnyxCli([
+      "ai:assistants:versions", "delete", "--assistant-id", assistantId, "--version-id", versionId,
+    ]);
+    const result: DeleteAiAssistantVersionResult = { assistant_id: assistantId, version_id: versionId, deleted: true };
+    if (jsonOutput) outputJson(result);
+    else printSuccess("AI assistant version deleted!", { "Assistant ID": assistantId, "Version ID": versionId });
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
+/** Make a saved assistant version the production/main version. */
+export async function promoteAiAssistantVersionCommand(flags: Flags): Promise<void> {
+  const jsonOutput = flags.json === true;
+  const assistantId = assistantIdFlag(flags, jsonOutput);
+  const versionId = requiredStringFlag(flags, "version-id", jsonOutput);
+  if (!booleanFlagIsTrue(flags, "confirm")) {
+    fail("--confirm is required to promote an AI assistant version to production", jsonOutput);
+  }
+  try {
+    const response = await telnyxCli([
+      "ai:assistants:versions", "promote", "--assistant-id", assistantId, "--version-id", versionId,
+    ]);
+    presentVersion("AI assistant version promoted!", assistantId, response, jsonOutput, versionId);
+  } catch (err) {
+    fail(errorMsg(err), jsonOutput);
+  }
+}
+
 /** Execute a shared webhook tool in an assistant context without a conversation. */
 export async function testAiAssistantToolCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -423,6 +688,78 @@ export async function testAiAssistantToolCommand(flags: Flags): Promise<void> {
   } catch (err) {
     fail(errorMsg(err), jsonOutput);
   }
+}
+
+function presentTest(
+  title: string,
+  response: unknown,
+  jsonOutput: boolean,
+  fallbackTestId = "",
+): void {
+  const test = responseDataRecord(response);
+  const result: AiAssistantTestResult = {
+    test_id: stringValue(test.id) || stringValue(test.test_id) || fallbackTestId,
+    test,
+  };
+  if (jsonOutput) {
+    outputJson(result);
+    return;
+  }
+  printSuccess(title, {
+    "Test ID": result.test_id || "(not returned)",
+    Name: stringValue(test.name) || "(not returned)",
+    "Test Suite": stringValue(test.test_suite) || "(none)",
+  });
+}
+
+function presentTestList(title: string, result: AiAssistantTestListResult, jsonOutput: boolean): void {
+  if (jsonOutput) {
+    outputJson(result);
+    return;
+  }
+  printSuccess(title, { Count: result.count });
+  for (const test of result.tests) {
+    const id = stringValue(test.id) || stringValue(test.test_id) || "(unknown)";
+    console.log(`  • ${stringValue(test.name) || id} — ${id}`);
+  }
+  if (result.count === 0) console.log("  (no AI assistant tests returned)");
+  console.log();
+}
+
+function presentVersion(
+  title: string,
+  assistantId: string,
+  response: unknown,
+  jsonOutput: boolean,
+  fallbackVersionId = "",
+): void {
+  const version = responseDataRecord(response);
+  const result: AiAssistantVersionResult = {
+    assistant_id: assistantId,
+    version_id: stringValue(version.id) || stringValue(version.version_id) || fallbackVersionId,
+    version,
+  };
+  if (jsonOutput) {
+    outputJson(result);
+    return;
+  }
+  printSuccess(title, {
+    "Assistant ID": assistantId,
+    "Version ID": result.version_id || "(not returned)",
+    Name: stringValue(version.name) || stringValue(version.version_name) || "(not returned)",
+  });
+}
+
+function addTestChannelFlag(args: string[], flags: Flags, jsonOutput: boolean): void {
+  const value = flags["telnyx-conversation-channel"];
+  if (value === undefined) return;
+  if (
+    typeof value !== "string"
+    || !["phone_call", "web_call", "sms_chat", "web_chat"].includes(value)
+  ) {
+    fail("--telnyx-conversation-channel must be one of: phone_call, web_call, sms_chat, web_chat", jsonOutput);
+  }
+  args.push("--telnyx-conversation-channel", value);
 }
 
 function addAssistantFields(
@@ -591,6 +928,33 @@ function addRequiredStringFlag(
   args.push(target, value);
 }
 
+function addJsonObjectArrayFlag(
+  args: string[],
+  flags: Flags,
+  source: string,
+  target: string,
+  required: boolean,
+  jsonOutput: boolean,
+): void {
+  const value = optionalStringFlag(flags, source);
+  if (value === undefined) {
+    if (required) fail(`--${source} is required and must be a JSON array of objects`, jsonOutput);
+    if (flags[source] !== undefined) fail(`--${source} must be a JSON array of objects`, jsonOutput);
+    return;
+  }
+  let entries: unknown[];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.length === 0 || parsed.some(
+      (item) => !item || typeof item !== "object" || Array.isArray(item),
+    )) throw new Error();
+    entries = parsed;
+  } catch {
+    fail(`--${source} must be a non-empty JSON array of objects`, jsonOutput);
+  }
+  for (const entry of entries) args.push(target, JSON.stringify(entry));
+}
+
 function addJsonObjectFlag(
   args: string[],
   flags: Flags,
@@ -720,7 +1084,10 @@ function addPositiveIntegerFlag(
   jsonOutput: boolean,
 ): void {
   const value = optionalStringFlag(flags, source);
-  if (value === undefined) return;
+  if (value === undefined) {
+    if (flags[source] !== undefined) fail(`--${source} must be a positive integer`, jsonOutput);
+    return;
+  }
   if (!/^\d+$/.test(value) || Number(value) < 1) {
     fail(`--${source} must be a positive integer`, jsonOutput);
   }
@@ -729,7 +1096,10 @@ function addPositiveIntegerFlag(
 
 function addMaxItemsFlag(args: string[], flags: Flags, jsonOutput: boolean): number | undefined {
   const value = optionalStringFlag(flags, "max-items");
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    if (flags["max-items"] !== undefined) fail("--max-items must be -1 or a non-negative integer", jsonOutput);
+    return undefined;
+  }
   if (!/^(?:-1|\d+)$/.test(value)) {
     fail("--max-items must be -1 or a non-negative integer", jsonOutput);
   }

@@ -34,9 +34,14 @@ function jsonFlags(name) {
   }
   return values;
 }
-if (args[0] !== "ai:conversations") {
+if (!["ai:conversations", "ai:conversations:messages"].includes(args[0])) {
   console.error("unexpected fake telnyx invocation: " + args.join(" "));
   process.exit(2);
+} else if (args[0] === "ai:conversations:messages" && args[1] === "list") {
+  console.log(JSON.stringify({ data: [
+    { id: "message-1", role: "user", content: "Hello" },
+    { id: "message-2", role: "assistant", content: "How can I help?", tool_calls: [] }
+  ], meta: { total_results: 2 } }));
 } else if (args[1] === "create") {
   console.log(JSON.stringify({ data: { id: "conversation-created", name: flag("--name"), metadata: jsonFlag("--metadata") } }));
 } else if (args[1] === "retrieve") {
@@ -204,6 +209,27 @@ describe("AI conversation lifecycle action commands", () => {
     assertFlag(args, "--idempotency-key", "retry-message");
   });
 
+  it("lists persisted messages with pagination and a stable raw-envelope result", () => {
+    const fake = setupFakeTelnyx();
+    const result = runAgent([
+      "list-ai-conversation-messages", "--id", "conversation-1", "--page-number", "2", "--page-size", "20", "--max-items", "1", "--json",
+    ], fake.env);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      conversation_id: "conversation-1",
+      count: 1,
+      messages: [{ id: "message-1", role: "user", content: "Hello" }],
+      meta: { total_results: 2 },
+    });
+    const [args] = loggedArgs(fake.logPath);
+    assert.deepEqual(args.slice(0, 2), ["ai:conversations:messages", "list"]);
+    assertFlag(args, "--conversation-id", "conversation-1");
+    assertFlag(args, "--page-number", "2");
+    assertFlag(args, "--page-size", "20");
+    assertFlag(args, "--max-items", "1");
+    assert.deepEqual(args.slice(-2), ["--format", "raw"]);
+  });
+
   it("requires confirmation before deletion and never forwards it", () => {
     const fake = setupFakeTelnyx();
     const rejected = runAgent(["delete-ai-conversation", "--id", "conversation-1", "--json"], fake.env);
@@ -228,6 +254,7 @@ describe("AI conversation lifecycle action commands", () => {
       ["add-ai-conversation-message", "--id", "conversation-1", "--json"],
       ["add-ai-conversation-message", "--id", "conversation-1", "--role", "user", "--tool-call", "{}", "--json"],
       ["list-ai-conversations", "--limit", "0", "--json"],
+      ["list-ai-conversation-messages", "--id", "conversation-1", "--max-items", "-2", "--json"],
       ["get-ai-conversation", "--id", "one", "--conversation-id", "two", "--json"],
     ];
     for (const args of invalidCases) {
@@ -241,7 +268,7 @@ describe("AI conversation lifecycle action commands", () => {
 
   it("advertises every conversation command in help and capabilities", () => {
     const commands = [
-      "create-ai-conversation", "get-ai-conversation", "list-ai-conversations", "update-ai-conversation",
+      "create-ai-conversation", "get-ai-conversation", "list-ai-conversations", "list-ai-conversation-messages", "update-ai-conversation",
       "add-ai-conversation-message", "delete-ai-conversation",
     ];
     const help = runAgent(["help"]);
@@ -258,7 +285,7 @@ describe("AI conversation lifecycle action commands", () => {
       (capability: { name: string }) => capability.name === "AI Conversations",
     ).actions;
     assert.deepEqual(conversationActions, [
-      "create_ai_conversation", "get_ai_conversation", "list_ai_conversations", "update_ai_conversation",
+      "create_ai_conversation", "get_ai_conversation", "list_ai_conversations", "list_ai_conversation_messages", "update_ai_conversation",
       "add_ai_conversation_message", "delete_ai_conversation",
     ]);
   });
