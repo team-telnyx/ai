@@ -122,6 +122,21 @@ import { aiChatCommand } from "./commands/ai-chat.ts";
 import { aiAnthropicMessageCommand } from "./commands/ai-anthropic-message.ts";
 import { aiEmbedCommand } from "./commands/ai-embed.ts";
 import {
+  createAgentGatewayApiCommand,
+  createAgentGatewayCommand,
+  createAgentGatewayMcpServerCommand,
+  deleteAgentGatewayApiCommand,
+  deleteAgentGatewayCommand,
+  deleteAgentGatewayMcpServerCommand,
+  getAgentGatewayCommand,
+  listAgentGatewayApisCommand,
+  listAgentGatewaysCommand,
+  listAgentGatewayMcpServersCommand,
+  retrieveAgentGatewayModelsCommand,
+  updateAgentGatewayApiCommand,
+  updateAgentGatewayMcpServerCommand,
+} from "./commands/agent-gateways.ts";
+import {
   chatAiAssistantCommand,
   createAiAssistantCommand,
   deleteAiAssistantCommand,
@@ -313,6 +328,19 @@ Commands:
   ai-chat           Create an OpenAI-compatible chat completion
   ai-anthropic-message Create an Anthropic-compatible message response
   ai-embed          Create OpenAI-compatible text embeddings
+  create-agent-gateway Create an Agent Gateway on a WireGuard interface
+  get-agent-gateway Retrieve an Agent Gateway instance by ID
+  list-agent-gateways List Agent Gateway instances
+  delete-agent-gateway Delete an Agent Gateway instance (requires --confirm)
+  retrieve-agent-gateway-models List models served by an Agent Gateway instance
+  create-agent-gateway-api Add an OpenAPI REST API to an Agent Gateway
+  update-agent-gateway-api Update an Agent Gateway REST API
+  list-agent-gateway-apis List REST APIs on an Agent Gateway
+  delete-agent-gateway-api Delete an Agent Gateway REST API (requires --confirm)
+  create-agent-gateway-mcp-server Add an MCP server to an Agent Gateway
+  update-agent-gateway-mcp-server Update an Agent Gateway MCP server
+  list-agent-gateway-mcp-servers List MCP servers on an Agent Gateway
+  delete-agent-gateway-mcp-server Delete an Agent Gateway MCP server (requires --confirm)
   list-ai-assistants List AI assistant configurations
   create-ai-assistant Create an AI assistant
   get-ai-assistant  Retrieve an AI assistant by ID
@@ -619,6 +647,19 @@ WhatsApp Flags:
   --language        Template language, default en_US (whatsapp-templates, create)
   --component       Template components as a JSON array string (whatsapp-templates, create)
   --status          Filter templates by status: APPROVED|PENDING|REJECTED (whatsapp-templates, list)
+Agent Gateway Flags:
+  --wireguard-interface-id <id> WireGuard interface for a new Agent Gateway (create-agent-gateway, required)
+  --instance-id <id> Agent Gateway instance ID (all get/delete/model/API/MCP actions, required as applicable)
+  --api-id <id>     Agent Gateway REST API ID (update/delete-agent-gateway-api, required)
+  --server-id <id>  Agent Gateway MCP server ID (update/delete-agent-gateway-mcp-server, required)
+  --spec-url <url>  OpenAPI 3.x or Swagger 2.0 description URL (create-agent-gateway-api, required)
+  --base-url <url>  Override the API description's first server URL (Agent Gateway API create/update)
+  --auth <json>     Gateway authentication configuration object (Agent Gateway API/MCP create/update)
+  --static-headers <json> Static request header object (Agent Gateway API/MCP create/update)
+  --forwarded-header <name> Header name to forward; repeatable (Agent Gateway API/MCP create/update)
+  --tool <name>     Exposed API operation or MCP tool name; repeatable (Agent Gateway API/MCP create/update)
+  --open-to-every-key <true|false> Make a configured API or MCP server available to every gateway key
+  --transport <http|sse> MCP transport (create/update-agent-gateway-mcp-server)
 Voice Call Flags:
   --connection-id   Voice connection ID (call-dial, list-active-calls — required)
   --from             E.164 number to call from (call-dial, required)
@@ -1162,6 +1203,10 @@ Examples:
   telnyx-agent ai-anthropic-message --model zai-org/GLM-5.2 --max-tokens 256 --message '{"role":"user","content":"Hello"}' --json
   telnyx-agent ai-embed --model thenlper/gte-large --input "Hello world" --json
   telnyx-agent ai-embed --model thenlper/gte-large --input '["one","two"]' --dimensions 256 --json
+  telnyx-agent create-agent-gateway --wireguard-interface-id <interface-id> --name "Support Gateway" --json
+  telnyx-agent retrieve-agent-gateway-models --instance-id <instance-id> --json
+  telnyx-agent create-agent-gateway-api --instance-id <instance-id> --name crm --spec-url https://example.com/openapi.json --tool getCustomer --json
+  telnyx-agent create-agent-gateway-mcp-server --instance-id <instance-id> --name docs --url https://mcp.example.com --transport http --json
   telnyx-agent list-ai-assistants --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Help callers" --model meta-llama/Llama-3.1-70B-Instruct --json
   telnyx-agent create-ai-assistant --name Concierge --instructions "Delegate specialist work" --a2a-agent '{"name":"billing","url":"https://billing.example.com"}' --fallback-destination sip:support@example.com --json
@@ -1314,6 +1359,19 @@ const COMMANDS: Record<string, (
   "ai-chat": aiChatCommand,
   "ai-anthropic-message": aiAnthropicMessageCommand,
   "ai-embed": aiEmbedCommand,
+  "create-agent-gateway": createAgentGatewayCommand,
+  "get-agent-gateway": getAgentGatewayCommand,
+  "list-agent-gateways": listAgentGatewaysCommand,
+  "delete-agent-gateway": deleteAgentGatewayCommand,
+  "retrieve-agent-gateway-models": retrieveAgentGatewayModelsCommand,
+  "create-agent-gateway-api": createAgentGatewayApiCommand,
+  "update-agent-gateway-api": updateAgentGatewayApiCommand,
+  "list-agent-gateway-apis": listAgentGatewayApisCommand,
+  "delete-agent-gateway-api": deleteAgentGatewayApiCommand,
+  "create-agent-gateway-mcp-server": createAgentGatewayMcpServerCommand,
+  "update-agent-gateway-mcp-server": updateAgentGatewayMcpServerCommand,
+  "list-agent-gateway-mcp-servers": listAgentGatewayMcpServersCommand,
+  "delete-agent-gateway-mcp-server": deleteAgentGatewayMcpServerCommand,
   "list-ai-assistants": listAiAssistantsCommand,
   "create-ai-assistant": createAiAssistantCommand,
   "get-ai-assistant": getAiAssistantCommand,
@@ -1357,11 +1415,11 @@ const COMMANDS: Record<string, (
 const KNOWN_FLAGS = new Set<string>([
   "texml-app-id",
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
-  "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
+  "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection", "auth",
+  "api-id", "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
-  "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
+  "base-url", "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
@@ -1380,11 +1438,11 @@ const KNOWN_FLAGS = new Set<string>([
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
   "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
-  "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
+  "forward-of-message-id", "forwarded-header", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
-  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
+  "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "instance-id", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
   "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
@@ -1394,7 +1452,7 @@ const KNOWN_FLAGS = new Set<string>([
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
   "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
+  "old-provider", "on-hold", "open-to-every-key", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
@@ -1403,23 +1461,23 @@ const KNOWN_FLAGS = new Set<string>([
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
-  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
+  "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at", "server-id",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
-  "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
+  "spec-url", "start-conference-on-create", "start-message", "start-time", "starts-with", "static-headers", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "telnyx-agent-target", "telnyx-conversation-channel", "telnyx-end-user-target", "temperature", "template-id", "template-language", "template-name", "template-variables",
   "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
-  "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
+  "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k", "transport",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
-  "whitelisted-destinations",
+  "whitelisted-destinations", "wireguard-interface-id",
 ]);
 
 // Commands that accept an arbitrary/generated flag surface, where an
