@@ -151,6 +151,15 @@ import {
 } from "./commands/ai-assistant-scheduled-events.ts";
 import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
 import {
+  createAiMemoryNamespaceCommand,
+  getAiMemoryOperationStatusCommand,
+  getAiMemoryProfileSummaryCommand,
+  ingestAiMemoryProfileCommand,
+  listAiMemoryNamespacesCommand,
+  recallAiMemoryProfileCommand,
+  rememberAiMemoryProfileCommand,
+} from "./commands/ai-memory.ts";
+import {
   disableSimCardCommand,
   enableSimCardCommand,
   listSimCardActionsCommand,
@@ -330,6 +339,13 @@ Commands:
   add-ai-conversation-message Add a message to an AI conversation
   delete-ai-conversation Delete an AI conversation by ID (requires --confirm)
   search-ai-collection Search or list RAG documents in an AI collection
+  create-ai-memory-namespace Create a persistent AI memory namespace
+  list-ai-memory-namespaces List persistent AI memory namespaces
+  get-ai-memory-operation-status Retrieve the status of an asynchronous AI memory write
+  ingest-ai-memory-profile Ingest a session into a persistent AI memory profile (asynchronous)
+  remember-ai-memory-profile Store a distilled fact in a persistent AI memory profile (asynchronous)
+  recall-ai-memory-profile Recall ranked facts from a persistent AI memory profile
+  get-ai-memory-profile-summary Retrieve a persistent AI memory profile's precomputed summary
   web-search        Search the web and return structured, LLM-ready results
   web-contents      Retrieve clean content for up to 20 URLs
   web-research      Start synchronous or background deep web research
@@ -937,6 +953,16 @@ AI Collection Retrieval Flags:
   --page-size <n>   Results per page (default: 20)
   --sources <csv>   Comma-separated source types to search, e.g. voice,message
   --filter <json>   Pre-ranking field filters, e.g. {"record_id":{"eq":"rec_123"}}
+AI Memory Flags:
+  --name <name>     Namespace name (create-ai-memory-namespace — required)
+  --namespace <id>  AI memory namespace (all profile and operation-status commands — required)
+  --profile-id <id> Profile identifier (ingest, remember, recall, and summary — required)
+  --operation-id <id> Asynchronous write operation identifier (get-ai-memory-operation-status — required)
+  --body <json>     Session payload sent to ingest (ingest-ai-memory-profile — required)
+  --session-id <id> Optional ingest session ID; reusing it replaces that session's source
+  --text <text>     Distilled fact to store directly (remember-ai-memory-profile — required)
+  --query <text>    Question used to rank recalled memories (recall-ai-memory-profile — required)
+  --top-k <n>       Maximum recalled memories (recall-ai-memory-profile)
 Web Intelligence Flags:
   --query <text>    Search query or research question (web-search, web-research — required)
   --count <1-100>   Number of web search results to return
@@ -1180,6 +1206,11 @@ Examples:
   telnyx-agent add-ai-conversation-message --id <conversation-id> --role user --content "Hello" --json
   telnyx-agent delete-ai-conversation --id <conversation-id> --confirm --json
   telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
+  telnyx-agent create-ai-memory-namespace --name support --json
+  telnyx-agent ingest-ai-memory-profile --namespace support --profile-id customer-123 --body '{"messages":[{"role":"user","content":"I prefer email updates."}]}' --json
+  telnyx-agent get-ai-memory-operation-status --namespace support --operation-id <operation-id> --json
+  telnyx-agent recall-ai-memory-profile --namespace support --profile-id customer-123 --query "contact preference" --top-k 5 --json
+  telnyx-agent get-ai-memory-profile-summary --namespace support --profile-id customer-123 --json
   telnyx-agent web-search --query "latest WebRTC developments" --count 10 --freshness week --json
   telnyx-agent web-contents --url https://example.com --format markdown --json
   telnyx-agent web-research --query "Compare SIP trunking providers" --background true --json
@@ -1331,6 +1362,13 @@ const COMMANDS: Record<string, (
   "add-ai-conversation-message": addAiConversationMessageCommand,
   "delete-ai-conversation": deleteAiConversationCommand,
   "search-ai-collection": searchAiCollectionCommand,
+  "create-ai-memory-namespace": createAiMemoryNamespaceCommand,
+  "list-ai-memory-namespaces": listAiMemoryNamespacesCommand,
+  "get-ai-memory-operation-status": getAiMemoryOperationStatusCommand,
+  "ingest-ai-memory-profile": ingestAiMemoryProfileCommand,
+  "remember-ai-memory-profile": rememberAiMemoryProfileCommand,
+  "recall-ai-memory-profile": recallAiMemoryProfileCommand,
+  "get-ai-memory-profile-summary": getAiMemoryProfileSummaryCommand,
   "chat-ai-assistant": chatAiAssistantCommand,
   "send-ai-assistant-sms": sendAiAssistantSmsCommand,
   "trigger-ai-assistant-test-run": triggerAiAssistantTestRunCommand,
@@ -1392,20 +1430,20 @@ const KNOWN_FLAGS = new Set<string>([
   "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
-  "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
+  "mode", "muted", "name", "name-contains", "namespace", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
+  "on-hold", "operation-id", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
-  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
+  "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-id", "profile-name", "promote-to-main", "prompts", "provider", "quality",
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
   "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
-  "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
+  "session-id", "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
   "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
