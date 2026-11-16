@@ -136,6 +136,20 @@ import {
   updateAiAssistantCommand,
 } from "./commands/ai-assistants.ts";
 import {
+  addAiAssistantToolCommand,
+  createAiMcpServerCommand,
+  createAiToolCommand,
+  deleteAiMcpServerCommand,
+  deleteAiToolCommand,
+  getAiMcpServerCommand,
+  getAiToolCommand,
+  listAiMcpServersCommand,
+  listAiToolsCommand,
+  removeAiAssistantToolCommand,
+  updateAiMcpServerCommand,
+  updateAiToolCommand,
+} from "./commands/ai-tools.ts";
+import {
   addAiConversationMessageCommand,
   createAiConversationCommand,
   deleteAiConversationCommand,
@@ -341,6 +355,18 @@ Commands:
   get-ai-assistant-test-run Retrieve one AI assistant test run
   list-ai-assistant-test-runs List execution history for an AI assistant test
   test-ai-assistant-tool Execute a webhook tool in an AI assistant context
+  add-ai-assistant-tool Attach a shared AI tool to an AI assistant
+  remove-ai-assistant-tool Detach a shared AI tool from an AI assistant
+  create-ai-tool     Create a reusable AI tool
+  get-ai-tool        Retrieve a reusable AI tool
+  update-ai-tool     Update a reusable AI tool
+  list-ai-tools      List reusable AI tools
+  delete-ai-tool     Delete a reusable AI tool (requires --confirm)
+  create-ai-mcp-server Create an AI MCP server configuration
+  get-ai-mcp-server  Retrieve an AI MCP server configuration
+  update-ai-mcp-server Update an AI MCP server configuration
+  list-ai-mcp-servers List AI MCP server configurations
+  delete-ai-mcp-server Delete an AI MCP server configuration (requires --confirm)
 
 Global Flags:
   --json            Output structured JSON instead of human-readable text
@@ -973,6 +999,24 @@ AI Assistant Execution Flags:
   --arguments <json> Webhook tool arguments object
   --dynamic-variables <json> Dynamic variables object (tool test)
 
+AI Tool and MCP Server Flags:
+  --tool-id <id>    Shared AI tool ID (get, update, delete, attach, detach, and test)
+  --display-name <name> Human-readable AI tool name (create required; update optional)
+  --type <type>     AI tool type (create required; update/list MCP-server filter optional)
+  --client-side-tool / --function / --handoff / --invite / --pay / --retrieval <json>
+                    AI tool configuration object (create, update)
+  --update-dynamic-variables / --webhook <json> AI tool configuration object (create, update)
+  --vision <json>    AI vision tool configuration (create, update; requires Telnyx Go CLI v0.36+)
+  --timeout-ms <n>  AI tool timeout in milliseconds (create, update)
+  --filter-name / --filter-type <value> AI tool list filters
+  --mcp-server-id <id> AI MCP server ID (get, update, delete)
+  --url <url>       MCP server endpoint URL (create required; update/list filter optional)
+  --allowed-tool <value> Allowed MCP tool value (create, update)
+  --api-key-ref <id> Integration-secret reference for MCP authentication (create, update)
+  --created-at <value> Upstream MCP server created-at value (update)
+  --idempotency-key <key> Idempotency key (create AI tool or MCP server)
+  --confirm         Explicitly confirm AI tool or MCP server deletion
+
 IoT SIM Action Flags:
   --id <id>         SIM card ID (retrieve/enable/disable) or action ID (retrieve-sim-card-action) — required
   --iccid           Partial ICCID filter (list-sim-cards)
@@ -1190,6 +1234,11 @@ Examples:
   telnyx-agent get-ai-assistant-test-run --test-id <test-id> --run-id <run-id> --json
   telnyx-agent list-ai-assistant-test-runs --test-id <test-id> --status completed --json
   telnyx-agent test-ai-assistant-tool --id <assistant-id> --tool-id <tool-id> --arguments '{"ticket_id":"123"}' --json
+  telnyx-agent create-ai-tool --display-name "Lookup order" --type function --function '{"name":"lookup_order","description":"Look up an order","parameters":{"type":"object"}}' --json
+  telnyx-agent add-ai-assistant-tool --assistant-id <assistant-id> --tool-id <tool-id> --json
+  telnyx-agent list-ai-tools --filter-type function --page-size 25 --json
+  telnyx-agent create-ai-mcp-server --name orders --type streamable_http --url https://mcp.example.com --allowed-tool lookup_order --json
+  telnyx-agent list-ai-mcp-servers --type streamable_http --json
   telnyx-agent list-sim-cards --status enabled,disabled --page-size 25 --json
   telnyx-agent retrieve-sim-card --id <sim-card-id> --json
   telnyx-agent enable-sim-card --id <sim-card-id> --json
@@ -1337,6 +1386,18 @@ const COMMANDS: Record<string, (
   "get-ai-assistant-test-run": getAiAssistantTestRunCommand,
   "list-ai-assistant-test-runs": listAiAssistantTestRunsCommand,
   "test-ai-assistant-tool": testAiAssistantToolCommand,
+  "add-ai-assistant-tool": addAiAssistantToolCommand,
+  "remove-ai-assistant-tool": removeAiAssistantToolCommand,
+  "create-ai-tool": createAiToolCommand,
+  "get-ai-tool": getAiToolCommand,
+  "update-ai-tool": updateAiToolCommand,
+  "list-ai-tools": listAiToolsCommand,
+  "delete-ai-tool": deleteAiToolCommand,
+  "create-ai-mcp-server": createAiMcpServerCommand,
+  "get-ai-mcp-server": getAiMcpServerCommand,
+  "update-ai-mcp-server": updateAiMcpServerCommand,
+  "list-ai-mcp-servers": listAiMcpServersCommand,
+  "delete-ai-mcp-server": deleteAiMcpServerCommand,
   "list-sim-cards": listSimCardsCommand,
   "retrieve-sim-card": retrieveSimCardCommand,
   "enable-sim-card": enableSimCardCommand,
@@ -1358,7 +1419,7 @@ const KNOWN_FLAGS = new Set<string>([
   "texml-app-id",
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
-  "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
+  "allowed-tool", "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
@@ -1370,38 +1431,38 @@ const KNOWN_FLAGS = new Set<string>([
   "conference-region",
   "confirm", "connection-id", "connection-name", "connector-name", "contacts", "contains",
   "content", "content-type", "context", "conversation-channel", "conversation-id", "conversation-metadata", "count",
-  "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code",
+  "country", "country-code", "country-code-in", "crawl-timeout", "create", "created-after", "created-at", "created-before", "currency", "custom-code", "client-side-tool",
   "customer-group-reference", "customer-name", "customer-reference", "daily-spend-limit",
   "daily-spend-limit-enabled", "deepfake-detection", "depth", "description", "direction",
   "destination-version-id", "destinations", "digits", "dimensions", "disable-cache",
   "display-name", "document", "document-id", "document-type", "dtmf-detection", "duration-minutes",
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
-  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
+  "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id", "filter-name", "filter-type", "function",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
   "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
-  "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
+  "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name", "handoff",
   "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
   "include-phone-numbers", "include-sim-card-group", "inline-css", "input", "instructions",
-  "inter-digit-timeout-millis", "interactive", "interrupt", "invoice-document-id", "join-at",
+  "inter-digit-timeout-millis", "interactive", "interrupt", "invite", "invoice-document-id", "join-at",
   "json", "language", "last-message-at", "limit", "livecrawl", "loa-document-id", "locality", "location", "max-age",
   "max-attempts", "max-items", "max-participants", "max-retries", "max-retries-client-errors", "max-size", "max-sources", "max-tokens",
-  "mcp-server", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
+  "mcp-server", "mcp-server-id", "media-encryption", "media-name", "media-url", "meeting-session-id", "meeting-url",
   "message", "message-flow", "message-id", "messaging-profile-id", "metadata", "method",
   "mms-fall-back-to-sms", "mms-transcoding", "mobile-only", "model", "monochrome", "msisdn",
   "mode", "muted", "name", "name-contains", "national-destination-code", "network-id",
   "new-billing-phone-number", "number-pool-settings", "number-type", "numbers", "old-provider",
-  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id",
+  "on-hold", "opt-in-method", "optin-message", "optout-message", "order", "outbound-voice-profile-id", "pay",
   "output", "output-file", "output-type", "page-number", "page-size", "param", "parameters",
   "parent-support-key", "participant", "participants", "payload", "payment-method",
   "payment-token", "phone", "phone-number", "phone-number-id", "phone-numbers", "port-type",
   "pon", "ported-out-at", "portout-id", "preview-format", "privacy", "profile-name", "promote-to-main", "prompts", "provider", "quality",
   "query", "queue-name", "reaction", "reason", "record", "recording-id", "region",
   "remaining-numbers-action", "reply-to", "reply-to-all", "requirement-group-id",
-  "research-effort", "resource-group-id", "response-format", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
+  "research-effort", "resource-group-id", "response-format", "retrieval", "retrieval-type", "retry-interval-secs", "retry-on-timeout",
   "role", "room-id", "room-participant-id", "room-session-id", "route-to-mobile", "run-id", "rx",
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
@@ -1412,11 +1473,11 @@ const KNOWN_FLAGS = new Set<string>([
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
   "telnyx-agent-target", "telnyx-conversation-channel", "telnyx-end-user-target", "temperature", "template-id", "template-language", "template-name", "template-variables",
   "test-id", "text", "text-body", "text-type", "thinking", "time-limit-secs", "timeout",
-  "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
+  "timeout-millis", "timeout-ms", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
-  "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
+  "transcription-model", "trigger-response", "ttl", "tx", "type", "update-dynamic-variables", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
-  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "version-name", "vertical", "video", "vision", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
