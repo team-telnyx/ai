@@ -378,7 +378,7 @@
     "underlying": {
       "package": "telnyx-cli (Go)",
       "binary": "telnyx",
-      "version": "0.32.0",
+      "version": "0.37.0",
       "syntax": "telnyx <resource[:subresource]> <command> [flags]",
       "note": "Vendored by @telnyx/agent-cli for endpoints without a telnyx-agent wrapper. Not the deprecated @telnyx/api-cli, which also installed a `telnyx` binary with different syntax.",
       "repo": "https://github.com/team-telnyx/telnyx-cli"
