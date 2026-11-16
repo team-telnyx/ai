@@ -401,16 +401,23 @@ describe("Edge Compute v0.5.2 guide regression", () => {
     assert.match(guide, /historical window; lines can arrive a few seconds/);
   });
 
-  it("documents released SQL export and standard-input import safety boundaries", () => {
-    assert.match(guide, /### SQL export and standard-input import \(v0\.5\.1\)/);
+  it("documents v0.5.18 job-based SQL restore and narrowly scopes standard-input copying", () => {
+    assert.match(guide, /current release is v0\.5\.18/);
+    assert.match(guide, /### SQL export and restore \(v0\.5\.18\)/);
     assert.match(guide, /storage sqldb export "\$SQLDB_ID" --remote --output \.\/database\.sql/);
+    assert.match(guide, /storage sqldb import "\$SQLDB_ID" --file \.\/database\.sql/);
+    assert.match(guide, /storage sqldb import "\$SQLDB_ID" --from-export <export-id>/);
+    assert.match(guide, /normal restores/);
+    assert.match(guide, /up to 100 MiB/);
     assert.match(guide, /storage sqldb export "\$SOURCE_SQLDB_ID" --remote --output -/);
     assert.match(guide, /storage sqldb execute "\$DEST_SQLDB_ID" --remote --file -/);
+    assert.match(guide, /roughly <=4 MiB/);
+    assert.match(guide, /not the normal restore path/);
     assert.match(guide, /not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data/);
     assert.match(guide, /do not combine `--no-data` with `--no-schema`/);
     assert.match(guide, /can partially modify the destination on failure, and is not a transactional restore/);
     assert.match(guide, /empty\/disposable destination/);
-    assert.match(guide, /never pipe blindly into a populated production database/);
+    assert.match(guide, /Do not pipe blindly into a populated production database/);
   });
 
   it("documents released metrics, deployment history, and invocation logs", () => {
@@ -420,6 +427,12 @@ describe("Edge Compute v0.5.2 guide regression", () => {
     assert.match(guide, /telnyx-edge logs my-function --type invocations --since 10m --last 200/);
     assert.match(guide, /telnyx-edge deployments my-function --json/);
     assert.match(guide, /build failure has no revision and cannot be a rollback target/);
+  });
+
+  it("documents released v0.5.5 actor metrics and logs without calling them upstream-only", () => {
+    assert.match(guide, /Since v0\.5\.5, `actors metrics <type> --since 24h`/);
+    assert.match(guide, /`actors logs <type>` reads recent runtime and invocation logs/);
+    assert.doesNotMatch(guide, /Current upstream main also adds optional `actors metrics/);
   });
 });
 

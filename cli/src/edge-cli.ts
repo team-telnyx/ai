@@ -199,6 +199,33 @@ export function supportsSecretsAdd(): boolean {
   }
 }
 
+/** Detect the complete secrets lifecycle separately from setup's secret-write prerequisite. */
+export function supportsSecretsLifecycle(): boolean {
+  try {
+    const secrets = runEdge(["secrets", "--help"]);
+    const remove = runEdge(["secrets", "delete", "--help"]);
+    return /\bsecrets\b/i.test(secrets) &&
+      ["add", "list", "delete"].every((command) => new RegExp(`\\b${command}\\b`, "i").test(secrets)) &&
+      /\bsecrets\s+delete\s+<[^>]+>/i.test(remove) && /--yes\b/i.test(remove);
+  } catch {
+    return false;
+  }
+}
+
+/** Detect the complete Telnyx binding lifecycle and safe non-interactive deletion. */
+export function supportsBindingsLifecycle(): boolean {
+  try {
+    const bindings = runEdge(["bindings", "--help"]);
+    const remove = runEdge(["bindings", "delete", "--help"]);
+    return /\bbindings\b/i.test(bindings) &&
+      ["create", "get", "update", "validate", "delete"]
+        .every((command) => new RegExp(`\\b${command}\\b`, "i").test(bindings)) &&
+      /\bbindings\s+delete\b/i.test(remove) && /--yes\b/i.test(remove);
+  } catch {
+    return false;
+  }
+}
+
 /** Detect TypeScript binding declaration generation directly. */
 export function supportsTypes(): boolean {
   try {
@@ -283,6 +310,17 @@ export function supportsSqlStdinImport(): boolean {
   }
 }
 
+/** Detect job-based SQL dump restore, which avoids the single-request script limit. */
+export function supportsSqlDatabaseImport(): boolean {
+  try {
+    const out = runEdge(["storage", "sqldb", "import", "--help"]);
+    return /\bstorage\s+sqldb\s+import\s+<[^>]+>/i.test(out) &&
+      ["file", "from-export"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Detect the complete custom-domain workflow from its own help surfaces. The
  * root command must advertise every lifecycle step, certificate upload must
@@ -331,6 +369,31 @@ export function supportsActorMetrics(): boolean {
     const out = runEdge(["actors", "metrics", "--help"]);
     return /\bactors\s+metrics\s+<type>(?:\s|\[|$)/i.test(out) &&
       ["since", "json"].every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect released StatefulActor runtime/invocation log history. */
+export function supportsActorLogs(): boolean {
+  try {
+    const out = runEdge(["actors", "logs", "--help"]);
+    return /\bactors\s+logs\s+<type>(?:\s|\[|$)/i.test(out) &&
+      ["type", "instance", "since", "last", "json"]
+        .every((flag) => new RegExp(`--${flag}\\b`, "i").test(out));
+  } catch {
+    return false;
+  }
+}
+
+/** Detect revision listing and rollback as one coherent deployed-revision workflow. */
+export function supportsRevisionsRollback(): boolean {
+  try {
+    const revisions = runEdge(["revisions", "list", "--help"]);
+    const rollback = runEdge(["rollback", "--help"]);
+    return /\brevisions\s+list\s+<[^>]+>/i.test(revisions) &&
+      /\brollback\s+<[^>]+>\s+<[^>]+>/i.test(rollback) &&
+      /\brevision\b/i.test(rollback);
   } catch {
     return false;
   }
