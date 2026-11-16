@@ -740,6 +740,8 @@ describe("AI assistant lifecycle action commands", () => {
       "trigger-ai-assistant-test-run",
       "get-ai-assistant-test-run",
       "list-ai-assistant-test-runs",
+      "add-ai-assistant-tool",
+      "remove-ai-assistant-tool",
       "test-ai-assistant-tool",
     ];
     const help = runAgent(["help"]);
@@ -783,6 +785,8 @@ describe("AI assistant lifecycle action commands", () => {
       "trigger_ai_assistant_test_run",
       "get_ai_assistant_test_run",
       "list_ai_assistant_test_runs",
+      "add_ai_assistant_tool",
+      "remove_ai_assistant_tool",
       "test_ai_assistant_tool",
       "create_ai_assistant_scheduled_event",
       "get_ai_assistant_scheduled_event",
