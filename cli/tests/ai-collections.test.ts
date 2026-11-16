@@ -232,6 +232,10 @@ describe("AI collection document retrieval", () => {
     const collections = capabilities.api_capabilities["🤖 AI"].find(
       (capability: { name: string }) => capability.name === "AI Collections",
     );
-    assert.deepEqual(collections.actions, ["search_ai_collection"]);
+    assert.deepEqual(collections.actions, [
+      "create_ai_collection", "get_ai_collection", "list_ai_collections", "update_ai_collection", "delete_ai_collection",
+      "create_ai_collection_source", "list_ai_collection_sources", "delete_ai_collection_source", "replace_ai_collection_sources",
+      "search_ai_collection",
+    ]);
   });
 });
