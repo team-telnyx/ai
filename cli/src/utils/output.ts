@@ -139,6 +139,10 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
     "mms-transcoding", "mobile-only", "smart-encoding",
   ])],
   ["update-portout-status", new Set(["host-messaging"])],
+  ["create-agent-gateway-api", new Set(["open-to-every-key"])],
+  ["update-agent-gateway-api", new Set(["open-to-every-key"])],
+  ["create-agent-gateway-mcp-server", new Set(["open-to-every-key"])],
+  ["update-agent-gateway-mcp-server", new Set(["open-to-every-key"])],
 ]);
 
 export function isBooleanFlag(command: string, key: string): boolean {
