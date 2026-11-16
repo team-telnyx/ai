@@ -235,6 +235,15 @@ output. Failed requests suppress any partial response payload.
 | `update-ai-assistant` | Use this to change an assistant’s configuration and create a new assistant version. | Mutates/version-creates; Go CLI |
 | `delete-ai-assistant` | Use this to permanently delete a configured AI assistant by ID. | Deletes; requires `--confirm`; Go CLI |
 | `enhance-ai-assistant-instructions` | Use this to generate suggested improvements for one assistant's instructions before deciding whether to update that assistant. | Suggestion only; never applies or promotes instructions; raw buffered body; Go CLI v0.30+ |
+| `create-ai-collection` | Use this to provision an AI RAG collection before attaching searchable Telnyx data sources. | Creates; accepts repeatable initial `--source` objects; Go CLI v0.27+ |
+| `get-ai-collection` | Use this to retrieve one AI RAG collection by its slug. | Read-only; Go CLI v0.27+ |
+| `list-ai-collections` | Use this to discover RAG collections before selecting a slug or UUID. | Read-only; Go CLI v0.27+ |
+| `update-ai-collection` | Use this to change mutable AI RAG collection metadata by UUID. | Mutates name or description; Go CLI v0.27+ |
+| `delete-ai-collection` | Use this to soft-delete an AI RAG collection by UUID only after verifying it. | Deletes; requires `--confirm`; Go CLI v0.27+ |
+| `create-ai-collection-source` | Use this to attach and ingest a content source into an existing AI RAG collection. | Starts source ingestion; Go CLI v0.27+ |
+| `list-ai-collection-sources` | Use this to inspect sources already attached to an AI RAG collection. | Read-only; Go CLI v0.27+ |
+| `delete-ai-collection-source` | Use this to remove one source from an AI RAG collection after verifying the source ID. | Deletes; requires `--confirm`; Go CLI v0.27+ |
+| `replace-ai-collection-sources` | Use this to atomically replace an AI RAG collection's full source set. | Destructive replacement; requires `--confirm`; Go CLI v0.27+ |
 | `search-ai-collection` | Use this to retrieve ranked RAG chunks for a query or, without a query, list the collection’s document catalog. | Read-only; Go CLI v0.27+ |
 | `chat-ai-assistant` | Use this to send a live chat turn through an existing assistant conversation rather than run a stateless completion or a test. | Sends conversation turn; non-idempotent; Go CLI |
 | `send-ai-assistant-sms` | Use this to start or continue an AI assistant conversation over SMS. | Sends SMS; non-idempotent; Go CLI |
@@ -242,6 +251,10 @@ output. Failed requests suppress any partial response payload.
 | `get-ai-assistant-test-run` | Use this to retrieve detailed results for one known assistant test run. | Read-only; Go CLI |
 | `list-ai-assistant-test-runs` | Use this to inspect and filter execution history for one configured assistant test. | Read-only; Go CLI |
 | `test-ai-assistant-tool` | Use this to invoke one configured assistant webhook tool with test arguments and dynamic variables. | Executes webhook; may have external side effects; Go CLI |
+
+Collection retrieval-settings routes are intentionally deferred. The generated
+CLI exposes only raw structured-map request arguments for those endpoints; this
+package does not yet have a stable, tested agent-level settings contract.
 
 ### Web intelligence
 

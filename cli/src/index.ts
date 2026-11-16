@@ -149,7 +149,18 @@ import {
   getAiAssistantScheduledEventCommand,
   listAiAssistantScheduledEventsCommand,
 } from "./commands/ai-assistant-scheduled-events.ts";
-import { searchAiCollectionCommand } from "./commands/ai-collections.ts";
+import {
+  createAiCollectionCommand,
+  createAiCollectionSourceCommand,
+  deleteAiCollectionCommand,
+  deleteAiCollectionSourceCommand,
+  getAiCollectionCommand,
+  listAiCollectionsCommand,
+  listAiCollectionSourcesCommand,
+  replaceAiCollectionSourcesCommand,
+  searchAiCollectionCommand,
+  updateAiCollectionCommand,
+} from "./commands/ai-collections.ts";
 import {
   disableSimCardCommand,
   enableSimCardCommand,
@@ -329,6 +340,15 @@ Commands:
   update-ai-conversation Update AI conversation metadata
   add-ai-conversation-message Add a message to an AI conversation
   delete-ai-conversation Delete an AI conversation by ID (requires --confirm)
+  create-ai-collection Create an AI RAG collection
+  get-ai-collection  Retrieve an AI RAG collection by slug
+  list-ai-collections List AI RAG collections
+  update-ai-collection Update AI RAG collection metadata by UUID
+  delete-ai-collection Delete an AI RAG collection by UUID (requires --confirm)
+  create-ai-collection-source Attach and ingest a source in an AI RAG collection
+  list-ai-collection-sources List sources attached to an AI RAG collection
+  delete-ai-collection-source Delete a source from an AI RAG collection (requires --confirm)
+  replace-ai-collection-sources Replace all AI RAG collection sources (requires --confirm)
   search-ai-collection Search or list RAG documents in an AI collection
   web-search        Search the web and return structured, LLM-ready results
   web-contents      Retrieve clean content for up to 20 URLs
@@ -928,7 +948,16 @@ AI Assistant Scheduled Event Flags:
   --max-items <n>   Maximum events returned; -1 means unlimited (list)
   --confirm         Bare safety acknowledgement (cancel only, required; never forwarded)
 
-AI Collection Retrieval Flags:
+AI Collection Lifecycle and Retrieval Flags:
+  --uuid <uuid>      Collection UUID (collection mutation and source commands — required)
+  --slug <slug>      Collection slug (get-ai-collection — required; create optional)
+  --name <text>      Human-readable collection name (create required; update optional)
+  --description <text> Collection description (create or update optional)
+  --source <json>    Source object (create repeatable; replace required/repeatable), e.g. {"source_type":"bucket","bucket_id":"knowledge-base"}
+  --source-type <type> Source type for create-ai-collection-source (required)
+  --bucket-id <name> Telnyx Storage bucket name (required for source type bucket)
+  --source-id <id>   Collection source ID (delete-ai-collection-source — required)
+  --confirm          Bare safety acknowledgement (collection/source deletion and source replacement; never forwarded)
   --collection-id <slug> Collection slug to search (required; --slug alias accepted)
   --query <text>    Natural-language query; omit for a plain document catalog listing
   --retrieval-type <type> Override retrieval strategy: vector, hybrid, or keyword
@@ -1179,6 +1208,14 @@ Examples:
   telnyx-agent update-ai-conversation --id <conversation-id> --metadata '{"ai_disabled":true}' --json
   telnyx-agent add-ai-conversation-message --id <conversation-id> --role user --content "Hello" --json
   telnyx-agent delete-ai-conversation --id <conversation-id> --confirm --json
+  telnyx-agent create-ai-collection --name "Support transcripts" --slug support-transcripts --json
+  telnyx-agent get-ai-collection --slug support-transcripts --json
+  telnyx-agent list-ai-collections --page-size 25 --json
+  telnyx-agent update-ai-collection --uuid <collection-uuid> --description "Current support knowledge" --json
+  telnyx-agent create-ai-collection-source --uuid <collection-uuid> --source-type bucket --bucket-id knowledge-base --json
+  telnyx-agent replace-ai-collection-sources --uuid <collection-uuid> --source '{"source_type":"voice"}' --confirm --json
+  telnyx-agent delete-ai-collection-source --uuid <collection-uuid> --source-id <source-id> --confirm --json
+  telnyx-agent delete-ai-collection --uuid <collection-uuid> --confirm --json
   telnyx-agent search-ai-collection --collection-id support-transcripts --query "billing issue" --retrieval-type hybrid --top-k 10 --json
   telnyx-agent web-search --query "latest WebRTC developments" --count 10 --freshness week --json
   telnyx-agent web-contents --url https://example.com --format markdown --json
@@ -1330,6 +1367,15 @@ const COMMANDS: Record<string, (
   "update-ai-conversation": updateAiConversationCommand,
   "add-ai-conversation-message": addAiConversationMessageCommand,
   "delete-ai-conversation": deleteAiConversationCommand,
+  "create-ai-collection": createAiCollectionCommand,
+  "get-ai-collection": getAiCollectionCommand,
+  "list-ai-collections": listAiCollectionsCommand,
+  "update-ai-collection": updateAiCollectionCommand,
+  "delete-ai-collection": deleteAiCollectionCommand,
+  "create-ai-collection-source": createAiCollectionSourceCommand,
+  "list-ai-collection-sources": listAiCollectionSourcesCommand,
+  "delete-ai-collection-source": deleteAiCollectionSourceCommand,
+  "replace-ai-collection-sources": replaceAiCollectionSourcesCommand,
   "search-ai-collection": searchAiCollectionCommand,
   "chat-ai-assistant": chatAiAssistantCommand,
   "send-ai-assistant-sms": sendAiAssistantSmsCommand,
@@ -1362,7 +1408,7 @@ const KNOWN_FLAGS = new Set<string>([
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
-  "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
+  "bucket-id", "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
   "call-session-id",
   "call-control-id-to-bridge-with", "camera-image", "campaign-id", "cancel", "carrier-name",
   "category", "cause", "cc", "channels", "clear-a2a-agents", "clear-tags", "clear-tool-ids", "client-state", "code",
@@ -1406,7 +1452,7 @@ const KNOWN_FLAGS = new Set<string>([
   "safesearch", "sample-message", "sample-message-2", "sample1", "sample2", "sandbox-mode", "scheduled-at-fixed-datetime", "sent-at",
   "scheduled-at", "send-at", "service-level", "service-tier", "service-type",
   "should-create-conversation", "sim-card-group-id", "sim-card-id", "sip-address", "sip-call-id", "slug",
-  "smart-encoding", "sole-prop", "sort", "source", "sources", "spid", "speak-on-enter", "sql",
+  "smart-encoding", "sole-prop", "sort", "source", "source-id", "source-type", "sources", "spid", "speak-on-enter", "sql",
   "start-conference-on-create", "start-message", "start-time", "starts-with", "status", "status-in", "sticker", "stop",
   "stop-message", "stop-sequence", "store-media", "store-preview", "stream", "stream-type",
   "subject", "submit", "summarize-on-end", "system", "t38-enabled", "tag", "tags", "task-id",
@@ -1416,7 +1462,7 @@ const KNOWN_FLAGS = new Set<string>([
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
-  "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
+  "uuid", "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
