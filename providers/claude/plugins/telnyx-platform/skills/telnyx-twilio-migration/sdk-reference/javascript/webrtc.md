@@ -132,7 +132,7 @@ for await (const telephonyCredential of client.telephonyCredentials.list()) {
 }
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Create a credential
 
@@ -150,7 +150,7 @@ const telephonyCredential = await client.telephonyCredentials.create({
 console.log(telephonyCredential.data);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Get a credential
 
@@ -164,7 +164,7 @@ const telephonyCredential = await client.telephonyCredentials.retrieve('550e8400
 console.log(telephonyCredential.data);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -180,7 +180,7 @@ const telephonyCredential = await client.telephonyCredentials.update('550e8400-e
 console.log(telephonyCredential.data);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Delete a credential
 
@@ -194,4 +194,4 @@ const telephonyCredential = await client.telephonyCredentials.delete('550e8400-e
 console.log(telephonyCredential.data);
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)

@@ -83,7 +83,7 @@ number_lookup = client.number_lookup.retrieve(
 print(number_lookup.data)
 ```
 
-Returns: `caller_name` (object), `carrier` (object), `country_code` (string), `fraud` (string | null), `national_format` (string), `phone_number` (string), `portability` (object), `record_type` (string)
+Returns: `caller_identity` (object), `caller_name` (object), `carrier` (object), `country_code` (string), `enhanced_caller_name` (object), `fraud` (string | null), `national_format` (string), `nnid_override` (object | null), `phone_number` (string), `portability` (object), `record_type` (string), `valid_number` (boolean)
 
 ## List verifications by phone number
 
