@@ -99,7 +99,7 @@ Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `n
 
 ## Initiate an outbound call
 
-Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
+Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the TeXML Application in the Mission Control Portal.
 
 `POST /texml/Accounts/{account_sid}/Calls` — Required: `Url`
 

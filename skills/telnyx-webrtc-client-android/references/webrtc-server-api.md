@@ -112,7 +112,7 @@ Returns a paginated list of the on-demand telephony credentials on your account,
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/telephony_credentials"
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Create a credential
 
@@ -133,7 +133,7 @@ curl \
   "https://api.telnyx.com/v2/telephony_credentials"
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Get a credential
 
@@ -145,7 +145,7 @@ Get the details of an existing On-demand Credential.
 curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/telephony_credentials/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -163,7 +163,7 @@ curl \
   "https://api.telnyx.com/v2/telephony_credentials/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Delete a credential
 
@@ -178,4 +178,4 @@ curl \
   "https://api.telnyx.com/v2/telephony_credentials/550e8400-e29b-41d4-a716-446655440000"
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
