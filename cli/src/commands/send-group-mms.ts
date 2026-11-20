@@ -36,6 +36,7 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
   const to = flags["to"] as string | undefined;
   const text = flags["text"] as string | undefined;
   const mediaUrls = flags["media-url"] as string | string[] | undefined;
+  const idempotencyKey = optionalIdempotencyKey(flags, jsonOutput);
 
   if (!from) {
     printError("--from is required (E.164 format, e.g., +131****0000)");
@@ -77,7 +78,11 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
 
   try {
     const client = new TelnyxClient();
-    const res = await client.post("/messages/group_mms", body);
+    const res = await client.post(
+      "/messages/group_mms",
+      body,
+      idempotencyKey === undefined ? undefined : { "Idempotency-Key": idempotencyKey },
+    );
     const data = (res?.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
     // Delivery state lives on each recipient (data.to[].status), not top-level.
@@ -121,6 +126,23 @@ export async function sendGroupMmsCommand(flags: Record<string, string | boolean
     }
     process.exit(1);
   }
+}
+
+function optionalIdempotencyKey(
+  flags: Record<string, string | boolean>,
+  jsonOutput: boolean,
+): string | undefined {
+  if (flags["idempotency-key"] === undefined) return undefined;
+  const value = flags["idempotency-key"];
+  if (typeof value !== "string" || value.length === 0) {
+    if (jsonOutput) {
+      outputJson({ error: "--idempotency-key must be a non-empty string" });
+    } else {
+      printError("--idempotency-key must be a non-empty string");
+    }
+    process.exit(1);
+  }
+  return value;
 }
 
 function errorMsg(err: unknown): string {

@@ -24,6 +24,7 @@ interface SendSmsResult {
 }
 
 const E164 = /^\+[1-9]\d{1,14}$/;
+const IDEMPOTENCY_KEY_MINIMUM_CLI_VERSION = "0.34.0";
 // Short codes (e.g. 80001) are digit-only senders that `messages send` accepts
 // directly; they must not be mistaken for alphanumeric sender IDs.
 const SHORT_CODE = /^\d{4,8}$/;
@@ -37,6 +38,7 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
   const messagingProfileId = flags["messaging-profile-id"] as string | undefined;
   const webhookUrl = flags["webhook-url"] as string | undefined;
   const subject = flags.subject as string | undefined;
+  const idempotencyKey = optionalIdempotencyKey(flags, jsonOutput);
 
   if (!to) failWith("--to is required (E.164 format, e.g., +131****0001)", jsonOutput);
   // --text is required for a plain SMS, but the Telnyx API supports
@@ -76,11 +78,17 @@ export async function sendSmsCommand(flags: Record<string, string | boolean>): P
     messagingProfileId,
     webhookUrl,
     subject,
+    idempotencyKey,
     type,
   });
 
   try {
-    const res = await telnyxCli(args);
+    // Idempotency-Key support was added to all wrapped message-send actions in
+    // Telnyx Go CLI v0.34.0. Keep earlier binaries usable when it is omitted.
+    const res = await telnyxCli(
+      args,
+      idempotencyKey === undefined ? undefined : { minimumVersion: IDEMPOTENCY_KEY_MINIMUM_CLI_VERSION },
+    );
     const data = (res?.data ?? res) as Record<string, unknown>;
     const messageId = String(data.id ?? data.message_id ?? "");
     const status = deriveMessageStatus(data, "queued");
@@ -129,11 +137,12 @@ interface SendArgsInput {
   messagingProfileId?: string;
   webhookUrl?: string;
   subject?: string;
+  idempotencyKey?: string;
   type: "SMS" | "MMS";
 }
 
 function buildSendArgs(input: SendArgsInput): string[] {
-  const { senderMode, from, to, text, mediaUrl, messagingProfileId, webhookUrl, subject, type } = input;
+  const { senderMode, from, to, text, mediaUrl, messagingProfileId, webhookUrl, subject, idempotencyKey, type } = input;
 
   if (senderMode === "number-pool") {
     const args = [
@@ -146,6 +155,7 @@ function buildSendArgs(input: SendArgsInput): string[] {
     if (subject) args.push("--subject", subject);
     if (text) args.push("--text", text);
     if (webhookUrl) args.push("--webhook-url", webhookUrl);
+    if (idempotencyKey) args.push("--idempotency-key", idempotencyKey);
     return args;
   }
 
@@ -158,6 +168,7 @@ function buildSendArgs(input: SendArgsInput): string[] {
       "--to", to,
     ];
     if (webhookUrl) args.push("--webhook-url", webhookUrl);
+    if (idempotencyKey) args.push("--idempotency-key", idempotencyKey);
     return args;
   }
 
@@ -172,7 +183,20 @@ function buildSendArgs(input: SendArgsInput): string[] {
   if (messagingProfileId) args.push("--messaging-profile-id", messagingProfileId);
   if (webhookUrl) args.push("--webhook-url", webhookUrl);
   if (subject) args.push("--subject", subject);
+  if (idempotencyKey) args.push("--idempotency-key", idempotencyKey);
   return args;
+}
+
+function optionalIdempotencyKey(
+  flags: Record<string, string | boolean>,
+  jsonOutput: boolean,
+): string | undefined {
+  if (flags["idempotency-key"] === undefined) return undefined;
+  const value = flags["idempotency-key"];
+  if (typeof value !== "string" || value.length === 0) {
+    failWith("--idempotency-key must be a non-empty string", jsonOutput);
+  }
+  return value;
 }
 
 function errorMsg(err: unknown): string {

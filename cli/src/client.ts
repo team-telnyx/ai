@@ -128,14 +128,18 @@ export class TelnyxClient {
     }
   }
 
-  async post(path: string, json?: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async post(
+    path: string,
+    json?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ): Promise<Record<string, unknown>> {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), this.timeout);
     const start = performance.now();
     try {
       const res = await fetch(`${this.baseUrl}${path}`, {
         method: "POST",
-        headers: this.headers(),
+        headers: { ...this.headers(), ...headers },
         body: json ? JSON.stringify(json) : undefined,
         signal: controller.signal,
       });
