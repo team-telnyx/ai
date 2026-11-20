@@ -64,6 +64,12 @@ export interface AiAssistantToolTestResult {
 
 const AI_ASSISTANT_INSTRUCTION_ENHANCE_MINIMUM_CLI_VERSION = "0.30.0";
 const AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION = "0.32.0";
+const AI_ASSISTANT_V034_CONTROLS_MINIMUM_CLI_VERSION = "0.34.0";
+const INSIGHT_MODEL_VALUES = [
+  "zai-org/GLM-5.3-Flash",
+  "meta-llama/Llama-3.3-70B-Instruct",
+] as const;
+const PII_REDACTION_VALUES = ["disabled", "redact"] as const;
 
 export async function listAiAssistantsCommand(flags: Flags): Promise<void> {
   const jsonOutput = flags.json === true;
@@ -109,11 +115,10 @@ export async function createAiAssistantCommand(
   addAssistantFields(args, flags, jsonOutput, undefined, occurrences);
 
   try {
+    const minimumVersion = aiAssistantControlsMinimumVersion(flags);
     const response = await telnyxCli(
       args,
-      usesAiAssistantV032Controls(flags)
-        ? { minimumVersion: AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION }
-        : undefined,
+      minimumVersion ? { minimumVersion } : undefined,
     );
     presentAssistant("AI assistant created!", normalizeAssistant(response), jsonOutput);
   } catch (err) {
@@ -157,8 +162,9 @@ export async function updateAiAssistantCommand(
     const options: { stdin?: string; minimumVersion?: string } = Object.keys(requestBody).length > 0
       ? { stdin: JSON.stringify(requestBody) }
       : {};
-    if (usesAiAssistantV032Controls(flags)) {
-      options.minimumVersion = AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION;
+    const minimumVersion = aiAssistantControlsMinimumVersion(flags);
+    if (minimumVersion) {
+      options.minimumVersion = minimumVersion;
     }
     const response = await telnyxCli(args, Object.keys(options).length > 0 ? options : undefined);
     presentAssistant("AI assistant updated!", normalizeAssistant(response, assistantId), jsonOutput);
@@ -434,6 +440,8 @@ function addAssistantFields(
 ): void {
   addMappedFlag(args, flags, "description", "--description");
   addMappedFlag(args, flags, "model", "--model");
+  addEnumFlag(args, flags, "insight-model", "--insight-settings.model", INSIGHT_MODEL_VALUES, jsonOutput);
+  addEnumFlag(args, flags, "pii-redaction", "--privacy-settings.pii-redaction", PII_REDACTION_VALUES, jsonOutput);
   addMappedFlag(args, flags, "greeting", "--greeting", true);
   addMappedFlag(args, flags, "dynamic-variables-webhook-url", "--dynamic-variables-webhook-url");
   addJsonObjectFlag(args, flags, "dynamic-variables", "--dynamic-variables", jsonOutput);
@@ -487,6 +495,20 @@ function addAssistantFields(
   addMappedFlag(args, flags, "voice", "--voice-settings.voice");
   addMappedFlag(args, flags, "transcription-model", "--transcription.model");
   addMappedFlag(args, flags, "transcription-language", "--transcription.language");
+}
+
+function aiAssistantControlsMinimumVersion(flags: Flags): string | undefined {
+  if (usesAiAssistantV034Controls(flags)) {
+    return AI_ASSISTANT_V034_CONTROLS_MINIMUM_CLI_VERSION;
+  }
+  if (usesAiAssistantV032Controls(flags)) {
+    return AI_ASSISTANT_V032_CONTROLS_MINIMUM_CLI_VERSION;
+  }
+  return undefined;
+}
+
+function usesAiAssistantV034Controls(flags: Flags): boolean {
+  return flags["insight-model"] !== undefined || flags["pii-redaction"] !== undefined;
 }
 
 function usesAiAssistantV032Controls(flags: Flags): boolean {
@@ -561,6 +583,22 @@ function addMappedFlag(
   const raw = flags[source];
   const value = typeof raw === "string" && (allowEmpty || raw.length > 0) ? raw : undefined;
   if (value !== undefined) args.push(target, value);
+}
+
+function addEnumFlag(
+  args: string[],
+  flags: Flags,
+  source: string,
+  target: string,
+  allowedValues: readonly string[],
+  jsonOutput: boolean,
+): void {
+  const value = flags[source];
+  if (value === undefined) return;
+  if (typeof value !== "string" || !allowedValues.includes(value)) {
+    fail(`--${source} must be one of: ${allowedValues.join(", ")}`, jsonOutput);
+  }
+  args.push(target, value);
 }
 
 function addOptionalStringFlag(
