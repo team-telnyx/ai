@@ -2,7 +2,7 @@
 
 > Fund your Telnyx account with USDC on the Base blockchain using the x402 payment protocol.
 
-Telnyx supports x402 two ways. This guide covers **authenticated account funding**: you hold a Telnyx API key and top up the account balance, which then pays for any Telnyx product (SMS, numbers, voice, inference). The separate **keyless pay-per-call** endpoints at [x402.telnyx.com](https://x402.telnyx.com/) sell inference/TTS/STT per request with no account at all — if that's all you need, use those directly and skip this guide.
+Telnyx supports x402 two ways. This guide covers **authenticated account funding**: you hold a Telnyx API key and top up the account balance, which then pays for any Telnyx product (SMS, numbers, voice, inference). The separate **keyless pay-per-call** endpoints at [x402.telnyx.com](https://x402.telnyx.com/) sell inference/TTS/STT per request with no account at all (live model list and per-call prices: [`GET /v1/models`](https://x402.telnyx.com/v1/models)) — if that's all you need, use those directly and skip this guide.
 
 ## Prerequisites
 

@@ -2,7 +2,7 @@
 
 > Fund your Telnyx account through an Agentic Commerce Protocol (ACP) checkout, paying with a Stripe Link agent wallet or USDC from a Tempo wallet.
 
-This is **authenticated account funding**: every call carries your Telnyx API key, and the credit lands on the account that owns the key. A funded balance pays for any Telnyx product. ACP wraps the same Link and Tempo payment steps as [MPP](./mpp-payments.md) in a checkout you can create, retrieve, complete, and cancel, with idempotency keys on every write and an order record on completion. For the single-request HTTP `402` version see [mpp-payments.md](./mpp-payments.md); for funding with USDC on Base see [x402-payments.md](./x402-payments.md); for paying per request without any Telnyx account (inference/TTS/STT only), use the keyless x402 endpoints at [x402.telnyx.com](https://x402.telnyx.com/).
+This is **authenticated account funding**: every call carries your Telnyx API key, and the credit lands on the account that owns the key. A funded balance pays for any Telnyx product. ACP wraps the same Link and Tempo payment steps as [MPP](./mpp-payments.md) in a checkout you can create, retrieve, complete, and cancel, with idempotency keys on every write and an order record on completion. For the single-request HTTP `402` version see [mpp-payments.md](./mpp-payments.md); for funding with USDC on Base see [x402-payments.md](./x402-payments.md); for paying per request without any Telnyx account (inference/TTS/STT only), use the keyless x402 endpoints at [x402.telnyx.com](https://x402.telnyx.com/) (live model list and per-call prices: [`GET /v1/models`](https://x402.telnyx.com/v1/models)).
 
 ## Prerequisites
 
