@@ -19,6 +19,20 @@ type FakeEdgeOptions = {
   actorMetricsTypeUsage?: boolean;
   actorMetricsSince?: boolean;
   actorMetricsJson?: boolean;
+  actorStorageMetrics?: boolean;
+  actorLogs?: boolean;
+  actorLogsType?: boolean;
+  actorLogsInstance?: boolean;
+  actorLogsSince?: boolean;
+  actorLogsLast?: boolean;
+  actorLogsJson?: boolean;
+  actorLiveLogTail?: boolean;
+  localDev?: boolean;
+  localDevUsage?: boolean;
+  localDevFromDir?: boolean;
+  localDevPort?: boolean;
+  localDevNoWatch?: boolean;
+  localDevGenerateOnly?: boolean;
   newFuncFromDir?: boolean;
   secretsAdd?: boolean;
   ship?: boolean;
@@ -62,6 +76,33 @@ type FakeEdgeOptions = {
   sqlDatabaseExportNoSchema?: boolean;
   sqlDatabaseExportStdout?: boolean;
   sqlStdinImport?: boolean;
+  sqlLocalExecute?: boolean;
+  sqlLocalPersistTo?: boolean;
+  sqlMigrationsListLocal?: boolean;
+  sqlMigrationsApplyLocal?: boolean;
+  selfUpdate?: boolean;
+  selfUpdateUsage?: boolean;
+  selfUpdateYes?: boolean;
+  sqlLargeExport?: boolean;
+  sqlImport?: boolean;
+  sqlImportFile?: boolean;
+  sqlImportFromExport?: boolean;
+  sqlImportYes?: boolean;
+  sqlImportJson?: boolean;
+  sqlImportStatus?: boolean;
+  sqlImportStatusJson?: boolean;
+  tunnelLifecycle?: boolean;
+  tunnelCreateToken?: boolean;
+  tunnelRunToken?: boolean;
+  tunnelGet?: boolean;
+  tunnelList?: boolean;
+  tunnelRotateToken?: boolean;
+  tunnelDelete?: boolean;
+  networkTunnelRoutes?: boolean;
+  networkRouteTunnel?: boolean;
+  actorLogsRuntime?: boolean;
+  actorLogsInvocations?: boolean;
+  binaryName?: "telnyx-edge" | "telnyx-edge-dev";
   customDomainCommands?: Array<"add" | "verify" | "list" | "delete" | "cert">;
   customDomainCertUpload?: boolean;
   customDomainCertFlag?: boolean;
@@ -80,6 +121,20 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const actorMetricsTypeUsage = config.actorMetricsTypeUsage ?? true;
   const actorMetricsSince = config.actorMetricsSince ?? true;
   const actorMetricsJson = config.actorMetricsJson ?? true;
+  const actorStorageMetrics = config.actorStorageMetrics ?? true;
+  const actorLogs = config.actorLogs ?? true;
+  const actorLogsType = config.actorLogsType ?? true;
+  const actorLogsInstance = config.actorLogsInstance ?? true;
+  const actorLogsSince = config.actorLogsSince ?? true;
+  const actorLogsLast = config.actorLogsLast ?? true;
+  const actorLogsJson = config.actorLogsJson ?? true;
+  const actorLiveLogTail = config.actorLiveLogTail ?? true;
+  const localDev = config.localDev ?? true;
+  const localDevUsage = config.localDevUsage ?? true;
+  const localDevFromDir = config.localDevFromDir ?? true;
+  const localDevPort = config.localDevPort ?? true;
+  const localDevNoWatch = config.localDevNoWatch ?? true;
+  const localDevGenerateOnly = config.localDevGenerateOnly ?? true;
   const newFuncFromDir = config.newFuncFromDir ?? true;
   const secretsAdd = config.secretsAdd ?? true;
   const ship = config.ship ?? true;
@@ -123,6 +178,32 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const sqlDatabaseExportNoSchema = config.sqlDatabaseExportNoSchema ?? true;
   const sqlDatabaseExportStdout = config.sqlDatabaseExportStdout ?? true;
   const sqlStdinImport = config.sqlStdinImport ?? true;
+  const sqlLocalExecute = config.sqlLocalExecute ?? true;
+  const sqlLocalPersistTo = config.sqlLocalPersistTo ?? true;
+  const sqlMigrationsListLocal = config.sqlMigrationsListLocal ?? true;
+  const sqlMigrationsApplyLocal = config.sqlMigrationsApplyLocal ?? true;
+  const selfUpdate = config.selfUpdate ?? true;
+  const selfUpdateUsage = config.selfUpdateUsage ?? true;
+  const selfUpdateYes = config.selfUpdateYes ?? true;
+  const sqlLargeExport = config.sqlLargeExport ?? true;
+  const sqlImport = config.sqlImport ?? true;
+  const sqlImportFile = config.sqlImportFile ?? true;
+  const sqlImportFromExport = config.sqlImportFromExport ?? true;
+  const sqlImportYes = config.sqlImportYes ?? true;
+  const sqlImportJson = config.sqlImportJson ?? true;
+  const sqlImportStatus = config.sqlImportStatus ?? true;
+  const sqlImportStatusJson = config.sqlImportStatusJson ?? true;
+  const tunnelLifecycle = config.tunnelLifecycle ?? true;
+  const tunnelCreateToken = config.tunnelCreateToken ?? true;
+  const tunnelRunToken = config.tunnelRunToken ?? true;
+  const tunnelGet = config.tunnelGet ?? true;
+  const tunnelList = config.tunnelList ?? true;
+  const tunnelRotateToken = config.tunnelRotateToken ?? true;
+  const tunnelDelete = config.tunnelDelete ?? true;
+  const networkTunnelRoutes = config.networkTunnelRoutes ?? true;
+  const networkRouteTunnel = config.networkRouteTunnel ?? true;
+  const actorLogsRuntime = config.actorLogsRuntime ?? true;
+  const actorLogsInvocations = config.actorLogsInvocations ?? true;
   const customDomainCommands = config.customDomainCommands ?? ["add", "verify", "list", "delete", "cert"];
   const customDomainCertUpload = config.customDomainCertUpload ?? true;
   const customDomainCertFlag = config.customDomainCertFlag ?? true;
@@ -132,7 +213,7 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
   mkdirSync(binDir, { recursive: true });
-  const fakeEdge = join(binDir, "telnyx-edge");
+  const fakeEdge = join(binDir, config.binaryName ?? "telnyx-edge");
   writeFileSync(
     fakeEdge,
     `#!/usr/bin/env node
@@ -258,18 +339,50 @@ if (args[0] === 'storage' && args[1] === 'kv' && args.includes('--help')) {
 }
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'execute' && args.includes('--help')) {
   if (${sqlDatabases}) {
-    console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlStdinImport} ? ['Use --file - for standard input'] : []), ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
+    console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlLocalExecute} ? ['--local  Run against a local database file'] : []), ...(${sqlLocalPersistTo} ? ['--persist-to string  Directory holding local databases'] : []), ...(${sqlStdinImport} ? ['Use --file - for standard input'] : []), ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
     process.exit(0);
   }
   console.log('Usage: telnyx-edge storage sqldb execute <database> [flags]\\n--remote --command string');
   process.exit(0);
 }
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'migrations' && args[3] === 'list' && args.includes('--help')) {
+  if (${sqlDatabases}) {
+    console.log(['List applied and pending migrations', 'Usage: telnyx-edge storage sqldb migrations list <database> [flags]', ...(${sqlMigrationsListLocal} ? ['--local  Read applied state from a local database'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "migrations"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'migrations' && args[3] === 'apply' && args.includes('--help')) {
+  if (${sqlDatabases}) {
+    console.log(['Apply pending migrations in order', 'Usage: telnyx-edge storage sqldb migrations apply <database> [flags]', ...(${sqlMigrationsApplyLocal} ? ['--local  Apply against a local database'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "migrations"\\n');
+  process.exit(1);
+}
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'export' && args.includes('--help')) {
   if (${sqlDatabaseExport}) {
-    console.log(['Export a remote SQL database', 'Usage: telnyx-edge storage sqldb export <database> [flags]', '--remote  --table strings  --no-data', '--output string  Path to SQL file' + (${sqlDatabaseExportStdout} ? ' (- writes to stdout)' : ''), ...(${sqlDatabaseExportNoSchema} ? ['--no-schema'] : [])].join('\\n'));
+    console.log(['Export a remote SQL database', 'Usage: telnyx-edge storage sqldb export <database> [flags]', '--remote  --table strings  --no-data', '--output string  Path to SQL file' + (${sqlDatabaseExportStdout} ? ' (- writes to stdout)' : ''), ...(${sqlLargeExport} ? ['Exports up to 4 GiB of SQL'] : []), ...(${sqlDatabaseExportNoSchema} ? ['--no-schema'] : [])].join('\\n'));
     process.exit(0);
   }
   process.stderr.write('unknown command "export"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'import' && args[3] === 'status' && args.includes('--help')) {
+  if (${sqlImport} && ${sqlImportStatus}) {
+    console.log(['Watch an import until it finishes', 'Usage: telnyx-edge storage sqldb import status <database> <import_id> [flags]', ...(${sqlImportStatusJson} ? ['      --json  Output the finished import as JSON'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "import"\\n');
+  process.exit(1);
+}
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'import' && args.includes('--help')) {
+  if (${sqlImport}) {
+    console.log(['Restore a .sql dump into a deployed SQL database', 'Usage: telnyx-edge storage sqldb import <database>${sqlImportFile && sqlImportFromExport ? ' (--file <path> | --from-export <export_id>)' : ''} [flags]', ...(${sqlImportFile} ? ['  -f, --file string  Path to a .sql dump to upload and import'] : []), ...(${sqlImportFromExport} ? ['      --from-export string  Id of a completed export of this database to import'] : []), ...(${sqlImportYes} ? ['  -y, --yes  Skip the not-empty confirmation prompt'] : []), ...(${sqlImportJson} ? ['      --json  Output the finished import as JSON'] : []), 'A dump can be up to 100 MiB.'].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "import"\\n');
   process.exit(1);
 }
 if (args[0] === 'domains' && args[1] === 'cert' && args[2] === 'upload' && args.includes('--help')) {
@@ -305,12 +418,108 @@ if (args[0] === 'actors' && args[1] === 'instances' && args.includes('--help')) 
   process.stderr.write('unknown command "instances"\\n');
   process.exit(1);
 }
+if (args[0] === 'actors' && args[1] === 'logs' && args.includes('--help')) {
+  if (${actorLogs}) {
+    console.log(["Show a StatefulActor type's recent runtime and invocation logs", 'Usage: telnyx-edge actors logs <type> [flags]', ...(${actorLogsType} ? ['      --type string  Log type: ' + (${actorLogsRuntime} ? 'runtime' : '') + (${actorLogsInvocations} ? ' or invocations' : '')] : []), ...(${actorLogsInstance} ? ["      --instance string  Keep only this instance's records"] : []), ...(${actorLogsSince} ? ['      --since duration  How far back to read'] : []), ...(${actorLogsLast} ? ['  -n, --last int  Maximum lines to print'] : []), ...(${actorLogsJson} ? ['      --json  Output the result as JSON'] : []), ...(${actorLiveLogTail} ? ['      --tail  Stream new log lines live instead of reading history'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "logs"\\n');
+  process.exit(1);
+}
 if (args[0] === 'actors' && args[1] === 'metrics' && args.includes('--help')) {
   if (${actorMetrics}) {
-    console.log(['Summarize StatefulActor request and resource metrics', 'Usage: telnyx-edge actors metrics ${actorMetricsTypeUsage ? "<type>" : "[flags]"}', ...(${actorMetricsSince} ? ['      --since duration  Look back over a window'] : []), ...(${actorMetricsJson} ? ['      --json  Print raw aggregate JSON'] : [])].join('\\n'));
+    console.log(['Summarize StatefulActor request and resource metrics', 'Usage: telnyx-edge actors metrics ${actorMetricsTypeUsage ? "<type>" : "[flags]"}', ...(${actorStorageMetrics} ? ['stored state size; maximum window 90h'] : []), ...(${actorMetricsSince} ? ['      --since duration  Look back over a window'] : []), ...(${actorMetricsJson} ? ['      --json  Print raw aggregate JSON'] : [])].join('\\n'));
     process.exit(0);
   }
   process.stderr.write('unknown command "metrics"\\n');
+  process.exit(1);
+}
+if (args[0] === 'dev' && args.includes('--help')) {
+  if (${localDev}) {
+    console.log(['Run an umbrella (telnyx.toml) project for local development', 'Usage: telnyx-edge ${localDevUsage ? "dev [flags]" : "[flags]"}', ...(${localDevFromDir} ? ['  -f, --from-dir string  Path to project directory'] : []), ...(${localDevPort} ? ['      --port int  Host port to publish the function runtime on'] : []), ...(${localDevNoWatch} ? ['      --no-watch  Boot the stack and return instead of watching for changes'] : []), ...(${localDevGenerateOnly} ? ['      --generate-only  Generate the stack files but do not run docker compose'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "dev"\\n');
+  process.exit(1);
+}
+if (args[0] === 'update' && args.includes('--help')) {
+  if (${selfUpdate}) {
+    console.log(['Verify and install the latest telnyx-edge release', 'Usage: ${selfUpdateUsage ? "telnyx-edge update [flags]" : "telnyx-edge [flags]"}', ...(${selfUpdateYes} ? ['  -y, --yes  Install without an interactive prompt'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "update"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'create' && args.includes('--help')) {
+  if (${tunnelLifecycle}) {
+    console.log(['${tunnelCreateToken ? 'Create a tunnel and print its token' : 'Create a tunnel'}', 'Usage: telnyx-edge tunnel create <name>', ...(${tunnelCreateToken} ? ['The token is shown once.'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'run' && args.includes('--help')) {
+  if (${tunnelLifecycle}) {
+    console.log(['Connect to the relay and keep the tunnel up', 'Usage: telnyx-edge tunnel run [flags]', ...(${tunnelRunToken} ? ['      --token string  Tunnel token'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'get' && args.includes('--help')) {
+  if (${tunnelLifecycle} && ${tunnelGet}) {
+    console.log('Show a tunnel status\\nUsage: telnyx-edge tunnel get <name|id>');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'list' && args.includes('--help')) {
+  if (${tunnelLifecycle} && ${tunnelList}) {
+    console.log('List tunnels\\nUsage: telnyx-edge tunnel list');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'rotate-token' && args.includes('--help')) {
+  if (${tunnelLifecycle} && ${tunnelRotateToken}) {
+    console.log('Issue a new token\\nUsage: telnyx-edge tunnel rotate-token <name|id>');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'tunnel' && args[1] === 'delete' && args.includes('--help')) {
+  if (${tunnelLifecycle} && ${tunnelDelete}) {
+    console.log('Delete a tunnel\\nUsage: telnyx-edge tunnel delete <name|id>');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "tunnel"\\n');
+  process.exit(1);
+}
+if (args[0] === 'network' && args[1] === 'route' && args[2] === 'add' && args.includes('--help')) {
+  if (${networkTunnelRoutes}) {
+    console.log(['Add a route, pointing a CIDR at a tunnel', 'Usage: telnyx-edge network route add <network> <cidr> [flags]', ...(${networkRouteTunnel} ? ['      --tunnel string  Tunnel name or id'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "route"\\n');
+  process.exit(1);
+}
+if (args[0] === 'network' && args[1] === 'route' && args[2] === 'list' && args.includes('--help')) {
+  if (${networkTunnelRoutes}) {
+    console.log('List a network routes\\nUsage: telnyx-edge network route list <network>');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "route"\\n');
+  process.exit(1);
+}
+if (args[0] === 'network' && args[1] === 'route' && args[2] === 'delete' && args.includes('--help')) {
+  if (${networkTunnelRoutes}) {
+    console.log('Delete a route\\nUsage: telnyx-edge network route delete <route-id>');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "route"\\n');
   process.exit(1);
 }
 if (args.length === 1 && args[0] === '--help') {
@@ -426,6 +635,10 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
     assert.equal(data.actor_metrics_supported, true);
+    assert.equal(data.actor_logs_supported, true);
+    assert.equal(data.actor_live_log_tail_supported, true);
+    assert.equal(data.actor_storage_metrics_supported, true);
+    assert.equal(data.local_dev_supported, true);
     assert.equal(data.reset_func_supported, true);
     assert.equal(data.noninteractive_confirmation_supported, true);
     assert.equal(data.types_supported, true);
@@ -434,8 +647,16 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_databases_supported, true);
     assert.equal(data.sql_bound_parameters_supported, true);
     assert.equal(data.sql_database_export_supported, true);
+    assert.equal(data.large_sql_database_export_supported, true);
     assert.equal(data.sql_stdin_import_supported, true);
+    assert.equal(data.local_sql_workflow_supported, true);
+    assert.equal(data.sql_database_import_supported, true);
+    assert.equal(data.tunnel_lifecycle_supported, true);
+    assert.equal(data.network_tunnel_routes_supported, true);
     assert.equal(data.custom_domains_supported, true);
+    assert.equal(data.self_update_supported, true);
+    assert.ok(data.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Verified self-update" && check.ok));
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -496,8 +717,15 @@ describe("CLI — Edge Compute handoff", () => {
       sqlParam: false,
       sqlParamJson: false,
       sqlDatabaseExport: false,
+      sqlLargeExport: false,
       sqlStdinImport: false,
+      sqlLocalExecute: false,
+      sqlImport: false,
+      tunnelLifecycle: false,
+      networkTunnelRoutes: false,
       actorMetrics: false,
+      actorLogs: false,
+      localDev: false,
       argLog: true,
     });
     const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
@@ -518,8 +746,17 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_databases_supported, false);
     assert.equal(data.sql_bound_parameters_supported, false);
     assert.equal(data.sql_database_export_supported, false);
+    assert.equal(data.large_sql_database_export_supported, false);
     assert.equal(data.sql_stdin_import_supported, false);
+    assert.equal(data.local_sql_workflow_supported, false);
+    assert.equal(data.sql_database_import_supported, false);
+    assert.equal(data.tunnel_lifecycle_supported, false);
+    assert.equal(data.network_tunnel_routes_supported, false);
     assert.equal(data.actor_metrics_supported, false);
+    assert.equal(data.actor_logs_supported, false);
+    assert.equal(data.actor_live_log_tail_supported, false);
+    assert.equal(data.actor_storage_metrics_supported, false);
+    assert.equal(data.local_dev_supported, false);
     assert.ok(data.next_steps.some((step: string) => step.includes("Optional capabilities not detected")));
     const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
     for (const expected of [
@@ -536,7 +773,23 @@ describe("CLI — Edge Compute handoff", () => {
       ["storage", "kv", "key", "--help"],
       ["storage", "sqldb", "execute", "--help"],
       ["storage", "sqldb", "export", "--help"],
+      ["storage", "sqldb", "import", "--help"],
+      ["storage", "sqldb", "import", "status", "--help"],
+      ["storage", "sqldb", "migrations", "list", "--help"],
+      ["storage", "sqldb", "migrations", "apply", "--help"],
       ["actors", "metrics", "--help"],
+      ["actors", "logs", "--help"],
+      ["dev", "--help"],
+      ["update", "--help"],
+      ["tunnel", "create", "--help"],
+      ["tunnel", "run", "--help"],
+      ["tunnel", "get", "--help"],
+      ["tunnel", "list", "--help"],
+      ["tunnel", "rotate-token", "--help"],
+      ["tunnel", "delete", "--help"],
+      ["network", "route", "add", "--help"],
+      ["network", "route", "list", "--help"],
+      ["network", "route", "delete", "--help"],
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
     }
@@ -637,6 +890,59 @@ describe("CLI — Edge Compute handoff", () => {
     }
   });
 
+  it("requires complete v0.5.10 actor logs, stored-state metrics, and local dev help surfaces", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true, "freshness capabilities remain optional for setup handoffs");
+    assert.equal(available.actor_metrics_supported, true, "the existing metrics compatibility field is retained");
+    assert.equal(available.actor_logs_supported, true);
+    assert.equal(available.actor_live_log_tail_supported, true);
+    assert.equal(available.actor_storage_metrics_supported, true);
+    assert.equal(available.local_dev_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Actor historical logs" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Live actor-log tail" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Actor stored-state metrics" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Local actor development" && check.ok));
+    assert.ok(available.next_steps.some((step: string) => step.includes("actors logs <type> --since 10m --last 200")));
+    assert.ok(available.next_steps.some((step: string) => step.includes("actors logs <type> --tail")));
+    assert.ok(available.next_steps.some((step: string) => step.includes("actor stored-state aggregates (90h maximum)")));
+    assert.ok(available.next_steps.some((step: string) => step.includes("telnyx-edge dev --from-dir ./<project-dir>")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [["actors", "logs", "--help"], ["actors", "metrics", "--help"], ["dev", "--help"]]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, string, string]> = [
+      [{ actorLogs: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsType: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsRuntime: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsInvocations: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsInstance: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsSince: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsLast: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLogsJson: false }, "actor_logs_supported", "actors logs <type> --since"],
+      [{ actorLiveLogTail: false }, "actor_live_log_tail_supported", "actors logs <type> --tail"],
+      [{ actorStorageMetrics: false }, "actor_storage_metrics_supported", "actor stored-state aggregates"],
+      [{ localDev: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+      [{ localDevUsage: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+      [{ localDevFromDir: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+      [{ localDevPort: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+      [{ localDevNoWatch: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+      [{ localDevGenerateOnly: false }, "local_dev_supported", "telnyx-edge dev --from-dir"],
+    ];
+    for (const [config, capability, suggestion] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "local development and observability remain optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(!data.next_steps.some((step: string) => step.includes(suggestion)));
+    }
+  });
+
   it("requires complete v0.5.2 observability and deployment-history help surfaces", () => {
     const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
     const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
@@ -718,6 +1024,129 @@ describe("CLI — Edge Compute handoff", () => {
       assert.equal(data.sql_databases_supported, true, "the existing SQL compatibility field is unchanged");
       assert.equal(data.sql_bound_parameters_supported, false);
       assert.ok(data.next_steps.some((step: string) => step.includes("SQL --param/--param-json bindings")));
+    }
+  });
+
+  it("requires complete v0.5.12 local SQL help without changing core handoff readiness", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.local_sql_workflow_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Local SQL workflow" && check.ok));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("storage sqldb execute <database> --local --command")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line: string) => JSON.parse(line));
+    for (const expected of [
+      ["storage", "sqldb", "execute", "--help"],
+      ["storage", "sqldb", "migrations", "list", "--help"],
+      ["storage", "sqldb", "migrations", "apply", "--help"],
+    ]) {
+      assert.ok(calls.some((args: string[]) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, string]> = [
+      [{ sqlLocalExecute: false }, "--local"],
+      [{ sqlLocalPersistTo: false }, "--persist-to"],
+      [{ sqlMigrationsListLocal: false }, "migrations list"],
+      [{ sqlMigrationsApplyLocal: false }, "migrations apply"],
+    ];
+    for (const [config, missing] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "local SQL remains optional for setup handoffs");
+      assert.equal(data.local_sql_workflow_supported, false, `missing ${missing} must not report local SQL support`);
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("Optional capabilities not detected") && step.includes("local SQL workflow")));
+    }
+  });
+
+  it("requires complete v0.5.13 self-update help from the released binary and uses it for upgrades", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", localDev: false, argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true, "self-update remains optional for setup handoffs");
+    assert.equal(available.self_update_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "Verified self-update" && check.ok));
+    assert.ok(available.next_steps.some((step: string) =>
+      step.includes("telnyx-edge update --yes")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(["update", "--help"])));
+
+    for (const config of [
+      { selfUpdate: false },
+      { selfUpdateUsage: false },
+      { selfUpdateYes: false },
+      { binaryName: "telnyx-edge-dev" as const },
+    ]) {
+      const fake = withFakeEdgeCli({ auth: "api_key", localDev: false, ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "self-update remains optional for setup handoffs");
+      assert.equal(data.self_update_supported, false);
+      assert.ok(data.checks.some((check: { name: string; ok: boolean }) =>
+        check.name === "Verified self-update" && !check.ok));
+      assert.ok(data.next_steps.includes(
+        "Download the latest telnyx-edge release from https://github.com/team-telnyx/edge-compute/releases (self-update requires a released binary named telnyx-edge).",
+      ));
+      assert.ok(!data.next_steps.some((step: string) => step.includes("telnyx-edge update --yes")));
+    }
+  });
+
+  it("detects v0.5.14 tunnels/routes and v0.5.15/current-main SQL import/export help without changing readiness", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.tunnel_lifecycle_supported, true);
+    assert.equal(available.network_tunnel_routes_supported, true);
+    assert.equal(available.large_sql_database_export_supported, true);
+    assert.equal(available.sql_database_import_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) => check.name === "Tunnel lifecycle" && check.ok));
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) => check.name === "Network tunnel routes" && check.ok));
+    assert.ok(available.next_steps.some((step: string) => step.includes("Export SQL dumps up to 4 GiB")));
+    assert.ok(available.next_steps.some((step: string) => step.includes("storage sqldb import status <database> <import-id>")));
+    assert.ok(available.next_steps.some((step: string) => step.includes("network route add <network> <cidr> --tunnel <name>")));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [
+      ["storage", "sqldb", "export", "--help"],
+      ["storage", "sqldb", "import", "--help"],
+      ["storage", "sqldb", "import", "status", "--help"],
+      ["tunnel", "create", "--help"],
+      ["tunnel", "run", "--help"],
+      ["tunnel", "get", "--help"],
+      ["tunnel", "list", "--help"],
+      ["tunnel", "rotate-token", "--help"],
+      ["tunnel", "delete", "--help"],
+      ["network", "route", "add", "--help"],
+      ["network", "route", "list", "--help"],
+      ["network", "route", "delete", "--help"],
+    ]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, string]> = [
+      [{ sqlLargeExport: false }, "large_sql_database_export_supported"],
+      [{ sqlImport: false }, "sql_database_import_supported"],
+      [{ sqlImportFile: false }, "sql_database_import_supported"],
+      [{ sqlImportFromExport: false }, "sql_database_import_supported"],
+      [{ sqlImportYes: false }, "sql_database_import_supported"],
+      [{ sqlImportJson: false }, "sql_database_import_supported"],
+      [{ sqlImportStatus: false }, "sql_database_import_supported"],
+      [{ sqlImportStatusJson: false }, "sql_database_import_supported"],
+      [{ tunnelLifecycle: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelCreateToken: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelRunToken: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelGet: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelList: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelRotateToken: false }, "tunnel_lifecycle_supported"],
+      [{ tunnelDelete: false }, "tunnel_lifecycle_supported"],
+      [{ networkTunnelRoutes: false }, "network_tunnel_routes_supported"],
+      [{ networkRouteTunnel: false }, "network_tunnel_routes_supported"],
+    ];
+    for (const [config, capability] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "freshness capabilities remain optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
     }
   });
 
