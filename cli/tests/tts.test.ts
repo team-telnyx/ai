@@ -283,6 +283,31 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.equal(body!.disable_cache, true);
   });
 
+  it("nests Telnyx provider controls in the request body when supplied", async () => {
+    lastRequest = null;
+    const r = await runTtsAsync([
+      "--text", "Marhaban", "--voice", "Telnyx.Bayan.Ahmed", "--voice-speed", "1.1",
+      "--response-format", "pcm", "--sampling-rate", "24000", "--json",
+    ]);
+    assert.equal(r.status, 0, `expected exit 0, got ${r.status}: ${r.stderr}`);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.deepEqual(body.telnyx, {
+      voice_speed: 1.1,
+      response_format: "pcm",
+      sampling_rate: 24000,
+    });
+    assert.deepEqual(JSON.parse(r.stdout).telnyx, body.telnyx);
+  });
+
+  it("omits the Telnyx provider object when no provider controls are supplied", async () => {
+    lastRequest = null;
+    await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--json"]);
+    const body = capturedRequest().body;
+    assert.ok(body);
+    assert.equal(body.telnyx, undefined);
+  });
+
   it("omits disable_cache when --disable-cache is not set", async () => {
     lastRequest = null;
     await runTtsAsync(["--text", "Hello", "--voice", "Amy", "--json"]);
@@ -311,6 +336,25 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
       assert.notEqual(r.status, 0, `expected non-zero exit for --output-type ${bad}`);
     }
     assert.equal(lastRequest, null, "expected no API calls");
+  });
+
+  it("rejects invalid Telnyx provider control values without calling the API", async () => {
+    const invalidArgs = [
+      ["--voice-speed", "fast"],
+      ["--voice-speed", ""],
+      ["--response-format", "ogg"],
+      ["--response-format", ""],
+      ["--sampling-rate", "16000", "--response-format", "pcm"],
+      ["--sampling-rate", "24000", "--response-format", "mp3"],
+      ["--voice", "Telnyx.Sukhan.urdu-professor", "--voice-speed", "1"],
+      ["--voice", "Telnyx.Sukhan.urdu-professor", "--response-format", "wav"],
+    ];
+    for (const args of invalidArgs) {
+      lastRequest = null;
+      const r = await runTtsAsync(["--text", "Hello", ...args, "--json"]);
+      assert.notEqual(r.status, 0, `expected non-zero exit for ${args.join(" ")}`);
+      assert.equal(lastRequest, null, "expected no API calls");
+    }
   });
 
   it("fails when --text is not provided", async () => {
@@ -346,6 +390,23 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.equal(data.provider, "inworld");
   });
 
+  it("lists the Telnyx provider controls in help and capabilities", () => {
+    const { stdout: help, status: helpStatus } = runCliSync(["help"], { ...process.env });
+    assert.equal(helpStatus, 0);
+    assert.match(help, /--voice-speed/);
+    assert.match(help, /--response-format/);
+    assert.match(help, /--sampling-rate/);
+
+    const { stdout, status } = runCliSync(["capabilities", "--json"], { ...process.env });
+    assert.equal(status, 0);
+    const capabilities = JSON.parse(stdout);
+    const synthesis = capabilities.api_capabilities["🔊 Text-to-Speech"]
+      .find((entry: { name: string }) => entry.name === "Speech Synthesis");
+    assert.match(synthesis.description, /voice speed/);
+    assert.match(synthesis.description, /response format/);
+    assert.match(synthesis.description, /sampling-rate/);
+  });
+
   it("lists the tts command in the help text", () => {
     const { stdout, status } = runCliSync(["help"], { ...process.env });
     assert.equal(status, 0);
@@ -353,6 +414,9 @@ describe("tts (text-to-speech) command — REST (AIF-331)", () => {
     assert.match(stdout, /--text/);
     assert.match(stdout, /--output-type/);
     assert.match(stdout, /--provider/);
+    assert.match(stdout, /--voice-speed/);
+    assert.match(stdout, /--response-format/);
+    assert.match(stdout, /--sampling-rate/);
   });
 });
 
