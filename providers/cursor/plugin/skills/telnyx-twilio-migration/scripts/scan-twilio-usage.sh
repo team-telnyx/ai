@@ -115,21 +115,37 @@ declare -A API_URL_MAP       # url -> comma-separated files
 # Runs grep -rn inside PROJECT_ROOT with standard excludes and returns
 # matching lines (path:lineno:content). Returns 0 even if nothing matched.
 run_grep() {
-  grep -rn "${EXCLUDE_ARGS[@]}" "$@" "$PROJECT_ROOT" 2>/dev/null || true
+  grep -rnI "${EXCLUDE_ARGS[@]}" "$@" "$PROJECT_ROOT" 2>/dev/null || true
+}
+
+run_source_fixed_grep() {
+  grep -rnI "${EXCLUDE_ARGS[@]}" --exclude='*.razor' --exclude='*.cshtml' "$@" "$PROJECT_ROOT" 2>/dev/null || true
+  # Razor mixes inert markup and executable C#. Recheck candidate lines on
+  # the shared executable view, retaining the original fixed-string semantics.
+  local filter_pattern script_dir filepath locator
+  filter_pattern="$(printf '%s' "$2" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  while IFS= read -r -d '' filepath && IFS= read -r locator; do
+    printf '%s\0%s\n' "$filepath" "$locator" |
+      python3 "$script_dir/filter-source-matches.py" --mode code \
+        --analyzer "$script_dir/lint-required-messaging-profile.py" --pattern "$filter_pattern"
+  done < <(grep -rnIH --null --include='*.razor' --include='*.cshtml' \
+    "${EXCLUDE_ARGS[@]}" "$@" "$PROJECT_ROOT" 2>/dev/null || true)
 }
 
 # Detect language from file extension
 detect_language() {
   local f="$1"
   case "$f" in
-    *.py)                     echo "python" ;;
-    *.js|*.mjs|*.cjs)        echo "javascript" ;;
-    *.ts|*.tsx)               echo "typescript" ;;
+    *.py|*.pyw)               echo "python" ;;
+    *.js|*.jsx|*.mjs|*.cjs)    echo "javascript" ;;
+    *.ts|*.tsx|*.mts|*.cts)    echo "typescript" ;;
     *.go)                     echo "go" ;;
-    *.rb)                     echo "ruby" ;;
+    *.rb|*.rake|*/Rakefile|Rakefile) echo "ruby" ;;
     *.java)                   echo "java" ;;
-    *.php)                    echo "php" ;;
-    *.cs)                     echo "csharp" ;;
+    *.php|*.phtml)             echo "php" ;;
+    *.scala)                  echo "scala" ;;
+    *.cs|*.cshtml|*.razor)     echo "csharp" ;;
     *.sh|*.bash)              echo "shell" ;;
     *.xml)                    echo "xml" ;;
     *.json)                   echo "json" ;;
@@ -179,7 +195,7 @@ pattern_to_products() {
     products="$products fax"
   fi
   # Lookup
-  if echo "$pat" | grep -qiE 'twilio/rest/lookups|PhoneNumber|lookups'; then
+  if echo "$pat" | grep -qiE 'twilio/rest/lookups|lookups'; then
     products="$products lookup"
   fi
   # TeXML (TwiML)
@@ -293,8 +309,8 @@ SDK_PATTERNS=(
   'import com.twilio'
   'com.twilio.'
   # PHP
-  'use Twilio\\'
-  'Twilio\\'
+  "use Twilio\\"
+  "Twilio\\"
   # C# / .NET
   'using Twilio'
   'Twilio.'
@@ -339,7 +355,7 @@ for pat in "${SDK_PATTERNS[@]}"; do
         record_file "$rel" "$lang" "$p" "$trimmed"
       done
     fi
-  done < <(run_grep -F "$pat")
+  done < <(run_source_fixed_grep -F "$pat")
 done
 
 for pat in "${SDK_REGEX_PATTERNS[@]}"; do
@@ -407,8 +423,8 @@ PRODUCT_PATTERNS_FIXED=(
 )
 
 for entry in "${PRODUCT_PATTERNS_FIXED[@]}"; do
-  pat="${entry%%:*}"
-  product="${entry#*:}"
+  pat="${entry%:*}"
+  product="${entry##*:}"
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     filepath="${line%%:*}"
@@ -416,15 +432,31 @@ for entry in "${PRODUCT_PATTERNS_FIXED[@]}"; do
     content="${rest#*:}"
     rel="${filepath#"$PROJECT_ROOT"/}"
     lang="$(detect_language "$rel")"
+    # C# resource names can be application-defined. The shared scoped
+    # resolver below attributes these calls; a bare name is not SDK evidence.
+    if [[ "$lang" == csharp && ( "$pat" == MessageResource || "$pat" == CallResource || \
+      "$pat" == VerificationResource || "$pat" == FaxResource || "$pat" == SimResource || \
+      "$pat" == ConversationResource || "$pat" == NotificationResource || \
+      "$pat" == WorkflowResource ) ]]; then
+      continue
+    fi
     trimmed="$(echo "$content" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
     record_file "$rel" "$lang" "$product" "$trimmed"
-  done < <(run_grep -F "$pat")
+  done < <(run_source_fixed_grep -F "$pat")
 done
 
 # Case-insensitive regex patterns for common method calls
 PRODUCT_PATTERNS_REGEX=(
   'messages\.create:messaging'
   'messages\.list:messaging'
+  'api\.twilio\.com/.*/Messages(\.json)?:messaging'
+  'messaging\.twilio\.com:messaging'
+  'api\.twilio\.com/.*/Calls(\.json)?:voice'
+  'verify\.twilio\.com:verify'
+  'lookups\.twilio\.com:lookup'
+  'video\.twilio\.com:video'
+  'fax\.twilio\.com:fax'
+  'api\.twilio\.com/.*/IncomingPhoneNumbers(\.json)?:phone-numbers'
   '\.calls\.create:voice'
   '\.calls\.list:voice'
   'verify\.v2:verify'
@@ -438,7 +470,6 @@ PRODUCT_PATTERNS_REGEX=(
   'twiml\.voice:voice'
   'twiml\.messaging:messaging'
   'VoiceGrant:voice'
-  'SipGrant:voice'
   # SIP trunking
   'twilio\.rest\.trunking:sip'
   'trunking\.v1:sip'
@@ -496,8 +527,8 @@ PRODUCT_PATTERNS_REGEX=(
 )
 
 for entry in "${PRODUCT_PATTERNS_REGEX[@]}"; do
-  pat="${entry%%:*}"
-  product="${entry#*:}"
+  pat="${entry%:*}"
+  product="${entry##*:}"
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     filepath="${line%%:*}"
@@ -507,8 +538,22 @@ for entry in "${PRODUCT_PATTERNS_REGEX[@]}"; do
     lang="$(detect_language "$rel")"
     trimmed="$(echo "$content" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')"
     record_file "$rel" "$lang" "$product" "$trimmed"
-  done < <(run_grep -iE "$pat")
+  done < <(run_grep -iE -- "$pat")
 done
+
+# Ambiguous JVM class names and PHP receivers use the same ownership resolver
+# as deep discovery. NUL records preserve filenames and source text verbatim.
+while IFS= read -r -d '' filepath && IFS= read -r -d '' product && IFS= read -r -d '' content; do
+  rel="${filepath#"$PROJECT_ROOT"/}"
+  lang="$(detect_language "$rel")"
+  record_file "$rel" "$lang" "$product" "$content"
+done < <(python3 "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sdk-source-ownership.py" "$PROJECT_ROOT")
+# A process-substitution failure does not propagate through `set -e`.
+# Do not serialize partial discovery as a successful complete scan.
+if ! wait "$!"; then
+  echo "SDK ownership discovery failed; scan is incomplete" >&2
+  exit 2
+fi
 
 # ---------------------------------------------------------------------------
 # 3. Environment variables

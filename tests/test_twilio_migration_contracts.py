@@ -3726,6 +3726,46 @@ class RunValidationContracts(unittest.TestCase):
             1, lint_failing.returncode, lint_failing.stdout + lint_failing.stderr
         )
 
+    def test_hybrid_migrated_file_scope_accepts_numeric_colons_in_root(self) -> None:
+        # Filtered findings can contain `:<digits>:` inside a legal POSIX path.
+        # Hybrid scoping must compare the known migrated path, not guess the
+        # filename boundary from the formatted finding.
+        with tempfile.TemporaryDirectory(prefix="hybrid-colon-") as directory:
+            root = Path(directory) / "root:123:part"
+            source = root / "src" / "migrated.js"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "const twilio = require('twilio');\n",
+                encoding="utf-8",
+            )
+            state = root / "migration-state.json"
+            state.write_text(
+                json.dumps(
+                    {
+                        "kept_on_twilio": {"conversations": True},
+                        "migrated_files": {"messaging": ["src/migrated.js"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    BASH,
+                    str(CORRECTNESS_LINTER),
+                    str(root),
+                    "--product",
+                    "all",
+                    "--state-file",
+                    str(state),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+        self.assertIn("Residual Twilio imports found", result.stdout)
+
     def test_hybrid_scope_normalizes_absolute_recorded_file_paths(self) -> None:
         with tempfile.TemporaryDirectory(prefix="absolute-migrated-file-") as directory:
             root = Path(directory)
