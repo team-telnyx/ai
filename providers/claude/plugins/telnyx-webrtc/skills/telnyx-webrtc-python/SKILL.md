@@ -142,7 +142,7 @@ page = page.data[0]
 print(page.id)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Create a credential
 
@@ -159,7 +159,7 @@ telephony_credential = client.telephony_credentials.create(
 print(telephony_credential.data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Get a credential
 
@@ -173,7 +173,7 @@ telephony_credential = client.telephony_credentials.retrieve("550e8400-e29b-41d4
 print(telephony_credential.data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Update a credential
 
@@ -190,7 +190,7 @@ telephony_credential = client.telephony_credentials.update(
 print(telephony_credential.data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
 
 ## Delete a credential
 
@@ -204,4 +204,4 @@ telephony_credential = client.telephony_credentials.delete("550e8400-e29b-41d4-a
 print(telephony_credential.data)
 ```
 
-Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `updated_at` (string), `user_id` (string)
+Returns: `created_at` (string), `expired` (boolean), `expires_at` (string), `id` (string), `name` (string), `record_type` (string), `resource_id` (string), `sip_password` (string), `sip_username` (string), `token_material` (object), `updated_at` (string), `user_id` (string)
