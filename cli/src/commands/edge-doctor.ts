@@ -16,8 +16,10 @@ import {
   supportsApiKeyAuth,
   supportsBindingsLifecycle,
   supportsCustomDomains,
+  supportsCpuSandboxes,
   supportsDeployments,
   supportsFunctionMetrics,
+  supportsGpuSandboxes,
   supportsInspect,
   supportsInvocationLogs,
   supportsKvKeyManagement,
@@ -81,6 +83,8 @@ interface EdgeDoctorResult {
   sql_stdin_import_supported: boolean;
   sql_database_import_supported: boolean;
   custom_domains_supported: boolean;
+  cpu_sandboxes_supported: boolean;
+  gpu_sandboxes_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -124,6 +128,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlStdinImportSupported = false;
   let sqlDatabaseImportSupported = false;
   let customDomainsSupported = false;
+  let cpuSandboxesSupported = false;
+  let gpuSandboxesSupported = false;
 
   try {
     getEdgeHelp();
@@ -173,6 +179,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlStdinImportSupported = supportsSqlStdinImport();
     sqlDatabaseImportSupported = supportsSqlDatabaseImport();
     customDomainsSupported = supportsCustomDomains();
+    cpuSandboxesSupported = supportsCpuSandboxes();
+    gpuSandboxesSupported = supportsGpuSandboxes();
 
     checks.push({
       name: "API-key auth supported",
@@ -381,6 +389,20 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         ? "domains add/verify/list/delete and cert upload are available with non-interactive deletion"
         : "custom-domain help surfaces did not advertise the complete lifecycle, certificate paths, and delete --yes",
     });
+    checks.push({
+      name: "CPU sandboxes",
+      ok: cpuSandboxesSupported,
+      detail: cpuSandboxesSupported
+        ? "sandbox-cpu create supports image, template, and snapshot sources"
+        : "sandbox-cpu/create help did not advertise image, template, and snapshot provisioning",
+    });
+    checks.push({
+      name: "GPU sandboxes (account gated)",
+      ok: gpuSandboxesSupported,
+      detail: gpuSandboxesSupported
+        ? "sandbox-gpu gpu-types, create (--image/--gpu), and files are available; account access may still require a Telnyx whitelist"
+        : "sandbox-gpu help did not advertise gpu-types, create (--image/--gpu), and file transfer",
+    });
 
     try {
       const status = getEdgeAuthStatus();
@@ -530,6 +552,12 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (customDomainsSupported) {
       nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
     }
+    if (cpuSandboxesSupported) {
+      nextSteps.push("Run a disposable CPU workload with: telnyx-edge sandbox-cpu create --image docker.io/library/python:3.13-slim --name job -- sleep infinity; terminate it with: telnyx-edge sandbox-cpu terminate job --yes");
+    }
+    if (gpuSandboxesSupported) {
+      nextSteps.push("List GPU capacity, then create a GPU workload: telnyx-edge sandbox-gpu gpu-types; telnyx-edge sandbox-gpu create --image <ref> --gpu <TYPE[:COUNT]> -- <command>. GPU access is account-whitelisted; contact Telnyx support if it returns sandboxes_not_whitelisted.");
+    }
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
       !runtimeLogsSupported && "runtime logs",
@@ -552,6 +580,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       !sqlStdinImportSupported && "SQL standard-input import",
       !sqlDatabaseImportSupported && "SQL database import",
       !customDomainsSupported && "custom domains",
+      !cpuSandboxesSupported && "CPU sandboxes",
+      !gpuSandboxesSupported && "GPU sandboxes",
       !actorMetricsSupported && "actor metrics",
       !actorLogsSupported && "actor logs",
       !revisionsRollbackSupported && "revisions and rollback",
@@ -599,6 +629,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_stdin_import_supported: sqlStdinImportSupported,
     sql_database_import_supported: sqlDatabaseImportSupported,
     custom_domains_supported: customDomainsSupported,
+    cpu_sandboxes_supported: cpuSandboxesSupported,
+    gpu_sandboxes_supported: gpuSandboxesSupported,
     checks,
     next_steps: nextSteps,
   };

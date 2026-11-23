@@ -18,7 +18,7 @@ git clone --depth 1 https://github.com/team-telnyx/edge-compute.git
 ```
 
 ## Prerequisites and readiness
-1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). The current release is v0.5.18; SQL databases require CLI v0.3.0 or newer.
+1. Download the latest CLI from the [Edge Compute releases page](https://github.com/team-telnyx/edge-compute/releases). The current release is v0.7.0; SQL databases require CLI v0.3.0 or newer.
 2. Authenticate interactively or with an API key stored by the CLI.
 3. Run the root status diagnostic. Unlike `auth status`, this validates configuration, credentials, and API connectivity.
 
@@ -42,7 +42,29 @@ telnyx-agent edge-doctor --json
 
 ## Function names
 Names must be 1–64 characters, contain only alphanumeric characters and dashes, and have no leading or trailing dash. Examples: `my-mcp-server`, `webhook-v2`, `report7`.
+## Sandboxes
+CPU sandboxes (v0.6.0 beta) run isolated Linux containers for jobs and agent workloads. Create from exactly one image, reusable template, or published snapshot; state survives pause/resume. Inspect the installed surface before automating it, and always terminate disposable work.
 
+```bash
+telnyx-edge sandbox-cpu --help
+telnyx-edge sandbox-cpu create --image docker.io/library/python:3.13-slim --name job -- sleep infinity
+telnyx-edge sandbox-cpu exec job -- python -c 'print(1 + 1)'
+telnyx-edge sandbox-cpu cp ./input.csv job:/tmp/input.csv
+telnyx-edge sandbox-cpu terminate job --yes
+```
+
+`create --template <id-or-name>` reuses a template's image, resources, command, workdir, and environment; `create --snapshot <id>` resumes its source configuration. Use `logs`, `metrics`, and `events` for CPU workload observation.
+
+GPU sandboxes (v0.7.0) run a container in its own VM and bill per second while running. First inspect capacity, then create with an image and GPU type/count; use `files` for `ls`, `put`, and `get`, and terminate when finished.
+
+```bash
+telnyx-edge sandbox-gpu gpu-types --help
+telnyx-edge sandbox-gpu create --image vllm/vllm-openai:v0.19.0 --gpu B300:8 --no-timeout -- <command>
+telnyx-edge sandbox-gpu files ls <id-or-name> /workspace
+telnyx-edge sandbox-gpu terminate <id-or-name> --yes
+```
+
+GPU sandbox access is account-whitelisted. Before access is enabled, commands return `sandboxes_not_whitelisted`; contact Telnyx support rather than treating that response as a local CLI or authentication failure.
 ## Quick Start
 Use one of the repository-aware handoff commands below for a complete clone, build, secrets, deploy, and inspect sequence. The expanded manual flows show exactly what each helper emits.
 ### Classic Node lockfile prerequisite
@@ -239,7 +261,6 @@ Use secrets for confidential values. Telnyx bindings provide managed Telnyx API 
 ```toml
 [telnyx]
 binding = "TELNYX_CLIENT"
-
 [[secrets]]
 binding = "MCP_TOKEN"
 name = "SHARED_SECRET"
@@ -266,34 +287,9 @@ import { env } from "@telnyx/edge-runtime";
 const balance = await env.TELNYX_CLIENT.balance.retrieve();
 const mcpToken: string = await env.SECRETS.get("MCP_TOKEN");
 ```
-
 `binding` is the code-facing handle; `name` is the secret-store key. `types` covers all declared actor, Telnyx, secret, KV, SQL database, and Cloud Storage bindings, runs offline without authentication, and should be rerun whenever the manifest changes.
 ### Rate limiter bindings
-Declare each fixed-window limiter in `func.toml` or `telnyx.toml`. `limit` is the allowed call count and `period` is the window in seconds:
-
-```toml
-[[ratelimits]]
-name = "api-limit"
-namespace_id = "1001"
-limit = 100
-period = 60
-```
-
-Install `@telnyx/edge-runtime` **0.9.2 or newer**, then regenerate declarations. `telnyx-edge types` emits the binding as a runtime `RateLimiter`:
-
-```bash
-npm install @telnyx/edge-runtime@latest
-telnyx-edge types
-```
-
-```typescript
-import { env } from "@telnyx/edge-runtime";
-
-const { success } = await env.API_LIMIT.limit({ key: clientId });
-if (!success) return new Response("Too many requests", { status: 429 });
-```
-
-The runtime handle is canonicalized to uppercase with hyphens replaced by underscores (`api-limit` becomes `env.API_LIMIT`). `namespace_id` is optional and must be a positive integer string; functions using the same value share a counter pool, so reuse it only when cross-function limiting is intentional.
+Declare fixed-window `[[ratelimits]]` entries with `name`, `limit`, and `period`; optional positive-integer `namespace_id` values intentionally share counters across functions. Run `telnyx-edge types` with `@telnyx/edge-runtime` 0.9.2+ to generate the canonicalized `RateLimiter` handle (`api-limit` becomes `env.API_LIMIT`).
 ### Non-interactive destructive commands
 Destructive commands prompt in a terminal and deliberately fail rather than hang when stdin is not a terminal. Scripts, agents, and CI must pass `--yes` (`-y`) to `delete-func`, `reset-func`, `domains delete`, `secrets delete`, `bindings delete`, `actors delete`, `storage sqldb delete`, `storage kv delete`, and `storage kv key delete`. Piping the output of `yes` is not accepted.
 
@@ -382,7 +378,7 @@ telnyx-edge types
 `env.DB` is generated as `SqlDatabase` and requires `@telnyx/edge-runtime` **0.9.0 or newer**. Keep the runtime current rather than pinning it to an older CLI-era version.
 
 Do not confuse shared account SQLDB with actor-local SQL. `[storage.sqldb.DB]` exposes one account database as `env.DB` to any functions that bind the same UUID. `ctx.storage.sql` belongs to one StatefulActor instance, is reached only inside that actor, and has no `storage sqldb execute` or migration CLI surface.
-### SQL export and restore (v0.5.18)
+### SQL export and restore (v0.5.16+)
 Export creates SQL data for backup or a deliberate copy; it is not a point-in-time snapshot, refuses virtual tables, and may contain sensitive data. Use the job-based `storage sqldb import` command for normal restores: it accepts a local dump up to 100 MiB, or reuses a completed export of the same database with `--from-export`. Import executes schema and data statements in batches, can partially modify the destination on failure, and is not a transactional restore. Use an empty/disposable destination, or review the SQL and back up the target first. Protect the output, verify the destination before importing, and do not combine `--no-data` with `--no-schema`.
 ```bash
 telnyx-edge storage sqldb export "$SQLDB_ID" --remote --output ./database.sql
@@ -392,7 +388,11 @@ telnyx-edge storage sqldb import "$SQLDB_ID" --from-export <export-id>
 # Deliberate small copy only: execute sends one request; keep it roughly <=4 MiB and use an empty/disposable destination.
 telnyx-edge storage sqldb export "$SOURCE_SQLDB_ID" --remote --output - | telnyx-edge storage sqldb execute "$DEST_SQLDB_ID" --remote --file -
 ```
-`execute --remote --file` (including the pipe above) is not the normal restore path: its single-request SQL script limit is roughly 4 MiB. Do not pipe blindly into a populated production database.
+`execute --remote --file` (including the pipe above) is not the normal restore path: its single-request SQL script limit is roughly 4 MiB. Do not pipe blindly into a populated production database. If import waiting is interrupted, the import keeps running; resume monitoring with `telnyx-edge storage sqldb import status <database> <import-id>`.
+### Local SQL, dev, and private connectivity (v0.5.6+)
+`storage sqldb execute`, `migrations list`, and `migrations apply` accept `--local` to use the same SQL engine locally through Docker; data persists in `.telnyx/sqldb/` (or `--persist-to <dir>`). `telnyx-edge dev` serves `telnyx.toml` projects locally and uses those bound local databases.
+
+For private connectivity, a `[network.<name>]` binding joins a function to a Telnyx WireGuard interface; the CLI also manages networks, interfaces, peers, DNS, routes, and Tailscale subnet routers. `tunnel run --token <token>` lets a function on a routed network reach a service on your machine without an inbound port; the token is shown only at tunnel creation or rotation.
 ### Cloud Storage binding types (v0.2.4)
 
 CLI v0.2.4 added `[storage.cloudstorage.<name>]` manifest bindings and `CloudStorageBucket` output from `telnyx-edge types`. JavaScript/TypeScript scaffolds include the Cloud Storage dependencies.
@@ -431,7 +431,7 @@ telnyx-edge inspect <function>
 The two inspect commands answer different questions:
 
 - `inspect <function>` shows one function and every declared binding (including actor owner/reference roles).
-- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Since v0.5.5, `actors metrics <type> --since 24h` (or `--json`) reports request, error-rate, latency, byte, CPU, and memory aggregates, and `actors logs <type>` reads recent runtime and invocation logs. Probe their help surfaces when supporting multiple CLI releases.
+- `actors inspect <type>` shows one account-scoped actor type, attached functions, and a best-effort live instance count. Since v0.5.5, `actors metrics <type> --since 24h` (or `--json`) reports request, error-rate, latency, byte, CPU, and memory aggregates; `--since` accepts up to 90h. `actors logs <type>` reads recent runtime and invocation logs. Probe their help surfaces when supporting multiple CLI releases.
 ### v0.2.5 actor-instance support and limitations
 
 v0.2.5 added `actors instances <type>` and the instance count in `actors inspect <type>`. The instance command is intentionally limited:

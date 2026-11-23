@@ -83,6 +83,14 @@ type FakeEdgeOptions = {
   customDomainCertFlag?: boolean;
   customDomainKeyFlag?: boolean;
   customDomainDeleteYes?: boolean;
+  cpuSandboxes?: boolean;
+  cpuSandboxImage?: boolean;
+  cpuSandboxTemplate?: boolean;
+  cpuSandboxSnapshot?: boolean;
+  gpuSandboxGpuTypes?: boolean;
+  gpuSandboxImage?: boolean;
+  gpuSandboxGpu?: boolean;
+  gpuSandboxFiles?: boolean;
   argLog?: boolean;
 };
 
@@ -160,6 +168,14 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const customDomainCertFlag = config.customDomainCertFlag ?? true;
   const customDomainKeyFlag = config.customDomainKeyFlag ?? true;
   const customDomainDeleteYes = config.customDomainDeleteYes ?? true;
+  const cpuSandboxes = config.cpuSandboxes ?? true;
+  const cpuSandboxImage = config.cpuSandboxImage ?? true;
+  const cpuSandboxTemplate = config.cpuSandboxTemplate ?? true;
+  const cpuSandboxSnapshot = config.cpuSandboxSnapshot ?? true;
+  const gpuSandboxGpuTypes = config.gpuSandboxGpuTypes ?? true;
+  const gpuSandboxImage = config.gpuSandboxImage ?? true;
+  const gpuSandboxGpu = config.gpuSandboxGpu ?? true;
+  const gpuSandboxFiles = config.gpuSandboxFiles ?? true;
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-edge-fake-"));
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
@@ -402,6 +418,38 @@ if (args[0] === 'actors' && args[1] === 'metrics' && args.includes('--help')) {
   process.stderr.write('unknown command "metrics"\\n');
   process.exit(1);
 }
+if (args[0] === 'sandbox-cpu' && args.length === 2 && args.includes('--help')) {
+  if (${cpuSandboxes}) {
+    console.log('Usage: telnyx-edge sandbox-cpu [command]\\nAvailable Commands:\\n  create      Create a sandbox and wait until it runs');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "sandbox-cpu"\\n');
+  process.exit(1);
+}
+if (args[0] === 'sandbox-cpu' && args[1] === 'create' && args.includes('--help')) {
+  console.log(['Usage: telnyx-edge sandbox-cpu create [flags]', ...(${cpuSandboxImage} ? ['      --image string'] : []), ...(${cpuSandboxTemplate} ? ['      --template string'] : []), ...(${cpuSandboxSnapshot} ? ['      --snapshot string'] : [])].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'gpu-types' && args.includes('--help')) {
+  if (${gpuSandboxGpuTypes}) {
+    console.log('Usage: telnyx-edge sandbox-gpu gpu-types [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "gpu-types"\\n');
+  process.exit(1);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'create' && args.includes('--help')) {
+  console.log(['Usage: telnyx-edge sandbox-gpu create' + (${gpuSandboxImage} ? ' --image <ref>' : '') + (${gpuSandboxGpu} ? ' --gpu <TYPE[:COUNT]>' : '') + ' [flags]', ...(${gpuSandboxImage} ? ['      --image string'] : []), ...(${gpuSandboxGpu} ? ['      --gpu string'] : [])].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'files' && args.includes('--help')) {
+  if (${gpuSandboxFiles}) {
+    console.log('Usage: telnyx-edge sandbox-gpu files [command]\\nAvailable Commands:\\n  get\\n  ls\\n  put');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "files"\\n');
+  process.exit(1);
+}
 if (args.length === 1 && args[0] === '--help') {
   console.log(['Telnyx Edge CLI v0.5.0', '', 'Available Commands:', '  actors      Manage StatefulActor types', '  inspect     Show function details', '  auth        Authentication commands', '  ship        Ship a function', '  storage     Manage storage'].join('\\n'));
   process.exit(0);
@@ -530,12 +578,18 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_stdin_import_supported, true);
     assert.equal(data.sql_database_import_supported, true);
     assert.equal(data.custom_domains_supported, true);
+    assert.equal(data.cpu_sandboxes_supported, true);
+    assert.equal(data.gpu_sandboxes_supported, true);
     assert.ok(data.next_steps.some((step: string) =>
       step.includes("actors logs <type> --since 10m --last 200")));
     assert.ok(data.next_steps.some((step: string) =>
       step.includes("revisions list <function-name>; telnyx-edge rollback <function-name> <revision-id>")));
     assert.ok(data.next_steps.some((step: string) =>
       step.includes("storage sqldb import <database> --file ./database.sql") && step.includes("--from-export <export-id>")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("sandbox-cpu create --image") && step.includes("sandbox-cpu terminate job --yes")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("sandbox-gpu gpu-types") && step.includes("sandboxes_not_whitelisted")));
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -691,6 +745,46 @@ describe("CLI — Edge Compute handoff", () => {
           step.includes("revisions and rollback") ||
           step.includes("SQL database import"))),
       );
+    }
+  });
+
+  it("probes complete CPU and GPU sandbox help without changing setup handoff readiness", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.cpu_sandboxes_supported, true);
+    assert.equal(available.gpu_sandboxes_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "GPU sandboxes (account gated)" && check.ok));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [
+      ["sandbox-cpu", "--help"],
+      ["sandbox-cpu", "create", "--help"],
+      ["sandbox-gpu", "gpu-types", "--help"],
+      ["sandbox-gpu", "create", "--help"],
+      ["sandbox-gpu", "files", "--help"],
+    ]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, "cpu_sandboxes_supported" | "gpu_sandboxes_supported"]> = [
+      [{ cpuSandboxes: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxImage: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxTemplate: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxSnapshot: false }, "cpu_sandboxes_supported"],
+      [{ gpuSandboxGpuTypes: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxImage: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxGpu: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxFiles: false }, "gpu_sandboxes_supported"],
+    ];
+    for (const [config, capability] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "sandboxes must remain optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("Optional capabilities not detected") &&
+        step.includes(capability === "cpu_sandboxes_supported" ? "CPU sandboxes" : "GPU sandboxes")));
     }
   });
 
