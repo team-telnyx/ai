@@ -182,6 +182,19 @@ output. Failed requests suppress any partial response payload.
 | `get-recording-transcription` | Use this to retrieve the transcript resource for one known recording-transcription ID. | Read-only; Go CLI |
 | `create-telephony-credential-token` | Use this to create a JWT for one existing on-demand telephony credential when a SIP or WebRTC client needs short-lived access. | Creates credential token; sensitive output only with `--json`; Go CLI v0.30+ |
 
+### Text-to-speech and voice clones
+
+| Command | Agent selection sentence | Operational note |
+| --- | --- | --- |
+| `tts` | Use this to synthesize speech from text using a selected provider and voice. | Creates audio; direct REST |
+| `tts-voices` | Use this to list current available TTS voices before choosing one for synthesis. | Read-only; Go CLI |
+| `list-voice-clones` | Use this to discover voice clones before selecting one to update, delete, or inspect. | Read-only; Go CLI |
+| `create-voice-clone` | Use this to create a clone from an existing voice-design request body. | Creates; Go CLI |
+| `update-voice-clone` | Use this to change a voice clone's name, gender, or language. | Mutates; Go CLI |
+| `delete-voice-clone` | Use this to permanently delete one known voice clone. | Deletes; requires bare `--confirm`; Go CLI |
+| `create-voice-clone-from-upload` | Use this to create a clone from reference audio only when the caller has rights and consent. | Creates; requires bare `--acknowledge-voice-consent`; Go CLI |
+| `download-voice-clone-sample` | Use this to download a known voice clone's creation sample into a local file. | Read-only; writes local file; Go CLI |
+
 ### Conferences
 
 | Command | Agent selection sentence | Operational note |

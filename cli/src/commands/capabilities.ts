@@ -50,6 +50,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
   "🔊 Text-to-Speech": [
     { name: "Speech Synthesis", description: "Generate audio from text via Telnyx and third-party TTS providers (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["generate_speech"] },
     { name: "Voice Catalog", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)", actions: ["list_voices"] },
+    { name: "Voice Clones", description: "List, create, update, delete, upload, and download sample audio for voice clones; uploaded-voice cloning requires an explicit consent acknowledgement", actions: ["list_voice_clones", "create_voice_clone", "update_voice_clone", "delete_voice_clone", "create_voice_clone_from_upload", "download_voice_clone_sample"] },
   ],
   "🎤 Speech-to-Text": [
     { name: "Transcription", description: "Transcribe hosted audio files to text via the OpenAI-compatible transcription endpoint, with model and language options", actions: ["ai_audio_transcribe"] },
@@ -192,6 +193,12 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent list-portout-comments", description: "List comments on a Port-Out order" },
   { name: "telnyx-agent tts", description: "Generate speech from text (text-to-speech) across multiple providers, returning base64-encoded audio data" },
   { name: "telnyx-agent tts-voices", description: "List available TTS voices, optionally filtered by provider (telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai)" },
+  { name: "telnyx-agent list-voice-clones", description: "List voice clones with optional model, name, provider, pagination, and sorting filters" },
+  { name: "telnyx-agent create-voice-clone", description: "Create a voice clone from an existing voice-design request body" },
+  { name: "telnyx-agent update-voice-clone", description: "Update a voice clone's name, gender, or language" },
+  { name: "telnyx-agent delete-voice-clone", description: "Permanently delete a voice clone with explicit confirmation" },
+  { name: "telnyx-agent create-voice-clone-from-upload", description: "Create a voice clone from uploaded audio after explicit consent acknowledgement" },
+  { name: "telnyx-agent download-voice-clone-sample", description: "Download a voice clone's WAV sample to a local file" },
   { name: "telnyx-agent setup-whatsapp", description: "Zero to WhatsApp: lists WABA, buys number, initializes & verifies, sets profile" },
   { name: "telnyx-agent whatsapp-send", description: "Send text, template, media, interactive, location, reaction, stickers, contacts, or video over WhatsApp" },
   { name: "telnyx-agent stt", description: "Transcribe audio to text (speech-to-text) — accepts an audio URL and returns the transcript with optional language, model, and keyword biasing" },
