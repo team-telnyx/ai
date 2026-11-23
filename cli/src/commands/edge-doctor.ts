@@ -10,12 +10,16 @@ import {
   getEdgeHelp,
   getEdgeRootStatus,
   getEdgeVersion,
+  supportsActorLogs,
   supportsActorMetrics,
   supportsActorInstances,
   supportsApiKeyAuth,
+  supportsBindingsLifecycle,
   supportsCustomDomains,
+  supportsCpuSandboxes,
   supportsDeployments,
   supportsFunctionMetrics,
+  supportsGpuSandboxes,
   supportsInspect,
   supportsInvocationLogs,
   supportsKvKeyManagement,
@@ -28,13 +32,16 @@ import {
   supportsLiveLogTail,
   supportsLogExport,
   supportsSecretsAdd,
+  supportsSecretsLifecycle,
   supportsShip,
   supportsShipStatus,
   supportsSqlBoundParameters,
   supportsSqlDatabaseExport,
+  supportsSqlDatabaseImport,
   supportsSqlDatabases,
   supportsSqlStdinImport,
   supportsStatefulActors,
+  supportsRevisionsRollback,
   supportsTypes,
 } from "../edge-cli.ts";
 
@@ -48,6 +55,8 @@ interface EdgeDoctorResult {
   api_key_auth_supported: boolean;
   new_func_from_dir_supported: boolean;
   secrets_add_supported: boolean;
+  secrets_lifecycle_supported: boolean;
+  bindings_lifecycle_supported: boolean;
   ship_supported: boolean;
   ship_status_supported: boolean;
   runtime_logs_supported: boolean;
@@ -60,6 +69,8 @@ interface EdgeDoctorResult {
   inspect_supported: boolean;
   actor_instances_supported: boolean;
   actor_metrics_supported: boolean;
+  actor_logs_supported: boolean;
+  revisions_rollback_supported: boolean;
   reset_func_supported: boolean;
   reset_func_noninteractive_confirmation_supported: boolean;
   noninteractive_confirmation_supported: boolean;
@@ -70,7 +81,10 @@ interface EdgeDoctorResult {
   sql_bound_parameters_supported: boolean;
   sql_database_export_supported: boolean;
   sql_stdin_import_supported: boolean;
+  sql_database_import_supported: boolean;
   custom_domains_supported: boolean;
+  cpu_sandboxes_supported: boolean;
+  gpu_sandboxes_supported: boolean;
   checks: Array<{ name: string; ok: boolean; detail: string }>;
   next_steps: string[];
 }
@@ -86,6 +100,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let apiKeyAuthSupported = false;
   let newFuncFromDirSupported = false;
   let secretsAddSupported = false;
+  let secretsLifecycleSupported = false;
+  let bindingsLifecycleSupported = false;
   let shipSupported = false;
   let shipStatusSupported = false;
   let runtimeLogsSupported = false;
@@ -98,6 +114,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let inspectSupported = false;
   let actorInstancesSupported = false;
   let actorMetricsSupported = false;
+  let actorLogsSupported = false;
+  let revisionsRollbackSupported = false;
   let resetFuncSupported = false;
   let resetFuncNoninteractiveConfirmationSupported = false;
   let noninteractiveConfirmationSupported = false;
@@ -108,7 +126,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
   let sqlBoundParametersSupported = false;
   let sqlDatabaseExportSupported = false;
   let sqlStdinImportSupported = false;
+  let sqlDatabaseImportSupported = false;
   let customDomainsSupported = false;
+  let cpuSandboxesSupported = false;
+  let gpuSandboxesSupported = false;
 
   try {
     getEdgeHelp();
@@ -130,6 +151,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     apiKeyAuthSupported = supportsApiKeyAuth();
     newFuncFromDirSupported = supportsNewFuncFromDir();
     secretsAddSupported = supportsSecretsAdd();
+    secretsLifecycleSupported = supportsSecretsLifecycle();
+    bindingsLifecycleSupported = supportsBindingsLifecycle();
     shipSupported = supportsShip();
     shipStatusSupported = supportsShipStatus();
     runtimeLogsSupported = supportsRuntimeLogs();
@@ -142,6 +165,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspectSupported = supportsInspect();
     actorInstancesSupported = supportsActorInstances();
     actorMetricsSupported = supportsActorMetrics();
+    actorLogsSupported = supportsActorLogs();
+    revisionsRollbackSupported = supportsRevisionsRollback();
     resetFuncSupported = supportsResetFunc();
     resetFuncNoninteractiveConfirmationSupported = supportsResetFuncNonInteractiveConfirmation();
     noninteractiveConfirmationSupported = supportsNonInteractiveConfirmation();
@@ -152,7 +177,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sqlBoundParametersSupported = supportsSqlBoundParameters();
     sqlDatabaseExportSupported = supportsSqlDatabaseExport();
     sqlStdinImportSupported = supportsSqlStdinImport();
+    sqlDatabaseImportSupported = supportsSqlDatabaseImport();
     customDomainsSupported = supportsCustomDomains();
+    cpuSandboxesSupported = supportsCpuSandboxes();
+    gpuSandboxesSupported = supportsGpuSandboxes();
 
     checks.push({
       name: "API-key auth supported",
@@ -172,6 +200,20 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       detail: secretsAddSupported
         ? "secrets add <key> <value> is available"
         : "secrets add <key> <value> was not detected; setup handoffs cannot install runtime secrets",
+    });
+    checks.push({
+      name: "Secrets lifecycle",
+      ok: secretsLifecycleSupported,
+      detail: secretsLifecycleSupported
+        ? "secrets add/list/delete supports non-interactive deletion"
+        : "secrets help did not advertise add/list/delete with delete --yes",
+    });
+    checks.push({
+      name: "Telnyx bindings lifecycle",
+      ok: bindingsLifecycleSupported,
+      detail: bindingsLifecycleSupported
+        ? "bindings create/get/update/validate/delete supports non-interactive deletion"
+        : "bindings help did not advertise the complete lifecycle with delete --yes",
     });
     checks.push({
       name: "Function shipping",
@@ -254,6 +296,20 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "actors metrics --help did not advertise <type> usage with --since and --json",
     });
     checks.push({
+      name: "Actor logs supported",
+      ok: actorLogsSupported,
+      detail: actorLogsSupported
+        ? "actors logs <type> supports runtime/invocation filters, instance filters, windows, and JSON"
+        : "actors logs --help did not advertise <type> usage with --type, --instance, --since, --last, and --json",
+    });
+    checks.push({
+      name: "Revisions and rollback",
+      ok: revisionsRollbackSupported,
+      detail: revisionsRollbackSupported
+        ? "revisions list <function> and rollback <function> <revision> are available"
+        : "revisions list and rollback help did not advertise the deployed-revision workflow",
+    });
+    checks.push({
       name: "Failed-function reset",
       ok: resetFuncSupported,
       detail: resetFuncSupported ? "reset-func <function-name> is available" : "reset-func --help capability not detected",
@@ -320,11 +376,32 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
         : "storage sqldb execute --help did not advertise --file - standard-input input",
     });
     checks.push({
+      name: "SQL database import",
+      ok: sqlDatabaseImportSupported,
+      detail: sqlDatabaseImportSupported
+        ? "storage sqldb import supports --file and --from-export restores"
+        : "storage sqldb import --help did not advertise both --file and --from-export",
+    });
+    checks.push({
       name: "Custom domains",
       ok: customDomainsSupported,
       detail: customDomainsSupported
         ? "domains add/verify/list/delete and cert upload are available with non-interactive deletion"
         : "custom-domain help surfaces did not advertise the complete lifecycle, certificate paths, and delete --yes",
+    });
+    checks.push({
+      name: "CPU sandboxes",
+      ok: cpuSandboxesSupported,
+      detail: cpuSandboxesSupported
+        ? "sandbox-cpu create supports image, template, and snapshot sources"
+        : "sandbox-cpu/create help did not advertise image, template, and snapshot provisioning",
+    });
+    checks.push({
+      name: "GPU sandboxes (account gated)",
+      ok: gpuSandboxesSupported,
+      detail: gpuSandboxesSupported
+        ? "sandbox-gpu gpu-types, create (--image/--gpu), and files are available; account access may still require a Telnyx whitelist"
+        : "sandbox-gpu help did not advertise gpu-types, create (--image/--gpu), and file transfer",
     });
 
     try {
@@ -421,6 +498,12 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (actorMetricsSupported) {
       nextSteps.push("Summarize actor traffic and resources with: telnyx-edge actors metrics <type> --since 24h");
     }
+    if (actorLogsSupported) {
+      nextSteps.push("Read StatefulActor runtime and invocation logs with: telnyx-edge actors logs <type> --since 10m --last 200");
+    }
+    if (revisionsRollbackSupported) {
+      nextSteps.push("Review immutable revisions, then retarget traffic if needed: telnyx-edge revisions list <function-name>; telnyx-edge rollback <function-name> <revision-id>");
+    }
     if (shipStatusSupported) {
       nextSteps.push("Diagnose the latest ship before resetting it: telnyx-edge ship status <function-name> --logs");
     }
@@ -460,11 +543,20 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     if (sqlDatabaseExportSupported) {
       nextSteps.push("Export a remote SQL database with: telnyx-edge storage sqldb export <database> --remote --output ./database.sql");
     }
+    if (sqlDatabaseImportSupported) {
+      nextSteps.push("Restore a SQL dump (up to 100 MiB) with: telnyx-edge storage sqldb import <database> --file ./database.sql; reuse an export in place with --from-export <export-id>");
+    }
     if (sqlDatabaseExportSupported && sqlStdinImportSupported) {
-      nextSteps.push("Copy SQL data only to an empty/disposable destination (imports can partially modify it on failure): telnyx-edge storage sqldb export <source-database> --remote --output - | telnyx-edge storage sqldb execute <destination-database> --remote --file -");
+      nextSteps.push("Copy only a small (about 4 MiB or less) SQL dump to an empty/disposable destination: telnyx-edge storage sqldb export <source-database> --remote --output - | telnyx-edge storage sqldb execute <destination-database> --remote --file -");
     }
     if (customDomainsSupported) {
       nextSteps.push("Route a hostname with: telnyx-edge domains add <hostname> <function-id>, then follow the DNS verification and TLS certificate workflow.");
+    }
+    if (cpuSandboxesSupported) {
+      nextSteps.push("Run a disposable CPU workload with: telnyx-edge sandbox-cpu create --image docker.io/library/python:3.13-slim --name job -- sleep infinity; terminate it with: telnyx-edge sandbox-cpu terminate job --yes");
+    }
+    if (gpuSandboxesSupported) {
+      nextSteps.push("List GPU capacity, then create a GPU workload: telnyx-edge sandbox-gpu gpu-types; telnyx-edge sandbox-gpu create --image <ref> --gpu <TYPE[:COUNT]> -- <command>. GPU access is account-whitelisted; contact Telnyx support if it returns sandboxes_not_whitelisted.");
     }
     const missingOptional = [
       !shipStatusSupported && "ship status <function> --logs diagnostics",
@@ -478,14 +570,21 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
       resetFuncSupported && !resetFuncNoninteractiveConfirmationSupported && "reset-func --yes",
       !noninteractiveConfirmationSupported && "destructive-command --yes",
       !typesSupported && "types",
+      !secretsLifecycleSupported && "secrets add/list/delete lifecycle",
+      !bindingsLifecycleSupported && "bindings create/get/update/validate/delete lifecycle",
       !kvStorageSupported && "KV namespaces",
       !kvKeyManagementSupported && "KV keys",
       !sqlDatabasesSupported && "remote SQL execution",
       !sqlBoundParametersSupported && "SQL --param/--param-json bindings",
       !sqlDatabaseExportSupported && "SQL database export",
       !sqlStdinImportSupported && "SQL standard-input import",
+      !sqlDatabaseImportSupported && "SQL database import",
       !customDomainsSupported && "custom domains",
+      !cpuSandboxesSupported && "CPU sandboxes",
+      !gpuSandboxesSupported && "GPU sandboxes",
       !actorMetricsSupported && "actor metrics",
+      !actorLogsSupported && "actor logs",
+      !revisionsRollbackSupported && "revisions and rollback",
     ].filter((value): value is string => Boolean(value));
     if (missingOptional.length > 0) {
       nextSteps.push(`Optional capabilities not detected; upgrade telnyx-edge if needed: ${missingOptional.join(", ")}.`);
@@ -502,6 +601,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     api_key_auth_supported: apiKeyAuthSupported,
     new_func_from_dir_supported: newFuncFromDirSupported,
     secrets_add_supported: secretsAddSupported,
+    secrets_lifecycle_supported: secretsLifecycleSupported,
+    bindings_lifecycle_supported: bindingsLifecycleSupported,
     ship_supported: shipSupported,
     ship_status_supported: shipStatusSupported,
     runtime_logs_supported: runtimeLogsSupported,
@@ -514,6 +615,8 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     inspect_supported: inspectSupported,
     actor_instances_supported: actorInstancesSupported,
     actor_metrics_supported: actorMetricsSupported,
+    actor_logs_supported: actorLogsSupported,
+    revisions_rollback_supported: revisionsRollbackSupported,
     reset_func_supported: resetFuncSupported,
     reset_func_noninteractive_confirmation_supported: resetFuncNoninteractiveConfirmationSupported,
     noninteractive_confirmation_supported: noninteractiveConfirmationSupported,
@@ -524,7 +627,10 @@ export async function edgeDoctorCommand(flags: Record<string, string | boolean>)
     sql_bound_parameters_supported: sqlBoundParametersSupported,
     sql_database_export_supported: sqlDatabaseExportSupported,
     sql_stdin_import_supported: sqlStdinImportSupported,
+    sql_database_import_supported: sqlDatabaseImportSupported,
     custom_domains_supported: customDomainsSupported,
+    cpu_sandboxes_supported: cpuSandboxesSupported,
+    gpu_sandboxes_supported: gpuSandboxesSupported,
     checks,
     next_steps: nextSteps,
   };

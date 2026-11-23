@@ -21,6 +21,22 @@ type FakeEdgeOptions = {
   actorMetricsJson?: boolean;
   newFuncFromDir?: boolean;
   secretsAdd?: boolean;
+  secretsList?: boolean;
+  secretsDelete?: boolean;
+  secretsDeleteYes?: boolean;
+  bindingsCommands?: Array<"create" | "get" | "update" | "validate" | "delete">;
+  bindingsDeleteYes?: boolean;
+  revisions?: boolean;
+  rollback?: boolean;
+  actorLogs?: boolean;
+  actorLogsType?: boolean;
+  actorLogsInstance?: boolean;
+  actorLogsSince?: boolean;
+  actorLogsLast?: boolean;
+  actorLogsJson?: boolean;
+  sqlDatabaseImport?: boolean;
+  sqlDatabaseImportFile?: boolean;
+  sqlDatabaseImportFromExport?: boolean;
   ship?: boolean;
   shipStatusFunctionUsage?: boolean;
   shipStatusLogs?: boolean;
@@ -67,6 +83,14 @@ type FakeEdgeOptions = {
   customDomainCertFlag?: boolean;
   customDomainKeyFlag?: boolean;
   customDomainDeleteYes?: boolean;
+  cpuSandboxes?: boolean;
+  cpuSandboxImage?: boolean;
+  cpuSandboxTemplate?: boolean;
+  cpuSandboxSnapshot?: boolean;
+  gpuSandboxGpuTypes?: boolean;
+  gpuSandboxImage?: boolean;
+  gpuSandboxGpu?: boolean;
+  gpuSandboxFiles?: boolean;
   argLog?: boolean;
 };
 
@@ -82,6 +106,22 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const actorMetricsJson = config.actorMetricsJson ?? true;
   const newFuncFromDir = config.newFuncFromDir ?? true;
   const secretsAdd = config.secretsAdd ?? true;
+  const secretsList = config.secretsList ?? true;
+  const secretsDelete = config.secretsDelete ?? true;
+  const secretsDeleteYes = config.secretsDeleteYes ?? true;
+  const bindingsCommands = config.bindingsCommands ?? ["create", "get", "update", "validate", "delete"];
+  const bindingsDeleteYes = config.bindingsDeleteYes ?? true;
+  const revisions = config.revisions ?? true;
+  const rollback = config.rollback ?? true;
+  const actorLogs = config.actorLogs ?? true;
+  const actorLogsType = config.actorLogsType ?? true;
+  const actorLogsInstance = config.actorLogsInstance ?? true;
+  const actorLogsSince = config.actorLogsSince ?? true;
+  const actorLogsLast = config.actorLogsLast ?? true;
+  const actorLogsJson = config.actorLogsJson ?? true;
+  const sqlDatabaseImport = config.sqlDatabaseImport ?? true;
+  const sqlDatabaseImportFile = config.sqlDatabaseImportFile ?? true;
+  const sqlDatabaseImportFromExport = config.sqlDatabaseImportFromExport ?? true;
   const ship = config.ship ?? true;
   const shipStatusFunctionUsage = config.shipStatusFunctionUsage ?? true;
   const shipStatusLogs = config.shipStatusLogs ?? true;
@@ -128,6 +168,14 @@ function withFakeEdgeCli(options: FakeEdgeOptions | AuthMode = "api_key") {
   const customDomainCertFlag = config.customDomainCertFlag ?? true;
   const customDomainKeyFlag = config.customDomainKeyFlag ?? true;
   const customDomainDeleteYes = config.customDomainDeleteYes ?? true;
+  const cpuSandboxes = config.cpuSandboxes ?? true;
+  const cpuSandboxImage = config.cpuSandboxImage ?? true;
+  const cpuSandboxTemplate = config.cpuSandboxTemplate ?? true;
+  const cpuSandboxSnapshot = config.cpuSandboxSnapshot ?? true;
+  const gpuSandboxGpuTypes = config.gpuSandboxGpuTypes ?? true;
+  const gpuSandboxImage = config.gpuSandboxImage ?? true;
+  const gpuSandboxGpu = config.gpuSandboxGpu ?? true;
+  const gpuSandboxFiles = config.gpuSandboxFiles ?? true;
   const tempDir = mkdtempSync(join(tmpdir(), "telnyx-edge-fake-"));
   const binDir = join(tempDir, "bin");
   const argsLog = join(tempDir, "args.jsonl");
@@ -152,12 +200,37 @@ if (args[0] === 'auth' && args[1] === 'api-key' && args[2] === 'set' && args.inc
   console.log('Set API key for authentication. The API key must be provided as an argument.');
   process.exit(0);
 }
+if (args[0] === 'secrets' && args.length === 2 && args.includes('--help')) {
+  console.log(['Manage secrets for edge computing functions', 'Usage: telnyx-edge secrets [command]', 'Available Commands:', '  add', ...(${secretsList} ? ['  list'] : []), ...(${secretsDelete} ? ['  delete'] : [])].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'secrets' && args[1] === 'delete' && args.includes('--help')) {
+  if (${secretsDelete}) {
+    console.log(['Delete a secret', 'Usage: telnyx-edge secrets delete <key> [flags]', ...(${secretsDeleteYes} ? ['  -y, --yes  Skip the confirmation prompt'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "delete"\\n');
+  process.exit(1);
+}
 if (args[0] === 'secrets' && args[1] === 'add' && args.includes('--help')) {
   if (${secretsAdd}) {
     console.log('Add or update a secret\\nUsage: telnyx-edge secrets add <key> <value> [flags]');
     process.exit(0);
   }
   process.stderr.write('unknown command "add"\\n');
+  process.exit(1);
+}
+if (args[0] === 'bindings' && args.length === 2 && args.includes('--help')) {
+  const commands = ${JSON.stringify(bindingsCommands)};
+  console.log(['Manage Telnyx API key bindings', 'Usage: telnyx-edge bindings [command]', 'Available Commands:', ...commands.map((command) => '  ' + command)].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'bindings' && args[1] === 'delete' && args.includes('--help')) {
+  if (${bindingsCommands.includes("delete")}) {
+    console.log(['Delete a binding', 'Usage: telnyx-edge bindings delete [binding_id] [flags]', ...(${bindingsDeleteYes} ? ['  -y, --yes  Skip the confirmation prompt'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "delete"\\n');
   process.exit(1);
 }
 if (args[0] === 'ship' && args[1] === 'status' && args.includes('--help')) {
@@ -256,6 +329,14 @@ if (args[0] === 'storage' && args[1] === 'kv' && args.includes('--help')) {
   process.stderr.write('unknown command "kv"\\n');
   process.exit(1);
 }
+if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'import' && args.includes('--help')) {
+  if (${sqlDatabaseImport}) {
+    console.log(['Restore a SQL dump', 'Usage: telnyx-edge storage sqldb import <database> (${sqlDatabaseImportFile ? '--file <path>' : '<file>'} | ${sqlDatabaseImportFromExport ? '--from-export <export_id>' : '<export>'}) [flags]', ...(${sqlDatabaseImportFile} ? ['  -f, --file string'] : []), ...(${sqlDatabaseImportFromExport} ? ['      --from-export string'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "import"\\n');
+  process.exit(1);
+}
 if (args[0] === 'storage' && args[1] === 'sqldb' && args[2] === 'execute' && args.includes('--help')) {
   if (${sqlDatabases}) {
     console.log(['Run SQL against a SQL database', 'Usage: telnyx-edge storage sqldb execute <database> [flags]', '--remote  --command string  --file string', ...(${sqlStdinImport} ? ['Use --file - for standard input'] : []), ...(${sqlParam} ? ['--param string'] : []), ...(${sqlParamJson} ? ['--param-json string'] : [])].join('\\n'));
@@ -305,12 +386,68 @@ if (args[0] === 'actors' && args[1] === 'instances' && args.includes('--help')) 
   process.stderr.write('unknown command "instances"\\n');
   process.exit(1);
 }
+if (args[0] === 'actors' && args[1] === 'logs' && args.includes('--help')) {
+  if (${actorLogs}) {
+    console.log(['Show StatefulActor runtime and invocation logs', 'Usage: telnyx-edge actors logs <type> [flags]', ...(${actorLogsType} ? ['      --type string'] : []), ...(${actorLogsInstance} ? ['      --instance string'] : []), ...(${actorLogsSince} ? ['      --since duration'] : []), ...(${actorLogsLast} ? ['  -n, --last int'] : []), ...(${actorLogsJson} ? ['      --json'] : [])].join('\\n'));
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "logs"\\n');
+  process.exit(1);
+}
+if (args[0] === 'revisions' && args[1] === 'list' && args.includes('--help')) {
+  if (${revisions}) {
+    console.log('List deployed revisions\\nUsage: telnyx-edge revisions list <function-name> [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "revisions"\\n');
+  process.exit(1);
+}
+if (args[0] === 'rollback' && args.includes('--help')) {
+  if (${rollback}) {
+    console.log('Roll back to a deployed revision\\nUsage: telnyx-edge rollback <function-name> <revision-id> [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "rollback"\\n');
+  process.exit(1);
+}
 if (args[0] === 'actors' && args[1] === 'metrics' && args.includes('--help')) {
   if (${actorMetrics}) {
     console.log(['Summarize StatefulActor request and resource metrics', 'Usage: telnyx-edge actors metrics ${actorMetricsTypeUsage ? "<type>" : "[flags]"}', ...(${actorMetricsSince} ? ['      --since duration  Look back over a window'] : []), ...(${actorMetricsJson} ? ['      --json  Print raw aggregate JSON'] : [])].join('\\n'));
     process.exit(0);
   }
   process.stderr.write('unknown command "metrics"\\n');
+  process.exit(1);
+}
+if (args[0] === 'sandbox-cpu' && args.length === 2 && args.includes('--help')) {
+  if (${cpuSandboxes}) {
+    console.log('Usage: telnyx-edge sandbox-cpu [command]\\nAvailable Commands:\\n  create      Create a sandbox and wait until it runs');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "sandbox-cpu"\\n');
+  process.exit(1);
+}
+if (args[0] === 'sandbox-cpu' && args[1] === 'create' && args.includes('--help')) {
+  console.log(['Usage: telnyx-edge sandbox-cpu create [flags]', ...(${cpuSandboxImage} ? ['      --image string'] : []), ...(${cpuSandboxTemplate} ? ['      --template string'] : []), ...(${cpuSandboxSnapshot} ? ['      --snapshot string'] : [])].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'gpu-types' && args.includes('--help')) {
+  if (${gpuSandboxGpuTypes}) {
+    console.log('Usage: telnyx-edge sandbox-gpu gpu-types [flags]');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "gpu-types"\\n');
+  process.exit(1);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'create' && args.includes('--help')) {
+  console.log(['Usage: telnyx-edge sandbox-gpu create' + (${gpuSandboxImage} ? ' --image <ref>' : '') + (${gpuSandboxGpu} ? ' --gpu <TYPE[:COUNT]>' : '') + ' [flags]', ...(${gpuSandboxImage} ? ['      --image string'] : []), ...(${gpuSandboxGpu} ? ['      --gpu string'] : [])].join('\\n'));
+  process.exit(0);
+}
+if (args[0] === 'sandbox-gpu' && args[1] === 'files' && args.includes('--help')) {
+  if (${gpuSandboxFiles}) {
+    console.log('Usage: telnyx-edge sandbox-gpu files [command]\\nAvailable Commands:\\n  get\\n  ls\\n  put');
+    process.exit(0);
+  }
+  process.stderr.write('unknown command "files"\\n');
   process.exit(1);
 }
 if (args.length === 1 && args[0] === '--help') {
@@ -414,6 +551,8 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.api_key_auth_supported, true);
     assert.equal(data.new_func_from_dir_supported, true);
     assert.equal(data.secrets_add_supported, true);
+    assert.equal(data.secrets_lifecycle_supported, true);
+    assert.equal(data.bindings_lifecycle_supported, true);
     assert.equal(data.ship_supported, true);
     assert.equal(data.ship_status_supported, true);
     assert.equal(data.runtime_logs_supported, true);
@@ -426,6 +565,8 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.inspect_supported, true);
     assert.equal(data.actor_instances_supported, true);
     assert.equal(data.actor_metrics_supported, true);
+    assert.equal(data.actor_logs_supported, true);
+    assert.equal(data.revisions_rollback_supported, true);
     assert.equal(data.reset_func_supported, true);
     assert.equal(data.noninteractive_confirmation_supported, true);
     assert.equal(data.types_supported, true);
@@ -435,7 +576,20 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_bound_parameters_supported, true);
     assert.equal(data.sql_database_export_supported, true);
     assert.equal(data.sql_stdin_import_supported, true);
+    assert.equal(data.sql_database_import_supported, true);
     assert.equal(data.custom_domains_supported, true);
+    assert.equal(data.cpu_sandboxes_supported, true);
+    assert.equal(data.gpu_sandboxes_supported, true);
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("actors logs <type> --since 10m --last 200")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("revisions list <function-name>; telnyx-edge rollback <function-name> <revision-id>")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("storage sqldb import <database> --file ./database.sql") && step.includes("--from-export <export-id>")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("sandbox-cpu create --image") && step.includes("sandbox-cpu terminate job --yes")));
+    assert.ok(data.next_steps.some((step: string) =>
+      step.includes("sandbox-gpu gpu-types") && step.includes("sandboxes_not_whitelisted")));
   });
 
   it("edge-doctor stays unready when root status exits zero but reports a failed check", () => {
@@ -497,7 +651,13 @@ describe("CLI — Edge Compute handoff", () => {
       sqlParamJson: false,
       sqlDatabaseExport: false,
       sqlStdinImport: false,
+      sqlDatabaseImport: false,
       actorMetrics: false,
+      actorLogs: false,
+      revisions: false,
+      rollback: false,
+      secretsList: false,
+      bindingsCommands: ["create", "get", "update", "delete"],
       argLog: true,
     });
     const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
@@ -519,7 +679,12 @@ describe("CLI — Edge Compute handoff", () => {
     assert.equal(data.sql_bound_parameters_supported, false);
     assert.equal(data.sql_database_export_supported, false);
     assert.equal(data.sql_stdin_import_supported, false);
+    assert.equal(data.sql_database_import_supported, false);
     assert.equal(data.actor_metrics_supported, false);
+    assert.equal(data.actor_logs_supported, false);
+    assert.equal(data.revisions_rollback_supported, false);
+    assert.equal(data.secrets_lifecycle_supported, false);
+    assert.equal(data.bindings_lifecycle_supported, false);
     assert.ok(data.next_steps.some((step: string) => step.includes("Optional capabilities not detected")));
     const calls = readFileSync(fake.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
     for (const expected of [
@@ -536,9 +701,90 @@ describe("CLI — Edge Compute handoff", () => {
       ["storage", "kv", "key", "--help"],
       ["storage", "sqldb", "execute", "--help"],
       ["storage", "sqldb", "export", "--help"],
+      ["storage", "sqldb", "import", "--help"],
       ["actors", "metrics", "--help"],
+      ["actors", "logs", "--help"],
+      ["revisions", "list", "--help"],
+      ["secrets", "--help"],
+      ["secrets", "delete", "--help"],
+      ["bindings", "--help"],
+      ["bindings", "delete", "--help"],
     ]) {
       assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+  });
+
+  it("requires complete released lifecycle, actor-log, revision, and SQL-import help surfaces", () => {
+    const incomplete: Array<[FakeEdgeOptions, string]> = [
+      [{ secretsList: false }, "secrets_lifecycle_supported"],
+      [{ secretsDeleteYes: false }, "secrets_lifecycle_supported"],
+      [{ bindingsCommands: ["create", "get", "update", "delete"] }, "bindings_lifecycle_supported"],
+      [{ bindingsDeleteYes: false }, "bindings_lifecycle_supported"],
+      [{ revisions: false }, "revisions_rollback_supported"],
+      [{ rollback: false }, "revisions_rollback_supported"],
+      [{ actorLogs: false }, "actor_logs_supported"],
+      [{ actorLogsType: false }, "actor_logs_supported"],
+      [{ actorLogsInstance: false }, "actor_logs_supported"],
+      [{ actorLogsSince: false }, "actor_logs_supported"],
+      [{ actorLogsLast: false }, "actor_logs_supported"],
+      [{ actorLogsJson: false }, "actor_logs_supported"],
+      [{ sqlDatabaseImport: false }, "sql_database_import_supported"],
+      [{ sqlDatabaseImportFile: false }, "sql_database_import_supported"],
+      [{ sqlDatabaseImportFromExport: false }, "sql_database_import_supported"],
+    ];
+    for (const [config, capability] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, `${capability} must remain optional for setup handoffs`);
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("Optional capabilities not detected") &&
+        (step.includes("secrets add/list/delete lifecycle") ||
+          step.includes("bindings create/get/update/validate/delete lifecycle") ||
+          step.includes("actor logs") ||
+          step.includes("revisions and rollback") ||
+          step.includes("SQL database import"))),
+      );
+    }
+  });
+
+  it("probes complete CPU and GPU sandbox help without changing setup handoff readiness", () => {
+    const positive = withFakeEdgeCli({ auth: "api_key", argLog: true });
+    const available = JSON.parse(run(["edge-doctor", "--json"], positive.env));
+    assert.equal(available.ready, true);
+    assert.equal(available.cpu_sandboxes_supported, true);
+    assert.equal(available.gpu_sandboxes_supported, true);
+    assert.ok(available.checks.some((check: { name: string; ok: boolean }) =>
+      check.name === "GPU sandboxes (account gated)" && check.ok));
+    const calls = readFileSync(positive.argsLog, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    for (const expected of [
+      ["sandbox-cpu", "--help"],
+      ["sandbox-cpu", "create", "--help"],
+      ["sandbox-gpu", "gpu-types", "--help"],
+      ["sandbox-gpu", "create", "--help"],
+      ["sandbox-gpu", "files", "--help"],
+    ]) {
+      assert.ok(calls.some((args) => JSON.stringify(args) === JSON.stringify(expected)), `missing probe ${expected.join(" ")}`);
+    }
+
+    const incomplete: Array<[FakeEdgeOptions, "cpu_sandboxes_supported" | "gpu_sandboxes_supported"]> = [
+      [{ cpuSandboxes: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxImage: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxTemplate: false }, "cpu_sandboxes_supported"],
+      [{ cpuSandboxSnapshot: false }, "cpu_sandboxes_supported"],
+      [{ gpuSandboxGpuTypes: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxImage: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxGpu: false }, "gpu_sandboxes_supported"],
+      [{ gpuSandboxFiles: false }, "gpu_sandboxes_supported"],
+    ];
+    for (const [config, capability] of incomplete) {
+      const fake = withFakeEdgeCli({ auth: "api_key", ...config });
+      const data = JSON.parse(run(["edge-doctor", "--json"], fake.env));
+      assert.equal(data.ready, true, "sandboxes must remain optional for setup handoffs");
+      assert.equal(data[capability], false, `partial help must not report ${capability} as supported`);
+      assert.ok(data.next_steps.some((step: string) =>
+        step.includes("Optional capabilities not detected") &&
+        step.includes(capability === "cpu_sandboxes_supported" ? "CPU sandboxes" : "GPU sandboxes")));
     }
   });
 
