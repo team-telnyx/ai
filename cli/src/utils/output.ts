@@ -148,6 +148,7 @@ export function isBooleanFlag(command: string, key: string): boolean {
 // These safety/consent flags are presence-only. Capture any adjacent value as
 // a string so strict handlers can reject valued forms, including true/false.
 const VALUE_REJECTING_BOOLEAN_FLAGS = new Set<string>([
+  "acknowledge-voice-consent",
   "confirm",
   "clear-tags",
   "clear-tool-ids",

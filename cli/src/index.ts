@@ -43,6 +43,14 @@ import { statusCommand } from "./commands/status.ts";
 import { fundAccountCommand } from "./commands/fund-account.ts";
 import { ttsCommand } from "./commands/tts.ts";
 import { ttsVoicesCommand } from "./commands/tts-voices.ts";
+import {
+  createVoiceCloneCommand,
+  createVoiceCloneFromUploadCommand,
+  deleteVoiceCloneCommand,
+  downloadVoiceCloneSampleCommand,
+  listVoiceClonesCommand,
+  updateVoiceCloneCommand,
+} from "./commands/voice-clones.ts";
 import { setupWhatsappCommand } from "./commands/setup-whatsapp.ts";
 import { whatsappSendCommand } from "./commands/whatsapp-send.ts";
 import { whatsappTemplatesCommand } from "./commands/whatsapp-templates.ts";
@@ -237,6 +245,12 @@ Commands:
   fund-account      Fund account via x402 USDC payment (EIP-712 signing)
   tts               Generate speech from text (text-to-speech)
   tts-voices        List available TTS voices (optionally filter by provider)
+  list-voice-clones List voice clones with optional filters and pagination
+  create-voice-clone Create a voice clone from an existing voice design request
+  update-voice-clone Update a voice clone's name, gender, or language
+  delete-voice-clone Delete a voice clone (requires --confirm)
+  create-voice-clone-from-upload Create a clone from uploaded audio (requires --acknowledge-voice-consent)
+  download-voice-clone-sample Download a voice clone's WAV sample to a local file
   setup-whatsapp    Zero to WhatsApp: list WABA, buy number, verify, set profile
   whatsapp-send     Send a WhatsApp message (text, template, media, or rich payload)
   whatsapp-templates List or create WhatsApp message templates
@@ -473,6 +487,18 @@ TTS Flags:
 TTS-voices Flags:
   --provider        Filter voices by provider: telnyx, aws, azure, minimax, inworld, rime, resemble, fishaudio, humain, xai (optional)
   --api-key <key>   Provider API key forwarded to the Go CLI for provider-backed voice lists (e.g., resemble)
+Voice Clone Flags:
+  --id <id>         Voice clone ID (update, delete, download sample — required)
+  --voice-clone-request <json> JSON request body for create-voice-clone (required; forwarded as upstream --voice-clone-request)
+  --voice-clone-upload-request <json> Multipart request body for create-voice-clone-from-upload (required; forwarded as upstream --voice-clone-upload-request)
+  --acknowledge-voice-consent Required bare acknowledgement that you have consent to clone the uploaded voice; never forwarded
+  --name            Voice clone name (update required)
+  --gender           Voice clone gender (update optional)
+  --language         ISO 639-1 language code or auto (update optional)
+  --filter-model-id / --filter-name / --filter-provider List filters
+  --page-number / --page-size / --sort / --max-items List pagination and sorting controls
+  --output <path>   Destination file for download-voice-clone-sample (required; stdout is unsupported)
+  --confirm         Required bare safety confirmation for delete-voice-clone; never forwarded
 SMS Action Flags:
   --from <sender>        E.164 number or alphanumeric sender ID (send-sms); omit with
                          --messaging-profile-id to send from its number pool
@@ -1239,6 +1265,12 @@ const COMMANDS: Record<string, (
   "fund-account": fundAccountCommand,
   tts: ttsCommand,
   "tts-voices": ttsVoicesCommand,
+  "list-voice-clones": listVoiceClonesCommand,
+  "create-voice-clone": createVoiceCloneCommand,
+  "update-voice-clone": updateVoiceCloneCommand,
+  "delete-voice-clone": deleteVoiceCloneCommand,
+  "create-voice-clone-from-upload": createVoiceCloneFromUploadCommand,
+  "download-voice-clone-sample": downloadVoiceCloneSampleCommand,
   "setup-whatsapp": setupWhatsappCommand,
   "whatsapp-send": whatsappSendCommand,
   "whatsapp-templates": whatsappTemplatesCommand,
@@ -1357,7 +1389,7 @@ const COMMANDS: Record<string, (
 const KNOWN_FLAGS = new Set<string>([
   "texml-app-id",
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
-  "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
+  "acknowledge-voice-consent", "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
   "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
@@ -1378,10 +1410,10 @@ const KNOWN_FLAGS = new Set<string>([
   "dynamic-variables", "dynamic-variables-webhook-timeout-ms", "dynamic-variables-webhook-url",
   "email", "emergency-address-id", "enable-messaging", "enabled", "encoding-format", "end-time", "ends-with", "enhancement-prompt", "event-id",
   "exclude", "exclude-domain", "extension", "fallback-config", "fallback-destination", "fast-port-eligible", "features",
-  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
+  "file", "file-base64", "file-path", "file-url", "filename", "filename-contains", "filter", "filter-model-id", "filter-name", "filter-provider", "filter-sim-card-group-id", "flag", "foc-after", "foc-before", "foc-date",
   "foc-datetime-requested", "force", "fork-rx", "fork-stream-type", "fork-tx", "format",
   "forward-of-message-id", "fqdn", "freshness", "from", "from-date", "from-dir", "from-display-name",
-  "from-name", "greeting", "group-id", "guided-choice", "guided-json", "headers",
+  "from-name", "gender", "greeting", "group-id", "guided-choice", "guided-json", "headers",
   "health-webhook-url", "help", "help-message", "hold-audio-url", "hold-media-name", "host-messaging", "html",
   "html-body", "iccid", "id", "idempotency-key", "ignore-suppression", "image",
   "in-reply-to-message-id", "inbox-id", "include-domain", "include-participants", "inserted-at",
@@ -1418,7 +1450,7 @@ const KNOWN_FLAGS = new Set<string>([
   "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
-  "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
+  "voice-clone-request", "voice-clone-upload-request", "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
   "whitelisted-destinations",
 ]);
 
