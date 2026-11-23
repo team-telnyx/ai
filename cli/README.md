@@ -146,6 +146,13 @@ output. Failed requests suppress any partial response payload.
 | `email-forward` | Use this to forward a message already received by a Telnyx email inbox to new recipients. | Sends; non-idempotent; Go CLI v0.27+ |
 | `email-reply` | Use this to reply only to the Reply-To or From address of a message received by a Telnyx email inbox. | Sends; non-idempotent; Go CLI v0.27+ |
 | `email-reply-all` | Use this to reply to all de-duplicated recipients of a message received by a Telnyx email inbox. | Sends; non-idempotent; Go CLI v0.27+ |
+| `create-email-template` | Use this to create a reusable Liquid email template, optionally declaring validation requirements for its variables. | Creates; Go CLI v0.32+ |
+| `get-email-template` | Use this to retrieve one reusable Liquid email template when its ID is known. | Read-only; Go CLI v0.32+ |
+| `list-email-templates` | Use this to discover reusable Liquid email templates by name, subject, content type, or variable settings. | Read-only; Go CLI v0.32+ |
+| `update-email-template` | Use this to patch selected fields on an existing reusable Liquid email template. | Mutates; Go CLI v0.32+ |
+| `replace-email-template` | Use this when an upstream-compatible replace route is required; it has PATCH semantics and preserves unspecified fields. | Mutates; Go CLI v0.32+ |
+| `delete-email-template` | Use this to permanently delete a reusable Liquid email template by ID. | Deletes; requires `--confirm`; Go CLI v0.32+ |
+| `render-email-template` | Use this to preview a Liquid email template with a validated JSON variables object before sending. | Read-only; Go CLI v0.32+ |
 
 ### WhatsApp and RCS
 

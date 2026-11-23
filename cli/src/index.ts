@@ -54,6 +54,15 @@ import {
   emailSendCommand,
 } from "./commands/email-actions.ts";
 import {
+  createEmailTemplateCommand,
+  deleteEmailTemplateCommand,
+  getEmailTemplateCommand,
+  listEmailTemplatesCommand,
+  renderEmailTemplateCommand,
+  replaceEmailTemplateCommand,
+  updateEmailTemplateCommand,
+} from "./commands/email-templates.ts";
+import {
   createMessagingProfileCommand,
   deleteMessagingProfileCommand,
   getMessagingProfileCommand,
@@ -246,6 +255,14 @@ Commands:
   email-forward     Forward a message received by an email inbox
   email-reply       Reply to a message received by an email inbox
   email-reply-all   Reply to all recipients of an inbox message
+  create-email-template Create a reusable Liquid email template
+  get-email-template Retrieve a reusable Liquid email template by ID
+  retrieve-email-template Alias for get-email-template
+  list-email-templates List reusable Liquid email templates
+  update-email-template Update selected fields on a reusable Liquid email template
+  replace-email-template Patch a reusable Liquid email template (upstream replace compatibility route)
+  delete-email-template Delete a reusable Liquid email template (requires --confirm)
+  render-email-template Render a reusable Liquid email template with JSON variables
   list-messaging-profiles List messaging profiles with name filters and pagination
   create-messaging-profile Create a messaging profile
   get-messaging-profile Get a messaging profile by ID
@@ -512,6 +529,28 @@ Email Action Flags:
   --message-id <id>     Received inbox message ID (email-forward, email-reply, email-reply-all — required)
   --text <text>         Reply or forwarding note plain-text body (inbox actions)
   --html <html>         Reply or forwarding note HTML body (inbox actions)
+
+Email Template Flags:
+  --id <template-id>    Email template ID (get, update, replace, delete, render — required)
+  --name <name>         Template name (create — required; update, replace)
+  --subject <text>      Liquid template subject (create, update, replace)
+  --html-body <html>    Liquid template HTML body (create, update, replace)
+  --text-body <text>    Liquid template text body (create, update, replace)
+  --autoescape <bool>   Enable HTML output escaping (create, update, replace)
+  --strict-variables <bool> Enforce required variable-schema fields at render/send time (create, update, replace)
+  --variable-schema <json|null> Variable requirements object; null clears it on update or replace
+  --variable <json|null> Persisted explicit variable-name array, or null for automatic variables
+  --variables-mode <automatic|explicit> Select automatic extraction or explicit persisted variables
+  --template-variables <json> Liquid variables object (render)
+  --filter-autoescape <bool> Filter list by HTML autoescaping setting
+  --filter-content-type <type> html_and_text|html_only|text_only|no_body (list)
+  --filter-query <text> Filter list by name or subject substring
+  --filter-strict-variables <bool> Filter list by strict variable setting
+  --page-cursor <cursor> Opaque list cursor
+  --page-size <n>       List result page size (1-100 upstream)
+  --max-items <n>       Maximum list items; -1 means unlimited (list)
+  --idempotency-key <key> Idempotency key (create)
+  --confirm             Required safety confirmation (delete-email-template; never forwarded)
 
 Messaging Profile Flags:
   --id <profile-id>      Messaging profile ID (get, update, delete — required)
@@ -1247,6 +1286,14 @@ const COMMANDS: Record<string, (
   "email-forward": emailForwardCommand,
   "email-reply": emailReplyCommand,
   "email-reply-all": emailReplyAllCommand,
+  "create-email-template": createEmailTemplateCommand,
+  "get-email-template": getEmailTemplateCommand,
+  "retrieve-email-template": getEmailTemplateCommand,
+  "list-email-templates": listEmailTemplatesCommand,
+  "update-email-template": updateEmailTemplateCommand,
+  "replace-email-template": replaceEmailTemplateCommand,
+  "delete-email-template": deleteEmailTemplateCommand,
+  "render-email-template": renderEmailTemplateCommand,
   "list-messaging-profiles": listMessagingProfilesCommand,
   "create-messaging-profile": createMessagingProfileCommand,
   "get-messaging-profile": getMessagingProfileCommand,
@@ -1359,7 +1406,7 @@ const KNOWN_FLAGS = new Set<string>([
   "about", "action", "action-type", "active", "actor", "administrative-area", "after", "a2a-agent", "agent-id",
   "agent-message", "ai-assistant-id", "ai-opt-out-detection-enabled", "alpha-sender", "amount", "answering-machine-detection",
   "api-key", "api-key-ref", "area-code", "arguments", "artifact-id", "assistant", "assistant-id",
-  "attachment", "audio", "audio-url", "authorized-person", "background", "barge-in", "bcc",
+  "attachment", "audio", "audio-url", "autoescape", "authorized-person", "background", "barge-in", "bcc",
   "beep-enabled", "billing-group-id", "billing-phone", "biz-opaque-callback-data",
   "black-threshold", "body", "bot-name", "brand-id", "brand-name", "bulk-sim-card-action-id",
   "bundle-id", "call-control-id", "call-control-id-2", "call-control-id-to-bridge", "call-leg-id", "call-settings",
@@ -1415,10 +1462,11 @@ const KNOWN_FLAGS = new Set<string>([
   "timeout-millis", "timeout-secs", "to", "to-date", "tool", "tool-choice", "tool-id", "tool-ids", "top-k",
   "top-p", "tool-call", "tool-call-id", "tracking-settings", "transaction-type", "transcription", "transcription-language",
   "transcription-model", "trigger-response", "ttl", "tx", "type", "url", "url-shortener-settings",
-  "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
+  "strict-variables", "support-key", "usecase", "user", "v1-secret", "verification-id", "verify-profile-id", "version",
   "version-name", "vertical", "video", "voice", "waba-id", "wait-seconds", "wallet-key", "webhook",
   "webhook-api-version", "webhook-failover-url", "webhook-url", "webhook-url-method",
   "webhook-urls", "website", "whatsapp-message", "whispering", "whitelisted-destination",
+  "variable", "variable-schema", "variables-mode", "filter-autoescape", "filter-content-type", "filter-query", "filter-strict-variables", "page-cursor",
   "whitelisted-destinations",
 ]);
 

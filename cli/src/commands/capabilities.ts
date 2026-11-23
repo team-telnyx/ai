@@ -15,7 +15,7 @@ const CAPABILITIES: Record<string, Capability[]> = {
     { name: "SMS / MMS", description: "Send, schedule, and manage text and multimedia messages and messaging profiles, including AI detection of non-standard inbound opt-out requests (Go CLI v0.32+)", actions: ["send_sms", "send_mms", "send_sms_from_number_pool", "send_sms_with_alphanumeric_sender", "send_group_mms", "schedule_sms", "check_sms_status", "cancel_scheduled_sms", "list_messaging_profiles", "create_messaging_profile", "get_messaging_profile", "update_messaging_profile", "configure_ai_opt_out_detection", "delete_messaging_profile"] },
   ],
   "📧 Email": [
-    { name: "Email", description: "Send or schedule outbound email and reply to or forward messages received by an email inbox", actions: ["send_email", "forward_email", "reply_email", "reply_all_email"] },
+    { name: "Email", description: "Send or schedule outbound email, manage reusable Liquid templates, and reply to or forward messages received by an email inbox", actions: ["send_email", "forward_email", "reply_email", "reply_all_email", "create_email_template", "get_email_template", "list_email_templates", "update_email_template", "replace_email_template", "delete_email_template", "render_email_template"] },
   ],
   "💬 RCS": [
     { name: "RCS Messaging", description: "Send RCS text messages and check recipient capabilities", actions: ["send_rcs_message", "check_rcs_capabilities"] },
@@ -107,6 +107,13 @@ const COMPOSITE_COMMANDS = [
   { name: "telnyx-agent email-forward", description: "Forward an email inbox message to caller-supplied recipients" },
   { name: "telnyx-agent email-reply", description: "Reply to the Reply-To or From address of an email inbox message" },
   { name: "telnyx-agent email-reply-all", description: "Reply to all de-duplicated recipients of an email inbox message" },
+  { name: "telnyx-agent create-email-template", description: "Create a reusable Liquid email template with validated variable schema" },
+  { name: "telnyx-agent get-email-template", description: "Retrieve one reusable Liquid email template by ID" },
+  { name: "telnyx-agent list-email-templates", description: "List reusable Liquid email templates with filters and cursor pagination" },
+  { name: "telnyx-agent update-email-template", description: "Update selected fields on a reusable Liquid email template" },
+  { name: "telnyx-agent replace-email-template", description: "Patch a reusable Liquid email template through the upstream replace compatibility route" },
+  { name: "telnyx-agent delete-email-template", description: "Permanently delete a reusable Liquid email template with explicit confirmation" },
+  { name: "telnyx-agent render-email-template", description: "Render a reusable Liquid email template against validated JSON variables" },
   { name: "telnyx-agent list-messaging-profiles", description: "List messaging profiles with name filters and pagination" },
   { name: "telnyx-agent create-messaging-profile", description: "Create a messaging profile with explicit destination and AI opt-out detection controls (Go CLI v0.32+)" },
   { name: "telnyx-agent get-messaging-profile", description: "Retrieve one messaging profile by ID" },

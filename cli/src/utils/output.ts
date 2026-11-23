@@ -126,6 +126,9 @@ const COMMAND_BOOLEAN_FLAGS = new Map<string, Set<string>>([
   ["email-send", new Set([
     "ignore-suppression", "inline-css", "reply-to-all", "sandbox-mode",
   ])],
+  ["create-email-template", new Set(["autoescape", "strict-variables"])],
+  ["update-email-template", new Set(["autoescape", "strict-variables"])],
+  ["replace-email-template", new Set(["autoescape", "strict-variables"])],
   ["web-search", new Set(["livecrawl"])],
   ["web-research", new Set(["background"])],
   ["create-meeting-session", new Set(["barge-in", "summarize-on-end"])],
