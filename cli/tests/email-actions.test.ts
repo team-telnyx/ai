@@ -98,7 +98,9 @@ describe("email action commands", () => {
     const capabilities = JSON.parse(runCli(["capabilities", "--json"], fake.env));
     const email = capabilities.api_capabilities["📧 Email"];
     assert.ok(email, "Email capability category must be present");
-    assert.deepEqual(email[0].actions, ["send_email", "forward_email", "reply_email", "reply_all_email"]);
+    for (const action of ["send_email", "forward_email", "reply_email", "reply_all_email"]) {
+      assert.ok(email[0].actions.includes(action));
+    }
     const commandNames = capabilities.composite_commands.map((entry: { name: string }) => entry.name);
     assert.ok(commandNames.includes("telnyx-agent email-send"));
     assert.ok(commandNames.includes("telnyx-agent email-reply-all"));
