@@ -121,6 +121,112 @@ curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/bulk_
 
 Returns: `action_type` (enum: bulk_disable_voice, bulk_enable_voice, bulk_set_public_ips), `created_at` (string), `id` (uuid), `record_type` (string), `settings` (object), `sim_card_actions_summary` (array[object]), `updated_at` (string)
 
+## List Mobile Voice Connections
+
+Retrieve a paginated list of mobile voice connections on your account.
+
+`GET /mobile_voice_connections`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/mobile_voice_connections"
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Create a Mobile Voice Connection
+
+Creates a new mobile voice connection with the provided configuration and returns the created connection.
+
+`POST /mobile_voice_connections`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+```bash
+curl \
+  -X POST \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "active": true,
+  "connection_name": "Telnyx Mobile Voice IMS",
+  "webhook_api_version": "2",
+  "tags": [
+    "string"
+  ],
+  "outbound": {
+    "channel_limit": 0,
+    "outbound_voice_profile_id": "string"
+  },
+  "inbound": {
+    "channel_limit": 0
+  }
+}' \
+  "https://api.telnyx.com/v2/mobile_voice_connections"
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Retrieve a Mobile Voice Connection
+
+Retrieve the details of a specific mobile voice connection.
+
+`GET /mobile_voice_connections/{id}`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Update a Mobile Voice Connection
+
+Update the settings of a specific mobile voice connection.
+
+`PATCH /mobile_voice_connections/{id}`
+
+Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
+
+```bash
+curl \
+  -X PATCH \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+  "active": false,
+  "connection_name": "my-sip-connection",
+  "webhook_api_version": "1",
+  "webhook_timeout_secs": 0,
+  "tags": [
+    "string"
+  ],
+  "outbound": {
+    "channel_limit": 0,
+    "outbound_voice_profile_id": "string"
+  },
+  "inbound": {
+    "channel_limit": 0
+  }
+}' \
+  "https://api.telnyx.com/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
+## Delete a Mobile Voice Connection
+
+Delete a mobile voice connection from your account.
+
+`DELETE /mobile_voice_connections/{id}`
+
+```bash
+curl \
+  -X DELETE \
+  -H "Authorization: Bearer $TELNYX_API_KEY" \
+  "https://api.telnyx.com/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
+```
+
+Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
+
 ## List OTA updates
 
 Retrieve a paginated list of over-the-air (OTA) update operations for your SIM cards.
@@ -935,112 +1041,6 @@ curl \
 ```
 
 Returns: `bytes_migrated` (integer), `bytes_to_migrate` (integer), `created_at` (date-time), `eta` (date-time), `id` (string), `last_copy` (date-time), `refresh` (boolean), `source_id` (string), `speed` (integer), `status` (enum: pending, checking, migrating, complete, error, stopped), `target_bucket_name` (string), `target_region` (string)
-
-## List Mobile Voice Connections
-
-Retrieve a paginated list of mobile voice connections on your account.
-
-`GET /v2/mobile_voice_connections`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_voice_connections"
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Create a Mobile Voice Connection
-
-Creates a new mobile voice connection with the provided configuration and returns the created connection.
-
-`POST /v2/mobile_voice_connections`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-```bash
-curl \
-  -X POST \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "active": true,
-  "connection_name": "Telnyx Mobile Voice IMS",
-  "webhook_api_version": "2",
-  "tags": [
-    "string"
-  ],
-  "outbound": {
-    "channel_limit": 0,
-    "outbound_voice_profile_id": "string"
-  },
-  "inbound": {
-    "channel_limit": 0
-  }
-}' \
-  "https://api.telnyx.com/v2/v2/mobile_voice_connections"
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Retrieve a Mobile Voice Connection
-
-Retrieve the details of a specific mobile voice connection.
-
-`GET /v2/mobile_voice_connections/{id}`
-
-```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Update a Mobile Voice Connection
-
-Update the settings of a specific mobile voice connection.
-
-`PATCH /v2/mobile_voice_connections/{id}`
-
-Optional: `active` (boolean), `connection_name` (string), `inbound` (object), `outbound` (object), `tags` (array[string]), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer)
-
-```bash
-curl \
-  -X PATCH \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-  "active": false,
-  "connection_name": "my-sip-connection",
-  "webhook_api_version": "1",
-  "webhook_timeout_secs": 0,
-  "tags": [
-    "string"
-  ],
-  "outbound": {
-    "channel_limit": 0,
-    "outbound_voice_profile_id": "string"
-  },
-  "inbound": {
-    "channel_limit": 0
-  }
-}' \
-  "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
-
-## Delete a Mobile Voice Connection
-
-Delete a mobile voice connection from your account.
-
-`DELETE /v2/mobile_voice_connections/{id}`
-
-```bash
-curl \
-  -X DELETE \
-  -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/v2/mobile_voice_connections/550e8400-e29b-41d4-a716-446655440000"
-```
-
-Returns: `active` (boolean), `connection_name` (string), `created_at` (date-time), `id` (string), `inbound` (object), `outbound` (object), `record_type` (enum: mobile_voice_connection), `tags` (array[string]), `updated_at` (date-time), `webhook_api_version` (enum: 1, 2), `webhook_event_failover_url` (string | null), `webhook_event_url` (string | null), `webhook_timeout_secs` (integer | null)
 
 ## Get all wireless regions
 

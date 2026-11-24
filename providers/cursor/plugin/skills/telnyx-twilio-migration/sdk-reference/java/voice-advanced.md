@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -140,7 +140,7 @@ Collect payment details from the caller using DTMF and either charge or tokenize
 
 `POST /calls/{call_control_id}/actions/pay`
 
-Optional: `amount` (number), `client_state` (string), `command_id` (string), `connector_name` (string), `currency` (enum: USD, usd), `description` (string), `inter_digit_timeout_millis` (int32), `language` (string), `max_attempts` (int32), `metadata` (object), `min_postal_code_length` (integer), `parameters` (object), `payment_method` (enum: credit-card, ach-debit), `payment_token` (string), `postal_code` (object), `prompts` (object), `service_level` (string), `timeout_millis` (int32), `transaction_type` (enum: charge, tokenize), `valid_card_types` (array[string]), `voice` (string)
+Optional: `amount` (number), `client_state` (string), `command_id` (string), `connector_name` (string), `currency` (enum: USD, usd), `description` (string), `inter_digit_timeout_millis` (int32), `language` (string), `max_attempts` (int32), `metadata` (object), `min_postal_code_length` (integer), `parameters` (object), `payment_method` (enum: credit-card, ach-debit), `payment_token` (string), `postal_code` (object), `prompts` (object), `service_level` (string), `timeout_millis` (int32), `transaction_type` (enum: charge, tokenize), `valid_card_types` (array[string]), `voice` (string), `voice_settings` (object)
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionPayParams;
@@ -218,9 +218,9 @@ ActionStopSiprecResponse response = client.calls().actions().stopSiprec("v3:550e
 
 Returns: `result` (string)
 
-## Noise Suppression Start (BETA)
+## Noise Suppression Start
 
-Start noise suppression on an active call to reduce background noise. This feature is currently in beta.
+Start noise suppression on an active call to reduce background noise.
 
 `POST /calls/{call_control_id}/actions/suppression_start`
 
@@ -235,9 +235,9 @@ ActionStartNoiseSuppressionResponse response = client.calls().actions().startNoi
 
 Returns: `result` (string)
 
-## Noise Suppression Stop (BETA)
+## Noise Suppression Stop
 
-Stop noise suppression previously started on an active call. This feature is currently in beta.
+Stop noise suppression previously started on an active call.
 
 `POST /calls/{call_control_id}/actions/suppression_stop`
 

@@ -632,37 +632,6 @@ print(session_analysis.session_id)
 
 Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
-## Get Telnyx product usage data (BETA)
-
-Get Telnyx usage data by product, broken out by the specified dimensions
-
-`GET /usage_reports`
-
-```python
-page = client.usage_reports.list(
-    dimensions=["string"],
-    metrics=["string"],
-    product="wireless",
-)
-page = page.data[0]
-print(page)
-```
-
-Returns: `data` (array[object]), `meta` (object)
-
-## Get Usage Reports query options (BETA)
-
-Get the Usage Reports options for querying usage, including the products available and their respective metrics and dimensions
-
-`GET /usage_reports/options`
-
-```python
-response = client.usage_reports.get_options()
-print(response.data)
-```
-
-Returns: `product` (string), `product_dimensions` (array[string]), `product_metrics` (array[string]), `record_types` (array[object])
-
 ## Get all Wireless Detail Records (WDRs) Reports
 
 Returns the WDR Reports that match the given parameters.

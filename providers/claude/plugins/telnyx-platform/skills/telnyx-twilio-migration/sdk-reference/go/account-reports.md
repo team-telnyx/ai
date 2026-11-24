@@ -704,42 +704,6 @@ Retrieves a full session analysis tree for a given event, including costs, child
 
 Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
 
-## Get Telnyx product usage data (BETA)
-
-Get Telnyx usage data by product, broken out by the specified dimensions
-
-`GET /usage_reports`
-
-```go
-	page, err := client.UsageReports.List(context.Background(), telnyx.UsageReportListParams{
-		Dimensions: []string{"string"},
-		Metrics:    []string{"string"},
-		Product: "wireless",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", page)
-```
-
-Returns: `data` (array[object]), `meta` (object)
-
-## Get Usage Reports query options (BETA)
-
-Get the Usage Reports options for querying usage, including the products available and their respective metrics and dimensions
-
-`GET /usage_reports/options`
-
-```go
-	response, err := client.UsageReports.GetOptions(context.Background(), telnyx.UsageReportGetOptionsParams{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%+v\n", response.Data)
-```
-
-Returns: `product` (string), `product_dimensions` (array[string]), `product_metrics` (array[string]), `record_types` (array[object])
-
 ## Get all Wireless Detail Records (WDRs) Reports
 
 Returns the WDR Reports that match the given parameters.
