@@ -467,7 +467,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type_` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
@@ -504,7 +504,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type_` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -519,7 +519,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type_` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -536,7 +536,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type_` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 
 ### Send a short code message — `client.messages.send_short_code()`
@@ -550,7 +550,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type_` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -575,10 +575,10 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `resp_text` | string |  |
+| `resp_text` | string | Reply sent to the sender when the rule matches. |
 
 ### Update Auto-Response Setting — `client.messaging_profiles.autoresp_configs.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `resp_text` | string |  |
+| `resp_text` | string | Reply sent to the sender when the rule matches. |

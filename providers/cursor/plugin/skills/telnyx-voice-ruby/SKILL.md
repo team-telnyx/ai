@@ -103,7 +103,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +61 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.dial(
@@ -135,7 +135,7 @@ Primary inbound call-control command.
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.actions.answer("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ")
@@ -160,7 +160,7 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +38 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.actions.transfer("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ",
@@ -290,7 +290,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `video_room_id` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +17 optional params in [references/api-details.md](references/api-details.md) |
 
 ```ruby
 response = client.calls.actions.bridge("v3:550e8400-e29b-41d4-a716-446655440000_gRU1OGRkYQ",
