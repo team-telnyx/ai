@@ -167,6 +167,8 @@ npx skills add team-telnyx/ai --skill telnyx-messaging-python --agent cursor
 | `telnyx-email-inbound-curl` | Manage inboxes, list/search messages, threads, reply/forward |
 | `telnyx-email-domains-curl` | Manage sending domains, DNS verification, health, domain webhooks |
 | `telnyx-email-suppressions-curl` | Suppression lists, import/export, unsubscribe groups |
+| `telnyx-email-javascript` | Send email with the Node.js SDK: single, batch, templates, scheduling, sandbox, status, domain setup |
+| `telnyx-email-python` | Send email with the Python SDK: single, batch, templates, scheduling, sandbox, status, domain setup |
 | `telnyx-storage-*` | S3-compatible cloud storage |
 | `telnyx-video-*` | Video rooms and conferencing |
 | `telnyx-fax-*` | Programmable fax |
