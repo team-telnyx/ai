@@ -179,6 +179,7 @@
 | `streamBidirectionalCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
 | `streamBidirectionalTargetLegs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
 | `streamBidirectionalSamplingRate` | enum (8000, 16000, 22050, 24000, 48000) | Audio sampling rate. |
+| `enableReconnect` | boolean | Whether Telnyx reconnects to `stream_url` when the WebSocket connection drops... |
 | `streamEstablishBeforeCallOriginate` | boolean | Establish websocket connection before dialing the destination. |
 | `sendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
@@ -193,6 +194,7 @@
 | `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordRedaction` | array[string] | Applies to the recording started with `record`. |
 | `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `superviseCallControlId` | string (UUID) | The call leg which will be supervised by the new call. |
 | `supervisorRole` | enum (barge, whisper, monitor) | The role of the supervisor call. |
@@ -223,6 +225,7 @@
 | `streamBidirectionalMode` | enum (mp3, rtp) | Configures method of bidirectional streaming (mp3, rtp). |
 | `streamBidirectionalCodec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
 | `streamBidirectionalTargetLegs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
+| `enableReconnect` | boolean | Whether Telnyx reconnects to `stream_url` when the WebSocket connection drops... |
 | `sendSilenceWhenIdle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhookUrl` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `webhookUrlMethod` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
@@ -235,6 +238,7 @@
 | `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordRedaction` | array[string] | Applies to the recording started with `record`. |
 | `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `webhookUrls` | object | A map of event types to arrays of webhook URLs. |
 | `webhookUrlsMethod` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
@@ -261,6 +265,7 @@
 | `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordRedaction` | array[string] | Applies to the recording started with `record`. |
 | `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `muteDtmf` | enum (none, both, self, opposite) | When enabled, DTMF tones are not passed to the call participant. |
 | `holdAfterUnbridge` | boolean | Specifies behavior after the bridge ends. |
@@ -336,6 +341,7 @@
 | `recordTimeoutSecs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `recordTrack` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `recordTrim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `recordRedaction` | array[string] | Applies to the recording started with `record`. |
 | `recordCustomFileName` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `sipRegion` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `preferredCodecs` | string | The list of comma-separated codecs in order of preference to be used during t... |

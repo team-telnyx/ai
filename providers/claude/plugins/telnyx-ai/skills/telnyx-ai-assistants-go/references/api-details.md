@@ -234,7 +234,7 @@
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
-| `AvatarSettings` | object | **Beta:** Optional avatar configuration for supported realtime browser conver... |
+| `AvatarSettings` | object | Optional avatar configuration for supported realtime browser conversations. |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |
@@ -316,7 +316,7 @@
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
-| `AvatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `AvatarSettings` | object | Replaces the assistant's avatar configuration. |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |
@@ -423,7 +423,7 @@
 | `ExternalLlm` | object |  |
 | `FallbackConfig` | object |  |
 | `VoiceSettings` | object |  |
-| `AvatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `AvatarSettings` | object | Replaces the assistant's avatar configuration. |
 | `Transcription` | object |  |
 | `TelephonySettings` | object |  |
 | `MessagingSettings` | object |  |

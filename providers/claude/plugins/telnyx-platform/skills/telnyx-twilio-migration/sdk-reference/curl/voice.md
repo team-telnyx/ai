@@ -73,7 +73,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +59 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +61 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -108,7 +108,7 @@ Primary inbound call-control command.
 | `billing_group_id` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +29 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +31 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -135,7 +135,7 @@ Common post-answer control path with downstream webhook implications.
 | `timeout_secs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhook_url` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +37 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +38 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -263,7 +263,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | `client_state` | string | No | Use this field to add state to every subsequent webhook. |
 | `command_id` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `video_room_id` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
-| ... | | | +16 optional params in the Optional Parameters section below and the shared SDK API Details reference |
+| ... | | | +17 optional params in the Optional Parameters section below and the shared SDK API Details reference |
 
 ```bash
 curl \
@@ -492,6 +492,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `stream_bidirectional_codec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
 | `stream_bidirectional_target_legs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
 | `stream_bidirectional_sampling_rate` | enum (8000, 16000, 22050, 24000, 48000) | Audio sampling rate. |
+| `enable_reconnect` | boolean | Whether Telnyx reconnects to `stream_url` when the WebSocket connection drops... |
 | `stream_establish_before_call_originate` | boolean | Establish websocket connection before dialing the destination. |
 | `send_silence_when_idle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhook_url` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
@@ -506,6 +507,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_timeout_secs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `record_track` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `record_trim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `record_redaction` | array[string] | Applies to the recording started with `record`. |
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `supervise_call_control_id` | string (UUID) | The call leg which will be supervised by the new call. |
 | `supervisor_role` | enum (barge, whisper, monitor) | The role of the supervisor call. |
@@ -536,6 +538,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `stream_bidirectional_mode` | enum (mp3, rtp) | Configures method of bidirectional streaming (mp3, rtp). |
 | `stream_bidirectional_codec` | enum (PCMU, PCMA, G722, OPUS, AMR-WB, ...) | Indicates codec for bidirectional streaming RTP payloads. |
 | `stream_bidirectional_target_legs` | enum (both, self, opposite) | Specifies which call legs should receive the bidirectional stream audio. |
+| `enable_reconnect` | boolean | Whether Telnyx reconnects to `stream_url` when the WebSocket connection drops... |
 | `send_silence_when_idle` | boolean | Generate silence RTP packets when no transmission available. |
 | `webhook_url` | string (URL) | Use this field to override the URL for which Telnyx will send subsequent webh... |
 | `webhook_url_method` | enum (POST, GET) | HTTP request type used for `webhook_url`. |
@@ -548,6 +551,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_timeout_secs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `record_track` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `record_trim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `record_redaction` | array[string] | Applies to the recording started with `record`. |
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `webhook_urls` | object | A map of event types to arrays of webhook URLs. |
 | `webhook_urls_method` | enum (POST, GET) | HTTP request method to invoke `webhook_urls`. |
@@ -574,6 +578,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_timeout_secs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `record_track` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `record_trim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `record_redaction` | array[string] | Applies to the recording started with `record`. |
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `mute_dtmf` | enum (none, both, self, opposite) | When enabled, DTMF tones are not passed to the call participant. |
 | `hold_after_unbridge` | boolean | Specifies behavior after the bridge ends. |
@@ -649,6 +654,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `record_timeout_secs` | integer | The number of seconds that Telnyx will wait for the recording to be stopped i... |
 | `record_track` | enum (both, inbound, outbound) | The audio track to be recorded. |
 | `record_trim` | enum (trim-silence) | When set to `trim-silence`, silence will be removed from the beginning and en... |
+| `record_redaction` | array[string] | Applies to the recording started with `record`. |
 | `record_custom_file_name` | string | The custom recording file name to be used instead of the default `call_leg_id`. |
 | `sip_region` | enum (US, Europe, Canada, Australia, Middle East) | Defines the SIP region to be used for the call. |
 | `preferred_codecs` | string | The list of comma-separated codecs in order of preference to be used during t... |
