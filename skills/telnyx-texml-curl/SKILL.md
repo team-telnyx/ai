@@ -69,14 +69,14 @@ Returns multiple call resources for an account. This endpoint is eventually cons
 `GET /texml/Accounts/{account_sid}/Calls`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls?Page=1&PageSize=10&To=+1312345678&From=+1312345678&Status=no-answer&StartTime=2023-05-22&StartTime>=2023-05-22&StartTime<=2023-05-22&EndTime=2023-05-22&EndTime>=2023-05-22&EndTime<=2023-05-22"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls?Page=1&PageSize=10&To=+1312345678&From=+1312345678&Status=no-answer&StartTime=2023-05-22&StartTime>=2023-05-22&StartTime<=2023-05-22&EndTime=2023-05-22&EndTime>=2023-05-22&EndTime<=2023-05-22"
 ```
 
 Returns: `calls` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
 
 ## Initiate an outbound call
 
-Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the connection in the Mission Control Portal.
+Initiate an outbound TeXML call. Telnyx will request TeXML from the XML Request URL configured for the TeXML Application in the Mission Control Portal.
 
 `POST /texml/Accounts/{account_sid}/Calls` — Required: `Url`
 
@@ -87,7 +87,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls"
 ```
 
 Returns: `from` (string), `status` (string), `to` (string)
@@ -99,7 +99,7 @@ Returns an individual call identified by its CallSid. This endpoint is eventuall
 `GET /texml/Accounts/{account_sid}/Calls/{call_sid}`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}"
 ```
 
 Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
@@ -115,7 +115,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}"
 ```
 
 Returns: `account_sid` (string), `answered_by` (enum: human, machine, not_sure), `caller_name` (string), `date_created` (string), `date_updated` (string), `direction` (enum: inbound, outbound), `duration` (string), `end_time` (string), `from` (string), `from_formatted` (string), `price` (string), `price_unit` (string), `sid` (string), `start_time` (string), `status` (enum: ringing, in-progress, canceled, completed, failed, busy, no-answer), `to` (string), `to_formatted` (string), `uri` (string)
@@ -127,7 +127,7 @@ Returns recordings for a call identified by call_sid.
 `GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Recordings.json"
 ```
 
 Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
@@ -143,7 +143,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Recordings.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `price` (string | null), `price_unit` (string | null), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
@@ -159,7 +159,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `price` (string | null), `price_unit` (string | null), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `track` (enum: inbound, outbound, both), `uri` (string)
@@ -175,7 +175,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Siprec.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `date_created` (string), `date_updated` (string), `error_code` (string), `sid` (string), `start_time` (string), `status` (enum: in-progress, stopped), `track` (enum: both_tracks, inbound_track, outbound_track), `uri` (string)
@@ -191,7 +191,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec/{siprec_sid}.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Siprec/{siprec_sid}.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `date_updated` (string), `error_code` (string), `sid` (string), `status` (enum: in-progress, stopped), `uri` (string)
@@ -207,7 +207,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Streams.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `name` (string), `sid` (string), `status` (enum: in-progress), `uri` (string)
@@ -223,7 +223,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Calls/{call_sid}/Streams/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Calls/{call_sid}/Streams/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `date_updated` (date-time), `sid` (string), `status` (enum: stopped), `uri` (string)
@@ -235,7 +235,7 @@ Returns a paginated list of conference resources for the account, with support f
 `GET /texml/Accounts/{account_sid}/Conferences`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences?Page=1&PageSize=10&FriendlyName=weekly_review_call&Status=in-progress&DateCreated=>=2023-05-22&DateUpdated=>=2023-05-22"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences?Page=1&PageSize=10&FriendlyName=weekly_review_call&Status=in-progress&DateCreated=>=2023-05-22&DateUpdated=>=2023-05-22"
 ```
 
 Returns: `conferences` (array[object]), `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `start` (integer), `uri` (string)
@@ -247,7 +247,7 @@ Returns a single conference resource for the account by its ConferenceSid.
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}"
 ```
 
 Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
@@ -263,7 +263,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}"
 ```
 
 Returns: `account_sid` (string), `api_version` (string), `call_sid_ending_conference` (string), `date_created` (string), `date_updated` (string), `friendly_name` (string), `reason_conference_ended` (enum: participant-with-end-conference-on-exit-left, last-participant-left, conference-ended-via-api, time-exceeded), `region` (string), `sid` (string), `status` (enum: init, in-progress, completed), `subresource_uris` (object), `uri` (string)
@@ -275,7 +275,7 @@ Returns the list of participants currently in the specified conference.
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Participants"
 ```
 
 Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `start` (integer), `uri` (string)
@@ -291,7 +291,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Participants"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `coaching` (boolean), `coaching_call_sid` (string), `conference_sid` (uuid), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
@@ -303,7 +303,7 @@ Returns a single conference participant resource by call SID or participant labe
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
 ```
 
 Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
@@ -319,7 +319,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
 ```
 
 Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `call_sid_legacy` (string), `coaching` (boolean), `coaching_call_sid` (string), `coaching_call_sid_legacy` (string), `conference_sid` (uuid), `date_created` (string), `date_updated` (string), `end_conference_on_exit` (boolean), `hold` (boolean), `muted` (boolean), `status` (enum: connecting, connected, completed), `uri` (string)
@@ -334,7 +334,7 @@ Removes the specified participant from the conference, ending their leg of the c
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}"
 ```
 
 ## List conference recordings
@@ -344,7 +344,7 @@ Returns the list of recordings made for the specified conference.
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Recordings"
 ```
 
 Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `participants` (array[object]), `recordings` (array[object]), `start` (integer), `uri` (string)
@@ -356,7 +356,7 @@ Returns recordings for a conference identified by conference_sid.
 `GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Conferences/{conference_sid}/Recordings.json"
 ```
 
 Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
@@ -368,7 +368,7 @@ Returns a paginated list of queue resources for the account, with support for fi
 `GET /texml/Accounts/{account_sid}/Queues`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Queues?Page=1&PageSize=10&DateCreated=>=2023-05-22&DateUpdated=>=2023-05-22"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Queues?Page=1&PageSize=10&DateCreated=>=2023-05-22&DateUpdated=>=2023-05-22"
 ```
 
 Returns: `end` (integer), `first_page_uri` (string), `next_page_uri` (string), `page` (integer), `page_size` (integer), `queues` (array[object]), `start` (integer), `uri` (string)
@@ -384,7 +384,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Queues"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Queues"
 ```
 
 Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
@@ -396,7 +396,7 @@ Returns a single queue resource for the account by its QueueSid.
 `GET /texml/Accounts/{account_sid}/Queues/{queue_sid}`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Queues/{queue_sid}"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Queues/{queue_sid}"
 ```
 
 Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
@@ -412,7 +412,7 @@ curl \
   -X POST \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
   -H "Content-Type: application/json" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Queues/{queue_sid}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Queues/{queue_sid}"
 ```
 
 Returns: `account_sid` (string), `average_wait_time` (integer), `current_size` (integer), `date_created` (string), `date_updated` (string), `max_size` (integer), `sid` (string), `subresource_uris` (object), `uri` (string)
@@ -427,7 +427,7 @@ Permanently deletes the specified queue resource from the account.
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Queues/{queue_sid}"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Queues/{queue_sid}"
 ```
 
 ## Fetch multiple recording resources
@@ -437,7 +437,7 @@ Returns multiple recording resources for an account.
 `GET /texml/Accounts/{account_sid}/Recordings.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Recordings.json?Page=1&PageSize=10&DateCreated=2023-05-22T00:00:00Z"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Recordings.json?Page=1&PageSize=10&DateCreated=2023-05-22T00:00:00Z"
 ```
 
 Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `recordings` (array[object]), `start` (integer), `uri` (string)
@@ -449,7 +449,7 @@ Returns recording resource identified by recording id.
 `GET /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 Returns: `account_sid` (string), `call_sid` (string), `channels` (enum: 1, 2), `conference_sid` (uuid), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `error_code` (string | null), `media_url` (uri), `sid` (string), `source` (enum: StartCallRecordingAPI, StartConferenceRecordingAPI, OutboundAPI, DialVerb, Conference, RecordVerb, Trunking), `start_time` (date-time), `status` (enum: in-progress, completed, paused, stopped), `subresources_uris` (object), `uri` (string)
@@ -464,7 +464,7 @@ Deletes recording resource identified by recording id.
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Recordings/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 ## List recording transcriptions
@@ -474,7 +474,7 @@ Returns multiple recording transcription resources for an account.
 `GET /texml/Accounts/{account_sid}/Transcriptions.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Transcriptions.json?PageSize=10"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Transcriptions.json?PageSize=10"
 ```
 
 Returns: `end` (integer), `first_page_uri` (uri), `next_page_uri` (string), `page` (integer), `page_size` (integer), `previous_page_uri` (uri), `start` (integer), `transcriptions` (array[object]), `uri` (string)
@@ -486,7 +486,7 @@ Returns the recording transcription resource identified by its ID.
 `GET /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json`
 
 ```bash
-curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 Returns: `account_sid` (string), `api_version` (string), `call_sid` (string), `date_created` (date-time), `date_updated` (date-time), `duration` (string | null), `recording_sid` (string), `sid` (string), `status` (enum: in-progress, completed), `transcription_text` (string), `uri` (string)
@@ -501,7 +501,7 @@ Permanently deletes a recording transcription.
 curl \
   -X DELETE \
   -H "Authorization: Bearer $TELNYX_API_KEY" \
-  "https://api.telnyx.com/v2/texml/Accounts/{account_sid}/Transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
+  "https://api.telnyx.com/v2/texml/Accounts/f5586561-8ff0-4291-a51b-c7dfe4139ff9/Transcriptions/6a09cdc3-8948-47f0-aa62-74ac943d6c58.json"
 ```
 
 ## Initiate an outbound AI call
