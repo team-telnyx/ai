@@ -8,6 +8,7 @@ Telnyx ships one Claude Code plugin per product area. Install only what your pro
 
 | Plugin | Covers | Skills |
 | --- | --- | --- |
+| `telnyx-developer-kit` | Starter workflow — product navigation, architecture, quickstart, guardrails, debugging, Twilio switching | 6 |
 | `telnyx-messaging` | SMS/MMS — send, schedule, group MMS, delivery webhooks, opt-out handling, messaging profiles | 18 |
 | `telnyx-voice` | Voice API — call control, DTMF, recording, noise suppression, AMD, deepfake detection, number masking, SIPREC, streaming | 37 |
 | `telnyx-whatsapp` | WhatsApp Business API — messages, templates, WABAs, phone numbers | 6 |

@@ -22,7 +22,7 @@ To make changes yourself, follow these steps:
 
 ## Skills
 
-Skills in `skills/` are the canonical source. They are synced to `providers/claude/plugin/skills/` and `providers/cursor/plugin/skills/` via `scripts/sync-skills.sh`. After modifying skills, run:
+Skills in `skills/` are the canonical source. `scripts/sync-skills.sh` routes them into the product-specific trees under `providers/claude/plugins/*/skills/` and syncs the complete set to `providers/cursor/plugin/skills/`. After modifying skills, run:
 
 ```bash
 ./scripts/sync-skills.sh
