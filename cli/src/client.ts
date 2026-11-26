@@ -28,7 +28,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
 
 export class TelnyxAPIError extends Error {
@@ -54,14 +53,12 @@ export class TelnyxClient {
   private readonly baseUrl: string;
   private readonly timeout: number;
   private readonly telemetry: TelemetryReporter;
-  private readonly friction: FrictionReporter;
 
   constructor(apiKey?: string, baseUrl?: string, timeout?: number) {
     this.apiKey = apiKey || resolveApiKey();
     this.baseUrl = (baseUrl ?? process.env.TELNYX_API_BASE_URL ?? "https://api.telnyx.com/v2").replace(/\/$/, "");
     this.timeout = timeout ?? 30000;
     this.telemetry = new TelemetryReporter();
-    this.friction = new FrictionReporter();
   }
 
   private headers(): Record<string, string> {
@@ -121,7 +118,6 @@ export class TelnyxClient {
       const error = this.normalizeNetworkError("GET", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("GET", path, Math.round(performance.now() - start), httpStatus, error);
-      this.reportFriction("GET", path, httpStatus, error);
       throw error;
     } finally {
       clearTimeout(tid);
@@ -146,7 +142,6 @@ export class TelnyxClient {
       const error = this.normalizeNetworkError("POST", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("POST", path, Math.round(performance.now() - start), httpStatus, error);
-      this.reportFriction("POST", path, httpStatus, error);
       throw error;
     } finally {
       clearTimeout(tid);
@@ -171,7 +166,6 @@ export class TelnyxClient {
       const error = this.normalizeNetworkError("PATCH", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("PATCH", path, Math.round(performance.now() - start), httpStatus, error);
-      this.reportFriction("PATCH", path, httpStatus, error);
       throw error;
     } finally {
       clearTimeout(tid);
@@ -195,7 +189,6 @@ export class TelnyxClient {
       const error = this.normalizeNetworkError("DELETE", path, rawError);
       const httpStatus = (error as any)?.statusCode ?? 500;
       this.reportTelemetry("DELETE", path, Math.round(performance.now() - start), httpStatus, error);
-      this.reportFriction("DELETE", path, httpStatus, error);
       throw error;
     } finally {
       clearTimeout(tid);
@@ -228,26 +221,6 @@ export class TelnyxClient {
       return new Error(`Network error calling ${method} ${url}: ${hint}${code ? ` (${code})` : ""}`);
     }
     return error;
-  }
-
-  private reportFriction(method: string, path: string, httpStatus: number, error: unknown): void {
-    try {
-      const errorMessage = error instanceof TelnyxAPIError
-        ? error.detail
-        : error instanceof Error
-          ? error.message
-          : String(error);
-      this.friction.report({
-        tool: path.replace(/^\//, "").replace(/\//g, "_"),
-        http_status: httpStatus,
-        http_method: method,
-        api_path: path,
-        error_message: errorMessage,
-        api_key: this.apiKey,
-      });
-    } catch {
-      // Friction must never interfere
-    }
   }
 
   private reportTelemetry(method: string, path: string, durationMs: number, httpStatus: number, error?: unknown): void {

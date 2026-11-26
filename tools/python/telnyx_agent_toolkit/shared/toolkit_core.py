@@ -10,7 +10,6 @@ from urllib.parse import quote
 from telnyx_agent_toolkit.shared.api_client import TelnyxAPIClient
 from telnyx_agent_toolkit.shared.compositions import execute_composition
 from telnyx_agent_toolkit.shared.constants import TOOL_DEFINITIONS, ToolDefinition
-from telnyx_agent_toolkit.shared.friction import FrictionReporter
 from telnyx_agent_toolkit.shared.storage import STORAGE_TOOL_DEFINITIONS, StorageExecutor
 from telnyx_agent_toolkit.shared.telemetry import TelemetryReporter
 
@@ -41,12 +40,10 @@ class ToolkitCore:
         self,
         client: TelnyxAPIClient,
         telemetry: TelemetryReporter | None = None,
-        friction: FrictionReporter | None = None,
         storage: bool = False,
     ) -> None:
         self._client = client
         self._telemetry = telemetry or TelemetryReporter()
-        self._friction = friction or FrictionReporter()
         self._storage = StorageExecutor(client.api_key) if storage else None
 
     @property
@@ -65,7 +62,7 @@ class ToolkitCore:
         if tool_def is None:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
-        # Reject routing input before telemetry/friction as well as API dispatch.
+        # Reject routing input before telemetry as well as API dispatch.
         if tool_name == "verify_phone":
             channel = arguments.get("type", "sms")
             if not isinstance(channel, str) or channel not in ("sms", "call", "whatsapp"):
@@ -91,12 +88,6 @@ class ToolkitCore:
                 tool_def=tool_def,
                 status="error",
                 duration_ms=duration_ms,
-                http_status=http_status,
-                error_message=str(e),
-            )
-            self._report_friction(
-                tool_name=tool_name,
-                tool_def=tool_def,
                 http_status=http_status,
                 error_message=str(e),
             )
@@ -189,27 +180,6 @@ class ToolkitCore:
                 http_method=tool_def["method"],
                 api_path=tool_def["path"],
                 error_message=error_message,
-            )
-        except Exception:
-            pass
-
-    def _report_friction(
-        self,
-        *,
-        tool_name: str,
-        tool_def: ToolDefinition,
-        http_status: int,
-        error_message: str,
-    ) -> None:
-        """Fire friction report on API errors. Never raises."""
-        try:
-            self._friction.report(
-                tool=tool_name,
-                http_status=http_status,
-                http_method=tool_def["method"],
-                api_path=tool_def["path"],
-                error_message=error_message,
-                api_key=self._client.api_key,
             )
         except Exception:
             pass

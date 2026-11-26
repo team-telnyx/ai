@@ -130,7 +130,7 @@ await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 try {
   const address = server.address();
   assert.ok(address && typeof address !== "string");
-  const toolkit = new TelnyxAgentToolkit("test-key", { baseUrl: `http://127.0.0.1:${address.port}/v2`, frictionEnabled: false, configuration: { actions: {
+  const toolkit = new TelnyxAgentToolkit("test-key", { baseUrl: `http://127.0.0.1:${address.port}/v2`, configuration: { actions: {
     lookup: { bulk_lookup_numbers: true }, voice: { get_voice_clone: true }, messaging: { list_messages: true },
   } } });
   assert.deepEqual(toolkit.enabledTools.map((t) => t.name).sort(), ["bulk_lookup_numbers", "get_voice_clone"]);

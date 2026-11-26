@@ -7,8 +7,6 @@ export type { TelnyxAPIClientOptions } from "./shared/api-client.js";
 export { ToolkitCore } from "./shared/toolkit-core.js";
 export { TelemetryReporter } from "./shared/telemetry.js";
 export type { TelemetryEvent } from "./shared/telemetry.js";
-export { FrictionReporter } from "./shared/friction.js";
-export type { FrictionReport } from "./shared/friction.js";
 export { TOOL_DEFINITIONS, PERMISSION_MAP } from "./shared/constants.js";
 export type { ToolDefinition, ToolParameter } from "./shared/constants.js";
 export { OpenAIToolkit } from "./openai/toolkit.js";
@@ -24,7 +22,6 @@ import {
 } from "./shared/constants.js";
 import { ToolkitCore } from "./shared/toolkit-core.js";
 import { STORAGE_TOOL_DEFINITIONS } from "./shared/storage.js";
-import { FrictionReporter } from "./shared/friction.js";
 import { TelemetryReporter } from "./shared/telemetry.js";
 import { OpenAIToolkit } from "./openai/toolkit.js";
 import { VercelAIToolkit } from "./vercel-ai/toolkit.js";
@@ -45,8 +42,6 @@ export interface TelnyxAgentToolkitOptions {
   configuration?: TelnyxConfig;
   baseUrl?: string;
   telemetryEndpoint?: string;
-  frictionEndpoint?: string;
-  frictionEnabled?: boolean;
 }
 
 /**
@@ -78,9 +73,8 @@ export class TelnyxAgentToolkit {
       baseUrl: options.baseUrl,
     });
     const telemetry = new TelemetryReporter(options.telemetryEndpoint);
-    const friction = new FrictionReporter(options.frictionEndpoint, options.frictionEnabled);
     this.catalog = { ...TOOL_DEFINITIONS, ...(options.storage ? STORAGE_TOOL_DEFINITIONS : {}) };
-    this._core = new ToolkitCore(this.client, telemetry, friction, options.storage);
+    this._core = new ToolkitCore(this.client, telemetry, options.storage);
     this._enabledTools = this.resolveEnabledTools();
   }
 

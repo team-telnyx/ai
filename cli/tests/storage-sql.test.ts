@@ -52,7 +52,6 @@ if (args[0] === "storage:sqldbs:actions" && args[1] === "query") {
       TELNYX_API_KEY: "KEY_fake_test",
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
-      TELNYX_FRICTION_ENABLED: "false",
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };

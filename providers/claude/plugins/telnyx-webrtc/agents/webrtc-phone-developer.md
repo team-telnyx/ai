@@ -1,6 +1,6 @@
 ---
 name: webrtc-phone-developer
-description: Builds a WebRTC softphone web app with dial pad, call controls, incoming call notifications, and recent calls using the Telnyx WebRTC JavaScript SDK. Reports friction automatically.
+description: Builds a WebRTC softphone web app with dial pad, call controls, incoming call notifications, and recent calls using the Telnyx WebRTC JavaScript SDK.
 model: sonnet
 tools: Bash, Read, Write, Edit, Glob, Grep
 maxTurns: 80
@@ -31,41 +31,13 @@ Read the SKILL.md for each skill before making API calls:
 - `skills/telnyx-numbers-curl` — Search, order, manage phone numbers
 - `skills/telnyx-numbers-config-curl` — Phone number settings (caller ID, call forwarding)
 
-## Conditional: Friction Reporting Wrapper
-
-**If the user has opted in to analytics**, every command that calls a Telnyx API SHOULD be wrapped with `friction-report watchdog` to help improve Telnyx products.
-
-**If the user has NOT opted in** (or opted out), do NOT use `friction-report watchdog`. Just call the API directly.
-
-### How to check opt-in status
-
-Run: `telnyx-ai analytics --status`
-- If output contains "Enabled" → wrap with `friction-report watchdog`
-- If output contains "Disabled" or "Not decided" → skip the wrapper entirely
-
-### Security: Use telnyx-curl.sh
+## API Call Security
 
 **NEVER pass the API key directly in curl commands.** Use the `telnyx-curl.sh` wrapper:
 
-**When opted IN:**
-```bash
-friction-report watchdog --skill SKILL_NAME --team TEAM -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
-```
-
-**When opted OUT or undecided:**
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
 ```
-
-### Team mapping
-
-| Skills | --team value |
-|--------|-------------|
-| voice, voice-advanced, voice-gather, voice-media | voice |
-| numbers, numbers-config | numbers |
-| sip | voice |
-| webrtc | webrtc |
 
 ## Technology Stack
 
@@ -457,7 +429,7 @@ Run through all test scenarios:
 12. **Reconnection:** Disconnect network → reconnect → client recovers
 13. **SIP URI call:** Dial `sip:user@domain` → call connects
 
-## Known Friction Points
+## Known Issues
 
 Apply these fixes proactively:
 
@@ -488,22 +460,3 @@ Apply these fixes proactively:
 - **Status bar:** Fixed top, shows connection state + registered number
 - **Animations:** CSS transitions for panel swaps (0.3s ease), button press feedback
 - **Icons:** Use Unicode/emoji for simplicity (📞🔇⏸🔊) or include a small icon set
-
-## Manual Friction Reporting (opt-in only)
-
-If the user has opted in to analytics and you encounter friction the watchdog can't detect (e.g., docs misleading, SDK behavior differs from docs, workaround needed), report manually:
-
-```bash
-friction-report \
-  --skill SKILL_NAME \
-  --team TEAM \
-  --type TYPE \
-  --severity SEVERITY \
-  --message "Brief description (max 180 chars)" \
-  --context '{"detail":"what happened"}'
-```
-
-Types: `parameter`, `api`, `docs`, `auth`
-Severity: `blocker`, `major`, `minor`
-
-**If the user has NOT opted in, do NOT report friction manually.** Just note the issue and help the user work around it.

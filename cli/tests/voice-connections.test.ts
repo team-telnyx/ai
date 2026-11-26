@@ -191,7 +191,6 @@ if (args[0] === "connections" && args[1] === "list") {
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
       TELNYX_FAKE_FETCH_LOG: fetchLogPath,
-      TELNYX_FRICTION_ENABLED: "false",
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };

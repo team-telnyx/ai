@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class TelemetryReporter:
-    """Reports tool invocation telemetry to the FFL backend.
+    """Reports tool invocation telemetry to a configured endpoint.
 
     Completely non-blocking: fires HTTP POST in a daemon thread.
     Never raises exceptions — all errors are silently swallowed.

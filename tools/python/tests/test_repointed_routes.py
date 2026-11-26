@@ -207,8 +207,8 @@ async def test_verify_channel_dispatch_and_actual_body(channel: str | None) -> N
 async def test_invalid_verify_channel_has_zero_http(channel: object) -> None:
     # Catch any transport attempt, including an accidental legacy SMS fallback.
     route = respx.route().mock(return_value=httpx.Response(200, json={"data": {}}))
-    telemetry, friction = Mock(), Mock()
-    core = ToolkitCore(TelnyxAPIClient(api_key="test-key"), telemetry=telemetry, friction=friction)
+    telemetry = Mock()
+    core = ToolkitCore(TelnyxAPIClient(api_key="test-key"), telemetry=telemetry)
     result = json.loads(await core.run_tool_async("verify_phone", {
         "phone_number": "+15555550123", "verify_profile_id": "profile-1", "type": channel,
     }))
@@ -216,4 +216,3 @@ async def test_invalid_verify_channel_has_zero_http(channel: object) -> None:
     assert "type must be one of: sms, call, whatsapp" in result["error"]
     assert route.call_count == 0
     telemetry.report.assert_not_called()
-    friction.report.assert_not_called()

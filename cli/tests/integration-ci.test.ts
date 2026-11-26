@@ -28,10 +28,8 @@ const run = (command: "help" | "status" | "capabilities", json = false): string 
     timeout: CLI_TIMEOUT_MS,
     env: {
       ...process.env,
-      // A read-only command must not POST success/error reports, even when the
-      // invoking account or CI environment enables these reporters.
-      TELNYX_FRICTION_ENABLED: "false",
-      TELNYX_FRICTION_ENDPOINT: "",
+      // A read-only command must not POST telemetry, even when the invoking
+      // account or CI environment enables it.
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
     stdio: ["ignore", "pipe", "pipe"],

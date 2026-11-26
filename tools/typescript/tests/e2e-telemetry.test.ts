@@ -1,9 +1,9 @@
 /**
- * E2E telemetry tests — exercises SDK toolkit to trigger real telemetry/friction reports.
+ * E2E telemetry tests — exercises SDK toolkit to trigger telemetry reports.
  * 
  * Run with: TELNYX_API_KEY=... npx tsx tests/e2e-telemetry.test.ts
  * 
- * Uses TelnyxAgentToolkit.runTool() so telemetry + friction reporters fire.
+ * Uses TelnyxAgentToolkit.runTool() so telemetry reports are sent.
  */
 
 import { describe, it } from "node:test";
@@ -58,9 +58,9 @@ describe("E2E Telemetry — SDK tool invocations", () => {
     console.log("  ✅ nonexistent_tool → error telemetry sent");
   });
 
-  it("lookup with bad number → friction event", async () => {
+  it("lookup with bad number → error telemetry", async () => {
     const result = JSON.parse(await toolkit.runTool("lookup_number", { phone_number: "+0000000000" }));
-    console.log("  ✅ lookup_number (bad input) → telemetry + possible friction sent");
+    console.log("  ✅ lookup_number (bad input) → telemetry sent");
   });
 });
 
