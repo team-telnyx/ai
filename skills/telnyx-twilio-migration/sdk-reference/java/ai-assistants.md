@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -481,7 +481,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `externalLlm` | object |  |
 | `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
-| `avatarSettings` | object | **Beta:** Optional avatar configuration for supported realtime browser conver... |
+| `avatarSettings` | object | Optional avatar configuration for supported realtime browser conversations. |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
 | `messagingSettings` | object |  |
@@ -563,7 +563,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `externalLlm` | object |  |
 | `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
-| `avatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `avatarSettings` | object | Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
 | `messagingSettings` | object |  |
@@ -670,7 +670,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `externalLlm` | object |  |
 | `fallbackConfig` | object |  |
 | `voiceSettings` | object |  |
-| `avatarSettings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `avatarSettings` | object | Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephonySettings` | object |  |
 | `messagingSettings` | object |  |
