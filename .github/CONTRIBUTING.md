@@ -22,13 +22,18 @@ To make changes yourself, follow these steps:
 
 ## Skills
 
-Skills in `skills/` are the canonical source. They are synced to `providers/claude/plugin/skills/` and `providers/cursor/plugin/skills/` via `scripts/sync-skills.sh`. After modifying skills, run:
+Skills in `skills/` are the canonical source. They are synced to
+`providers/claude/plugins/<plugin-name>/skills/`,
+`providers/cursor/plugin/skills/`, and the scoped Codex Developer Kit via
+`scripts/sync-skills.sh`. After modifying skills, run:
 
 ```bash
 ./scripts/sync-skills.sh
 ```
 
 You can verify sync locally with `./scripts/check-skills-sync.sh`.
+For Codex package changes, run `python3 scripts/check-codex-plugin.py` and
+`python3 scripts/check-telnyx-mcp-catalog.py --self-test`.
 
 ### Auto-generated skills
 
@@ -38,7 +43,11 @@ Do not PR changes to generated skills — a daily automated update regenerates t
 
 ### Hand-authored skills
 
-Skills without a `generated_by:` frontmatter field (the Twilio migration workflow, WebRTC client SDK skills, provider import skills, payment/signup skills, and others) are manually authored. PRs to improve these are welcome — run `./scripts/sync-skills.sh` after editing and commit the sync output.
+Skills without a `generated_by:` frontmatter field (the Twilio migration
+workflow, WebRTC client SDK skills, provider import skills, payment/signup
+skills, the four `telnyx-kit-*` directories, and others) are manually authored.
+PRs to improve these are welcome — run `./scripts/sync-skills.sh` after editing
+and commit the sync output.
 
 Exception: embedded SDK reference files inside some hand-authored skills (`telnyx-twilio-migration/sdk-reference/`, `telnyx-twilio-migration/references/sdk-api-details/`, `telnyx-webrtc-client-*/references/webrtc-server-api.md`) are pipeline-managed and will be overwritten — treat those like generated content.
 

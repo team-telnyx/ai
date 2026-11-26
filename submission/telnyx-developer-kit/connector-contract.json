@@ -1,0 +1,173 @@
+{
+  "id": "telnyx-ai-connector",
+  "version": "1.0.0-preview.7",
+  "protocolVersions": ["2026-07-28", "2025-11-25"],
+  "hosts": ["claude", "codex"],
+  "tools": [
+    {
+      "name": "list_api_endpoints",
+      "title": "Search Telnyx API reference",
+      "access": "public",
+      "operation": "catalog",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "search_query": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^(?:|[\\x21-\\x7e](?:[\\x20-\\x7e]*[\\x21-\\x7e])?)(?![\\s\\S])"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 20
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_api_endpoint_schema",
+      "title": "Get Telnyx endpoint schema",
+      "access": "public",
+      "operation": "catalog",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["endpoint_name"],
+        "properties": {
+          "endpoint_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[\\x21-\\x7e]+(?![\\s\\S])"
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_call_status",
+      "title": "Get call status",
+      "access": "account",
+      "operation": "read",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "list_call_events",
+      "title": "List call events",
+      "access": "account",
+      "operation": "read",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "search_recordings",
+      "title": "Search recording metadata",
+      "access": "account",
+      "operation": "read_redacted",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    }
+  ],
+  "endpoints": [
+    {
+      "name": "get_call_status",
+      "method": "GET",
+      "path": "/v2/calls/{call_control_id}",
+      "executionTool": "get_call_status",
+      "safety": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["call_control_id"],
+        "properties": {
+          "call_control_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?!\\.{1,2}(?![\\s\\S]))[\\x21-\\x22\\x24\\x26-\\x2e\\x30-\\x3e\\x40-\\x5b\\x5d-\\x7e]+(?![\\s\\S])"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_call_events",
+      "method": "GET",
+      "path": "/v2/call_events",
+      "executionTool": "list_call_events",
+      "safety": "read",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filter_by", "filter_value"],
+        "properties": {
+          "filter_by": {
+            "type": "string",
+            "enum": ["call_leg_id", "call_session_id"]
+          },
+          "filter_value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[\\x21-\\x7e]+(?![\\s\\S])"
+          },
+          "page_size": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 },
+          "page_number": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 1 }
+        }
+      }
+    },
+    {
+      "name": "search_recordings",
+      "method": "GET",
+      "path": "/v2/recordings",
+      "executionTool": "search_recordings",
+      "safety": "read_redacted",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["filter_by", "filter_value"],
+        "properties": {
+          "filter_by": {
+            "type": "string",
+            "enum": ["call_leg_id", "call_session_id"]
+          },
+          "filter_value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[\\x21-\\x7e]+(?![\\s\\S])"
+          },
+          "page_size": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 },
+          "page_number": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 1 }
+        }
+      }
+    }
+  ]
+}

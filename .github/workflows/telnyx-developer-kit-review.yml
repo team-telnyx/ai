@@ -1,0 +1,61 @@
+name: Telnyx Developer Kit Review
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_hosted_audit:
+        description: 'Validate the deployed MCP review contract with reviewer-safe reads'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      connector_url:
+        description: 'Exact staging MCP resource URL to validate'
+        required: true
+        default: 'https://apidev.telnyx.com/v2/ai/mcp'
+        type: choice
+        options:
+          - 'https://apidev.telnyx.com/v2/ai/mcp'
+
+permissions:
+  contents: read
+
+jobs:
+  package-validation:
+    name: Developer Kit package (no credentials)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Validate Codex developer-kit package
+        run: python3 scripts/check-codex-plugin.py
+      - name: Validate hosted MCP auditor fixtures
+        run: |
+          python3 scripts/check-telnyx-mcp-catalog.py --self-test
+          python3 scripts/test-mcp-catalog-audit.py
+
+  hosted-mcp-audit:
+    name: Hosted MCP Release Audit (metadata only)
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.run_hosted_audit == 'true' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - name: Validate deployed five-tool OAuth contract
+        run: python3 ./scripts/check-telnyx-mcp-catalog.py --url "$TELNYX_MCP_URL"
+        env:
+          TELNYX_MCP_URL: ${{ inputs.connector_url }}
+          TELNYX_MCP_OAUTH_TOKEN: ${{ secrets.TELNYX_MCP_OAUTH_TOKEN }}
