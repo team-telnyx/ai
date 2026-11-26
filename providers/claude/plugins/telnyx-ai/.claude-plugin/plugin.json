@@ -1,7 +1,7 @@
 {
   "name": "telnyx-ai",
   "description": "Telnyx AI \u2014 LLM inference, chat completions, embeddings, AI assistants, Meeting Bot, conversation insights",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": {
     "name": "Telnyx",
     "url": "https://telnyx.com"
