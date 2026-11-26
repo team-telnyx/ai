@@ -235,7 +235,7 @@ output. Failed requests suppress any partial response payload.
 | `update-ai-assistant` | Use this to change an assistant’s configuration and create a new assistant version. | Mutates/version-creates; Go CLI |
 | `delete-ai-assistant` | Use this to permanently delete a configured AI assistant by ID. | Deletes; requires `--confirm`; Go CLI |
 | `enhance-ai-assistant-instructions` | Use this to generate suggested improvements for one assistant's instructions before deciding whether to update that assistant. | Suggestion only; never applies or promotes instructions; raw buffered body; Go CLI v0.30+ |
-| `search-ai-collection` | Use this to retrieve ranked RAG chunks for a query or, without a query, list the collection’s document catalog. | Read-only; Go CLI v0.27+ |
+| `search-ai-collection` | Use this to retrieve ranked RAG chunks for a query or, without a query, list the collection’s document catalog. | Read-only; Go CLI v0.27+ (automatically resolves the v0.31 collection namespace) |
 | `chat-ai-assistant` | Use this to send a live chat turn through an existing assistant conversation rather than run a stateless completion or a test. | Sends conversation turn; non-idempotent; Go CLI |
 | `send-ai-assistant-sms` | Use this to start or continue an AI assistant conversation over SMS. | Sends SMS; non-idempotent; Go CLI |
 | `trigger-ai-assistant-test-run` | Use this to execute an already configured AI assistant test, not a live assistant chat turn. | Starts test execution; non-idempotent; Go CLI |
