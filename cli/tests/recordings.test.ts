@@ -76,7 +76,6 @@ if (args[0] === "recordings" && args[1] === "list") {
       TELNYX_API_KEY: "test-key",
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
-      TELNYX_FRICTION_ENABLED: "false",
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };

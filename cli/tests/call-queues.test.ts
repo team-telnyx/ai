@@ -64,7 +64,6 @@ if (args[0] === "queues" && args[1] === "create") {
       ...process.env,
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
-      TELNYX_FRICTION_ENABLED: "false",
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };

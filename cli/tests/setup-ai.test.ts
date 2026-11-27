@@ -65,7 +65,7 @@ beforeEach(() => { requests = []; appMode = "ok"; assignmentFails = false; assig
 async function run(args: string[] = [], mode = "ok") {
   const child = spawn(process.execPath, ["--import", "tsx", "bin/telnyx-agent.ts", "setup-ai", "--json", ...args], {
     cwd: root,
-    env: { ...process.env, TELNYX_API_KEY: "test-only", TELNYX_API_BASE_URL: `http://127.0.0.1:${port}/v2`, TELNYX_CLI_PATH: join(dir, "telnyx"), TEST_ARGS_LOG: join(dir, "args"), TEST_MODE: mode, TELNYX_TELEMETRY_ENDPOINT: "", TELNYX_FRICTION_ENDPOINT: "" },
+    env: { ...process.env, TELNYX_API_KEY: "test-only", TELNYX_API_BASE_URL: `http://127.0.0.1:${port}/v2`, TELNYX_CLI_PATH: join(dir, "telnyx"), TEST_ARGS_LOG: join(dir, "args"), TEST_MODE: mode, TELNYX_TELEMETRY_ENDPOINT: "" },
   });
   let stdout = ""; let stderr = "";
   child.stdout.on("data", c => stdout += c); child.stderr.on("data", c => stderr += c);

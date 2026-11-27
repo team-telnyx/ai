@@ -11,7 +11,7 @@ const scratch = mkdtempSync(join(tmpdir(), 'telnyx-esm-'));
 function run(command, args, cwd, expectedStatus = 0) {
   const result = spawnSync(command, args, {
     cwd, encoding: 'utf8', timeout: 180_000,
-    env: { ...process.env, TELNYX_FRICTION_ENABLED: 'false' },
+    env: { ...process.env },
   });
   process.stdout.write(result.stdout ?? '');
   process.stderr.write(result.stderr ?? '');
@@ -80,7 +80,7 @@ try {
     await import('@telnyx/agent-toolkit/vercel-ai');
     await import('@telnyx/agent-toolkit/langchain');
     assert.equal(globalThis.require, undefined);
-    const toolkit = new TelnyxAgentToolkit('offline-placeholder', { frictionEnabled: false });
+    const toolkit = new TelnyxAgentToolkit('offline-placeholder');
     test('core imports and OpenAI schemas need no optional peers', () => {
       assert.equal(toolkit.getOpenAITools().length, toolkit.enabledTools.length);
     });
@@ -99,7 +99,7 @@ try {
       const result = spawnSync(process.execPath, ['--input-type=module', '-e',
         "import assert from 'node:assert/strict';" +
         "import { TelnyxAgentToolkit } from '@telnyx/agent-toolkit';" +
-        "const toolkit = new TelnyxAgentToolkit('offline-placeholder', { frictionEnabled: false });" +
+        "const toolkit = new TelnyxAgentToolkit('offline-placeholder');" +
         "assert.throws(() => toolkit['" + method + "'](), error => {" + check + "; return true; });"
       ], { encoding: 'utf8', timeout: 30_000 });
       assert.ifError(result.error);
@@ -147,13 +147,13 @@ try {
     const require = createRequire(import.meta.url);
     const { DynamicStructuredTool } = require('@langchain/core/tools');
     assert.equal(globalThis.require, undefined);
-    const toolkit = new TelnyxAgentToolkit('offline-placeholder', { frictionEnabled: false });
+    const toolkit = new TelnyxAgentToolkit('offline-placeholder');
     test('native ESM Vercel factory stays synchronous and builds valid schemas', async () => {
       const tools = toolkit.getVercelAITools();
       assert.equal(tools instanceof Promise, false);
       assert.equal(toolkit.enabledTools.length, 200);
       assert.equal(Object.keys(tools).length, 200);
-      const optional = new TelnyxAgentToolkit('offline-placeholder', { storage: true, frictionEnabled: false });
+      const optional = new TelnyxAgentToolkit('offline-placeholder', { storage: true });
       assert.equal(optional.enabledTools.length, 205);
       assert.equal(Object.keys(optional.getVercelAITools()).length, 205);
       for (const tool of Object.values(tools)) {
@@ -171,7 +171,7 @@ try {
       assert.equal(tools instanceof Promise, false);
       assert.equal(toolkit.enabledTools.length, 200);
       assert.equal(tools.length, 200);
-      const optional = new TelnyxAgentToolkit('offline-placeholder', { storage: true, frictionEnabled: false });
+      const optional = new TelnyxAgentToolkit('offline-placeholder', { storage: true });
       assert.equal(optional.enabledTools.length, 205);
       assert.equal(optional.getLangChainTools().length, 205);
       for (const tool of tools) {

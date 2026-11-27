@@ -156,14 +156,14 @@ async function assertExecutor(): Promise<void> {
       assert.deepEqual(args, original);
     }
     let reportingCalls = 0;
-    const reporting = core as unknown as { reportTelemetry: () => void; reportFriction: () => void };
-    reporting.reportTelemetry = reporting.reportFriction = () => { reportingCalls += 1; };
+    const reporting = core as unknown as { reportTelemetry: () => void };
+    reporting.reportTelemetry = () => { reportingCalls += 1; };
     for (const type of ["flashcall", "email", "SMS", "", "../sms", "sms?x=1", null, undefined, 1, false, [], {}]) {
       const count = requests.length;
       const result = JSON.parse(await core.runTool("verify_phone", { ...body, type }));
       assert.match(result.error, /type must be one of: sms, call, whatsapp/);
       assert.equal(requests.length, count, "invalid type must have zero HTTP requests");
-      assert.equal(reportingCalls, 0, "invalid type must return before telemetry/friction");
+      assert.equal(reportingCalls, 0, "invalid type must return before telemetry");
     }
   } finally {
     globalThis.fetch = originalFetch;

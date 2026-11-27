@@ -88,7 +88,6 @@ if (args[0] === "rooms:sessions" && args[1] === "list-0") {
       ...process.env,
       TELNYX_CLI_PATH: fakeTelnyx,
       TELNYX_FAKE_ARGS_LOG: logPath,
-      TELNYX_FRICTION_ENABLED: "false",
       TELNYX_TELEMETRY_ENDPOINT: "",
     },
   };

@@ -5,7 +5,6 @@
 import { executeComposition } from "./compositions.js";
 import { TelnyxAPIClient } from "./api-client.js";
 import { TOOL_DEFINITIONS, type ToolDefinition } from "./constants.js";
-import { FrictionReporter } from "./friction.js";
 import { TelemetryReporter } from "./telemetry.js";
 import { STORAGE_TOOL_DEFINITIONS, StorageExecutor } from "./storage.js";
 
@@ -33,13 +32,11 @@ export function encodePathParam(value: unknown): string {
 export class ToolkitCore {
   private readonly client: TelnyxAPIClient;
   private readonly telemetry: TelemetryReporter;
-  private readonly friction: FrictionReporter;
   private readonly storage?: StorageExecutor;
 
-  constructor(client: TelnyxAPIClient, telemetry?: TelemetryReporter, friction?: FrictionReporter, storage = false) {
+  constructor(client: TelnyxAPIClient, telemetry?: TelemetryReporter, storage = false) {
     this.client = client;
     this.telemetry = telemetry ?? new TelemetryReporter();
-    this.friction = friction ?? new FrictionReporter();
     this.storage = storage ? new StorageExecutor(client.apiKey) : undefined;
   }
 
@@ -66,7 +63,7 @@ export class ToolkitCore {
       return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
 
-    // Reject routing input before telemetry/friction as well as API dispatch.
+    // Reject routing input before telemetry as well as API dispatch.
     if (toolName === "verify_phone") {
       const channel = Object.prototype.hasOwnProperty.call(args, "type") ? args.type : "sms";
       if (typeof channel !== "string" || !["sms", "call", "whatsapp"].includes(channel)) {
@@ -96,7 +93,6 @@ export class ToolkitCore {
         httpStatus,
         errorMessage,
       );
-      this.reportFriction(toolName, toolDef, httpStatus, errorMessage);
       return JSON.stringify({ error: errorMessage });
     }
   }
@@ -121,26 +117,6 @@ export class ToolkitCore {
       });
     } catch {
       // Telemetry must never interfere
-    }
-  }
-
-  private reportFriction(
-    toolName: string,
-    toolDef: ToolDefinition,
-    httpStatus: number,
-    errorMessage: string,
-  ): void {
-    try {
-      this.friction.report({
-        tool: toolName,
-        http_status: httpStatus,
-        http_method: toolDef.method,
-        api_path: toolDef.path,
-        error_message: errorMessage,
-        api_key: this.client.apiKey,
-      });
-    } catch {
-      // Friction reporting must never interfere
     }
   }
 

@@ -904,7 +904,7 @@ treating its label as a safety boundary:
 - **API Read-Only Tests** runs the CLI's `help`, `status`, and `capabilities`
   through its packaged launcher. The CLI suite does not invoke setup/funding
   commands or perform cleanup, and partial status-query failures fail the suite.
-  Telemetry and friction reporting are disabled in every CLI subprocess.
+  Telemetry is disabled in every CLI subprocess.
   `integration-ci-readonly.test.ts` runs this same suite against a local API
   with an allowlisted environment and checks every request is an expected GET.
   A preloaded TCP guard is inherited by Node descendants and fails before any

@@ -27,7 +27,7 @@ guidance.
 - `skills/` — canonical SKILL.md files (235+ skills).
 - `providers/{claude,cursor}/` — synced from `skills/`. Generated.
 - `plugins/opencode/` — OpenCode plugin source.
-- `tools/{python,typescript,mcp,ffl-cli}/` — agent toolkits.
+- `tools/{python,typescript,mcp}/` — agent toolkits.
 - `cli/` — agent CLI source.
 - `inference/` — Telnyx-hosted inference docs.
 - `guides/` — operational guides.

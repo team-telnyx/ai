@@ -1,7 +1,6 @@
 #!/bin/bash
 # Curl wrapper that adds Telnyx auth header internally.
-# The API key never appears in the command line, so friction-report
-# watchdog cannot leak it in logs.
+# The API key never appears in the command line or process arguments.
 #
 # Usage: telnyx-curl.sh [curl args...]
 # Example: telnyx-curl.sh -X POST -H "Content-Type: application/json" -d '{}' "https://api.telnyx.com/v2/messages"

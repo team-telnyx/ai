@@ -12,7 +12,7 @@ const guardPath = fileURLToPath(new URL("./fixtures/readonly-egress-guard.cjs", 
 const blockedEndpoint = "https://readonly-egress.invalid/report";
 
 function childEnvironment(port: number): NodeJS.ProcessEnv {
-  // Do not inherit credentials, reporter/proxy settings or arbitrary Node hooks.
+  // Do not inherit credentials, telemetry/proxy settings or arbitrary Node hooks.
   const env: NodeJS.ProcessEnv = {};
   for (const name of ["PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR"]) {
     if (process.env[name] !== undefined) env[name] = process.env[name];
@@ -22,8 +22,6 @@ function childEnvironment(port: number): NodeJS.ProcessEnv {
     NODE_OPTIONS: `--require=${JSON.stringify(guardPath)}`,
     TELNYX_API_KEY: "test-readonly-key",
     TELNYX_API_BASE_URL: `http://127.0.0.1:${port}/v2`,
-    TELNYX_FRICTION_ENABLED: "false",
-    TELNYX_FRICTION_ENDPOINT: "",
     TELNYX_TELEMETRY_ENDPOINT: "",
     // All retained commands are REST/local. Any Go CLI call must fail.
     TELNYX_CLI_PATH: "/nonexistent/read-only-suite-must-not-provision",
@@ -37,7 +35,6 @@ const probes = {
   tcp: `require("node:net").connect(80, "192.0.2.1").on("error", () => {})`,
   descendant: `const result = require("node:child_process").spawnSync(process.execPath, ["--eval", 'fetch("https://readonly-egress.invalid").catch(() => {})'], {stdio: "inherit"}); process.exit(result.status ?? 1)`,
   telemetry: `const { TelemetryReporter } = require("./src/telemetry.ts"); new TelemetryReporter(${JSON.stringify(blockedEndpoint)}).report({tool: "guard-probe", status: "error"})`,
-  friction: `const { FrictionReporter } = require("./src/friction.ts"); new FrictionReporter(${JSON.stringify(blockedEndpoint)}, true).report({tool: "guard-probe", http_status: 401, api_key: "test-readonly-key"})`,
 };
 
 async function assertBlocked(code: string, port = 1): Promise<void> {
@@ -107,11 +104,9 @@ for (const { failBalance, inheritedReporting } of [
         timeout: 50_000,
         env: {
           ...childEnvironment(address.port),
-          // Simulate a live runner with reporting enabled; the suite must still
-          // disable both reporters in each packaged CLI descendant.
+          // Simulate a live runner with telemetry enabled; the suite must still
+          // disable it in each packaged CLI descendant.
           ...(inheritedReporting ? {
-            TELNYX_FRICTION_ENABLED: "true",
-            TELNYX_FRICTION_ENDPOINT: blockedEndpoint,
             TELNYX_TELEMETRY_ENDPOINT: blockedEndpoint,
           } : {}),
         },

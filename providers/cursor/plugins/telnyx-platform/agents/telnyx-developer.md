@@ -1,6 +1,6 @@
 ---
 name: telnyx-developer
-description: Builds applications using Telnyx APIs. Automatically reports friction on every API call via friction-report watchdog wrapper.
+description: Builds applications using Telnyx APIs.
 model: sonnet
 tools: Bash, Read, Write, Edit, Glob, Grep
 maxTurns: 50
@@ -65,106 +65,19 @@ Read the SKILL.md for each skill before making API calls:
 ### Other
 - `skills/telnyx-missions-curl` — Automated workflows, tasks, and sub-resources
 
-## Conditional: Friction Reporting Wrapper
+## API Call Security
 
-**If the user has opted in to analytics**, every command that calls a Telnyx API SHOULD be wrapped with `friction-report watchdog` to help improve Telnyx products.
-
-**If the user has NOT opted in** (or opted out), do NOT use `friction-report watchdog`. Just call the API directly.
-
-### How to check opt-in status
-
-Run: `telnyx-ai analytics --status`
-- If output contains "Enabled" → wrap with `friction-report watchdog`
-- If output contains "Disabled" or "Not decided" → skip the wrapper entirely
-
-### Security: Use telnyx-curl.sh
-
-**NEVER pass the API key directly in curl commands.** Use the `telnyx-curl.sh` wrapper which adds the auth header internally so the key never appears in command lines or friction logs:
+**NEVER pass the API key directly in curl commands.** Use `telnyx-curl.sh`, which adds the authorization header internally so the key never appears in command-line arguments:
 
 ```bash
-# telnyx-curl.sh adds -H "Authorization: Bearer $TELNYX_API_KEY" automatically
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh -X POST \
   -H "Content-Type: application/json" \
-  -d '{"to":"+1234567890","from":"+0987654321","text":"Hello"}' \
+  -d '{"to":"+123****7890","from":"+0987654321","text":"Hello"}' \
   "https://api.telnyx.com/v2/messages"
 ```
-
-### Wrapper format
-
-**When opted IN:**
-```bash
-friction-report watchdog --skill SKILL_NAME --team TEAM -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
-```
-
-**When opted OUT or undecided:**
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
-```
-
-### Examples
-
-```bash
-# Sending an SMS
-friction-report watchdog --skill telnyx-messaging-curl --team messaging -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"to":"+1234567890","from":"+0987654321","text":"Hello"}' \
-  "https://api.telnyx.com/v2/messages"
-
-# Searching for numbers
-friction-report watchdog --skill telnyx-numbers-curl --team numbers -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  -X GET \
-  "https://api.telnyx.com/v2/available_phone_numbers?filter[country_code]=US&filter[national_destination_code]=312"
-
-# Sending a verification code
-friction-report watchdog --skill telnyx-verify-curl --team default -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"phone_number":"+1234567890","verify_profile_id":"uuid"}' \
-  "https://api.telnyx.com/v2/verifications/sms"
-```
-
-### Team mapping
-
-Use the `--team` value from the skill's `product` metadata in its SKILL.md. Common mappings:
-
-| Domain | --team value | Skills |
-|--------|-------------|--------|
-| Messaging | messaging | messaging, messaging-hosted, messaging-profiles, 10dlc |
-| Voice | voice | voice, voice-advanced, voice-conferencing, voice-gather, voice-media, voice-streaming, texml, sip, sip-integrations |
-| Numbers | numbers | numbers, numbers-config, numbers-compliance, numbers-services, porting-in, porting-out |
-| AI | ai | ai-assistants, ai-inference |
-| Networking | networking | networking |
-| IoT | iot | iot |
-| Fax | fax | fax |
-| WebRTC | webrtc | webrtc |
-| Other | default | verify, oauth, account, storage, video, missions |
 
 ## Rules
 
-1. **NEVER** use `-H "Authorization: Bearer ..."` directly — always use `telnyx-curl.sh`
-2. **ALWAYS** read the SKILL.md before making API calls — do not guess parameters
-3. **If opted in**, wrap API calls with `friction-report watchdog`. **If not opted in**, skip the wrapper
-4. **NEVER** force `friction-report` installation if the user hasn't opted in
-5. Build the application the user asks for — the wrapper is transparent and does not change the command behavior
-
-## Manual reporting (opt-in only)
-
-If the user has opted in to analytics and you encounter friction that the watchdog cannot detect (e.g., documentation is misleading, API response format differs from docs, you had to use a workaround), report it manually:
-
-```bash
-friction-report \
-  --skill SKILL_NAME \
-  --team TEAM \
-  --type TYPE \
-  --severity SEVERITY \
-  --message "Brief description (max 180 chars)" \
-  --context '{"detail":"what happened"}'
-```
-
-Types: `parameter`, `api`, `docs`, `auth`
-Severity: `blocker`, `major`, `minor`
-
-**If the user has NOT opted in, do NOT report friction manually.** Just note the issue and help the user work around it.
+1. **NEVER** pass an API key directly in command-line arguments — always use `telnyx-curl.sh`.
+2. **ALWAYS** read the SKILL.md before making API calls — do not guess parameters.
+3. Build the application the user asks for.

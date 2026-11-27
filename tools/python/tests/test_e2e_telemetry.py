@@ -1,9 +1,9 @@
-"""E2E telemetry tests — exercises the SDK toolkit to trigger real telemetry/friction reports.
+"""E2E telemetry tests — exercises the SDK toolkit to trigger telemetry reports.
 
 Run with: TELNYX_API_KEY=... RUN_WRITE_TESTS=true pytest tests/test_e2e_telemetry.py -v -s
 
-These tests use TelnyxAgentToolkit.run_tool() (not raw HTTP) so telemetry and friction
-reporters fire against the deployed endpoints.
+These tests use TelnyxAgentToolkit.run_tool() (not raw HTTP) so telemetry
+reports are sent to the configured endpoint.
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ class TestE2ETelemetry(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         from telnyx_agent_toolkit import TelnyxAgentToolkit
-        # Telemetry + friction both enabled by default (point at deployed services)
         cls.toolkit = TelnyxAgentToolkit(api_key=API_KEY)
 
     def _run(self, tool: str, args: dict | None = None):
@@ -67,11 +66,10 @@ class TestE2ETelemetry(unittest.TestCase):
         self.assertIn("error", result)
         print(f"✅ nonexistent_tool → error telemetry sent")
 
-    def test_lookup_triggers_friction(self):
-        """Lookup with invalid number should generate a friction event (4xx)."""
+    def test_lookup_generates_error_telemetry(self):
+        """Lookup with an invalid number should generate error telemetry."""
         result = json.loads(self._run("lookup_number", {"phone_number": "+0000000000"}))
-        # Whether it fails or not, telemetry fires
-        print(f"✅ lookup_number (bad input) → telemetry + possible friction sent")
+        print(f"✅ lookup_number (bad input) → telemetry sent")
 
     @classmethod
     def tearDownClass(cls):

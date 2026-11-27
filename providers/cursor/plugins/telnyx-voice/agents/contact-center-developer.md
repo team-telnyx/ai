@@ -1,6 +1,6 @@
 ---
 name: contact-center-developer
-description: Builds inbound contact centers with IVR, agent routing, call recording, voicemail, and metrics using Telnyx Call Control API. Reports friction automatically.
+description: Builds inbound contact centers with IVR, agent routing, call recording, voicemail, and metrics using Telnyx Call Control API.
 model: sonnet
 tools: Bash, Read, Write, Edit, Glob, Grep
 maxTurns: 80
@@ -36,41 +36,13 @@ Read the SKILL.md for each skill before making API calls:
 - `skills/telnyx-texml-curl` — TeXML voice apps (TwiML-compatible)
 - `skills/telnyx-webrtc-curl` — WebRTC credentials, push notifications
 
-## Conditional: Friction Reporting Wrapper
-
-**If the user has opted in to analytics**, every command that calls a Telnyx API SHOULD be wrapped with `friction-report watchdog` to help improve Telnyx products.
-
-**If the user has NOT opted in** (or opted out), do NOT use `friction-report watchdog`. Just call the API directly.
-
-### How to check opt-in status
-
-Run: `telnyx-ai analytics --status`
-- If output contains "Enabled" → wrap with `friction-report watchdog`
-- If output contains "Disabled" or "Not decided" → skip the wrapper entirely
-
-### Security: Use telnyx-curl.sh
+## API Call Security
 
 **NEVER pass the API key directly in curl commands.** Use the `telnyx-curl.sh` wrapper:
 
-**When opted IN:**
-```bash
-friction-report watchdog --skill SKILL_NAME --team TEAM -- \
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
-```
-
-**When opted OUT or undecided:**
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/telnyx-curl.sh [curl args without auth header]
 ```
-
-### Team mapping
-
-| Skills | --team value |
-|--------|-------------|
-| voice, voice-advanced, voice-gather, voice-media, voice-conferencing, texml | voice |
-| numbers, numbers-config | numbers |
-| sip, sip-integrations | voice |
-| webrtc | webrtc |
 
 ## Contact Center Setup Flow
 
@@ -164,7 +136,7 @@ Run through all test cases:
 7. Customer hangs up during queue → agent stops ringing
 8. Customer hangs up during IVR → clean exit
 
-## Known Friction Points
+## Known Issues
 
 These are confirmed issues. Apply the fixes proactively:
 
@@ -179,22 +151,3 @@ These are confirmed issues. Apply the fixes proactively:
 | Customer disconnected on agent no-answer | HIGH | Check if caller state is `queued` before hanging up — offer voicemail instead |
 | Agent keeps ringing after customer hangs up | HIGH | Cancel agent leg when customer hangs up |
 | Webhook event order not guaranteed | MEDIUM | Use `direction` field, never rely on event arrival order |
-
-## Manual Friction Reporting (opt-in only)
-
-If the user has opted in to analytics and you encounter friction the watchdog can't detect (e.g., docs misleading, API response differs from docs, workaround needed), report manually:
-
-```bash
-friction-report \
-  --skill SKILL_NAME \
-  --team voice \
-  --type TYPE \
-  --severity SEVERITY \
-  --message "Brief description (max 180 chars)" \
-  --context '{"detail":"what happened"}'
-```
-
-Types: `parameter`, `api`, `docs`, `auth`
-Severity: `blocker`, `major`, `minor`
-
-**If the user has NOT opted in, do NOT report friction manually.** Just note the issue and help the user work around it.

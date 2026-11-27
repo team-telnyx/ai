@@ -215,7 +215,6 @@ async def test_actions_openai_and_real_http_client_use_only_declared_gets():
                 "messaging": {"list_messages": True},
             }
         },
-        friction_enabled=False,
     )
     assert {t["name"] for t in toolkit.enabled_tools} == {
         "bulk_lookup_numbers",
