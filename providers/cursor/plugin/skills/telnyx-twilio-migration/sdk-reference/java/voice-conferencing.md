@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -339,7 +339,7 @@ Start recording the conference. Recording will stop on conference end, or via th
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `channels` (enum: single, dual), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum: Australia, Europe, Middle East, US), `trim` (enum: trim-silence)
+Optional: `channels` (enum: single, dual), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `redaction` (array[string]), `region` (enum: Australia, Europe, Middle East, US), `trim` (enum: trim-silence)
 
 ```java
 import com.telnyx.sdk.models.conferences.actions.ActionRecordStartParams;

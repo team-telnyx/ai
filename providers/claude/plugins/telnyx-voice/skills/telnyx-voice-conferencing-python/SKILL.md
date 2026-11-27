@@ -333,7 +333,7 @@ Start recording the conference. Recording will stop on conference end, or via th
 
 `POST /conferences/{id}/actions/record_start` — Required: `format`
 
-Optional: `channels` (enum: single, dual), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `region` (enum: Australia, Europe, Middle East, US), `trim` (enum: trim-silence)
+Optional: `channels` (enum: single, dual), `command_id` (string), `custom_file_name` (string), `play_beep` (boolean), `redaction` (array[string]), `region` (enum: Australia, Europe, Middle East, US), `trim` (enum: trim-silence)
 
 ```python
 response = client.conferences.actions.record_start(

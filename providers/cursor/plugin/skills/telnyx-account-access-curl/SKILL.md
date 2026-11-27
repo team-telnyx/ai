@@ -182,7 +182,7 @@ curl \
   "https://api.telnyx.com/v2/addresses/actions/validate"
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 
@@ -464,3 +464,15 @@ curl \
   -H "Content-Type: application/json" \
   "https://api.telnyx.com/v2/telephony_credentials/550e8400-e29b-41d4-a716-446655440000/token"
 ```
+
+## Retrieve token material.
+
+Returns the material a server needs to mint login tokens for the credential locally, with no request per token: `kid`, `tel_token` and `signing_secret`. The same material is in the response of `POST /telephony_credentials`. Treat it like the SIP password.
+
+`GET /telephony_credentials/{id}/token_material`
+
+```bash
+curl -H "Authorization: Bearer $TELNYX_API_KEY" "https://api.telnyx.com/v2/telephony_credentials/550e8400-e29b-41d4-a716-446655440000/token_material"
+```
+
+Returns: `kid` (string), `signing_secret` (string), `tel_token` (string)

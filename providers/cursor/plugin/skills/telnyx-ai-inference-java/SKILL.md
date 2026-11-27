@@ -21,11 +21,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -359,7 +359,7 @@ Returns: `created_at` (date-time), `id` (uuid), `last_message_at` (date-time), `
 
 ## Delete a conversation
 
-Delete a specific conversation by its ID.
+Delete a specific conversation by its ID. Permanently deletes the conversation and its associated data: the conversation's messages, its insight generation results, any conversation memories, and its webhook request logs. Recordings are not deleted — recordings are managed separately through the /v2/recordings endpoints. This action cannot be undone.
 
 `DELETE /ai/conversations/{conversation_id}`
 
@@ -383,6 +383,16 @@ ConversationRetrieveConversationsInsightsResponse response = client.ai().convers
 ```
 
 Returns: `conversation_insights` (array[object]), `created_at` (date-time), `id` (string), `status` (enum: pending, in_progress, completed, failed)
+
+## Delete a conversation's insight generation results
+
+Delete one insight generation request for a conversation. Generation results are stored per conversation and per insight template; deleting a request permanently removes the stored result but does not stop insight generation from running again. To remove every insight result for the conversation, delete the conversation itself.
+
+`DELETE /ai/conversations/{conversation_id}/conversations-insights/{insight_id}`
+
+```java
+client.ai().conversations().deleteDelete("conversation_id", "insight_id");
+```
 
 ## Create Message
 
@@ -559,72 +569,6 @@ EmbeddingRetrieveResponse embedding = client.ai().embeddings().retrieve("550e840
 ```
 
 Returns: `created_at` (string), `finished_at` (string), `status` (enum: queued, processing, success, failure, partial_success), `task_id` (uuid), `task_name` (string)
-
-## List fine tuning jobs
-
-Retrieve a list of all fine tuning jobs created by the user.
-
-`GET /ai/fine_tuning/jobs`
-
-```java
-import com.telnyx.sdk.models.ai.finetuning.jobs.JobListParams;
-import com.telnyx.sdk.models.ai.finetuning.jobs.JobListResponse;
-
-JobListResponse jobs = client.ai().fineTuning().jobs().list();
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Create a fine tuning job
-
-Creates a new fine-tuning job that trains a model on the provided dataset, and returns the created job.
-
-`POST /ai/fine_tuning/jobs` — Required: `model`, `training_file`
-
-Optional: `hyperparameters` (object), `suffix` (string)
-
-```java
-import com.telnyx.sdk.models.ai.finetuning.jobs.FineTuningJob;
-import com.telnyx.sdk.models.ai.finetuning.jobs.JobCreateParams;
-
-JobCreateParams params = JobCreateParams.builder()
-    .model("openai/gpt-4o")
-    .trainingFile("training-data.jsonl")
-    .build();
-FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().create(params);
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Get a fine tuning job
-
-Returns the details of a single fine-tuning job by its job_id, including its current status.
-
-`GET /ai/fine_tuning/jobs/{job_id}`
-
-```java
-import com.telnyx.sdk.models.ai.finetuning.jobs.FineTuningJob;
-import com.telnyx.sdk.models.ai.finetuning.jobs.JobRetrieveParams;
-
-FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().retrieve("550e8400-e29b-41d4-a716-446655440000");
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
-
-## Cancel a fine tuning job
-
-Cancels the specified in-progress fine-tuning job and returns the updated job.
-
-`POST /ai/fine_tuning/jobs/{job_id}/cancel`
-
-```java
-import com.telnyx.sdk.models.ai.finetuning.jobs.FineTuningJob;
-import com.telnyx.sdk.models.ai.finetuning.jobs.JobCancelParams;
-
-FineTuningJob fineTuningJob = client.ai().fineTuning().jobs().cancel("550e8400-e29b-41d4-a716-446655440000");
-```
-
-Returns: `created_at` (integer), `finished_at` (integer | null), `hyperparameters` (object), `id` (string), `model` (string), `organization_id` (string), `status` (enum: queued, running, succeeded, failed, cancelled), `trained_tokens` (integer | null), `training_file` (string)
 
 ## Create embeddings
 
