@@ -22,11 +22,11 @@ metadata:
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -111,7 +111,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +61 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.CallDialParams;
@@ -145,7 +145,7 @@ Primary inbound call-control command.
 | `billingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionAnswerParams;
@@ -171,7 +171,7 @@ Common post-answer control path with downstream webhook implications.
 | `timeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `webhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +38 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionTransferParams;
@@ -315,7 +315,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | `clientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `commandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `videoRoomId` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +17 optional params in [references/api-details.md](references/api-details.md) |
 
 ```java
 import com.telnyx.sdk.models.calls.actions.ActionBridgeParams;

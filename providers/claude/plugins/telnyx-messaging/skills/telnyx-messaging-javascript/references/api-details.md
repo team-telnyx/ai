@@ -27,6 +27,7 @@
 |-------|------|
 | `body` | object |
 | `cc` | array[object] |
+| `child_message_id` | uuid |
 | `completed_at` | date-time |
 | `cost` | object \| null |
 | `cost_breakdown` | object \| null |
@@ -39,6 +40,7 @@
 | `messaging_profile_id` | string |
 | `num_chars` | integer |
 | `organization_id` | uuid |
+| `parent_message_id` | uuid |
 | `parts` | integer |
 | `received_at` | date-time |
 | `record_type` | enum: message |
@@ -166,6 +168,7 @@
 | `features` | object \| null |
 | `health_webhook_url` | url |
 | `id` | uuid |
+| `mm7_metadata` | object \| null |
 | `mms_fall_back_to_sms` | boolean |
 | `mms_transcoding` | boolean |
 | `mobile_only` | boolean |
@@ -218,7 +221,7 @@
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
@@ -255,7 +258,7 @@
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -270,7 +273,7 @@
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -287,7 +290,7 @@
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `send_at` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 
 ### Send a short code message — `client.messages.sendShortCode()`
@@ -301,7 +304,7 @@
 | `webhook_failover_url` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `use_profile_webhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `auto_detect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `auto_detect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -326,13 +329,13 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `resp_text` | string |  |
+| `resp_text` | string | Reply sent to the sender when the rule matches. |
 
 ### Update Auto-Response Setting — `client.messagingProfiles.autorespConfigs.update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `resp_text` | string |  |
+| `resp_text` | string | Reply sent to the sender when the rule matches. |
 
 ## Webhook Payload Fields
 
@@ -375,6 +378,8 @@
 | `data.payload.wait_seconds` | float | Seconds the message is queued due to rate limiting before being sent to the carrier. |
 | `data.payload.template_id` | string | Telnyx ID of the WhatsApp template used by the message, when known. |
 | `data.payload.template_name` | string | Name of the WhatsApp template used by the message. |
+| `data.payload.parent_message_id` | uuid | Identifies the original request's message when server-side SMS chunking (`auto_chunk_long_messages` on the messaging ... |
+| `data.payload.child_message_id` | uuid | Identifies the next chunk when server-side SMS chunking (`auto_chunk_long_messages` on the messaging profile) split t... |
 | `meta.attempt` | integer | Number of attempts to deliver the webhook event. |
 | `meta.delivered_to` | url | The webhook URL the event was delivered to. |
 
