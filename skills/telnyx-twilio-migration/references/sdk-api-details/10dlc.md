@@ -128,10 +128,13 @@
 |-------|------|
 | `createDate` | string |
 | `evpId` | string |
+| `expirationDate` | date-time |
+| `validUntil` | date-time |
 | `vettedDate` | string |
 | `vettingClass` | string |
 | `vettingId` | string |
 | `vettingScore` | integer |
+| `vettingStatus` | enum: PENDING, UNSCORE, ACTIVE, FAILED, EXPIRED |
 | `vettingToken` | string |
 
 **Returned by:** Trigger Brand SMS OTP

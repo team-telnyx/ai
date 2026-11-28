@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -519,7 +519,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `autoDetect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
@@ -556,7 +556,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `autoDetect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -571,7 +571,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `autoDetect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -588,7 +588,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `autoDetect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `sendAt` | string (date-time) | ISO 8601 formatted date indicating when to send the message - accurate up til... |
 
 ### Send a short code message — `client.messages().sendShortCode()`
@@ -602,7 +602,7 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 | `webhookFailoverUrl` | string (URL) | The failover URL where webhooks related to this message will be sent if sendi... |
 | `useProfileWebhooks` | boolean | If the profile this number is associated with has webhooks, use them for deli... |
 | `type` | enum (SMS, MMS) | The protocol for sending the message, either SMS or MMS. |
-| `autoDetect` | boolean | Automatically detect if an SMS message is unusually long and exceeds a recomm... |
+| `autoDetect` | boolean | When `true`, rejects the request with error `40328` if `text` is longer than ... |
 | `encoding` | enum (auto, gsm7, ucs2) | Encoding to use for the message. |
 | `Idempotency-Key` | string | Optional opaque, unquoted key for safely retrying the same logical request. |
 
@@ -627,10 +627,10 @@ For exhaustive optional parameters, full response schemas, and complete webhook 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `respText` | string |  |
+| `respText` | string | Reply sent to the sender when the rule matches. |
 
 ### Update Auto-Response Setting — `client.messagingProfiles().autorespConfigs().update()`
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `respText` | string |  |
+| `respText` | string | Reply sent to the sender when the rule matches. |
