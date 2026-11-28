@@ -234,7 +234,7 @@
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
-| `avatar_settings` | object | **Beta:** Optional avatar configuration for supported realtime browser conver... |
+| `avatar_settings` | object | Optional avatar configuration for supported realtime browser conversations. |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |
@@ -316,7 +316,7 @@
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
-| `avatar_settings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `avatar_settings` | object | Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |
@@ -423,7 +423,7 @@
 | `external_llm` | object |  |
 | `fallback_config` | object |  |
 | `voice_settings` | object |  |
-| `avatar_settings` | object | **Beta:** Replaces the assistant's avatar configuration. |
+| `avatar_settings` | object | Replaces the assistant's avatar configuration. |
 | `transcription` | object |  |
 | `telephony_settings` | object |  |
 | `messaging_settings` | object |  |

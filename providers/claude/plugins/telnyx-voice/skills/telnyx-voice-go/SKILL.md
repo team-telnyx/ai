@@ -114,7 +114,7 @@ Primary voice entrypoint. Agents need the async call-control identifiers returne
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
-| ... | | | +59 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +61 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Dial(context.Background(), telnyx.CallDialParams{
@@ -150,7 +150,7 @@ Primary inbound call-control command.
 | `BillingGroupId` | string (UUID) | No | Use this field to set the Billing Group ID for the call. |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +29 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +31 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Answer(
@@ -181,7 +181,7 @@ Common post-answer control path with downstream webhook implications.
 | `TimeoutSecs` | integer | No | The number of seconds that Telnyx will wait for the call to ... |
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `WebhookUrl` | string (URL) | No | Use this field to override the URL for which Telnyx will sen... |
-| ... | | | +37 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +38 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Transfer(
@@ -319,7 +319,7 @@ Trigger a follow-up action in an existing workflow rather than creating a new to
 | `ClientState` | string | No | Use this field to add state to every subsequent webhook. |
 | `CommandId` | string (UUID) | No | Use this field to avoid duplicate commands. |
 | `VideoRoomId` | string (UUID) | No | The ID of the video room you want to bridge with, can't be u... |
-| ... | | | +16 optional params in [references/api-details.md](references/api-details.md) |
+| ... | | | +17 optional params in [references/api-details.md](references/api-details.md) |
 
 ```go
 	response, err := client.Calls.Actions.Bridge(
