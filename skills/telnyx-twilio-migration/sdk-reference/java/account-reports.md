@@ -9,11 +9,11 @@
 <dependency>
     <groupId>com.telnyx.sdk</groupId>
     <artifactId>telnyx</artifactId>
-    <version>6.95.0</version>
+    <version>6.98.0</version>
 </dependency>
 
 // Gradle
-implementation("com.telnyx.sdk:telnyx:6.95.0")
+implementation("com.telnyx.sdk:telnyx:6.98.0")
 ```
 
 ## Setup
@@ -667,41 +667,6 @@ SessionAnalysisRetrieveResponse sessionAnalysis = client.sessionAnalysis().retri
 ```
 
 Returns: `cost` (object), `meta` (object), `root` (object), `session_id` (string)
-
-## Get Telnyx product usage data (BETA)
-
-Get Telnyx usage data by product, broken out by the specified dimensions
-
-`GET /usage_reports`
-
-```java
-import com.telnyx.sdk.models.usagereports.UsageReportListPage;
-import com.telnyx.sdk.models.usagereports.UsageReportListParams;
-
-UsageReportListParams params = UsageReportListParams.builder()
-    .addDimension("string")
-    .addMetric("string")
-    .product("wireless")
-    .build();
-UsageReportListPage page = client.usageReports().list(params);
-```
-
-Returns: `data` (array[object]), `meta` (object)
-
-## Get Usage Reports query options (BETA)
-
-Get the Usage Reports options for querying usage, including the products available and their respective metrics and dimensions
-
-`GET /usage_reports/options`
-
-```java
-import com.telnyx.sdk.models.usagereports.UsageReportGetOptionsParams;
-import com.telnyx.sdk.models.usagereports.UsageReportGetOptionsResponse;
-
-UsageReportGetOptionsResponse response = client.usageReports().getOptions();
-```
-
-Returns: `product` (string), `product_dimensions` (array[string]), `product_metrics` (array[string]), `record_types` (array[object])
 
 ## Get all Wireless Detail Records (WDRs) Reports
 

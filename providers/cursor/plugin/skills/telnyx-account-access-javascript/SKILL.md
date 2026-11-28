@@ -183,7 +183,7 @@ const response = await client.addresses.actions.validate({
 console.log(response.data);
 ```
 
-Returns: `errors` (array[object]), `record_type` (string), `result` (enum: valid, invalid), `suggested` (object)
+Returns: `data` (object)
 
 ## Retrieve an address
 
@@ -457,3 +457,17 @@ const response = await client.telephonyCredentials.createToken('550e8400-e29b-41
 
 console.log(response);
 ```
+
+## Retrieve token material.
+
+Returns the material a server needs to mint login tokens for the credential locally, with no request per token: `kid`, `tel_token` and `signing_secret`. The same material is in the response of `POST /telephony_credentials`. Treat it like the SIP password.
+
+`GET /telephony_credentials/{id}/token_material`
+
+```javascript
+const response = await client.telephonyCredentials.retrieveTokenMaterial('550e8400-e29b-41d4-a716-446655440000');
+
+console.log(response.data);
+```
+
+Returns: `kid` (string), `signing_secret` (string), `tel_token` (string)
