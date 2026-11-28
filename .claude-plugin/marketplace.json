@@ -5,10 +5,16 @@
     "email": "support@telnyx.com"
   },
   "metadata": {
-    "description": "Official Telnyx plugin marketplace for AI coding agents — modular plugins for WhatsApp, Voice, SMS, Email, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services",
+    "description": "Official Telnyx plugin marketplace for AI coding agents — the telnyx-developer-kit starter plus modular plugins for WhatsApp, Voice, SMS, Email, TTS, STT, Verify, AI, Numbers, WebRTC, and platform services",
     "version": "0.4.0"
   },
   "plugins": [
+    {
+      "name": "telnyx-developer-kit",
+      "source": "./providers/claude/plugins/telnyx-developer-kit",
+      "description": "The one-install starter kit: six focused build skills, the telnyx-builder agent, and an OAuth-authenticated hosted MCP connector with a reviewed five-tool contract for Call Control and recordings. Add product plugins for other API coverage.",
+      "version": "0.2.0"
+    },
     {
       "name": "telnyx-whatsapp",
       "source": "./providers/claude/plugins/telnyx-whatsapp",
